@@ -1,0 +1,156 @@
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ArrowLeft, CreditCard, Zap, Barcode, DollarSign } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useState } from "react";
+
+const Payment = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+  
+  // Get shipment data from location state or sessionStorage
+  const shipmentData = location.state?.shipmentData || JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
+  
+  const handleBack = () => {
+    navigate('/documento');
+  };
+
+  const paymentMethods = [
+    {
+      id: 'credit',
+      name: 'Cartão de Crédito',
+      icon: CreditCard,
+      description: 'Até 12x sem juros',
+      available: true
+    },
+    {
+      id: 'pix',
+      name: 'PIX',
+      icon: Zap,
+      description: 'Aprovação instantânea',
+      available: true
+    },
+    {
+      id: 'boleto',
+      name: 'Boleto Bancário',
+      icon: Barcode,
+      description: 'Vencimento em 3 dias úteis',
+      available: true
+    }
+  ];
+
+  const handlePaymentSelect = (methodId: string) => {
+    setSelectedMethod(methodId);
+  };
+
+  const handleConfirmPayment = () => {
+    // Here you would integrate with payment processing
+    console.log('Processing payment with method:', selectedMethod);
+    // For now, just navigate to a success page or tracking
+    navigate('/rastreio');
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background to-background/80 p-4">
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <Button 
+            variant="ghost" 
+            onClick={handleBack}
+            className="mb-4 hover:bg-background/80"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
+          </Button>
+          
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <DollarSign className="h-5 w-5 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">Pagamento</h1>
+          </div>
+          <p className="text-muted-foreground">
+            Escolha a forma de pagamento para finalizar seu envio
+          </p>
+        </div>
+
+        <div className="grid gap-6">
+          {/* Order Summary */}
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="text-lg">Resumo do Pedido</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Frete</span>
+                <span className="font-semibold">R$ {shipmentData.quote_data?.shippingQuote?.economicPrice?.toFixed(2) || '0,00'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Taxa de Seguro</span>
+                <span className="font-semibold">R$ 10,00</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between items-center text-lg font-bold">
+                <span>Total</span>
+                <span className="text-primary">R$ {(parseFloat(shipmentData.quote_data?.shippingQuote?.economicPrice || 0) + 10).toFixed(2)}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Payment Methods */}
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="text-lg">Formas de Pagamento</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {paymentMethods.map((method) => {
+                const Icon = method.icon;
+                return (
+                  <div
+                    key={method.id}
+                    className={`p-4 border rounded-lg cursor-pointer transition-all hover:border-primary/50 ${
+                      selectedMethod === method.id 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-border'
+                    }`}
+                    onClick={() => handlePaymentSelect(method.id)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className="h-5 w-5 text-primary" />
+                      <div className="flex-1">
+                        <div className="font-semibold">{method.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {method.description}
+                        </div>
+                      </div>
+                      {selectedMethod === method.id && (
+                        <Badge variant="default" className="bg-primary">
+                          Selecionado
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          {/* Confirm Button */}
+          <Button 
+            onClick={handleConfirmPayment}
+            disabled={!selectedMethod}
+            className="w-full h-12 text-base font-semibold"
+          >
+            Confirmar Pagamento
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Payment;

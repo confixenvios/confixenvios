@@ -8,6 +8,7 @@ import Results from "./pages/Results";
 import Label from "./pages/Label";
 import Document from "./pages/Document";
 import Tracking from "./pages/Tracking";
+import Payment from "./pages/Payment";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
           <Route path="/resultados" element={<Results />} />
           <Route path="/etiqueta" element={<Label />} />
           <Route path="/documento" element={<Document />} />
+          <Route path="/pagamento" element={<Payment />} />
           <Route path="/rastreio" element={<Tracking />} />
           <Route path="/rastreio/:codigo" element={<Tracking />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
