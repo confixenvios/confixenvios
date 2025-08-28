@@ -21,6 +21,8 @@ interface QuoteFormData {
   width: string;
   height: string;
   format: string;
+  quantity: string;
+  unitValue: string;
 }
 
 interface AddressData {
@@ -52,7 +54,9 @@ const QuoteForm = () => {
     length: "",
     width: "",
     height: "",
-    format: ""
+    format: "",
+    quantity: "1",
+    unitValue: ""
   });
   
   // Step 2: Resultados e opções
@@ -79,6 +83,12 @@ const QuoteForm = () => {
   const getPickupCost = (option: string) => {
     if (option === 'pickup') return 10.00;
     return 0;
+  };
+
+  const getTotalMerchandiseValue = () => {
+    const quantity = parseInt(formData.quantity) || 0;
+    const unitValue = parseFloat(formData.unitValue) || 0;
+    return quantity * unitValue;
   };
 
   const getTotalPrice = () => {
@@ -350,6 +360,50 @@ const QuoteForm = () => {
                       onChange={(e) => handleInputChange("destinyCep", e.target.value)}
                       className="border-input-border focus:border-primary focus:ring-primary h-12"
                     />
+                  </div>
+                </div>
+
+                {/* Merchandise Details */}
+                <div className="space-y-4">
+                  <Label className="flex items-center space-x-2 text-base font-medium">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    <span>Detalhes da Mercadoria</span>
+                  </Label>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="quantity">Quantidade</Label>
+                      <Input
+                        id="quantity"
+                        type="number"
+                        min="1"
+                        placeholder="1"
+                        value={formData.quantity}
+                        onChange={(e) => handleInputChange("quantity", e.target.value)}
+                        className="border-input-border focus:border-primary focus:ring-primary h-12"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="unitValue">Valor Unitário (R$)</Label>
+                      <Input
+                        id="unitValue"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="100.00"
+                        value={formData.unitValue}
+                        onChange={(e) => handleInputChange("unitValue", e.target.value)}
+                        className="border-input-border focus:border-primary focus:ring-primary h-12"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Valor Total</Label>
+                      <div className="h-12 flex items-center px-3 py-2 rounded-md border border-input-border bg-muted text-foreground font-medium">
+                        R$ {getTotalMerchandiseValue().toFixed(2)}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
