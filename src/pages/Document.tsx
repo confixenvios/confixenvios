@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Package, FileText, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +18,7 @@ const Document = () => {
   const [nfeKey, setNfeKey] = useState<string>("");
   const [itemQuantity, setItemQuantity] = useState<string>("");
   const [declaredValue, setDeclaredValue] = useState<string>("");
+  const [merchandiseDescription, setMerchandiseDescription] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -31,6 +33,7 @@ const Document = () => {
   const isFormValid = () => {
     if (!documentType || !itemQuantity || !declaredValue) return false;
     if (documentType === 'nfe' && !nfeKey) return false;
+    if (documentType === 'declaration' && !merchandiseDescription) return false;
     return true;
   };
 
@@ -53,6 +56,7 @@ const Document = () => {
       const documentData = {
         documentType,
         nfeKey: documentType === 'nfe' ? nfeKey : null,
+        merchandiseDescription: documentType === 'declaration' ? merchandiseDescription : null,
         itemQuantity: parseInt(itemQuantity),
         declaredValue: parseFloat(declaredValue),
         shipment: currentShipment
@@ -180,6 +184,34 @@ const Document = () => {
                 </RadioGroup>
               </CardContent>
             </Card>
+
+            {/* Merchandise Description Field */}
+            {documentType === 'declaration' && (
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle>Descrição da Mercadoria</CardTitle>
+                  <CardDescription>
+                    Descreva detalhadamente o conteúdo do envio
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <Label htmlFor="merchandise-description">Descrição do conteúdo *</Label>
+                    <Textarea
+                      id="merchandise-description"
+                      value={merchandiseDescription}
+                      onChange={(e) => setMerchandiseDescription(e.target.value)}
+                      placeholder="Descreva o que está sendo enviado (ex: 2 pares de tênis esportivos, cor preta, tamanho 42)"
+                      rows={4}
+                      className="border-input-border focus:border-primary focus:ring-primary resize-none"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Seja específico para evitar problemas na entrega
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* NFe Key Field */}
             {documentType === 'nfe' && (
