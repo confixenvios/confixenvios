@@ -24,27 +24,19 @@ const Results = () => {
   const [selectedOption, setSelectedOption] = useState<string>("");
   const [pickupOption, setPickupOption] = useState<string>("");
 
-  // As opções serão geradas dinamicamente baseadas na cotação real
+  // Apenas uma opção de preço baseada na tabela atual
   const getQuoteOptions = (): QuoteOption[] => {
     if (!quoteData?.shippingQuote) return [];
     
     const { shippingQuote } = quoteData;
     return [
       {
-        id: "economic",
+        id: "standard",
         type: "price",
-        title: "Menor Preço",
+        title: "Frete Padrão",
         price: shippingQuote.economicPrice,
         deliveryDays: shippingQuote.economicDays,
         description: "Entrega padrão com melhor custo-benefício"
-      },
-      {
-        id: "express",
-        type: "speed", 
-        title: "Menor Prazo",
-        price: shippingQuote.expressPrice,
-        deliveryDays: shippingQuote.expressDays,
-        description: "Entrega expressa para urgências"
       }
     ];
   };
@@ -140,7 +132,7 @@ const Results = () => {
           </Card>
 
           {/* Quote Options */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="max-w-md mx-auto mb-8">
             {getQuoteOptions().map((option) => (
               <Card 
                 key={option.id}
@@ -161,8 +153,8 @@ const Results = () => {
                       )}
                       <span>{option.title}</span>
                     </CardTitle>
-                    <Badge variant={option.type === "price" ? "secondary" : "outline"}>
-                      {option.type === "price" ? "Econômico" : "Expresso"}
+                    <Badge variant="secondary">
+                      Padrão
                     </Badge>
                   </div>
                   <CardDescription>{option.description}</CardDescription>
