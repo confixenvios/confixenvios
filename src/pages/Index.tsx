@@ -4,12 +4,12 @@ import { Truck, Clock, Shield } from "lucide-react";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-dark">
+    <div className="min-h-screen bg-gradient-light">
       <Header />
       
       {/* Hero Section */}
       <section className="relative py-20 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-glow opacity-20"></div>
+        <div className="absolute inset-0 bg-gradient-glow opacity-30"></div>
         
         <div className="container mx-auto text-center relative">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">

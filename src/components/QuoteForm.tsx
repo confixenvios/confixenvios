@@ -60,7 +60,7 @@ const QuoteForm = () => {
 
   return (
     <Card className="w-full max-w-2xl mx-auto shadow-card relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-glow opacity-30"></div>
+      <div className="absolute inset-0 bg-gradient-glow opacity-20"></div>
       <CardHeader className="relative">
         <div className="flex items-center space-x-2 mb-2">
           <Calculator className="h-6 w-6 text-primary" />

@@ -76,7 +76,7 @@ const Results = () => {
 
   if (!quoteData) {
     return (
-      <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-light flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-muted-foreground">Carregando...</p>
@@ -86,7 +86,7 @@ const Results = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-dark">
+    <div className="min-h-screen bg-gradient-light">
       <Header />
       
       <div className="container mx-auto py-12 px-4">

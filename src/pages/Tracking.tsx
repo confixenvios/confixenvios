@@ -138,7 +138,7 @@ const Tracking = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-dark">
+    <div className="min-h-screen bg-gradient-light">
       <Header />
       
       <div className="container mx-auto py-12 px-4">
