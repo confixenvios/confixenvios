@@ -70,8 +70,10 @@ const Results = () => {
     
     toast({
       title: "Opções selecionadas!",
-      description: "Funcionalidade de etiqueta será implementada em breve...",
+      description: "Redirecionando para dados da etiqueta...",
     });
+    
+    navigate("/etiqueta");
   };
 
   if (!quoteData) {
@@ -238,7 +240,7 @@ const Results = () => {
               className="w-full md:w-auto px-12 h-12 text-lg font-semibold bg-gradient-primary hover:shadow-primary transition-all duration-300"
               disabled={!selectedOption || !pickupOption}
             >
-              Continuar com Etiqueta
+              Preencher Dados da Etiqueta
             </Button>
           </div>
         </div>
