@@ -134,9 +134,12 @@ const QuoteForm = () => {
         return;
       }
 
+      const quantity = parseInt(formData.quantity) || 1;
+
       const shippingQuote = await calculateShippingQuote({
         destinyCep: formData.destinyCep,
-        weight: weight
+        weight: weight,
+        quantity: quantity
       });
 
       const newQuoteData = { ...formData, shippingQuote };

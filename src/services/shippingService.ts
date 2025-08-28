@@ -12,6 +12,7 @@ export interface ShippingQuote {
 export interface QuoteRequest {
   destinyCep: string;
   weight: number;
+  quantity: number;
 }
 
 // Aparecida de Goiânia é sempre nossa origem
@@ -19,7 +20,8 @@ const ORIGIN_CEP = "74900000";
 
 export const calculateShippingQuote = async ({
   destinyCep,
-  weight
+  weight,
+  quantity = 1
 }: QuoteRequest): Promise<ShippingQuote> => {
   try {
     // Remove formatação do CEP e garante 8 dígitos
@@ -54,11 +56,14 @@ export const calculateShippingQuote = async ({
 
     const basePrice = pricing[0].price;
     
-    // Preço econômico é o preço base
-    const economicPrice = basePrice;
+    // Multiplica o preço base pela quantidade de pacotes
+    const basePriceWithQuantity = basePrice * quantity;
+    
+    // Preço econômico é o preço base multiplicado pela quantidade
+    const economicPrice = basePriceWithQuantity;
     
     // Preço expresso tem 60% de acréscimo
-    const expressPrice = basePrice * 1.6;
+    const expressPrice = basePriceWithQuantity * 1.6;
 
     return {
       economicPrice: Number(economicPrice.toFixed(2)),
