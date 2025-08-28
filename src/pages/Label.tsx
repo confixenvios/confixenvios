@@ -352,17 +352,19 @@ const Label = () => {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <FormLabel htmlFor={`${type}-reference`}>Referência</FormLabel>
-          <Textarea
-            id={`${type}-reference`}
-            value={data.reference}
-            onChange={(e) => handleAddressChange(type, 'reference', e.target.value)}
-            placeholder="Ponto de referência para facilitar a localização"
-            className="border-input-border focus:border-primary focus:ring-primary"
-            rows={2}
-          />
-        </div>
+        {type === 'recipient' && (
+          <div className="space-y-2">
+            <FormLabel htmlFor={`${type}-reference`}>Referência</FormLabel>
+            <Textarea
+              id={`${type}-reference`}
+              value={data.reference}
+              onChange={(e) => handleAddressChange(type, 'reference', e.target.value)}
+              placeholder="Ponto de referência para facilitar a localização"
+              className="border-input-border focus:border-primary focus:ring-primary"
+              rows={2}
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
