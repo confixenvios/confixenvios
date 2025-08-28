@@ -16,8 +16,6 @@ const Document = () => {
   const [currentShipment, setCurrentShipment] = useState<any>(null);
   const [documentType, setDocumentType] = useState<string>("");
   const [nfeKey, setNfeKey] = useState<string>("");
-  const [itemQuantity, setItemQuantity] = useState<string>("");
-  const [declaredValue, setDeclaredValue] = useState<string>("");
   const [merchandiseDescription, setMerchandiseDescription] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -31,7 +29,7 @@ const Document = () => {
   }, [navigate]);
 
   const isFormValid = () => {
-    if (!documentType || !itemQuantity || !declaredValue) return false;
+    if (!documentType) return false;
     if (documentType === 'nfe' && !nfeKey) return false;
     if (documentType === 'declaration' && !merchandiseDescription) return false;
     return true;
@@ -52,13 +50,10 @@ const Document = () => {
     setIsLoading(true);
 
     try {
-      // Store document data for next step
       const documentData = {
         documentType,
         nfeKey: documentType === 'nfe' ? nfeKey : null,
         merchandiseDescription: documentType === 'declaration' ? merchandiseDescription : null,
-        itemQuantity: parseInt(itemQuantity),
-        declaredValue: parseFloat(declaredValue),
         shipment: currentShipment
       };
 
@@ -241,51 +236,19 @@ const Document = () => {
               </Card>
             )}
 
-            {/* Item Details */}
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle>Detalhes do Item</CardTitle>
-                <CardDescription>
-                  Quantidade e valor declarado do conteúdo
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity">Quantidade *</Label>
-                    <Input
-                      id="quantity"
-                      type="number"
-                      min="1"
-                      value={itemQuantity}
-                      onChange={(e) => setItemQuantity(e.target.value)}
-                      placeholder="1"
-                      className="border-input-border focus:border-primary focus:ring-primary"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="value">Valor Declarado (R$) *</Label>
-                    <Input
-                      id="value"
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      value={declaredValue}
-                      onChange={(e) => setDeclaredValue(e.target.value)}
-                      placeholder="100.00"
-                      className="border-input-border focus:border-primary focus:ring-primary"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Submit Button */}
-            <div className="text-center">
+            <div className="flex space-x-4">
+              <Button
+                variant="outline"
+                onClick={() => navigate("/resultados")}
+                className="flex-1 h-12"
+              >
+                Voltar
+              </Button>
               <Button 
                 type="submit"
                 disabled={!isFormValid() || isLoading}
-                className="w-full md:w-auto px-12 h-12 text-lg font-semibold bg-gradient-primary hover:shadow-primary transition-all duration-300"
+                className="flex-1 h-12 text-lg font-semibold bg-gradient-primary hover:shadow-primary transition-all duration-300"
               >
                 {isLoading ? (
                   <div className="flex items-center space-x-2">
