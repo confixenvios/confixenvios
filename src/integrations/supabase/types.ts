@@ -116,6 +116,7 @@ export type Database = {
           status: string
           tracking_code: string | null
           updated_at: string
+          user_id: string | null
           weight: number
           width: number
         }
@@ -133,6 +134,7 @@ export type Database = {
           status?: string
           tracking_code?: string | null
           updated_at?: string
+          user_id?: string | null
           weight: number
           width: number
         }
@@ -150,6 +152,7 @@ export type Database = {
           status?: string
           tracking_code?: string | null
           updated_at?: string
+          user_id?: string | null
           weight?: number
           width?: number
         }

@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { calculateShippingQuote, validateCep, formatCep } from "@/services/shippingService";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface QuoteFormData {
   originCep: string;
@@ -43,6 +44,7 @@ interface AddressData {
 const QuoteForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -208,7 +210,7 @@ const QuoteForm = () => {
       // Create sender address
       const { data: senderAddress, error: senderError } = await supabase
         .from('addresses')
-        .insert({ ...senderData, address_type: 'sender' })
+        .insert({ ...senderData, address_type: 'sender', user_id: user?.id })
         .select()
         .single();
 
@@ -217,7 +219,7 @@ const QuoteForm = () => {
       // Create recipient address  
       const { data: recipientAddress, error: recipientError } = await supabase
         .from('addresses')
-        .insert({ ...recipientData, address_type: 'recipient' })
+        .insert({ ...recipientData, address_type: 'recipient', user_id: user?.id })
         .select()
         .single();
 
@@ -246,7 +248,8 @@ const QuoteForm = () => {
           width: parseFloat(formData.width),
           height: parseFloat(formData.height),
           format: formData.format,
-          status: 'PENDING_DOCUMENT'
+          status: 'PENDING_DOCUMENT',
+          user_id: user?.id
         })
         .select()
         .single();

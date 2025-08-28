@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { User, MapPin, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface AddressData {
   name: string;
@@ -29,6 +30,7 @@ interface AddressData {
 const Label = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedQuote, setSelectedQuote] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -115,7 +117,8 @@ const Label = () => {
         .from('addresses')
         .insert({
           ...senderData,
-          address_type: 'sender'
+          address_type: 'sender',
+          user_id: user?.id
         })
         .select()
         .single();
@@ -127,7 +130,8 @@ const Label = () => {
         .from('addresses')
         .insert({
           ...recipientData,
-          address_type: 'recipient'
+          address_type: 'recipient',
+          user_id: user?.id
         })
         .select()
         .single();
@@ -160,7 +164,8 @@ const Label = () => {
           width: parseFloat(selectedQuote.quoteData.width),
           height: parseFloat(selectedQuote.quoteData.height),
           format: selectedQuote.quoteData.format,
-          status: 'PENDING_DOCUMENT'
+          status: 'PENDING_DOCUMENT',
+          user_id: user?.id
         })
         .select()
         .single();
