@@ -4,10 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calculator, MapPin, Package } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { Calculator, MapPin, Package, Truck, User, CheckCircle, Circle, DollarSign, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { calculateShippingQuote, validateCep, formatCep } from "@/services/shippingService";
+import { supabase } from "@/integrations/supabase/client";
 
 interface QuoteFormData {
   originCep: string;
@@ -19,11 +23,30 @@ interface QuoteFormData {
   format: string;
 }
 
+interface AddressData {
+  name: string;
+  document: string;
+  phone: string;
+  email: string;
+  cep: string;
+  street: string;
+  number: string;
+  complement: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  reference: string;
+}
+
 const QuoteForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Step 1: Cotação
   const [formData, setFormData] = useState<QuoteFormData>({
-    originCep: "74900-000", // Aparecida de Goiânia - origem fixa
+    originCep: "74900-000",
     destinyCep: "",
     weight: "",
     length: "",
@@ -32,59 +55,89 @@ const QuoteForm = () => {
     format: ""
   });
   
-  const [isLoading, setIsLoading] = useState(false);
+  // Step 2: Resultados e opções
+  const [quoteData, setQuoteData] = useState<any>(null);
+  const [pickupOption, setPickupOption] = useState<string>("");
+  
+  // Step 3: Dados da etiqueta
+  const [senderData, setSenderData] = useState<AddressData>({
+    name: "", document: "", phone: "", email: "", cep: "", street: "",
+    number: "", complement: "", neighborhood: "", city: "", state: "", reference: ""
+  });
+  
+  const [recipientData, setRecipientData] = useState<AddressData>({
+    name: "", document: "", phone: "", email: "", cep: "", street: "",
+    number: "", complement: "", neighborhood: "", city: "", state: "", reference: ""
+  });
+
+  const steps = [
+    { number: 1, title: "Calcular Frete", icon: Calculator },
+    { number: 2, title: "Opções de Coleta", icon: Truck },
+    { number: 3, title: "Dados da Etiqueta", icon: User }
+  ];
+
+  const getPickupCost = (option: string) => {
+    if (option === 'pickup') return 10.00;
+    return 0;
+  };
+
+  const getTotalPrice = () => {
+    if (!quoteData?.shippingQuote) return 0;
+    const freightPrice = quoteData.shippingQuote.economicPrice;
+    const pickupCost = getPickupCost(pickupOption);
+    return freightPrice + pickupCost;
+  };
 
   const handleInputChange = (field: keyof QuoteFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddressChange = (type: 'sender' | 'recipient', field: keyof AddressData, value: string) => {
+    if (type === 'sender') {
+      setSenderData(prev => ({ ...prev, [field]: value }));
+    } else {
+      setRecipientData(prev => ({ ...prev, [field]: value }));
+    }
+  };
+
+  // Step 1: Calcular Cotação
+  const handleStep1Submit = async () => {
     setIsLoading(true);
 
     try {
-      // Validar CEP de destino
       if (!validateCep(formData.destinyCep)) {
         toast({
           title: "CEP inválido",
           description: "Digite um CEP válido com 8 dígitos",
           variant: "destructive"
         });
-        setIsLoading(false);
         return;
       }
 
       const weight = parseFloat(formData.weight);
       if (weight <= 0) {
         toast({
-          title: "Peso inválido",
+          title: "Peso inválido", 
           description: "Digite um peso válido maior que 0",
           variant: "destructive"
         });
-        setIsLoading(false);
         return;
       }
 
-      // Calcular frete real usando os dados da planilha
       const shippingQuote = await calculateShippingQuote({
         destinyCep: formData.destinyCep,
         weight: weight
       });
 
-      // Armazenar dados da cotação
-      const quoteData = {
-        ...formData,
-        shippingQuote
-      };
-      
-      sessionStorage.setItem('quoteData', JSON.stringify(quoteData));
+      const newQuoteData = { ...formData, shippingQuote };
+      setQuoteData(newQuoteData);
+      setCurrentStep(2);
       
       toast({
         title: "Cotação calculada!",
-        description: "Redirecionando para os resultados...",
+        description: "Escolha uma opção de coleta para continuar",
       });
-      
-      navigate("/resultados");
+
     } catch (error) {
       console.error('Erro ao calcular frete:', error);
       toast({
@@ -97,154 +150,740 @@ const QuoteForm = () => {
     }
   };
 
-  const isFormValid = Object.values(formData).every(value => value.trim() !== "");
+  // Step 2: Selecionar opções
+  const handleStep2Submit = () => {
+    if (!pickupOption) {
+      toast({
+        title: "Seleção obrigatória",
+        description: "Selecione uma opção de coleta para continuar",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setCurrentStep(3);
+    toast({
+      title: "Opção selecionada!",
+      description: "Agora preencha os dados da etiqueta",
+    });
+  };
+
+  // Step 3: Criar etiqueta
+  const handleStep3Submit = async () => {
+    const requiredFields: (keyof AddressData)[] = [
+      'name', 'document', 'phone', 'email', 'cep', 'street', 
+      'number', 'neighborhood', 'city', 'state'
+    ];
+
+    const senderValid = requiredFields.every(field => senderData[field].trim() !== "");
+    const recipientValid = requiredFields.every(field => recipientData[field].trim() !== "");
+
+    if (!senderValid || !recipientValid) {
+      toast({
+        title: "Dados obrigatórios",
+        description: "Preencha todos os campos obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Create sender address
+      const { data: senderAddress, error: senderError } = await supabase
+        .from('addresses')
+        .insert({ ...senderData, address_type: 'sender' })
+        .select()
+        .single();
+
+      if (senderError) throw senderError;
+
+      // Create recipient address  
+      const { data: recipientAddress, error: recipientError } = await supabase
+        .from('addresses')
+        .insert({ ...recipientData, address_type: 'recipient' })
+        .select()
+        .single();
+
+      if (recipientError) throw recipientError;
+
+      // Generate tracking code
+      const { data: trackingResult, error: trackingError } = await supabase
+        .rpc('generate_tracking_code');
+
+      if (trackingError) throw trackingError;
+
+      // Create shipment with total price
+      const shipmentQuoteData = { ...quoteData, totalPrice: getTotalPrice() };
+
+      const { data: shipment, error: shipmentError } = await supabase
+        .from('shipments')
+        .insert({
+          tracking_code: trackingResult,
+          sender_address_id: senderAddress.id,
+          recipient_address_id: recipientAddress.id,
+          quote_data: shipmentQuoteData,
+          selected_option: "standard",
+          pickup_option: pickupOption,
+          weight: parseFloat(formData.weight),
+          length: parseFloat(formData.length),
+          width: parseFloat(formData.width),
+          height: parseFloat(formData.height),
+          format: formData.format,
+          status: 'PENDING_DOCUMENT'
+        })
+        .select()
+        .single();
+
+      if (shipmentError) throw shipmentError;
+
+      sessionStorage.setItem('currentShipment', JSON.stringify(shipment));
+
+      toast({
+        title: "Etiqueta criada!",
+        description: `Código de rastreio: ${trackingResult}`,
+      });
+
+      navigate("/documento");
+
+    } catch (error: any) {
+      console.error('Error creating shipment:', error);
+      toast({
+        title: "Erro ao criar etiqueta",
+        description: error.message || "Tente novamente mais tarde",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const isStep1Valid = Object.values(formData).every(value => value.trim() !== "");
+
+  const renderStepIndicator = () => (
+    <div className="flex items-center justify-center mb-8">
+      {steps.map((step, index) => (
+        <div key={step.number} className="flex items-center">
+          <div className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-300 ${
+            currentStep === step.number 
+              ? 'bg-primary text-primary-foreground' 
+              : currentStep > step.number 
+                ? 'bg-success text-success-foreground'
+                : 'bg-muted text-muted-foreground'
+          }`}>
+            {currentStep > step.number ? (
+              <CheckCircle className="h-4 w-4" />
+            ) : (
+              <step.icon className="h-4 w-4" />
+            )}
+            <span className="font-medium text-sm">{step.title}</span>
+          </div>
+          {index < steps.length - 1 && (
+            <div className={`w-8 h-0.5 mx-2 transition-all duration-300 ${
+              currentStep > step.number ? 'bg-success' : 'bg-muted'
+            }`} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
 
   return (
-    <Card className="w-full max-w-2xl mx-auto shadow-card relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-glow opacity-20"></div>
-      <CardHeader className="relative">
-        <div className="flex items-center space-x-2 mb-2">
-          <Calculator className="h-6 w-6 text-primary" />
-          <CardTitle className="text-2xl">Calcular Frete</CardTitle>
-        </div>
-        <CardDescription>
-          Insira os dados do seu envio para calcular o melhor preço e prazo
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="relative space-y-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* CEP Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="origin-cep" className="flex items-center space-x-2">
-                <MapPin className="h-4 w-4 text-primary" />
-                <span>CEP de Origem</span>
-              </Label>
-              <Input
-                id="origin-cep"
-                type="text"
-                value={formData.originCep}
-                disabled
-                className="border-input-border bg-muted text-muted-foreground"
-              />
-              <p className="text-xs text-muted-foreground">
-                Aparecida de Goiânia, GO - Origem fixa
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="destiny-cep" className="flex items-center space-x-2">
-                <MapPin className="h-4 w-4 text-primary" />
-                <span>CEP de Destino</span>
-              </Label>
-              <Input
-                id="destiny-cep"
-                type="text"
-                placeholder="00000-000"
-                value={formData.destinyCep}
-                onChange={(e) => handleInputChange("destinyCep", e.target.value)}
-                className="border-input-border focus:border-primary focus:ring-primary"
-              />
-            </div>
-          </div>
+    <div className="w-full max-w-5xl mx-auto">
+      <Card className="shadow-card relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-glow opacity-10"></div>
+        <CardHeader className="relative pb-4">
+          <CardTitle className="text-center text-2xl font-bold">
+            Sistema de Envios
+          </CardTitle>
+          <CardDescription className="text-center">
+            Complete todos os passos para criar sua etiqueta de envio
+          </CardDescription>
+        </CardHeader>
+        
+        <CardContent className="relative">
+          {renderStepIndicator()}
 
-          {/* Package Details */}
-          <div className="space-y-4">
-            <Label className="flex items-center space-x-2 text-base font-medium">
-              <Package className="h-4 w-4 text-primary" />
-              <span>Detalhes do Pacote</span>
-            </Label>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="weight">Peso (kg)</Label>
-                <Input
-                  id="weight"
-                  type="number"
-                  step="0.1"
-                  placeholder="0.5"
-                  value={formData.weight}
-                  onChange={(e) => handleInputChange("weight", e.target.value)}
-                  className="border-input-border focus:border-primary focus:ring-primary"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="length">Comp. (cm)</Label>
-                <Input
-                  id="length"
-                  type="number"
-                  placeholder="20"
-                  value={formData.length}
-                  onChange={(e) => handleInputChange("length", e.target.value)}
-                  className="border-input-border focus:border-primary focus:ring-primary"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="width">Larg. (cm)</Label>
-                <Input
-                  id="width"
-                  type="number"
-                  placeholder="15"
-                  value={formData.width}
-                  onChange={(e) => handleInputChange("width", e.target.value)}
-                  className="border-input-border focus:border-primary focus:ring-primary"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="height">Alt. (cm)</Label>
-                <Input
-                  id="height"
-                  type="number"
-                  placeholder="10"
-                  value={formData.height}
-                  onChange={(e) => handleInputChange("height", e.target.value)}
-                  className="border-input-border focus:border-primary focus:ring-primary"
-                />
-              </div>
-            </div>
+          <div className="animate-fade-in">
+            {currentStep === 1 && (
+              <div className="space-y-6">
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-semibold flex items-center justify-center space-x-2">
+                    <Calculator className="h-5 w-5 text-primary" />
+                    <span>Calcular Frete</span>
+                  </h3>
+                  <p className="text-muted-foreground mt-2">
+                    Insira os dados do seu envio para calcular o preço e prazo
+                  </p>
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="format">Formato</Label>
-              <Select onValueChange={(value) => handleInputChange("format", value)}>
-                <SelectTrigger className="border-input-border focus:border-primary focus:ring-primary">
-                  <SelectValue placeholder="Selecione o formato" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="caixa">Caixa</SelectItem>
-                  <SelectItem value="pacote">Pacote</SelectItem>
-                  <SelectItem value="rolo">Rolo</SelectItem>
-                  <SelectItem value="cilindro">Cilindro</SelectItem>
-                  <SelectItem value="esfera">Esfera</SelectItem>
-                  <SelectItem value="envelope">Envelope</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+                {/* CEP Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="origin-cep" className="flex items-center space-x-2">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      <span>CEP de Origem</span>
+                    </Label>
+                    <Input
+                      id="origin-cep"
+                      type="text"
+                      value={formData.originCep}
+                      disabled
+                      className="border-input-border bg-muted text-muted-foreground h-12"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Aparecida de Goiânia, GO - Origem fixa
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="destiny-cep" className="flex items-center space-x-2">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      <span>CEP de Destino</span>
+                    </Label>
+                    <Input
+                      id="destiny-cep"
+                      type="text"
+                      placeholder="00000-000"
+                      value={formData.destinyCep}
+                      onChange={(e) => handleInputChange("destinyCep", e.target.value)}
+                      className="border-input-border focus:border-primary focus:ring-primary h-12"
+                    />
+                  </div>
+                </div>
 
-          <Button
-            type="submit"
-            disabled={!isFormValid || isLoading}
-            className="w-full h-12 text-lg font-semibold bg-gradient-primary hover:shadow-primary transition-all duration-300 disabled:opacity-50"
-          >
-            {isLoading ? (
-              <div className="flex items-center space-x-2">
-                <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"></div>
-                <span>Calculando...</span>
+                {/* Package Details */}
+                <div className="space-y-4">
+                  <Label className="flex items-center space-x-2 text-base font-medium">
+                    <Package className="h-4 w-4 text-primary" />
+                    <span>Detalhes do Pacote</span>
+                  </Label>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="weight">Peso (kg)</Label>
+                      <Input
+                        id="weight"
+                        type="number"
+                        step="0.1"
+                        placeholder="0.5"
+                        value={formData.weight}
+                        onChange={(e) => handleInputChange("weight", e.target.value)}
+                        className="border-input-border focus:border-primary focus:ring-primary h-12"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="length">Comp. (cm)</Label>
+                      <Input
+                        id="length"
+                        type="number"
+                        placeholder="20"
+                        value={formData.length}
+                        onChange={(e) => handleInputChange("length", e.target.value)}
+                        className="border-input-border focus:border-primary focus:ring-primary h-12"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="width">Larg. (cm)</Label>
+                      <Input
+                        id="width"
+                        type="number"
+                        placeholder="15"
+                        value={formData.width}
+                        onChange={(e) => handleInputChange("width", e.target.value)}
+                        className="border-input-border focus:border-primary focus:ring-primary h-12"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="height">Alt. (cm)</Label>
+                      <Input
+                        id="height"
+                        type="number"
+                        placeholder="10"
+                        value={formData.height}
+                        onChange={(e) => handleInputChange("height", e.target.value)}
+                        className="border-input-border focus:border-primary focus:ring-primary h-12"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 max-w-md">
+                    <Label htmlFor="format">Formato</Label>
+                    <Select onValueChange={(value) => handleInputChange("format", value)}>
+                      <SelectTrigger className="border-input-border focus:border-primary focus:ring-primary h-12">
+                        <SelectValue placeholder="Selecione o formato" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="caixa">Caixa</SelectItem>
+                        <SelectItem value="pacote">Pacote</SelectItem>
+                        <SelectItem value="rolo">Rolo</SelectItem>
+                        <SelectItem value="cilindro">Cilindro</SelectItem>
+                        <SelectItem value="esfera">Esfera</SelectItem>
+                        <SelectItem value="envelope">Envelope</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleStep1Submit}
+                  disabled={!isStep1Valid || isLoading}
+                  className="w-full h-14 text-lg font-semibold bg-gradient-primary hover:shadow-primary transition-all duration-300"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"></div>
+                      <span>Calculando...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Calculator className="mr-2 h-5 w-5" />
+                      Calcular Frete
+                    </>
+                  )}
+                </Button>
               </div>
-            ) : (
-              <>
-                <Calculator className="mr-2 h-5 w-5" />
-                Calcular Frete
-              </>
             )}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+
+            {currentStep === 2 && quoteData && (
+              <div className="space-y-6">
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-semibold flex items-center justify-center space-x-2">
+                    <Truck className="h-5 w-5 text-primary" />
+                    <span>Opções de Entrega e Coleta</span>
+                  </h3>
+                  <p className="text-muted-foreground mt-2">
+                    Escolha como será feita a coleta do seu envio
+                  </p>
+                </div>
+
+                {/* Quote Summary */}
+                <Card className="bg-accent/20 border-primary/20">
+                  <CardContent className="pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-4">
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="h-4 w-4 text-primary" />
+                        <span className="text-muted-foreground">Destino:</span>
+                        <span className="font-medium">{formatCep(quoteData.destinyCep)} - {quoteData.shippingQuote?.zoneName}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Package className="h-4 w-4 text-primary" />
+                        <span className="text-muted-foreground">Peso:</span>
+                        <span className="font-medium">{quoteData.weight}kg</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <DollarSign className="h-4 w-4 text-primary" />
+                        <span className="text-muted-foreground">Frete:</span>
+                        <span className="font-medium">R$ {quoteData.shippingQuote.economicPrice.toFixed(2)}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-4 bg-card rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <DollarSign className="h-5 w-5 text-success" />
+                        <div>
+                          <div className="font-semibold">Frete Padrão</div>
+                          <div className="text-sm text-muted-foreground">Entrega padrão com melhor custo-benefício</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-primary">R$ {quoteData.shippingQuote.economicPrice.toFixed(2)}</div>
+                        <div className="text-sm text-muted-foreground">{quoteData.shippingQuote.economicDays} dias úteis</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Pickup Options */}
+                <div className="space-y-4">
+                  <div 
+                    className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 hover-scale ${
+                      pickupOption === 'dropoff' 
+                        ? 'border-primary bg-accent/20 ring-2 ring-primary' 
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                    onClick={() => setPickupOption('dropoff')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Circle className={`h-4 w-4 ${pickupOption === 'dropoff' ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <div>
+                          <h4 className="font-medium">Postar no ponto de coleta</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Leve até uma agência parceira (imediato)
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="secondary">Gratuito</Badge>
+                    </div>
+                  </div>
+                  
+                  <div 
+                    className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 hover-scale ${
+                      pickupOption === 'pickup' 
+                        ? 'border-primary bg-accent/20 ring-2 ring-primary' 
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                    onClick={() => setPickupOption('pickup')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Circle className={`h-4 w-4 ${pickupOption === 'pickup' ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <div>
+                          <h4 className="font-medium">Coleta no local</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Buscamos em seu endereço (Região Metropolitana de Goiânia)
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline">+ R$ 10,00</Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Total Price */}
+                {pickupOption && (
+                  <Card className="border-success/20 bg-success/5 animate-scale-in">
+                    <CardContent className="pt-6">
+                      <div className="text-center space-y-2">
+                        <div className="text-sm text-muted-foreground">Valor Total</div>
+                        <div className="text-3xl font-bold text-primary">R$ {getTotalPrice().toFixed(2)}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Frete: R$ {quoteData.shippingQuote.economicPrice.toFixed(2)}
+                          {pickupOption === 'pickup' && ' + Coleta: R$ 10,00'}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <div className="flex space-x-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentStep(1)}
+                    className="flex-1 h-12"
+                  >
+                    Voltar
+                  </Button>
+                  <Button
+                    onClick={handleStep2Submit}
+                    disabled={!pickupOption}
+                    className="flex-1 h-12 bg-gradient-primary hover:shadow-primary"
+                  >
+                    Continuar
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {currentStep === 3 && (
+              <div className="space-y-6">
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-semibold flex items-center justify-center space-x-2">
+                    <User className="h-5 w-5 text-primary" />
+                    <span>Dados da Etiqueta</span>
+                  </h3>
+                  <p className="text-muted-foreground mt-2">
+                    Preencha os dados do remetente e destinatário
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Sender Address */}
+                  <Card className="border-primary/20">
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center space-x-2">
+                        <User className="h-5 w-5 text-primary" />
+                        <span>Dados do Remetente</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="space-y-2">
+                          <Label>Nome completo *</Label>
+                          <Input
+                            value={senderData.name}
+                            onChange={(e) => handleAddressChange('sender', 'name', e.target.value)}
+                            placeholder="Nome completo"
+                            className="h-12"
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>CPF/CNPJ *</Label>
+                            <Input
+                              value={senderData.document}
+                              onChange={(e) => handleAddressChange('sender', 'document', e.target.value)}
+                              placeholder="000.000.000-00"
+                              className="h-12"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Telefone *</Label>
+                            <Input
+                              value={senderData.phone}
+                              onChange={(e) => handleAddressChange('sender', 'phone', e.target.value)}
+                              placeholder="(00) 00000-0000"
+                              className="h-12"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>E-mail *</Label>
+                          <Input
+                            type="email"
+                            value={senderData.email}
+                            onChange={(e) => handleAddressChange('sender', 'email', e.target.value)}
+                            placeholder="email@exemplo.com"
+                            className="h-12"
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>CEP *</Label>
+                            <Input
+                              value={senderData.cep}
+                              onChange={(e) => handleAddressChange('sender', 'cep', e.target.value)}
+                              placeholder="00000-000"
+                              className="h-12"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Número *</Label>
+                            <Input
+                              value={senderData.number}
+                              onChange={(e) => handleAddressChange('sender', 'number', e.target.value)}
+                              placeholder="123"
+                              className="h-12"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Endereço *</Label>
+                          <Input
+                            value={senderData.street}
+                            onChange={(e) => handleAddressChange('sender', 'street', e.target.value)}
+                            placeholder="Rua, Avenida..."
+                            className="h-12"
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Bairro *</Label>
+                            <Input
+                              value={senderData.neighborhood}
+                              onChange={(e) => handleAddressChange('sender', 'neighborhood', e.target.value)}
+                              placeholder="Bairro"
+                              className="h-12"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Complemento</Label>
+                            <Input
+                              value={senderData.complement}
+                              onChange={(e) => handleAddressChange('sender', 'complement', e.target.value)}
+                              placeholder="Apto, Bloco..."
+                              className="h-12"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Cidade *</Label>
+                            <Input
+                              value={senderData.city}
+                              onChange={(e) => handleAddressChange('sender', 'city', e.target.value)}
+                              placeholder="Cidade"
+                              className="h-12"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Estado *</Label>
+                            <Input
+                              value={senderData.state}
+                              onChange={(e) => handleAddressChange('sender', 'state', e.target.value)}
+                              placeholder="GO"
+                              maxLength={2}
+                              className="h-12"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Recipient Address */}
+                  <Card className="border-primary/20">
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center space-x-2">
+                        <MapPin className="h-5 w-5 text-primary" />
+                        <span>Dados do Destinatário</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="space-y-2">
+                          <Label>Nome completo *</Label>
+                          <Input
+                            value={recipientData.name}
+                            onChange={(e) => handleAddressChange('recipient', 'name', e.target.value)}
+                            placeholder="Nome completo"
+                            className="h-12"
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>CPF/CNPJ *</Label>
+                            <Input
+                              value={recipientData.document}
+                              onChange={(e) => handleAddressChange('recipient', 'document', e.target.value)}
+                              placeholder="000.000.000-00"
+                              className="h-12"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Telefone *</Label>
+                            <Input
+                              value={recipientData.phone}
+                              onChange={(e) => handleAddressChange('recipient', 'phone', e.target.value)}
+                              placeholder="(00) 00000-0000"
+                              className="h-12"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>E-mail *</Label>
+                          <Input
+                            type="email"
+                            value={recipientData.email}
+                            onChange={(e) => handleAddressChange('recipient', 'email', e.target.value)}
+                            placeholder="email@exemplo.com"
+                            className="h-12"
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>CEP *</Label>
+                            <Input
+                              value={recipientData.cep}
+                              onChange={(e) => handleAddressChange('recipient', 'cep', e.target.value)}
+                              placeholder="00000-000"
+                              className="h-12"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Número *</Label>
+                            <Input
+                              value={recipientData.number}
+                              onChange={(e) => handleAddressChange('recipient', 'number', e.target.value)}
+                              placeholder="123"
+                              className="h-12"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Endereço *</Label>
+                          <Input
+                            value={recipientData.street}
+                            onChange={(e) => handleAddressChange('recipient', 'street', e.target.value)}
+                            placeholder="Rua, Avenida..."
+                            className="h-12"
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Bairro *</Label>
+                            <Input
+                              value={recipientData.neighborhood}
+                              onChange={(e) => handleAddressChange('recipient', 'neighborhood', e.target.value)}
+                              placeholder="Bairro"
+                              className="h-12"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Complemento</Label>
+                            <Input
+                              value={recipientData.complement}
+                              onChange={(e) => handleAddressChange('recipient', 'complement', e.target.value)}
+                              placeholder="Apto, Bloco..."
+                              className="h-12"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Cidade *</Label>
+                            <Input
+                              value={recipientData.city}
+                              onChange={(e) => handleAddressChange('recipient', 'city', e.target.value)}
+                              placeholder="Cidade"
+                              className="h-12"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Estado *</Label>
+                            <Input
+                              value={recipientData.state}
+                              onChange={(e) => handleAddressChange('recipient', 'state', e.target.value)}
+                              placeholder="SP"
+                              maxLength={2}
+                              className="h-12"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="flex space-x-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentStep(2)}
+                    className="flex-1 h-12"
+                  >
+                    Voltar
+                  </Button>
+                  <Button
+                    onClick={handleStep3Submit}
+                    disabled={isLoading}
+                    className="flex-1 h-12 bg-gradient-primary hover:shadow-primary"
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"></div>
+                        <span>Criando etiqueta...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <CheckCircle className="mr-2 h-5 w-5" />
+                        Criar Etiqueta
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
