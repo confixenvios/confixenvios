@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Clock, DollarSign, MapPin, Package, Truck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatCep } from "@/services/shippingService";
 
 interface QuoteOption {
   id: string;
@@ -23,24 +24,30 @@ const Results = () => {
   const [selectedOption, setSelectedOption] = useState<string>("");
   const [pickupOption, setPickupOption] = useState<string>("");
 
-  const quoteOptions: QuoteOption[] = [
-    {
-      id: "economic",
-      type: "price",
-      title: "Menor Preço",
-      price: 15.90,
-      deliveryDays: 7,
-      description: "Entrega padrão com melhor custo-benefício"
-    },
-    {
-      id: "express",
-      type: "speed", 
-      title: "Menor Prazo",
-      price: 28.50,
-      deliveryDays: 3,
-      description: "Entrega expressa para urgências"
-    }
-  ];
+  // As opções serão geradas dinamicamente baseadas na cotação real
+  const getQuoteOptions = (): QuoteOption[] => {
+    if (!quoteData?.shippingQuote) return [];
+    
+    const { shippingQuote } = quoteData;
+    return [
+      {
+        id: "economic",
+        type: "price",
+        title: "Menor Preço",
+        price: shippingQuote.economicPrice,
+        deliveryDays: shippingQuote.economicDays,
+        description: "Entrega padrão com melhor custo-benefício"
+      },
+      {
+        id: "express",
+        type: "speed", 
+        title: "Menor Prazo",
+        price: shippingQuote.expressPrice,
+        deliveryDays: shippingQuote.expressDays,
+        description: "Entrega expressa para urgências"
+      }
+    ];
+  };
 
   useEffect(() => {
     const savedQuoteData = sessionStorage.getItem('quoteData');
@@ -116,12 +123,12 @@ const Results = () => {
                 <div className="flex items-center space-x-2">
                   <MapPin className="h-4 w-4 text-primary" />
                   <span className="text-muted-foreground">Origem:</span>
-                  <span className="font-medium">{quoteData.originCep}</span>
+                  <span className="font-medium">Aparecida de Goiânia, GO</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <MapPin className="h-4 w-4 text-primary" />
                   <span className="text-muted-foreground">Destino:</span>
-                  <span className="font-medium">{quoteData.destinyCep}</span>
+                  <span className="font-medium">{formatCep(quoteData.destinyCep)} - {quoteData.shippingQuote?.zoneName}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Package className="h-4 w-4 text-primary" />
@@ -134,7 +141,7 @@ const Results = () => {
 
           {/* Quote Options */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {quoteOptions.map((option) => (
+            {getQuoteOptions().map((option) => (
               <Card 
                 key={option.id}
                 className={`cursor-pointer transition-all duration-300 shadow-card hover:shadow-glow ${

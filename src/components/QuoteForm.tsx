@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Calculator, MapPin, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { calculateShippingQuote, validateCep, formatCep } from "@/services/shippingService";
 
 interface QuoteFormData {
   originCep: string;
@@ -22,7 +23,7 @@ const QuoteForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [formData, setFormData] = useState<QuoteFormData>({
-    originCep: "",
+    originCep: "74900-000", // Aparecida de Goiânia - origem fixa
     destinyCep: "",
     weight: "",
     length: "",
@@ -41,19 +42,59 @@ const QuoteForm = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Store quote data in sessionStorage for the results page
-    sessionStorage.setItem('quoteData', JSON.stringify(formData));
-    
-    setIsLoading(false);
-    toast({
-      title: "Cotação calculada!",
-      description: "Redirecionando para os resultados...",
-    });
-    
-    navigate("/resultados");
+    try {
+      // Validar CEP de destino
+      if (!validateCep(formData.destinyCep)) {
+        toast({
+          title: "CEP inválido",
+          description: "Digite um CEP válido com 8 dígitos",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const weight = parseFloat(formData.weight);
+      if (weight <= 0) {
+        toast({
+          title: "Peso inválido",
+          description: "Digite um peso válido maior que 0",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Calcular frete real usando os dados da planilha
+      const shippingQuote = await calculateShippingQuote({
+        destinyCep: formData.destinyCep,
+        weight: weight
+      });
+
+      // Armazenar dados da cotação
+      const quoteData = {
+        ...formData,
+        shippingQuote
+      };
+      
+      sessionStorage.setItem('quoteData', JSON.stringify(quoteData));
+      
+      toast({
+        title: "Cotação calculada!",
+        description: "Redirecionando para os resultados...",
+      });
+      
+      navigate("/resultados");
+    } catch (error) {
+      console.error('Erro ao calcular frete:', error);
+      toast({
+        title: "Erro no cálculo",
+        description: error instanceof Error ? error.message : "Erro inesperado ao calcular o frete",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const isFormValid = Object.values(formData).every(value => value.trim() !== "");
@@ -83,11 +124,13 @@ const QuoteForm = () => {
               <Input
                 id="origin-cep"
                 type="text"
-                placeholder="00000-000"
                 value={formData.originCep}
-                onChange={(e) => handleInputChange("originCep", e.target.value)}
-                className="border-input-border focus:border-primary focus:ring-primary"
+                disabled
+                className="border-input-border bg-muted text-muted-foreground"
               />
+              <p className="text-xs text-muted-foreground">
+                Aparecida de Goiânia, GO - Origem fixa
+              </p>
             </div>
             
             <div className="space-y-2">

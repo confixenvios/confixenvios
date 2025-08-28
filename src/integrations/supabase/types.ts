@@ -140,6 +140,86 @@ export type Database = {
           },
         ]
       }
+      shipping_pricing: {
+        Row: {
+          created_at: string
+          id: string
+          price: number
+          updated_at: string
+          weight_max: number
+          weight_min: number
+          zone_code: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          price: number
+          updated_at?: string
+          weight_max: number
+          weight_min: number
+          zone_code: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          price?: number
+          updated_at?: string
+          weight_max?: number
+          weight_min?: number
+          zone_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipping_pricing_zone_code_fkey"
+            columns: ["zone_code"]
+            isOneToOne: false
+            referencedRelation: "shipping_zones"
+            referencedColumns: ["zone_code"]
+          },
+        ]
+      }
+      shipping_zones: {
+        Row: {
+          cep_end: string
+          cep_start: string
+          created_at: string
+          delivery_days: number
+          express_delivery_days: number
+          id: string
+          state: string
+          updated_at: string
+          zone_code: string
+          zone_number: string | null
+          zone_type: string
+        }
+        Insert: {
+          cep_end: string
+          cep_start: string
+          created_at?: string
+          delivery_days?: number
+          express_delivery_days?: number
+          id?: string
+          state: string
+          updated_at?: string
+          zone_code: string
+          zone_number?: string | null
+          zone_type: string
+        }
+        Update: {
+          cep_end?: string
+          cep_start?: string
+          created_at?: string
+          delivery_days?: number
+          express_delivery_days?: number
+          id?: string
+          state?: string
+          updated_at?: string
+          zone_code?: string
+          zone_number?: string | null
+          zone_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
