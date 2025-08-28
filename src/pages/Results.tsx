@@ -8,37 +8,27 @@ import { Clock, DollarSign, MapPin, Package, Truck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCep } from "@/services/shippingService";
 
-interface QuoteOption {
-  id: string;
-  type: "price" | "speed";
-  title: string;
-  price: number;
-  deliveryDays: number;
-  description: string;
-}
-
 const Results = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [quoteData, setQuoteData] = useState<any>(null);
-  const [selectedOption, setSelectedOption] = useState<string>("");
   const [pickupOption, setPickupOption] = useState<string>("");
 
-  // Apenas uma opção de preço baseada na tabela atual
-  const getQuoteOptions = (): QuoteOption[] => {
-    if (!quoteData?.shippingQuote) return [];
-    
-    const { shippingQuote } = quoteData;
-    return [
-      {
-        id: "standard",
-        type: "price",
-        title: "Frete Padrão",
-        price: shippingQuote.economicPrice,
-        deliveryDays: shippingQuote.economicDays,
-        description: "Entrega padrão com melhor custo-benefício"
-      }
-    ];
+  // Função para calcular valor da coleta baseado na região
+  const getPickupCost = (option: string) => {
+    if (option === 'pickup') {
+      // Coleta padrão na região metropolitana de Goiânia é R$ 10,00
+      return 10.00;
+    }
+    return 0;
+  };
+
+  // Calcula o valor total (frete + coleta)
+  const getTotalPrice = () => {
+    if (!quoteData?.shippingQuote) return 0;
+    const freightPrice = quoteData.shippingQuote.economicPrice;
+    const pickupCost = getPickupCost(pickupOption);
+    return freightPrice + pickupCost;
   };
 
   useEffect(() => {
@@ -51,10 +41,10 @@ const Results = () => {
   }, [navigate]);
 
   const handleContinue = () => {
-    if (!selectedOption || !pickupOption) {
+    if (!pickupOption) {
       toast({
         title: "Seleção obrigatória",
-        description: "Selecione uma opção de entrega e coleta para continuar",
+        description: "Selecione uma opção de coleta para continuar",
         variant: "destructive"
       });
       return;
@@ -62,13 +52,14 @@ const Results = () => {
 
     // Store selections and navigate to next step
     sessionStorage.setItem('selectedQuote', JSON.stringify({
-      option: selectedOption,
+      option: "standard", // Sempre frete padrão
       pickup: pickupOption,
-      quoteData
+      quoteData,
+      totalPrice: getTotalPrice()
     }));
     
     toast({
-      title: "Opções selecionadas!",
+      title: "Opção selecionada!",
       description: "Redirecionando para dados da etiqueta...",
     });
     
@@ -92,16 +83,6 @@ const Results = () => {
       
       <div className="container mx-auto py-12 px-4">
         <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">
-              Opções de <span className="bg-gradient-primary bg-clip-text text-transparent">Entrega</span>
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              Escolha a melhor opção para o seu envio
-            </p>
-          </div>
-
           {/* Quote Summary */}
           <Card className="mb-8 shadow-card">
             <CardHeader>
@@ -131,53 +112,39 @@ const Results = () => {
             </CardContent>
           </Card>
 
-          {/* Quote Options */}
+          {/* Freight Information (Non-clickable) */}
           <div className="max-w-md mx-auto mb-8">
-            {getQuoteOptions().map((option) => (
-              <Card 
-                key={option.id}
-                className={`cursor-pointer transition-all duration-300 shadow-card hover:shadow-glow ${
-                  selectedOption === option.id 
-                    ? 'ring-2 ring-primary shadow-primary' 
-                    : 'hover:border-primary/50'
-                }`}
-                onClick={() => setSelectedOption(option.id)}
-              >
-                <CardHeader>
+            <Card className="shadow-card">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center space-x-2">
+                    <DollarSign className="h-5 w-5 text-success" />
+                    <span>Frete Padrão</span>
+                  </CardTitle>
+                  <Badge variant="secondary">
+                    Padrão
+                  </Badge>
+                </div>
+                <CardDescription>Entrega padrão com melhor custo-benefício</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center space-x-2">
-                      {option.type === "price" ? (
-                        <DollarSign className="h-5 w-5 text-success" />
-                      ) : (
-                        <Clock className="h-5 w-5 text-warning" />
-                      )}
-                      <span>{option.title}</span>
-                    </CardTitle>
-                    <Badge variant="secondary">
-                      Padrão
-                    </Badge>
-                  </div>
-                  <CardDescription>{option.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-primary">
-                        R$ {option.price.toFixed(2)}
-                      </span>
-                      <div className="text-right">
-                        <div className="text-lg font-semibold">
-                          {option.deliveryDays} dias úteis
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          Prazo estimado
-                        </div>
+                    <span className="text-2xl font-bold text-primary">
+                      R$ {quoteData.shippingQuote.economicPrice.toFixed(2)}
+                    </span>
+                    <div className="text-right">
+                      <div className="text-lg font-semibold">
+                        {quoteData.shippingQuote.economicDays} dias úteis
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Prazo estimado
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Pickup Options */}
@@ -195,7 +162,7 @@ const Results = () => {
               <div 
                 className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
                   pickupOption === 'dropoff' 
-                    ? 'border-primary bg-accent/20' 
+                    ? 'border-primary bg-accent/20 ring-2 ring-primary' 
                     : 'border-border hover:border-primary/50'
                 }`}
                 onClick={() => setPickupOption('dropoff')}
@@ -214,7 +181,7 @@ const Results = () => {
               <div 
                 className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
                   pickupOption === 'pickup' 
-                    ? 'border-primary bg-accent/20' 
+                    ? 'border-primary bg-accent/20 ring-2 ring-primary' 
                     : 'border-border hover:border-primary/50'
                 }`}
                 onClick={() => setPickupOption('pickup')}
@@ -223,21 +190,39 @@ const Results = () => {
                   <div>
                     <h4 className="font-medium">Coleta no local</h4>
                     <p className="text-sm text-muted-foreground">
-                      Buscamos em seu endereço (D+1)
+                      Buscamos em seu endereço (Região Metropolitana de Goiânia)
                     </p>
                   </div>
-                  <Badge variant="outline">+ R$ 5,00</Badge>
+                  <Badge variant="outline">+ R$ 10,00</Badge>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Total Price Display */}
+          {pickupOption && (
+            <Card className="mb-8 shadow-card border-primary/20">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-2">
+                  <div className="text-sm text-muted-foreground">Valor Total</div>
+                  <div className="text-3xl font-bold text-primary">
+                    R$ {getTotalPrice().toFixed(2)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Frete: R$ {quoteData.shippingQuote.economicPrice.toFixed(2)} 
+                    {pickupOption === 'pickup' && ' + Coleta: R$ 10,00'}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Continue Button */}
           <div className="text-center">
             <Button 
               onClick={handleContinue}
               className="w-full md:w-auto px-12 h-12 text-lg font-semibold bg-gradient-primary hover:shadow-primary transition-all duration-300"
-              disabled={!selectedOption || !pickupOption}
+              disabled={!pickupOption}
             >
               Preencher Dados da Etiqueta
             </Button>

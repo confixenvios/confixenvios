@@ -140,14 +140,19 @@ const Label = () => {
 
       if (trackingError) throw trackingError;
 
-      // Create shipment
+      // Create shipment with total price included in quote_data
+      const shipmentQuoteData = {
+        ...selectedQuote.quoteData,
+        totalPrice: selectedQuote.totalPrice
+      };
+
       const { data: shipment, error: shipmentError } = await supabase
         .from('shipments')
         .insert({
           tracking_code: trackingResult,
           sender_address_id: senderAddress.id,
           recipient_address_id: recipientAddress.id,
-          quote_data: selectedQuote.quoteData,
+          quote_data: shipmentQuoteData,
           selected_option: selectedQuote.option,
           pickup_option: selectedQuote.pickup,
           weight: parseFloat(selectedQuote.quoteData.weight),
@@ -404,7 +409,7 @@ const Label = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Origem:</span>
                     <div className="font-medium">{selectedQuote.quoteData.originCep}</div>
@@ -418,9 +423,15 @@ const Label = () => {
                     <div className="font-medium">{selectedQuote.quoteData.weight}kg</div>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Opção:</span>
+                    <span className="text-muted-foreground">Coleta:</span>
                     <div className="font-medium">
-                      {selectedQuote.option === 'economic' ? 'Menor Preço' : 'Menor Prazo'}
+                      {selectedQuote.pickup === 'pickup' ? 'No local (+R$ 10,00)' : 'Ponto de coleta (Grátis)'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Valor Total:</span>
+                    <div className="font-medium text-primary text-lg">
+                      R$ {selectedQuote.totalPrice?.toFixed(2)}
                     </div>
                   </div>
                 </div>
