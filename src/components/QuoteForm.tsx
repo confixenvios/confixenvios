@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { Calculator, MapPin, Package, Truck, User, CheckCircle, Circle, DollarSign, Clock } from "lucide-react";
+import { Calculator, MapPin, Package, Truck, User, CheckCircle, Circle, DollarSign, Clock, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { calculateShippingQuote, validateCep, formatCep } from "@/services/shippingService";
@@ -77,7 +77,9 @@ const QuoteForm = () => {
   const steps = [
     { number: 1, title: "Calcular Frete", icon: Calculator },
     { number: 2, title: "Opções de Coleta", icon: Truck },
-    { number: 3, title: "Dados da Etiqueta", icon: User }
+    { number: 3, title: "Dados da Etiqueta", icon: User },
+    { number: 4, title: "Documento Fiscal", icon: FileText },
+    { number: 5, title: "Pagamento", icon: DollarSign }
   ];
 
   const getPickupCost = (option: string) => {
@@ -250,8 +252,6 @@ const QuoteForm = () => {
         .single();
 
       if (shipmentError) throw shipmentError;
-
-      sessionStorage.setItem('currentShipment', JSON.stringify(shipment));
 
       toast({
         title: "Etiqueta criada!",
