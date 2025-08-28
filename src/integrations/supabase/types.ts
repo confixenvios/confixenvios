@@ -14,13 +14,141 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      addresses: {
+        Row: {
+          address_type: string
+          cep: string
+          city: string
+          complement: string | null
+          created_at: string
+          document: string
+          email: string
+          id: string
+          name: string
+          neighborhood: string
+          number: string
+          phone: string
+          reference: string | null
+          state: string
+          street: string
+          updated_at: string
+        }
+        Insert: {
+          address_type: string
+          cep: string
+          city: string
+          complement?: string | null
+          created_at?: string
+          document: string
+          email: string
+          id?: string
+          name: string
+          neighborhood: string
+          number: string
+          phone: string
+          reference?: string | null
+          state: string
+          street: string
+          updated_at?: string
+        }
+        Update: {
+          address_type?: string
+          cep?: string
+          city?: string
+          complement?: string | null
+          created_at?: string
+          document?: string
+          email?: string
+          id?: string
+          name?: string
+          neighborhood?: string
+          number?: string
+          phone?: string
+          reference?: string | null
+          state?: string
+          street?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      shipments: {
+        Row: {
+          created_at: string
+          format: string
+          height: number
+          id: string
+          length: number
+          pickup_option: string
+          quote_data: Json
+          recipient_address_id: string
+          selected_option: string
+          sender_address_id: string
+          status: string
+          tracking_code: string | null
+          updated_at: string
+          weight: number
+          width: number
+        }
+        Insert: {
+          created_at?: string
+          format: string
+          height: number
+          id?: string
+          length: number
+          pickup_option: string
+          quote_data: Json
+          recipient_address_id: string
+          selected_option: string
+          sender_address_id: string
+          status?: string
+          tracking_code?: string | null
+          updated_at?: string
+          weight: number
+          width: number
+        }
+        Update: {
+          created_at?: string
+          format?: string
+          height?: number
+          id?: string
+          length?: number
+          pickup_option?: string
+          quote_data?: Json
+          recipient_address_id?: string
+          selected_option?: string
+          sender_address_id?: string
+          status?: string
+          tracking_code?: string | null
+          updated_at?: string
+          weight?: number
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipments_recipient_address_id_fkey"
+            columns: ["recipient_address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipments_sender_address_id_fkey"
+            columns: ["sender_address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_tracking_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
