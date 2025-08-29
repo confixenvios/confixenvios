@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import InputMask from "react-input-mask";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,6 +75,28 @@ const Label = () => {
     setSelectedQuote(JSON.parse(savedQuote));
   }, [navigate]);
 
+  // Função para buscar endereço por CEP via ViaCEP
+  const fetchEnderecoPorCep = async (cep: string) => {
+    const apenasDigitos = cep.replace(/\D/g, "");
+    if (apenasDigitos.length !== 8) return null;
+
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${apenasDigitos}/json/`);
+      const data = await res.json();
+      if (data.erro) return null;
+
+      return {
+        logradouro: data.logradouro,
+        bairro: data.bairro,
+        cidade: data.localidade,
+        estado: data.uf,
+      };
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+      return null;
+    }
+  };
+
   const handleAddressChange = (
     type: 'sender' | 'recipient',
     field: keyof AddressData,
@@ -86,6 +109,49 @@ const Label = () => {
       setSenderData(prev => ({ ...prev, [field]: sanitizedValue }));
     } else {
       setRecipientData(prev => ({ ...prev, [field]: sanitizedValue }));
+    }
+  };
+
+  // Função especial para CEP com busca automática
+  const handleCepChange = async (
+    type: 'sender' | 'recipient',
+    value: string
+  ) => {
+    const sanitizedValue = sanitizeTextInput(value);
+    
+    if (type === 'sender') {
+      setSenderData(prev => ({ ...prev, cep: sanitizedValue }));
+    } else {
+      setRecipientData(prev => ({ ...prev, cep: sanitizedValue }));
+    }
+
+    // Buscar endereço quando CEP estiver completo
+    if (value.replace(/\D/g, "").length === 8) {
+      const endereco = await fetchEnderecoPorCep(value);
+      if (endereco) {
+        if (type === 'sender') {
+          setSenderData(prev => ({
+            ...prev,
+            street: endereco.logradouro || prev.street,
+            neighborhood: endereco.bairro || prev.neighborhood,
+            city: endereco.cidade || prev.city,
+            state: endereco.estado || prev.state
+          }));
+        } else {
+          setRecipientData(prev => ({
+            ...prev,
+            street: endereco.logradouro || prev.street,
+            neighborhood: endereco.bairro || prev.neighborhood,
+            city: endereco.cidade || prev.city,
+            state: endereco.estado || prev.state
+          }));
+        }
+        
+        toast({
+          title: "CEP encontrado!",
+          description: "Endereço preenchido automaticamente.",
+        });
+      }
     }
   };
 
@@ -274,26 +340,43 @@ const Label = () => {
           </div>
           <div className="space-y-2">
             <FormLabel htmlFor={`${type}-document`}>CPF/CNPJ *</FormLabel>
-            <Input
-              id={`${type}-document`}
+            <InputMask
+              mask={data.document?.replace(/\D/g, "").length > 11 ? "99.999.999/9999-99" : "999.999.999-99"}
+              maskPlaceholder={null}
               value={data.document}
               onChange={(e) => handleAddressChange(type, 'document', e.target.value)}
-              placeholder="000.000.000-00"
-              className="border-input-border focus:border-primary focus:ring-primary"
-            />
+            >
+              {(inputProps: any) => (
+                <Input
+                  {...inputProps}
+                  id={`${type}-document`}
+                  type="text"
+                  placeholder="CPF ou CNPJ"
+                  className="border-input-border focus:border-primary focus:ring-primary"
+                />
+              )}
+            </InputMask>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <FormLabel htmlFor={`${type}-phone`}>Telefone *</FormLabel>
-            <Input
-              id={`${type}-phone`}
+            <InputMask
+              mask="(99) 99999-9999"
               value={data.phone}
               onChange={(e) => handleAddressChange(type, 'phone', e.target.value)}
-              placeholder="(11) 99999-9999"
-              className="border-input-border focus:border-primary focus:ring-primary"
-            />
+            >
+              {(inputProps: any) => (
+                <Input
+                  {...inputProps}
+                  id={`${type}-phone`}
+                  type="tel"
+                  placeholder="(00) 00000-0000"
+                  className="border-input-border focus:border-primary focus:ring-primary"
+                />
+              )}
+            </InputMask>
           </div>
           <div className="space-y-2">
             <FormLabel htmlFor={`${type}-email`}>E-mail *</FormLabel>
@@ -313,13 +396,21 @@ const Label = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <FormLabel htmlFor={`${type}-cep`}>CEP *</FormLabel>
-            <Input
-              id={`${type}-cep`}
+            <InputMask
+              mask="99999-999"
               value={data.cep}
-              onChange={(e) => handleAddressChange(type, 'cep', e.target.value)}
-              placeholder="00000-000"
-              className="border-input-border focus:border-primary focus:ring-primary"
-            />
+              onChange={(e) => handleCepChange(type, e.target.value)}
+            >
+              {(inputProps: any) => (
+                <Input
+                  {...inputProps}
+                  id={`${type}-cep`}
+                  type="text"
+                  placeholder="00000-000"
+                  className="border-input-border focus:border-primary focus:ring-primary"
+                />
+              )}
+            </InputMask>
           </div>
           <div className="space-y-2 md:col-span-2">
             <FormLabel htmlFor={`${type}-street`}>Rua *</FormLabel>
