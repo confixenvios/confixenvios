@@ -188,9 +188,9 @@ const Results = () => {
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-medium">Coleta no local</h4>
+                    <h4 className="font-medium">Coletar no meu local</h4>
                     <p className="text-sm text-muted-foreground">
-                      Buscamos em seu endereço (Região Metropolitana de Goiânia)
+                      Buscamos em seu endereço (Região Metropolitana de Goiânia e Anápolis)
                     </p>
                   </div>
                   <Badge variant="outline">+ R$ 10,00</Badge>
