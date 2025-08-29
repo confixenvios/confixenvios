@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, user, loading } = useAuth();
+  const { signIn, signUp, user, loading, userRole, isAdmin } = useAuth();
   const { toast } = useToast();
   
   const [isLoading, setIsLoading] = useState(false);
@@ -36,9 +36,16 @@ const Auth = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !loading) {
-      navigate('/dashboard');
+      // Wait for user role to be loaded before redirecting
+      if (userRole !== null) {
+        if (isAdmin) {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/cliente/dashboard');
+        }
+      }
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, userRole, isAdmin, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +72,7 @@ const Auth = () => {
       } else {
         toast({
           title: "Login realizado com sucesso!",
-          description: "Redirecionando para o dashboard...",
+          description: "Redirecionando...",
         });
       }
     } catch (error: any) {
@@ -135,7 +142,7 @@ const Auth = () => {
         // Auto-login successful (email confirmation disabled)
         toast({
           title: "Conta criada e login realizado!",
-          description: "Redirecionando para o dashboard...",
+          description: "Redirecionando...",
         });
         // Will redirect automatically due to useEffect
       }
@@ -147,7 +154,7 @@ const Auth = () => {
   };
 
   const handleBack = () => {
-    navigate('/');
+    navigate('/cotacao');
   };
 
   if (loading) {

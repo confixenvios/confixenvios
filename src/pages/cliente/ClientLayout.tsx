@@ -6,23 +6,23 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { 
   LayoutDashboard, 
-  Puzzle, 
-  Users, 
-  Package, 
-  Webhook,
-  Settings,
+  Package2,
+  FileText,
+  Truck,
+  History,
+  User,
   LogOut,
   Menu,
   X,
-  Shield
+  Calculator
 } from "lucide-react";
 import { NavLink, useLocation } from 'react-router-dom';
 
-interface AdminLayoutProps {
+interface ClientLayoutProps {
   children: React.ReactNode;
 }
 
-const AdminLayout = ({ children }: AdminLayoutProps) => {
+const ClientLayout = ({ children }: ClientLayoutProps) => {
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -37,7 +37,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     if (user?.email) {
       return user.email.charAt(0).toUpperCase();
     }
-    return 'A';
+    return 'C';
   };
 
   const getDisplayName = () => {
@@ -47,21 +47,21 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     if (profile?.first_name) {
       return profile.first_name;
     }
-    return user?.email || 'Admin';
+    return user?.email || 'Cliente';
   };
 
   const navigation = [
-    { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { name: 'Integrações', href: '/admin/integracoes', icon: Puzzle },
-    { name: 'Clientes', href: '/admin/clientes', icon: Users },
-    { name: 'Remessas', href: '/admin/remessas', icon: Package },
-    { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
-    { name: 'Configurações', href: '/admin/configuracoes', icon: Settings },
+    { name: 'Dashboard', href: '/cliente/dashboard', icon: LayoutDashboard },
+    { name: 'Cotações', href: '/cliente/cotacoes', icon: Calculator },
+    { name: 'Remessas', href: '/cliente/remessas', icon: Package2 },
+    { name: 'Etiquetas', href: '/cliente/etiquetas', icon: FileText },
+    { name: 'Histórico', href: '/cliente/historico', icon: History },
+    { name: 'Minha Conta', href: '/cliente/minha-conta', icon: User },
   ];
 
   const isActive = (path: string) => {
-    if (path === '/admin') {
-      return location.pathname === '/admin';
+    if (path === '/cliente/dashboard') {
+      return location.pathname === '/cliente/dashboard' || location.pathname === '/cliente';
     }
     return location.pathname.startsWith(path);
   };
@@ -85,9 +85,9 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         <div className="flex items-center justify-between h-16 px-6 border-b border-sidebar-border">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Shield className="w-5 h-5 text-primary-foreground" />
+              <Truck className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold text-sidebar-foreground">Confix Admin</span>
+            <span className="text-lg font-bold text-sidebar-foreground">Confix Cliente</span>
           </div>
           <Button
             variant="ghost"
@@ -131,7 +131,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                 <span className="text-sm font-medium text-sidebar-foreground truncate">
                   {getDisplayName()}
                 </span>
-                <Badge variant="secondary" className="text-xs">Admin</Badge>
+                <Badge variant="secondary" className="text-xs">Cliente</Badge>
               </div>
               <p className="text-xs text-sidebar-foreground/60 truncate">
                 {user?.email}
@@ -162,8 +162,8 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
             <Menu className="w-5 h-5" />
           </Button>
           <div className="flex items-center space-x-2">
-            <Shield className="w-5 h-5 text-primary" />
-            <span className="font-bold">Confix Admin</span>
+            <Truck className="w-5 h-5 text-primary" />
+            <span className="font-bold">Confix Cliente</span>
           </div>
           <div className="w-10" /> {/* Spacer */}
         </div>
@@ -177,4 +177,4 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   );
 };
 
-export default AdminLayout;
+export default ClientLayout;

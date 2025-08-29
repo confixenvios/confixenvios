@@ -5,24 +5,24 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { 
-  Calculator, 
+  LayoutDashboard, 
+  Users, 
   Package, 
-  FileText, 
-  Search,
-  Clock,
-  User,
+  Webhook,
+  History,
   LogOut,
   Menu,
   X,
-  Truck
+  Shield,
+  Puzzle
 } from "lucide-react";
 import { NavLink, useLocation } from 'react-router-dom';
 
-interface ClientLayoutProps {
+interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-const ClientLayout = ({ children }: ClientLayoutProps) => {
+const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -37,7 +37,7 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
     if (user?.email) {
       return user.email.charAt(0).toUpperCase();
     }
-    return 'C';
+    return 'A';
   };
 
   const getDisplayName = () => {
@@ -47,21 +47,21 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
     if (profile?.first_name) {
       return profile.first_name;
     }
-    return user?.email || 'Cliente';
+    return user?.email || 'Admin';
   };
 
   const navigation = [
-    { name: 'Cotação', href: '/dashboard', icon: Calculator },
-    { name: 'Minhas Remessas', href: '/dashboard/remessas', icon: Package },
-    { name: 'Etiquetas', href: '/dashboard/etiquetas', icon: FileText },
-    { name: 'Rastreio', href: '/dashboard/rastreio', icon: Search },
-    { name: 'Histórico', href: '/dashboard/historico', icon: Clock },
-    { name: 'Minha Conta', href: '/dashboard/conta', icon: User },
+    { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+    { name: 'Clientes', href: '/admin/clientes', icon: Users },
+    { name: 'Remessas', href: '/admin/remessas', icon: Package },
+    { name: 'Integrações', href: '/admin/integracoes', icon: Puzzle },
+    { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
+    { name: 'Histórico', href: '/admin/historico', icon: History },
   ];
 
   const isActive = (path: string) => {
-    if (path === '/dashboard') {
-      return location.pathname === '/dashboard';
+    if (path === '/admin/dashboard') {
+      return location.pathname === '/admin/dashboard' || location.pathname === '/admin';
     }
     return location.pathname.startsWith(path);
   };
@@ -85,9 +85,9 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
         <div className="flex items-center justify-between h-16 px-6 border-b border-sidebar-border">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Truck className="w-5 h-5 text-primary-foreground" />
+              <Shield className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold text-sidebar-foreground">Confix Envios</span>
+            <span className="text-lg font-bold text-sidebar-foreground">Confix Admin</span>
           </div>
           <Button
             variant="ghost"
@@ -131,7 +131,7 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
                 <span className="text-sm font-medium text-sidebar-foreground truncate">
                   {getDisplayName()}
                 </span>
-                <Badge variant="secondary" className="text-xs">Cliente</Badge>
+                <Badge variant="secondary" className="text-xs">Admin</Badge>
               </div>
               <p className="text-xs text-sidebar-foreground/60 truncate">
                 {user?.email}
@@ -162,8 +162,8 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
             <Menu className="w-5 h-5" />
           </Button>
           <div className="flex items-center space-x-2">
-            <Truck className="w-5 h-5 text-primary" />
-            <span className="font-bold">Confix Envios</span>
+            <Shield className="w-5 h-5 text-primary" />
+            <span className="font-bold">Confix Admin</span>
           </div>
           <div className="w-10" /> {/* Spacer */}
         </div>
@@ -177,4 +177,4 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
   );
 };
 
-export default ClientLayout;
+export default AdminLayout;

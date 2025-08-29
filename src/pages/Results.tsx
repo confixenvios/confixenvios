@@ -56,21 +56,21 @@ const Results = () => {
 
     // Check if user is authenticated
     if (!user && !loading) {
-      // Store selections before showing auth modal
-      sessionStorage.setItem('selectedQuote', JSON.stringify({
-        option: "standard", // Sempre frete padrão
-        pickup: pickupOption,
-        quoteData,
-        totalPrice: getTotalPrice()
-      }));
-      
-      setShowAuthModal(true);
-      return;
-    }
+    // Store selections before showing auth modal
+    sessionStorage.setItem('selectedQuote', JSON.stringify({
+      option: "standard", // Sempre frete padrão
+      pickup: pickupOption,
+      quoteData,
+      totalPrice: getTotalPrice()
+    }));
+    
+    setShowAuthModal(true);
+    return;
+  }
 
-    // User is authenticated, proceed
-    proceedToNextStep();
-  };
+  // User is authenticated, proceed
+  proceedToNextStep();
+};
 
   const proceedToNextStep = () => {
     // Store selections and navigate to next step

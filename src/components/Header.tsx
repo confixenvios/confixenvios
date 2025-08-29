@@ -20,7 +20,7 @@ const Header = () => {
     <header className="border-b border-border bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <Link to="/" className="flex items-center space-x-2 group">
+          <Link to="/cotacao" className="flex items-center space-x-2 group">
             <div className="relative">
               <Package className="h-8 w-8 text-primary group-hover:scale-110 transition-transform duration-200" />
               <div className="absolute inset-0 bg-primary rounded-full blur-xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
@@ -32,7 +32,7 @@ const Header = () => {
           
           <nav className="flex items-center space-x-6">
             <Link 
-              to="/" 
+              to="/cotacao" 
               className="text-muted-foreground hover:text-foreground transition-colors font-medium hidden md:block"
             >
               Cotação
@@ -70,14 +70,14 @@ const Header = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">
                         <DropdownMenuItem asChild>
-                          <Link to="/dashboard" className="flex items-center">
+                          <Link to="/cliente/dashboard" className="flex items-center">
                             <LayoutDashboard className="mr-2 h-4 w-4" />
                             Dashboard
                           </Link>
                         </DropdownMenuItem>
                         {isAdmin && (
                           <DropdownMenuItem asChild>
-                            <Link to="/admin" className="flex items-center">
+                            <Link to="/admin/dashboard" className="flex items-center">
                               <Shield className="mr-2 h-4 w-4" />
                               Admin
                             </Link>
