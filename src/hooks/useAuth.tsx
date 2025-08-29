@@ -126,11 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       password,
     });
     
-    if (data.user && !error) {
-      // Force page reload for clean state
-      window.location.href = '/dashboard';
-    }
-    
+    // Don't redirect immediately, let the auth state change handle it
     return { error };
   };
 

@@ -35,7 +35,7 @@ const App = () => (
             <Route path="/rastreio" element={<Tracking />} />
             <Route path="/rastreio/:codigo" element={<Tracking />} />
             <Route 
-              path="/dashboard" 
+              path="/dashboard/*" 
               element={
                 <ProtectedRoute>
                   <Dashboard />
@@ -49,16 +49,6 @@ const App = () => (
               element={
                 <ProtectedRoute requireAdmin>
                   <Admin />
-                </ProtectedRoute>
-              } 
-            />
-            
-            {/* Client Routes - Using ClientDashboard */}
-            <Route 
-              path="/cliente/*" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
                 </ProtectedRoute>
               } 
             />

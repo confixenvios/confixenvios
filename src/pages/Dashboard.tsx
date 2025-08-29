@@ -2,6 +2,11 @@ import { Routes, Route } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import ClientLayout from '@/components/layouts/ClientLayout';
 import ClientDashboard from './client/ClientDashboard';
+import Remessas from './client/Remessas';
+import Etiquetas from './client/Etiquetas';
+import Rastreio from './client/Rastreio';
+import Historico from './client/Historico';
+import Conta from './client/Conta';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -14,11 +19,11 @@ const Dashboard = () => {
     <ClientLayout>
       <Routes>
         <Route index element={<ClientDashboard />} />
-        <Route path="remessas" element={<div className="p-6"><h1 className="text-2xl font-bold">Minhas Remessas</h1><p className="text-muted-foreground">Em breve...</p></div>} />
-        <Route path="etiquetas" element={<div className="p-6"><h1 className="text-2xl font-bold">Etiquetas</h1><p className="text-muted-foreground">Em breve...</p></div>} />
-        <Route path="rastreio" element={<div className="p-6"><h1 className="text-2xl font-bold">Rastreio</h1><p className="text-muted-foreground">Em breve...</p></div>} />
-        <Route path="historico" element={<div className="p-6"><h1 className="text-2xl font-bold">Histórico</h1><p className="text-muted-foreground">Em breve...</p></div>} />
-        <Route path="conta" element={<div className="p-6"><h1 className="text-2xl font-bold">Minha Conta</h1><p className="text-muted-foreground">Em breve...</p></div>} />
+        <Route path="remessas" element={<Remessas />} />
+        <Route path="etiquetas" element={<Etiquetas />} />
+        <Route path="rastreio" element={<Rastreio />} />
+        <Route path="historico" element={<Historico />} />
+        <Route path="conta" element={<Conta />} />
       </Routes>
     </ClientLayout>
   );

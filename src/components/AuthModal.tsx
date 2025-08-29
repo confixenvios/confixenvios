@@ -70,9 +70,12 @@ const AuthModal = ({ open, onOpenChange, onSuccess }: AuthModalProps) => {
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
           setError('Email ou senha incorretos');
+        } else if (error.message.includes('Email not confirmed')) {
+          setError('Confirme seu email antes de fazer login');
         } else {
-          setError(error.message);
+          setError(`Erro ao fazer login: ${error.message}`);
         }
+        console.error('Login error:', error);
       } else {
         toast({
           title: "Login realizado com sucesso!",
@@ -80,9 +83,13 @@ const AuthModal = ({ open, onOpenChange, onSuccess }: AuthModalProps) => {
         });
         resetForms();
         onOpenChange(false);
-        onSuccess?.();
+        // Wait a bit for auth state to settle
+        setTimeout(() => {
+          onSuccess?.();
+        }, 1000);
       }
     } catch (error: any) {
+      console.error('Unexpected login error:', error);
       setError('Erro inesperado. Tente novamente.');
     } finally {
       setIsLoading(false);
@@ -122,20 +129,29 @@ const AuthModal = ({ open, onOpenChange, onSuccess }: AuthModalProps) => {
       
       if (error) {
         if (error.message.includes('User already registered')) {
-          setError('Este email já está cadastrado');
+          setError('Este email já está cadastrado. Tente fazer login.');
+        } else if (error.message.includes('Unable to validate email address')) {
+          setError('Email inválido. Verifique o formato do email.');
+        } else if (error.message.includes('Password should be at least')) {
+          setError('A senha deve ter pelo menos 6 caracteres');
         } else {
-          setError(error.message);
+          setError(`Erro ao criar conta: ${error.message}`);
         }
+        console.error('Signup error:', error);
       } else {
         toast({
           title: "Conta criada com sucesso!",
-          description: "Continuando o processo...",
+          description: "Você foi logado automaticamente. Continuando...",
         });
         resetForms();
         onOpenChange(false);
-        onSuccess?.();
+        // Wait a bit for auth state to settle
+        setTimeout(() => {
+          onSuccess?.();
+        }, 1000);
       }
     } catch (error: any) {
+      console.error('Unexpected signup error:', error);
       setError('Erro inesperado. Tente novamente.');
     } finally {
       setIsLoading(false);
