@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 
 const Header = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
 
   return (
     <header className="border-b border-border bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
@@ -37,12 +37,37 @@ const Header = () => {
             {!loading && (
               <>
                 {user ? (
-                  <Button asChild>
-                    <Link to="/dashboard">
-                      <User className="h-4 w-4 mr-2" />
-                      Dashboard
-                    </Link>
-                  </Button>
+                  <div className="flex items-center space-x-4">
+                    <span className="text-sm text-muted-foreground hidden md:block">
+                      Olá, {user.email}
+                    </span>
+                    <div className="relative group">
+                      <Button variant="outline" size="sm">
+                        <User className="h-4 w-4 mr-2" />
+                        <span className="hidden md:inline">Minha Conta</span>
+                      </Button>
+                      <div className="absolute right-0 top-full mt-2 w-48 bg-background border rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                        <div className="p-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="w-full justify-start"
+                            asChild
+                          >
+                            <Link to="/dashboard">Dashboard</Link>
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="w-full justify-start text-destructive hover:text-destructive"
+                            onClick={() => signOut()}
+                          >
+                            Sair
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <Button asChild>
                     <Link to="/auth">

@@ -1,18 +1,22 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
+import AuthModal from "@/components/AuthModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, DollarSign, MapPin, Package, Truck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { formatCep } from "@/services/shippingService";
 
 const Results = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, loading } = useAuth();
   const [quoteData, setQuoteData] = useState<any>(null);
   const [pickupOption, setPickupOption] = useState<string>("");
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Função para calcular valor da coleta baseado na região
   const getPickupCost = (option: string) => {
@@ -50,6 +54,25 @@ const Results = () => {
       return;
     }
 
+    // Check if user is authenticated
+    if (!user && !loading) {
+      // Store selections before showing auth modal
+      sessionStorage.setItem('selectedQuote', JSON.stringify({
+        option: "standard", // Sempre frete padrão
+        pickup: pickupOption,
+        quoteData,
+        totalPrice: getTotalPrice()
+      }));
+      
+      setShowAuthModal(true);
+      return;
+    }
+
+    // User is authenticated, proceed
+    proceedToNextStep();
+  };
+
+  const proceedToNextStep = () => {
     // Store selections and navigate to next step
     sessionStorage.setItem('selectedQuote', JSON.stringify({
       option: "standard", // Sempre frete padrão
@@ -64,6 +87,11 @@ const Results = () => {
     });
     
     navigate("/etiqueta");
+  };
+
+  const handleAuthSuccess = () => {
+    // After successful auth, proceed to next step
+    proceedToNextStep();
   };
 
   if (!quoteData) {
@@ -229,6 +257,12 @@ const Results = () => {
           </div>
         </div>
       </div>
+
+      <AuthModal 
+        open={showAuthModal}
+        onOpenChange={setShowAuthModal}
+        onSuccess={handleAuthSuccess}
+      />
     </div>
   );
 };
