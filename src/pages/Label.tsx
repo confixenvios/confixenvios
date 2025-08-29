@@ -595,7 +595,7 @@ const Label = () => {
                     <span>Processando...</span>
                   </div>
                 ) : (
-                  "Continuar para Documento Fiscal"
+                  "Avançar"
                 )}
               </Button>
             </div>

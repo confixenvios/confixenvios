@@ -1107,7 +1107,7 @@ const QuoteForm = () => {
                     ) : (
                       <>
                         <CheckCircle className="mr-2 h-5 w-5" />
-                        Criar Etiqueta
+                        Avançar
                       </>
                     )}
                   </Button>
