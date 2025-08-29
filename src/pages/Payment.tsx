@@ -46,11 +46,33 @@ const Payment = () => {
     setSelectedMethod(methodId);
   };
 
-  const handleConfirmPayment = () => {
-    // Here you would integrate with payment processing
-    console.log('Processing payment with method:', selectedMethod);
-    // For now, just navigate to a success page or tracking
-    navigate('/rastreio');
+  const handleConfirmPayment = async () => {
+    if (!selectedMethod) return;
+    
+    try {
+      // Simulate payment processing
+      console.log('Processing payment with method:', selectedMethod);
+      
+      // Update shipment with payment data
+      const paymentData = {
+        method: selectedMethod,
+        amount: (parseFloat(shipmentData.quote_data?.shippingQuote?.economicPrice || 0) + 10),
+        status: 'PAID'
+      };
+
+      // Here you would integrate with real payment gateway
+      // For demo, we'll simulate a successful payment
+      
+      // Store payment data and navigate to payment success
+      sessionStorage.setItem('paymentData', JSON.stringify(paymentData));
+      sessionStorage.setItem('paymentShipmentId', shipmentData.id || 'temp-id');
+      
+      navigate('/pagamento-sucesso');
+      
+    } catch (error) {
+      console.error('Payment error:', error);
+      // Handle payment error
+    }
   };
 
   return (

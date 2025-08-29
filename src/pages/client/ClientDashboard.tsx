@@ -50,12 +50,12 @@ const ClientDashboard = () => {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id);
 
-      // Pending shipments
+      // Pending shipments  
       const { count: pendingCount } = await supabase
         .from('shipments')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
-        .in('status', ['PENDING_DOCUMENT', 'PENDING_LABEL']);
+        .in('status', ['PENDING_DOCUMENT', 'PENDING_PAYMENT', 'PENDING_LABEL', 'PAYMENT_CONFIRMED', 'AWAITING_LABEL']);
 
       // Delivered shipments
       const { count: deliveredCount } = await supabase
@@ -91,6 +91,14 @@ const ClientDashboard = () => {
         return <Badge variant="destructive">Aguardando Etiqueta</Badge>;
       case 'PENDING_DOCUMENT':
         return <Badge variant="destructive">Aguardando Documento</Badge>;
+      case 'PENDING_PAYMENT':
+        return <Badge variant="destructive">Aguardando Pagamento</Badge>;
+      case 'PAYMENT_CONFIRMED':
+        return <Badge className="bg-info text-info-foreground">Pagamento Confirmado</Badge>;
+      case 'AWAITING_LABEL':
+        return <Badge variant="secondary">Aguardando Etiqueta</Badge>;
+      case 'LABEL_AVAILABLE':
+        return <Badge className="bg-success text-success-foreground">Etiqueta Disponível</Badge>;
       case 'PAID':
         return <Badge className="bg-success text-success-foreground">Pago</Badge>;
       case 'DELIVERED':

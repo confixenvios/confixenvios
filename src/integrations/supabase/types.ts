@@ -74,6 +74,36 @@ export type Database = {
         }
         Relationships: []
       }
+      integrations: {
+        Row: {
+          active: boolean | null
+          created_at: string
+          id: string
+          name: string
+          secret_key: string | null
+          updated_at: string
+          webhook_url: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string
+          id?: string
+          name: string
+          secret_key?: string | null
+          updated_at?: string
+          webhook_url: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string
+          id?: string
+          name?: string
+          secret_key?: string | null
+          updated_at?: string
+          webhook_url?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -107,10 +137,13 @@ export type Database = {
       shipments: {
         Row: {
           created_at: string
+          cte_key: string | null
           format: string
           height: number
           id: string
+          label_pdf_url: string | null
           length: number
+          payment_data: Json | null
           pickup_option: string
           quote_data: Json
           recipient_address_id: string
@@ -125,10 +158,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          cte_key?: string | null
           format: string
           height: number
           id?: string
+          label_pdf_url?: string | null
           length: number
+          payment_data?: Json | null
           pickup_option: string
           quote_data: Json
           recipient_address_id: string
@@ -143,10 +179,13 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          cte_key?: string | null
           format?: string
           height?: number
           id?: string
+          label_pdf_url?: string | null
           length?: number
+          payment_data?: Json | null
           pickup_option?: string
           quote_data?: Json
           recipient_address_id?: string

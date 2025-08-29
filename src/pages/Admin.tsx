@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import AdminLayout from '@/components/layouts/AdminLayout';
 import AdminDashboard from './admin/AdminDashboard';
+import Integracoes from './admin/Integracoes';
 import WebhookManagement from '@/components/admin/WebhookManagement';
 import ActiveClients from '@/components/admin/ActiveClients';
 
@@ -16,7 +17,7 @@ const Admin = () => {
     <AdminLayout>
       <Routes>
         <Route index element={<AdminDashboard />} />
-        <Route path="integracoes" element={<div className="p-6"><h1 className="text-2xl font-bold">Integrações</h1><p className="text-muted-foreground">Em breve...</p></div>} />
+        <Route path="integracoes" element={<Integracoes />} />
         <Route path="clientes" element={<div className="p-6"><ActiveClients /></div>} />
         <Route path="remessas" element={<div className="p-6"><h1 className="text-2xl font-bold">Remessas</h1><p className="text-muted-foreground">Em breve...</p></div>} />
         <Route path="webhooks" element={<div className="p-6"><WebhookManagement /></div>} />

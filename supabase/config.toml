@@ -1,1 +1,7 @@
 project_id = "dhznyjtisfdxzbnzinab"
+
+[functions.webhook-dispatch]
+verify_jwt = false
+
+[functions.webhook-tms]  
+verify_jwt = false

@@ -11,6 +11,7 @@ import Label from "./pages/Label";
 import Document from "./pages/Document";
 import Tracking from "./pages/Tracking";
 import Payment from "./pages/Payment";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/etiqueta" element={<Label />} />
             <Route path="/documento" element={<Document />} />
             <Route path="/pagamento" element={<Payment />} />
+            <Route path="/pagamento-sucesso" element={<PaymentSuccess />} />
             <Route path="/rastreio" element={<Tracking />} />
             <Route path="/rastreio/:codigo" element={<Tracking />} />
             <Route 

@@ -1,248 +1,285 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Settings, Plus, Edit, Trash2, Webhook, MessageSquare, CreditCard, Truck } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { 
+  Settings, 
+  Plus, 
+  Globe, 
+  Key, 
+  Trash2, 
+  Edit2,
+  TestTube,
+  Link as LinkIcon,
+  AlertTriangle
+} from "lucide-react";
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Integration {
   id: string;
-  type: 'tms' | 'payment' | 'email' | 'whatsapp';
   name: string;
-  url: string;
-  secret?: string;
+  webhook_url: string;
+  secret_key?: string;
   active: boolean;
-  description: string;
-  icon: any;
+  created_at: string;
+  updated_at: string;
 }
 
 const Integracoes = () => {
   const { toast } = useToast();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIntegration, setEditingIntegration] = useState<Integration | null>(null);
-
-  // Mock data for demo
-  const [integrations, setIntegrations] = useState<Integration[]>([
-    {
-      id: "1",
-      type: "tms",
-      name: "Sistema TMS Principal",
-      url: "https://api.tms.exemplo.com/webhook",
-      secret: "tms_secret_123",
-      active: true,
-      description: "Integração com sistema de gerenciamento de transporte",
-      icon: Truck
-    },
-    {
-      id: "2", 
-      type: "payment",
-      name: "Gateway de Pagamento",
-      url: "https://api.pagamento.exemplo.com/webhook",
-      secret: "pay_secret_456",
-      active: true,
-      description: "Processamento de pagamentos PIX e cartão",
-      icon: CreditCard
-    },
-    {
-      id: "3",
-      type: "whatsapp",
-      name: "WhatsApp Business",
-      url: "https://api.whatsapp.exemplo.com/webhook",
-      secret: "wa_secret_789",
-      active: false,
-      description: "Notificações via WhatsApp para clientes",
-      icon: MessageSquare
-    }
-  ]);
-
   const [formData, setFormData] = useState({
-    type: "tms" as 'tms' | 'payment' | 'email' | 'whatsapp',
-    name: "",
-    url: "",
-    secret: "",
-    active: true,
-    description: ""
+    name: '',
+    webhook_url: '',
+    secret_key: '',
+    active: true
   });
 
-  const integrationTypes = [
-    { value: "tms", label: "TMS - Transporte", icon: Truck },
-    { value: "payment", label: "Pagamento", icon: CreditCard },
-    { value: "email", label: "E-mail", icon: MessageSquare },
-    { value: "whatsapp", label: "WhatsApp", icon: MessageSquare }
-  ];
+  useEffect(() => {
+    loadIntegrations();
+  }, []);
 
-  const handleSave = () => {
-    if (!formData.name || !formData.url) {
+  const loadIntegrations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('integrations')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setIntegrations(data || []);
+    } catch (error) {
+      console.error('Error loading integrations:', error);
       toast({
-        title: "Campos obrigatórios",
-        description: "Preencha nome e URL",
+        title: "Erro",
+        description: "Não foi possível carregar as integrações.",
         variant: "destructive"
       });
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    if (editingIntegration) {
-      // Update existing
-      setIntegrations(prev => prev.map(integration => 
-        integration.id === editingIntegration.id 
-          ? { ...integration, ...formData, Icon: integrationTypes.find(t => t.value === formData.type)?.icon || Webhook }
-          : integration
-      ));
-      
-      toast({
-        title: "Integração atualizada!",
-        description: `${formData.name} foi atualizada com sucesso`,
-      });
-    } else {
-      // Create new
-      const newIntegration: Integration = {
-        id: Date.now().toString(),
-        ...formData,
-        icon: integrationTypes.find(t => t.value === formData.type)?.icon || Webhook
-      };
-      
-      setIntegrations(prev => [...prev, newIntegration]);
-      
-      toast({
-        title: "Integração criada!",
-        description: `${formData.name} foi configurada com sucesso`,
-      });
-    }
-
-    // Reset form
-    setFormData({
-      type: "tms",
-      name: "",
-      url: "",
-      secret: "",
-      active: true,
-      description: ""
-    });
-    setEditingIntegration(null);
-    setIsDialogOpen(false);
   };
 
-  const handleEdit = (integration: Integration) => {
+  const handleSaveIntegration = async () => {
+    try {
+      if (editingIntegration) {
+        // Update existing integration
+        const { error } = await supabase
+          .from('integrations')
+          .update(formData)
+          .eq('id', editingIntegration.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Sucesso",
+          description: "Integração atualizada com sucesso!"
+        });
+      } else {
+        // Create new integration
+        const { error } = await supabase
+          .from('integrations')
+          .insert([formData]);
+
+        if (error) throw error;
+
+        toast({
+          title: "Sucesso",
+          description: "Integração criada com sucesso!"
+        });
+      }
+
+      setDialogOpen(false);
+      setEditingIntegration(null);
+      setFormData({ name: '', webhook_url: '', secret_key: '', active: true });
+      loadIntegrations();
+    } catch (error) {
+      console.error('Error saving integration:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar a integração.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditIntegration = (integration: Integration) => {
     setEditingIntegration(integration);
     setFormData({
-      type: integration.type,
       name: integration.name,
-      url: integration.url,
-      secret: integration.secret || "",
-      active: integration.active,
-      description: integration.description
+      webhook_url: integration.webhook_url,
+      secret_key: integration.secret_key || '',
+      active: integration.active
     });
-    setIsDialogOpen(true);
+    setDialogOpen(true);
   };
 
-  const handleDelete = (integration: Integration) => {
-    setIntegrations(prev => prev.filter(i => i.id !== integration.id));
-    toast({
-      title: "Integração removida",
-      description: `${integration.name} foi removida`,
-    });
-  };
+  const handleDeleteIntegration = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta integração?')) return;
 
-  const toggleIntegration = (integration: Integration) => {
-    setIntegrations(prev => prev.map(i => 
-      i.id === integration.id 
-        ? { ...i, active: !i.active }
-        : i
-    ));
-    
-    toast({
-      title: integration.active ? "Integração desativada" : "Integração ativada",
-      description: `${integration.name} foi ${integration.active ? 'desativada' : 'ativada'}`,
-    });
-  };
+    try {
+      const { error } = await supabase
+        .from('integrations')
+        .delete()
+        .eq('id', id);
 
-  const testWebhook = async (integration: Integration) => {
-    toast({
-      title: "Testando webhook...",
-      description: `Enviando teste para ${integration.name}`,
-    });
+      if (error) throw error;
 
-    // Simulate webhook test
-    setTimeout(() => {
       toast({
-        title: "Teste concluído!",
-        description: "Webhook respondeu com sucesso (200 OK)",
+        title: "Sucesso",
+        description: "Integração excluída com sucesso!"
       });
-    }, 2000);
+
+      loadIntegrations();
+    } catch (error) {
+      console.error('Error deleting integration:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir a integração.",
+        variant: "destructive"
+      });
+    }
   };
+
+  const handleTestIntegration = async (integration: Integration) => {
+    try {
+      // Create a test webhook payload
+      const testPayload = {
+        shipmentId: "test-shipment-id",
+        trackingCode: "TRK-TEST123",
+        cteKey: "35200214200166000187550000000000123456789",
+        labelPdfUrl: "https://example.com/test-label.pdf",
+        status: "LABEL_AVAILABLE"
+      };
+
+      const response = await fetch(integration.webhook_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(integration.secret_key && { 'Authorization': `Bearer ${integration.secret_key}` })
+        },
+        body: JSON.stringify(testPayload)
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Sucesso",
+          description: "Teste de webhook enviado com sucesso!"
+        });
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error testing integration:', error);
+      toast({
+        title: "Erro no Teste",
+        description: `Não foi possível testar o webhook: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleToggleActive = async (integration: Integration) => {
+    try {
+      const { error } = await supabase
+        .from('integrations')
+        .update({ active: !integration.active })
+        .eq('id', integration.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: `Integração ${!integration.active ? 'ativada' : 'desativada'} com sucesso!`
+      });
+
+      loadIntegrations();
+    } catch (error) {
+      console.error('Error toggling integration:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível alterar o status da integração.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-32 bg-muted animate-pulse rounded" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold">Integrações</h1>
+          <h1 className="text-2xl font-bold text-foreground">Integrações Webhook</h1>
           <p className="text-muted-foreground">
-            Configure webhooks e integrações externas
+            Configure webhooks para sistemas externos (TMS)
           </p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-primary">
+            <Button onClick={() => {
+              setEditingIntegration(null);
+              setFormData({ name: '', webhook_url: '', secret_key: '', active: true });
+            }}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Integração
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[525px]">
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>
-                {editingIntegration ? 'Editar' : 'Criar'} Integração
+                {editingIntegration ? 'Editar' : 'Nova'} Integração
               </DialogTitle>
-              <DialogDescription>
-                Configure uma nova integração via webhook
-              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome da Integração *</Label>
+              <div>
+                <Label htmlFor="name">Nome da Integração</Label>
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Ex: Sistema TMS Principal"
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="url">URL do Webhook *</Label>
+              <div>
+                <Label htmlFor="webhook_url">URL do Webhook</Label>
                 <Input
-                  id="url" 
-                  value={formData.url}
-                  onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+                  id="webhook_url"
+                  value={formData.webhook_url}
+                  onChange={(e) => setFormData({ ...formData, webhook_url: e.target.value })}
                   placeholder="https://api.exemplo.com/webhook"
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="secret">Secret (Opcional)</Label>
+              <div>
+                <Label htmlFor="secret_key">Chave Secreta (Opcional)</Label>
                 <Input
-                  id="secret"
+                  id="secret_key"
                   type="password"
-                  value={formData.secret}
-                  onChange={(e) => setFormData(prev => ({ ...prev, secret: e.target.value }))}
-                  placeholder="Chave secreta para autenticação"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descreva o propósito desta integração..."
-                  rows={3}
+                  value={formData.secret_key}
+                  onChange={(e) => setFormData({ ...formData, secret_key: e.target.value })}
+                  placeholder="Token de autenticação"
                 />
               </div>
               
@@ -250,126 +287,121 @@ const Integracoes = () => {
                 <Switch
                   id="active"
                   checked={formData.active}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, active: checked }))}
+                  onCheckedChange={(checked) => setFormData({ ...formData, active: checked })}
                 />
-                <Label htmlFor="active">Ativar integração</Label>
+                <Label htmlFor="active">Ativo</Label>
               </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSave}>
+              
+              <Button onClick={handleSaveIntegration} className="w-full">
                 {editingIntegration ? 'Atualizar' : 'Criar'} Integração
               </Button>
-            </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Integration Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {integrations.map((integration) => {
-          const IconComponent = integration.icon;
-          
-          return (
-            <Card key={integration.id} className="shadow-card">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <IconComponent className="h-5 w-5 text-primary" />
+      {/* Warning Info */}
+      <Card className="border-warning/20 bg-warning/5">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
+            <div className="space-y-2 text-sm">
+              <p className="font-medium">Como funciona o fluxo de webhook:</p>
+              <div className="text-muted-foreground space-y-1">
+                <p>1. Cliente faz pagamento → Sistema dispara POST para URL configurada</p>
+                <p>2. Sistema externo processa e responde via <code>/api/webhooks/tms</code></p>
+                <p>3. Status da remessa é atualizado para "Etiqueta Disponível"</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Integrations List */}
+      {integrations.length === 0 ? (
+        <Card className="border-border/50">
+          <CardContent className="py-12">
+            <div className="text-center">
+              <Settings className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-4">
+                Nenhuma integração configurada
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {integrations.map((integration) => (
+            <Card key={integration.id} className="border-border/50">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4 flex-1">
+                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <LinkIcon className="h-5 w-5 text-primary" />
                     </div>
-                    <div>
-                      <CardTitle className="text-lg">{integration.name}</CardTitle>
-                      <Badge variant={integration.active ? "default" : "secondary"}>
-                        {integration.active ? "Ativa" : "Inativa"}
-                      </Badge>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="font-semibold">{integration.name}</h3>
+                        <Badge variant={integration.active ? "default" : "secondary"}>
+                          {integration.active ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </div>
+                      
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-3 w-3" />
+                          <span className="font-mono text-xs">{integration.webhook_url}</span>
+                        </div>
+                        {integration.secret_key && (
+                          <div className="flex items-center gap-2">
+                            <Key className="h-3 w-3" />
+                            <span>Autenticação configurada</span>
+                          </div>
+                        )}
+                        <p>Criado em: {new Date(integration.created_at).toLocaleDateString('pt-BR')}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  {integration.description}
-                </p>
-                
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="font-medium">URL:</span>
-                    <p className="text-muted-foreground break-all font-mono">
-                      {integration.url}
-                    </p>
-                  </div>
-                  {integration.secret && (
-                    <div>
-                      <span className="font-medium">Secret:</span>
-                      <p className="text-muted-foreground font-mono">
-                        •••••••••••••
-                      </p>
-                    </div>
-                  )}
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="ghost"
+                  
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
                       size="sm"
-                      onClick={() => handleEdit(integration)}
+                      onClick={() => handleTestIntegration(integration)}
                     >
-                      <Edit className="h-4 w-4" />
+                      <TestTube className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
+                    
+                    <Button 
+                      variant="outline" 
                       size="sm"
-                      onClick={() => handleDelete(integration)}
+                      onClick={() => handleToggleActive(integration)}
+                    >
+                      <Switch checked={integration.active} />
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleEditIntegration(integration)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDeleteIntegration(integration.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => testWebhook(integration)}
-                      disabled={!integration.active}
-                    >
-                      <Webhook className="h-4 w-4" />
-                    </Button>
                   </div>
-                  
-                  <Switch
-                    checked={integration.active}
-                    onCheckedChange={() => toggleIntegration(integration)}
-                  />
                 </div>
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
-
-      {/* Info Card */}
-      <Card className="bg-primary/5 border-primary/20">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-primary">
-            <Settings className="h-5 w-5" />
-            <span>Como funcionam as integrações</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <p>
-            <strong>Webhooks automáticos:</strong> Sempre que uma cotação é feita, enviamos os dados para todas as integrações ativas.
-          </p>
-          <p>
-            <strong>Retorno do TMS:</strong> Quando o sistema externo processar a cotação, ele deve retornar os dados da etiqueta.
-          </p>
-          <p>
-            <strong>Segurança:</strong> Use o campo "Secret" para validar que os webhooks vêm realmente do seu sistema.
-          </p>
-        </CardContent>
-      </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
