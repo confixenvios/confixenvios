@@ -284,7 +284,7 @@ const QuoteForm = () => {
     }
   };
 
-  // Step 2: Selecionar opções
+  // Step 2: Selecionar opções e navegar para dados da etiqueta
   const handleStep2Submit = () => {
     if (!pickupOption) {
       toast({
@@ -295,11 +295,23 @@ const QuoteForm = () => {
       return;
     }
     
-    setCurrentStep(3);
+    // Save quote data to sessionStorage for the label page
+    const quoteForLabel = {
+      quoteData: quoteData,
+      option: "standard", // Default option since we only have one shipping option
+      pickup: pickupOption,
+      totalPrice: getTotalPrice()
+    };
+
+    sessionStorage.setItem('selectedQuote', JSON.stringify(quoteForLabel));
+
     toast({
       title: "Opção selecionada!",
       description: "Agora preencha os dados da etiqueta",
     });
+
+    // Navigate to label page instead of continuing to step 3
+    navigate("/etiqueta");
   };
 
   // Step 3: Criar etiqueta
@@ -800,12 +812,11 @@ const QuoteForm = () => {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label>CPF/CNPJ *</Label>
-                            <InputMask
-                              mask={senderData.document?.replace(/\D/g, "").length > 11 ? "99.999.999/9999-99" : "999.999.999-99"}
-                              maskPlaceholder={null}
-                              value={senderData.document}
-                              onChange={(e) => handleAddressChange('sender', 'document', e.target.value)}
-                            >
+                             <InputMask
+                               mask={senderData.document?.replace(/\D/g, "").length > 11 ? "99.999.999/9999-99" : "999.999.999-99"}
+                               value={senderData.document}
+                               onChange={(e) => handleAddressChange('sender', 'document', e.target.value)}
+                             >
                               {(inputProps: any) => (
                                 <Input
                                   {...inputProps}
@@ -954,12 +965,11 @@ const QuoteForm = () => {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label>CPF/CNPJ *</Label>
-                            <InputMask
-                              mask={recipientData.document?.replace(/\D/g, "").length > 11 ? "99.999.999/9999-99" : "999.999.999-99"}
-                              maskPlaceholder={null}
-                              value={recipientData.document}
-                              onChange={(e) => handleAddressChange('recipient', 'document', e.target.value)}
-                            >
+                             <InputMask
+                               mask={recipientData.document?.replace(/\D/g, "").length > 11 ? "99.999.999/9999-99" : "999.999.999-99"}
+                               value={recipientData.document}
+                               onChange={(e) => handleAddressChange('recipient', 'document', e.target.value)}
+                             >
                               {(inputProps: any) => (
                                 <Input
                                   {...inputProps}

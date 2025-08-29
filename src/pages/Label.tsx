@@ -363,7 +363,6 @@ const Label = () => {
             <FormLabel htmlFor={`${type}-document`}>CPF/CNPJ *</FormLabel>
             <InputMask
               mask={data.document?.replace(/\D/g, "").length > 11 ? "99.999.999/9999-99" : "999.999.999-99"}
-              maskPlaceholder={null}
               value={data.document}
               onChange={(e) => handleAddressChange(type, 'document', e.target.value)}
             >
