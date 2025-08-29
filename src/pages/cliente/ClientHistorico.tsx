@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Package } from "lucide-react";
 
-const Historico = () => {
+const ClientHistorico = () => {
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col space-y-2">
@@ -33,4 +33,4 @@ const Historico = () => {
   );
 };
 
-export default Historico;
+export default ClientHistorico;

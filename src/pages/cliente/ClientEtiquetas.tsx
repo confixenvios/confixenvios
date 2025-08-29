@@ -24,7 +24,7 @@ interface Shipment {
   cte_key?: string;
 }
 
-const Etiquetas = () => {
+const ClientEtiquetas = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [shipments, setShipments] = useState<Shipment[]>([]);
@@ -157,7 +157,7 @@ const Etiquetas = () => {
               <p className="text-muted-foreground mb-4">
                 Você ainda não possui remessas
               </p>
-              <Button onClick={() => window.location.href = '/dashboard'}>
+              <Button onClick={() => window.location.href = '/cliente/cotacoes'}>
                 Fazer primeira cotação
               </Button>
             </div>
@@ -224,4 +224,4 @@ const Etiquetas = () => {
   );
 };
 
-export default Etiquetas;
+export default ClientEtiquetas;

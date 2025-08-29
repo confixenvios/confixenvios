@@ -3,7 +3,7 @@ import { Package, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
-const Remessas = () => {
+const ClientRemessas = () => {
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col space-y-2">
@@ -30,7 +30,7 @@ const Remessas = () => {
             Você ainda não criou nenhuma remessa. Comece fazendo uma cotação.
           </p>
           <Button asChild>
-            <Link to="/dashboard">
+            <Link to="/cliente/cotacoes">
               <Plus className="w-4 h-4 mr-2" />
               Nova Cotação
             </Link>
@@ -41,4 +41,4 @@ const Remessas = () => {
   );
 };
 
-export default Remessas;
+export default ClientRemessas;

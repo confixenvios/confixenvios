@@ -30,7 +30,7 @@ interface Integration {
   updated_at: string;
 }
 
-const Integracoes = () => {
+const AdminIntegracoes = () => {
   const { toast } = useToast();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
@@ -406,4 +406,4 @@ const Integracoes = () => {
   );
 };
 
-export default Integracoes;
+export default AdminIntegracoes;

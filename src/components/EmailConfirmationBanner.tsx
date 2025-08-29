@@ -26,7 +26,8 @@ const EmailConfirmationBanner = () => {
         type: 'signup',
         email: user.email,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`
+          // Redirect will be handled based on user role after confirmation
+          emailRedirectTo: `${window.location.origin}/auth`
         }
       });
 

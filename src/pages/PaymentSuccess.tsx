@@ -21,7 +21,7 @@ const PaymentSuccess = () => {
         const shipmentData = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
 
         if (!shipmentId || !paymentData.method) {
-          navigate('/dashboard');
+          navigate('/cliente/dashboard');
           return;
         }
 
@@ -181,12 +181,12 @@ const PaymentSuccess = () => {
             </div>
             
             <div className="flex gap-4 pt-4">
-              <Button onClick={() => navigate('/dashboard')} className="flex-1">
+              <Button onClick={() => navigate('/cliente/dashboard')} className="flex-1">
                 Ir para Dashboard
               </Button>
               <Button 
                 variant="outline" 
-                onClick={() => navigate('/dashboard/remessas')}
+                onClick={() => navigate('/cliente/remessas')}
                 className="flex-1"
               >
                 Ver Remessas

@@ -20,7 +20,7 @@ interface Shipment {
   createdAt: string;
 }
 
-const Remessas = () => {
+const AdminRemessas = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -275,4 +275,4 @@ const Remessas = () => {
   );
 };
 
-export default Remessas;
+export default AdminRemessas;

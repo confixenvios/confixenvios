@@ -3,7 +3,7 @@ import { User, Mail, Phone, Calendar } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 
-const Conta = () => {
+const ClientConta = () => {
   const { user, profile, userRole } = useAuth();
 
   return (
@@ -103,4 +103,4 @@ const Conta = () => {
   );
 };
 
-export default Conta;
+export default ClientConta;
