@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Users, 
   Package, 
@@ -14,11 +15,15 @@ import {
   Shield,
   Database,
   FileText,
-  DollarSign
+  DollarSign,
+  Webhook,
+  UserCheck
 } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import WebhookManagement from '@/components/admin/WebhookManagement';
+import ActiveClients from '@/components/admin/ActiveClients';
 
 interface Stats {
   totalUsers: number;
@@ -231,100 +236,174 @@ const Admin = () => {
           </Card>
         </div>
 
-        {/* Management Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* User Management */}
-          <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Users className="h-5 w-5" />
-                <span>Gestão de Usuários</span>
-              </CardTitle>
-              <CardDescription>
-                Gerencie contas de usuário e permissões
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button className="w-full" variant="outline">
-                <Users className="h-4 w-4 mr-2" />
-                Ver Todos os Usuários
-              </Button>
-              <Button className="w-full" variant="outline">
-                <Shield className="h-4 w-4 mr-2" />
-                Gerenciar Administradores
-              </Button>
-            </CardContent>
-          </Card>
+        {/* Admin Tabs */}
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+            <TabsTrigger value="overview" className="flex items-center space-x-2">
+              <TrendingUp className="h-4 w-4" />
+              <span className="hidden sm:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="clients" className="flex items-center space-x-2">
+              <UserCheck className="h-4 w-4" />
+              <span className="hidden sm:inline">Clientes</span>
+            </TabsTrigger>
+            <TabsTrigger value="webhooks" className="flex items-center space-x-2">
+              <Webhook className="h-4 w-4" />
+              <span className="hidden sm:inline">Webhooks</span>
+            </TabsTrigger>
+            <TabsTrigger value="management" className="flex items-center space-x-2">
+              <Settings className="h-4 w-4" />
+              <span className="hidden sm:inline">Gestão</span>
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Shipment Management */}
-          <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Package className="h-5 w-5" />
-                <span>Gestão de Envios</span>
-              </CardTitle>
-              <CardDescription>
-                Monitore e gerencie todos os envios
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button className="w-full" variant="outline">
-                <Package className="h-4 w-4 mr-2" />
-                Ver Todos os Envios
-              </Button>
-              <Button className="w-full" variant="outline">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Relatórios de Envio
-              </Button>
-            </CardContent>
-          </Card>
+          <TabsContent value="overview" className="space-y-6">
+            {/* Management Overview Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* User Management */}
+              <Card className="border-border/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Users className="h-5 w-5" />
+                    <span>Gestão de Usuários</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie contas de usuário e permissões
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Button className="w-full" variant="outline">
+                    <Users className="h-4 w-4 mr-2" />
+                    Ver Todos os Usuários
+                  </Button>
+                  <Button className="w-full" variant="outline">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Gerenciar Administradores
+                  </Button>
+                </CardContent>
+              </Card>
 
-          {/* System Settings */}
-          <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Settings className="h-5 w-5" />
-                <span>Configurações do Sistema</span>
-              </CardTitle>
-              <CardDescription>
-                Configure parâmetros do sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button className="w-full" variant="outline">
-                <Database className="h-4 w-4 mr-2" />
-                Configurar Zonas de Entrega
-              </Button>
-              <Button className="w-full" variant="outline">
-                <DollarSign className="h-4 w-4 mr-2" />
-                Gerenciar Preços
-              </Button>
-            </CardContent>
-          </Card>
+              {/* Shipment Management */}
+              <Card className="border-border/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Package className="h-5 w-5" />
+                    <span>Gestão de Envios</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Monitore e gerencie todos os envios
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Button className="w-full" variant="outline">
+                    <Package className="h-4 w-4 mr-2" />
+                    Ver Todos os Envios
+                  </Button>
+                  <Button className="w-full" variant="outline">
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    Relatórios de Envio
+                  </Button>
+                </CardContent>
+              </Card>
 
-          {/* Reports */}
-          <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <FileText className="h-5 w-5" />
-                <span>Relatórios</span>
-              </CardTitle>
-              <CardDescription>
-                Visualize estatísticas e relatórios
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button className="w-full" variant="outline">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Relatório de Vendas
-              </Button>
-              <Button className="w-full" variant="outline">
-                <Users className="h-4 w-4 mr-2" />
-                Relatório de Usuários
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+              {/* System Settings */}
+              <Card className="border-border/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Settings className="h-5 w-5" />
+                    <span>Configurações do Sistema</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Configure parâmetros do sistema
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Button className="w-full" variant="outline">
+                    <Database className="h-4 w-4 mr-2" />
+                    Configurar Zonas de Entrega
+                  </Button>
+                  <Button className="w-full" variant="outline">
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Gerenciar Preços
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Reports */}
+              <Card className="border-border/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <FileText className="h-5 w-5" />
+                    <span>Relatórios</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Visualize estatísticas e relatórios
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Button className="w-full" variant="outline">
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    Relatório de Vendas
+                  </Button>
+                  <Button className="w-full" variant="outline">
+                    <Users className="h-4 w-4 mr-2" />
+                    Relatório de Usuários
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="clients">
+            <ActiveClients />
+          </TabsContent>
+
+          <TabsContent value="webhooks">
+            <WebhookManagement />
+          </TabsContent>
+
+          <TabsContent value="management">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="border-border/50">
+                <CardHeader>
+                  <CardTitle>Configurações Avançadas</CardTitle>
+                  <CardDescription>
+                    Configurações técnicas do sistema
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Button className="w-full" variant="outline">
+                    <Database className="h-4 w-4 mr-2" />
+                    Backup do Banco de Dados
+                  </Button>
+                  <Button className="w-full" variant="outline">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Configurações de API
+                  </Button>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-border/50">
+                <CardHeader>
+                  <CardTitle>Manutenção</CardTitle>
+                  <CardDescription>
+                    Ferramentas de manutenção do sistema
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Button className="w-full" variant="outline">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Logs do Sistema
+                  </Button>
+                  <Button className="w-full" variant="outline">
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    Performance
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
