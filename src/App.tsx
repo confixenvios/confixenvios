@@ -53,7 +53,7 @@ const App = () => (
               } 
             />
             
-            {/* Client Routes */}
+            {/* Client Routes - Using ClientDashboard */}
             <Route 
               path="/cliente/*" 
               element={
