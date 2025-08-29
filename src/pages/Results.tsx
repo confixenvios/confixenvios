@@ -91,7 +91,9 @@ const Results = () => {
 
   const handleAuthSuccess = () => {
     // After successful auth, proceed to next step
-    proceedToNextStep();
+    setTimeout(() => {
+      proceedToNextStep();
+    }, 500); // Small delay to allow auth state to settle
   };
 
   if (!quoteData) {

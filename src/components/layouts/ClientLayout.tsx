@@ -51,17 +51,17 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
   };
 
   const navigation = [
-    { name: 'Cotação', href: '/cliente', icon: Calculator },
-    { name: 'Minhas Remessas', href: '/cliente/remessas', icon: Package },
-    { name: 'Etiquetas', href: '/cliente/etiquetas', icon: FileText },
-    { name: 'Rastreio', href: '/cliente/rastreio', icon: Search },
-    { name: 'Histórico', href: '/cliente/historico', icon: Clock },
-    { name: 'Minha Conta', href: '/cliente/conta', icon: User },
+    { name: 'Cotação', href: '/dashboard', icon: Calculator },
+    { name: 'Minhas Remessas', href: '/dashboard/remessas', icon: Package },
+    { name: 'Etiquetas', href: '/dashboard/etiquetas', icon: FileText },
+    { name: 'Rastreio', href: '/dashboard/rastreio', icon: Search },
+    { name: 'Histórico', href: '/dashboard/historico', icon: Clock },
+    { name: 'Minha Conta', href: '/dashboard/conta', icon: User },
   ];
 
   const isActive = (path: string) => {
-    if (path === '/cliente') {
-      return location.pathname === '/cliente';
+    if (path === '/dashboard') {
+      return location.pathname === '/dashboard';
     }
     return location.pathname.startsWith(path);
   };

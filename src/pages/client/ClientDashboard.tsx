@@ -191,21 +191,21 @@ const ClientDashboard = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <Button asChild className="w-full justify-start">
-              <Link to="/cliente/remessas">
+              <Link to="/dashboard/remessas">
                 <Package className="w-4 h-4 mr-2" />
                 Ver Minhas Remessas
               </Link>
             </Button>
             
             <Button asChild variant="outline" className="w-full justify-start">
-              <Link to="/cliente/etiquetas">
+              <Link to="/dashboard/etiquetas">
                 <FileText className="w-4 h-4 mr-2" />
                 Baixar Etiquetas
               </Link>
             </Button>
             
             <Button asChild variant="outline" className="w-full justify-start">
-              <Link to="/cliente/rastreio">
+              <Link to="/dashboard/rastreio">
                 <Search className="w-4 h-4 mr-2" />
                 Rastrear Encomenda
               </Link>
@@ -222,7 +222,7 @@ const ClientDashboard = () => {
                 <span>Remessas Recentes</span>
               </span>
               <Button variant="ghost" size="sm" asChild>
-                <Link to="/cliente/remessas">
+                <Link to="/dashboard/remessas">
                   Ver todas
                   <ArrowRight className="w-4 h-4 ml-1" />
                 </Link>
