@@ -1,4 +1,5 @@
 import { useState } from "react";
+import InputMask from "react-input-mask";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -139,6 +140,71 @@ const QuoteForm = () => {
     if (dimensionsError) return dimensionsError;
 
     return null;
+  };
+
+  // Função para buscar endereço por CEP via ViaCEP
+  const fetchEnderecoPorCep = async (cep: string) => {
+    const apenasDigitos = cep.replace(/\D/g, "");
+    if (apenasDigitos.length !== 8) return null;
+
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${apenasDigitos}/json/`);
+      const data = await res.json();
+      if (data.erro) return null;
+
+      return {
+        logradouro: data.logradouro,
+        bairro: data.bairro,
+        cidade: data.localidade,
+        estado: data.uf,
+      };
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+      return null;
+    }
+  };
+
+  // Função especial para CEP com busca automática
+  const handleCepChange = async (
+    type: 'sender' | 'recipient',
+    value: string
+  ) => {
+    const sanitizedValue = sanitizeTextInput(value);
+    
+    if (type === 'sender') {
+      setSenderData(prev => ({ ...prev, cep: sanitizedValue }));
+    } else {
+      setRecipientData(prev => ({ ...prev, cep: sanitizedValue }));
+    }
+
+    // Buscar endereço quando CEP estiver completo
+    if (value.replace(/\D/g, "").length === 8) {
+      const endereco = await fetchEnderecoPorCep(value);
+      if (endereco) {
+        if (type === 'sender') {
+          setSenderData(prev => ({
+            ...prev,
+            street: endereco.logradouro || prev.street,
+            neighborhood: endereco.bairro || prev.neighborhood,
+            city: endereco.cidade || prev.city,
+            state: endereco.estado || prev.state
+          }));
+        } else {
+          setRecipientData(prev => ({
+            ...prev,
+            street: endereco.logradouro || prev.street,
+            neighborhood: endereco.bairro || prev.neighborhood,
+            city: endereco.cidade || prev.city,
+            state: endereco.estado || prev.state
+          }));
+        }
+        
+        toast({
+          title: "CEP encontrado!",
+          description: "Endereço preenchido automaticamente.",
+        });
+      }
+    }
   };
 
   // Step 1: Calcular Cotação
@@ -396,14 +462,21 @@ const QuoteForm = () => {
                       <MapPin className="h-4 w-4 text-primary" />
                       <span>CEP de Destino</span>
                     </Label>
-                    <Input
-                      id="destiny-cep"
-                      type="text"
-                      placeholder="00000-000"
+                    <InputMask
+                      mask="99999-999"
                       value={formData.destinyCep}
                       onChange={(e) => handleInputChange("destinyCep", e.target.value)}
-                      className="border-input-border focus:border-primary focus:ring-primary h-12"
-                    />
+                    >
+                      {(inputProps: any) => (
+                        <Input
+                          {...inputProps}
+                          id="destiny-cep"
+                          type="text"
+                          placeholder="00000-000"
+                          className="border-input-border focus:border-primary focus:ring-primary h-12"
+                        />
+                      )}
+                    </InputMask>
                   </div>
                 </div>
 
@@ -714,21 +787,38 @@ const QuoteForm = () => {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label>CPF/CNPJ *</Label>
-                            <Input
+                            <InputMask
+                              mask={senderData.document?.replace(/\D/g, "").length > 11 ? "99.999.999/9999-99" : "999.999.999-99"}
+                              maskPlaceholder={null}
                               value={senderData.document}
                               onChange={(e) => handleAddressChange('sender', 'document', e.target.value)}
-                              placeholder="000.000.000-00"
-                              className="h-12"
-                            />
+                            >
+                              {(inputProps: any) => (
+                                <Input
+                                  {...inputProps}
+                                  type="text"
+                                  placeholder="CPF ou CNPJ"
+                                  className="h-12"
+                                />
+                              )}
+                            </InputMask>
                           </div>
                           <div className="space-y-2">
                             <Label>Telefone *</Label>
-                            <Input
+                            <InputMask
+                              mask="(99) 99999-9999"
                               value={senderData.phone}
                               onChange={(e) => handleAddressChange('sender', 'phone', e.target.value)}
-                              placeholder="(00) 00000-0000"
-                              className="h-12"
-                            />
+                            >
+                              {(inputProps: any) => (
+                                <Input
+                                  {...inputProps}
+                                  type="tel"
+                                  placeholder="(00) 00000-0000"
+                                  className="h-12"
+                                />
+                              )}
+                            </InputMask>
                           </div>
                         </div>
                         
@@ -746,12 +836,20 @@ const QuoteForm = () => {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label>CEP *</Label>
-                            <Input
+                            <InputMask
+                              mask="99999-999"
                               value={senderData.cep}
-                              onChange={(e) => handleAddressChange('sender', 'cep', e.target.value)}
-                              placeholder="00000-000"
-                              className="h-12"
-                            />
+                              onChange={(e) => handleCepChange('sender', e.target.value)}
+                            >
+                              {(inputProps: any) => (
+                                <Input
+                                  {...inputProps}
+                                  type="text"
+                                  placeholder="00000-000"
+                                  className="h-12"
+                                />
+                              )}
+                            </InputMask>
                           </div>
                           <div className="space-y-2">
                             <Label>Número *</Label>
@@ -843,21 +941,38 @@ const QuoteForm = () => {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label>CPF/CNPJ *</Label>
-                            <Input
+                            <InputMask
+                              mask={recipientData.document?.replace(/\D/g, "").length > 11 ? "99.999.999/9999-99" : "999.999.999-99"}
+                              maskPlaceholder={null}
                               value={recipientData.document}
                               onChange={(e) => handleAddressChange('recipient', 'document', e.target.value)}
-                              placeholder="000.000.000-00"
-                              className="h-12"
-                            />
+                            >
+                              {(inputProps: any) => (
+                                <Input
+                                  {...inputProps}
+                                  type="text"
+                                  placeholder="CPF ou CNPJ"
+                                  className="h-12"
+                                />
+                              )}
+                            </InputMask>
                           </div>
                           <div className="space-y-2">
                             <Label>Telefone *</Label>
-                            <Input
+                            <InputMask
+                              mask="(99) 99999-9999"
                               value={recipientData.phone}
                               onChange={(e) => handleAddressChange('recipient', 'phone', e.target.value)}
-                              placeholder="(00) 00000-0000"
-                              className="h-12"
-                            />
+                            >
+                              {(inputProps: any) => (
+                                <Input
+                                  {...inputProps}
+                                  type="tel"
+                                  placeholder="(00) 00000-0000"
+                                  className="h-12"
+                                />
+                              )}
+                            </InputMask>
                           </div>
                         </div>
                         
@@ -875,12 +990,20 @@ const QuoteForm = () => {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label>CEP *</Label>
-                            <Input
+                            <InputMask
+                              mask="99999-999"
                               value={recipientData.cep}
-                              onChange={(e) => handleAddressChange('recipient', 'cep', e.target.value)}
-                              placeholder="00000-000"
-                              className="h-12"
-                            />
+                              onChange={(e) => handleCepChange('recipient', e.target.value)}
+                            >
+                              {(inputProps: any) => (
+                                <Input
+                                  {...inputProps}
+                                  type="text"
+                                  placeholder="00000-000"
+                                  className="h-12"
+                                />
+                              )}
+                            </InputMask>
                           </div>
                           <div className="space-y-2">
                             <Label>Número *</Label>
