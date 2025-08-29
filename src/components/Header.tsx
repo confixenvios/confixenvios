@@ -1,10 +1,20 @@
 import { Package, User, LogIn } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { LayoutDashboard, Shield, RefreshCw, LogOut } from 'lucide-react';
 
 const Header = () => {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, isAdmin, refreshUserData } = useAuth();
 
   return (
     <header className="border-b border-border bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
@@ -41,32 +51,49 @@ const Header = () => {
                     <span className="text-sm text-muted-foreground hidden md:block">
                       Olá, {user.email}
                     </span>
-                    <div className="relative group">
-                      <Button variant="outline" size="sm">
-                        <User className="h-4 w-4 mr-2" />
-                        <span className="hidden md:inline">Minha Conta</span>
-                      </Button>
-                      <div className="absolute right-0 top-full mt-2 w-48 bg-background border rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                        <div className="p-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="w-full justify-start"
-                            asChild
-                          >
-                            <Link to="/dashboard">Dashboard</Link>
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="w-full justify-start text-destructive hover:text-destructive"
-                            onClick={() => signOut()}
-                          >
-                            Sair
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                    {isAdmin && (
+                      <Badge variant="secondary" className="hidden md:flex">
+                        <Shield className="w-3 h-3 mr-1" />
+                        Admin
+                      </Badge>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                          <Avatar className="w-6 h-6">
+                            <AvatarFallback className="text-xs">
+                              {user.email?.[0]?.toUpperCase() || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="hidden md:inline">Minha Conta</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem asChild>
+                          <Link to="/dashboard" className="flex items-center">
+                            <LayoutDashboard className="mr-2 h-4 w-4" />
+                            Dashboard
+                          </Link>
+                        </DropdownMenuItem>
+                        {isAdmin && (
+                          <DropdownMenuItem asChild>
+                            <Link to="/admin" className="flex items-center">
+                              <Shield className="mr-2 h-4 w-4" />
+                              Admin
+                            </Link>
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={refreshUserData} className="flex items-center">
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Atualizar Dados
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={signOut} className="text-destructive">
+                          <LogOut className="mr-2 h-4 w-4" />
+                          Sair
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 ) : (
                   <Button asChild>
