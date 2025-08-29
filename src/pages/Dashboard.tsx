@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import ClientLayout from '@/components/layouts/ClientLayout';
 import ClientDashboard from './client/ClientDashboard';
@@ -9,10 +9,26 @@ import Historico from './client/Historico';
 import Conta from './client/Conta';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, isAdmin, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return null;
+  }
+
+  // Redirect admins to admin dashboard
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />;
   }
 
   return (
