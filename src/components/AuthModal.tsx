@@ -71,7 +71,9 @@ const AuthModal = ({ open, onOpenChange, onSuccess }: AuthModalProps) => {
         if (error.message.includes('Invalid login credentials')) {
           setError('Email ou senha incorretos');
         } else if (error.message.includes('Email not confirmed')) {
-          setError('Confirme seu email antes de fazer login');
+          setError('Confirme seu email antes de fazer login. Verifique sua caixa de entrada.');
+        } else if (error.message.includes('Too many requests')) {
+          setError('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
         } else {
           setError(`Erro ao fazer login: ${error.message}`);
         }
@@ -120,27 +122,38 @@ const AuthModal = ({ open, onOpenChange, onSuccess }: AuthModalProps) => {
     }
 
     try {
-      const { error } = await signUp(
+      const result = await signUp(
         signupData.email,
         signupData.password,
         signupData.firstName,
         signupData.lastName
       );
       
-      if (error) {
-        if (error.message.includes('User already registered')) {
+      if (result.error) {
+        if (result.error.message.includes('User already registered')) {
           setError('Este email já está cadastrado. Tente fazer login.');
-        } else if (error.message.includes('Unable to validate email address')) {
+        } else if (result.error.message.includes('Unable to validate email address')) {
           setError('Email inválido. Verifique o formato do email.');
-        } else if (error.message.includes('Password should be at least')) {
+        } else if (result.error.message.includes('Password should be at least')) {
           setError('A senha deve ter pelo menos 6 caracteres');
         } else {
-          setError(`Erro ao criar conta: ${error.message}`);
+          setError(`Erro ao criar conta: ${result.error.message}`);
         }
-        console.error('Signup error:', error);
-      } else {
+        console.error('Signup error:', result.error);
+      } else if (result.needsConfirmation) {
         toast({
-          title: "Conta criada com sucesso!",
+          title: "Conta criada!",
+          description: "Verifique seu email para confirmar a conta antes de fazer login.",
+          variant: "default"
+        });
+        resetForms();
+        onOpenChange(false);
+        // Switch to login tab
+        setActiveTab('login');
+      } else {
+        // Auto-login successful
+        toast({
+          title: "Conta criada e login realizado!",
           description: "Você foi logado automaticamente. Continuando...",
         });
         resetForms();

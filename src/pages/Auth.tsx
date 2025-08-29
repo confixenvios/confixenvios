@@ -97,24 +97,46 @@ const Auth = () => {
     }
 
     try {
-      const { error } = await signUp(
+      const result = await signUp(
         signupData.email,
         signupData.password,
         signupData.firstName,
         signupData.lastName
       );
       
-      if (error) {
-        if (error.message.includes('User already registered')) {
-          setError('Este email já está cadastrado');
+      if (result.error) {
+        if (result.error.message.includes('User already registered')) {
+          setError('Este email já está cadastrado. Tente fazer login.');
+        } else if (result.error.message.includes('Unable to validate email address')) {
+          setError('Email inválido. Verifique o formato do email.');
+        } else if (result.error.message.includes('Password should be at least')) {
+          setError('A senha deve ter pelo menos 6 caracteres');
         } else {
-          setError(error.message);
+          setError(`Erro ao criar conta: ${result.error.message}`);
         }
-      } else {
+        console.error('Signup error:', result.error);
+      } else if (result.needsConfirmation) {
         toast({
-          title: "Conta criada com sucesso!",
-          description: "Verifique seu email para confirmar a conta.",
+          title: "Conta criada!",
+          description: "Verifique seu email para confirmar a conta antes de fazer login.",
+          variant: "default"
         });
+        // Clear form
+        setSignupData({
+          email: '',
+          password: '',
+          confirmPassword: '',
+          firstName: '',
+          lastName: ''
+        });
+        setError('');
+      } else {
+        // Auto-login successful
+        toast({
+          title: "Conta criada e login realizado!",
+          description: "Redirecionando para o dashboard...",
+        });
+        // Will redirect automatically due to useEffect
       }
     } catch (error: any) {
       setError('Erro inesperado. Tente novamente.');

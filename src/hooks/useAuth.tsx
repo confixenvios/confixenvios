@@ -20,7 +20,7 @@ interface AuthContextType {
   profile: Profile | null;
   userRole: UserRole | null;
   loading: boolean;
-  signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error: any; needsConfirmation?: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
@@ -103,9 +103,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signUp = async (email: string, password: string, firstName = '', lastName = '') => {
-    const redirectUrl = `${window.location.origin}/`;
+    const redirectUrl = `${window.location.origin}/dashboard`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -117,7 +117,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
     
-    return { error };
+    // If user was created successfully but needs email confirmation
+    if (data.user && !error) {
+      // Try to sign in immediately (works if email confirmation is disabled)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (!signInError) {
+        // Auto login successful
+        return { error: null, needsConfirmation: false };
+      } else if (signInError.message.includes('Email not confirmed')) {
+        // Email confirmation required
+        return { error: null, needsConfirmation: true };
+      } else {
+        // Other login error
+        return { error: signInError, needsConfirmation: false };
+      }
+    }
+    
+    return { error, needsConfirmation: false };
   };
 
   const signIn = async (email: string, password: string) => {
