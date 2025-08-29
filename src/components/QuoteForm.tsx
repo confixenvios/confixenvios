@@ -115,8 +115,11 @@ const QuoteForm = () => {
   };
 
   const handleAddressChange = (type: 'sender' | 'recipient', field: keyof AddressData, value: string) => {
-    // Sanitize input for security
-    const sanitizedValue = sanitizeTextInput(value);
+    // For name and street fields, preserve spaces. For other fields, sanitize normally
+    const shouldPreserveSpaces = field === 'name' || field === 'street' || field === 'neighborhood' || field === 'city';
+    const sanitizedValue = shouldPreserveSpaces 
+      ? value.replace(/[<>\"'&]/g, '').substring(0, 500) // Remove dangerous chars but keep spaces
+      : sanitizeTextInput(value);
     
     if (type === 'sender') {
       setSenderData(prev => ({ ...prev, [field]: sanitizedValue }));
@@ -813,7 +816,7 @@ const QuoteForm = () => {
                           <div className="space-y-2">
                             <Label>CPF/CNPJ *</Label>
                              <InputMask
-                               mask={senderData.document?.replace(/\D/g, "").length > 11 ? "99.999.999/9999-99" : "999.999.999-99"}
+                               mask={senderData.document?.replace(/\D/g, "").length <= 11 ? "999.999.999-99" : "99.999.999/9999-99"}
                                value={senderData.document}
                                onChange={(e) => handleAddressChange('sender', 'document', e.target.value)}
                              >
@@ -1017,7 +1020,7 @@ const QuoteForm = () => {
                           <div className="space-y-2">
                             <Label>CPF/CNPJ *</Label>
                              <InputMask
-                               mask={recipientData.document?.replace(/\D/g, "").length > 11 ? "99.999.999/9999-99" : "999.999.999-99"}
+                               mask={recipientData.document?.replace(/\D/g, "").length <= 11 ? "999.999.999-99" : "99.999.999/9999-99"}
                                value={recipientData.document}
                                onChange={(e) => handleAddressChange('recipient', 'document', e.target.value)}
                              >
