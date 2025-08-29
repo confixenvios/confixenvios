@@ -51,7 +51,7 @@ const QuoteForm = () => {
   
   // Step 1: Cotação
   const [formData, setFormData] = useState<QuoteFormData>({
-    originCep: "74900-000",
+    originCep: "74345-260",
     destinyCep: "",
     weight: "",
     length: "",
@@ -387,7 +387,7 @@ const QuoteForm = () => {
                       className="border-input-border bg-muted text-muted-foreground h-12"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Aparecida de Goiânia, GO - Origem fixa
+                      Goiânia e Região / Origem fixa
                     </p>
                   </div>
                   
