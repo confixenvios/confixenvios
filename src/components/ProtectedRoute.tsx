@@ -31,7 +31,8 @@ const ProtectedRoute = ({ children, requireAdmin = false, requireClient = false 
   }
 
   if (requireClient && isAdmin) {
-    return <Navigate to="/admin/dashboard" replace />;
+    // Allow admin to access client area too, don't redirect
+    // return <Navigate to="/admin/dashboard" replace />;
   }
 
   return <>{children}</>;

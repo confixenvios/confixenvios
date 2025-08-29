@@ -55,11 +55,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
+        .eq('user_id', userId);
 
       if (profileData) setProfile(profileData);
-      if (roleData) setUserRole(roleData);
+      if (roleData && roleData.length > 0) {
+        // Check if user has admin role
+        const hasAdminRole = roleData.some(r => r.role === 'admin');
+        const primaryRole = hasAdminRole ? 'admin' : roleData[0]?.role || 'user';
+        setUserRole({ role: primaryRole });
+      }
     } catch (error) {
       console.error('Error loading user data:', error);
     }
