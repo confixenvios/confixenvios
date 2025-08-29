@@ -311,6 +311,17 @@ const QuoteForm = () => {
 
   // Step 3: Criar etiqueta
   const handleStep3Submit = async () => {
+    // Check if user is authenticated
+    if (!user?.id) {
+      toast({
+        title: "Erro de autenticação",
+        description: "Você precisa estar logado para criar uma etiqueta",
+        variant: "destructive"
+      });
+      navigate("/auth");
+      return;
+    }
+
     const requiredFields: (keyof AddressData)[] = [
       'name', 'document', 'phone', 'email', 'cep', 'street', 
       'number', 'neighborhood', 'city', 'state'
@@ -337,20 +348,42 @@ const QuoteForm = () => {
       // Create sender address with security validation
       const { data: senderAddress, error: senderError } = await supabase
         .from('addresses')
-        .insert({ ...senderData, address_type: 'sender', user_id: user?.id })
+        .insert({ 
+          ...senderData, 
+          address_type: 'sender', 
+          user_id: user.id // Remove optional chaining since we already checked it's not null
+        })
         .select()
         .maybeSingle();
 
-      if (senderError) throw senderError;
+      if (senderError) {
+        console.error('Sender address error:', senderError);
+        throw new Error(`Erro ao criar endereço do remetente: ${senderError.message}`);
+      }
+
+      if (!senderAddress) {
+        throw new Error('Falha ao criar endereço do remetente');
+      }
 
       // Create recipient address with security validation
       const { data: recipientAddress, error: recipientError } = await supabase
         .from('addresses')
-        .insert({ ...recipientData, address_type: 'recipient', user_id: user?.id })
+        .insert({ 
+          ...recipientData, 
+          address_type: 'recipient', 
+          user_id: user.id // Remove optional chaining since we already checked it's not null
+        })
         .select()
         .maybeSingle();
 
-      if (recipientError) throw recipientError;
+      if (recipientError) {
+        console.error('Recipient address error:', recipientError);
+        throw new Error(`Erro ao criar endereço do destinatário: ${recipientError.message}`);
+      }
+
+      if (!recipientAddress) {
+        throw new Error('Falha ao criar endereço do destinatário');
+      }
 
       // Generate tracking code
       const { data: trackingResult, error: trackingError } = await supabase
@@ -381,7 +414,7 @@ const QuoteForm = () => {
           height: parseFloat(formData.height),
           format: formData.format,
           status: 'PENDING_DOCUMENT',
-          user_id: user?.id
+          user_id: user.id // Remove optional chaining since we already checked it's not null
         })
         .select()
         .maybeSingle();
