@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { calculateShippingQuote, validateCep, formatCep } from "@/services/shippingService";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { validateUnitValue, validateWeight, validateDimensions, sanitizeTextInput } from "@/utils/inputValidation";
 
 interface QuoteFormData {
   originCep: string;
@@ -103,15 +104,41 @@ const QuoteForm = () => {
   };
 
   const handleInputChange = (field: keyof QuoteFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    // Sanitize input and validate financial data
+    const sanitizedValue = sanitizeTextInput(value);
+    setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
   };
 
   const handleAddressChange = (type: 'sender' | 'recipient', field: keyof AddressData, value: string) => {
+    // Sanitize input for security
+    const sanitizedValue = sanitizeTextInput(value);
+    
     if (type === 'sender') {
-      setSenderData(prev => ({ ...prev, [field]: value }));
+      setSenderData(prev => ({ ...prev, [field]: sanitizedValue }));
     } else {
-      setRecipientData(prev => ({ ...prev, [field]: value }));
+      setRecipientData(prev => ({ ...prev, [field]: sanitizedValue }));
     }
+  };
+
+  const validateQuoteInputs = (): string | null => {
+    // Validate unit value
+    const unitValue = parseFloat(formData.unitValue);
+    const unitValueError = validateUnitValue(unitValue);
+    if (unitValueError) return unitValueError;
+
+    // Validate weight
+    const weight = parseFloat(formData.weight);
+    const weightError = validateWeight(weight);
+    if (weightError) return weightError;
+
+    // Validate dimensions
+    const length = parseFloat(formData.length);
+    const width = parseFloat(formData.width);
+    const height = parseFloat(formData.height);
+    const dimensionsError = validateDimensions(length, width, height);
+    if (dimensionsError) return dimensionsError;
+
+    return null;
   };
 
   // Step 1: Calcular Cotação
@@ -123,6 +150,17 @@ const QuoteForm = () => {
         toast({
           title: "CEP inválido",
           description: "Digite um CEP válido com 8 dígitos",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validate all inputs for security
+      const validationError = validateQuoteInputs();
+      if (validationError) {
+        toast({
+          title: "Dados inválidos",
+          description: validationError,
           variant: "destructive"
         });
         return;
@@ -207,21 +245,21 @@ const QuoteForm = () => {
     setIsLoading(true);
 
     try {
-      // Create sender address
+      // Create sender address with security validation
       const { data: senderAddress, error: senderError } = await supabase
         .from('addresses')
         .insert({ ...senderData, address_type: 'sender', user_id: user?.id })
         .select()
-        .single();
+        .maybeSingle();
 
       if (senderError) throw senderError;
 
-      // Create recipient address  
+      // Create recipient address with security validation
       const { data: recipientAddress, error: recipientError } = await supabase
         .from('addresses')
         .insert({ ...recipientData, address_type: 'recipient', user_id: user?.id })
         .select()
-        .single();
+        .maybeSingle();
 
       if (recipientError) throw recipientError;
 
@@ -252,7 +290,7 @@ const QuoteForm = () => {
           user_id: user?.id
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (shipmentError) throw shipmentError;
 

@@ -11,6 +11,7 @@ import { User, MapPin, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { sanitizeTextInput, validateDocument, validateCEP } from "@/utils/inputValidation";
 
 interface AddressData {
   name: string;
@@ -78,11 +79,32 @@ const Label = () => {
     field: keyof AddressData,
     value: string
   ) => {
+    // Sanitize input for security
+    const sanitizedValue = sanitizeTextInput(value);
+    
     if (type === 'sender') {
-      setSenderData(prev => ({ ...prev, [field]: value }));
+      setSenderData(prev => ({ ...prev, [field]: sanitizedValue }));
     } else {
-      setRecipientData(prev => ({ ...prev, [field]: value }));
+      setRecipientData(prev => ({ ...prev, [field]: sanitizedValue }));
     }
+  };
+
+  const validateFormInputs = (): string | null => {
+    // Validate sender data
+    const senderDocError = validateDocument(senderData.document);
+    if (senderDocError) return `Remetente: ${senderDocError}`;
+    
+    const senderCepError = validateCEP(senderData.cep);
+    if (senderCepError) return `Remetente: ${senderCepError}`;
+    
+    // Validate recipient data
+    const recipientDocError = validateDocument(recipientData.document);
+    if (recipientDocError) return `Destinatário: ${recipientDocError}`;
+    
+    const recipientCepError = validateCEP(recipientData.cep);
+    if (recipientCepError) return `Destinatário: ${recipientCepError}`;
+    
+    return null;
   };
 
   const isFormValid = () => {
@@ -109,10 +131,21 @@ const Label = () => {
       return;
     }
 
+    // Validate input security
+    const validationError = validateFormInputs();
+    if (validationError) {
+      toast({
+        title: "Dados inválidos",
+        description: validationError,
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Create sender address
+      // Create sender address with user ownership and validation
       const { data: senderAddress, error: senderError } = await supabase
         .from('addresses')
         .insert({
@@ -121,11 +154,11 @@ const Label = () => {
           user_id: user?.id
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (senderError) throw senderError;
 
-      // Create recipient address
+      // Create recipient address with user ownership and validation
       const { data: recipientAddress, error: recipientError } = await supabase
         .from('addresses')
         .insert({
@@ -134,7 +167,7 @@ const Label = () => {
           user_id: user?.id
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (recipientError) throw recipientError;
 
@@ -168,7 +201,7 @@ const Label = () => {
           user_id: user?.id
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (shipmentError) throw shipmentError;
 

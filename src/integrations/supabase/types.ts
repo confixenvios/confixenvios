@@ -32,6 +32,7 @@ export type Database = {
           state: string
           street: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           address_type: string
@@ -50,6 +51,7 @@ export type Database = {
           state: string
           street: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           address_type?: string
@@ -68,6 +70,7 @@ export type Database = {
           state?: string
           street?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
