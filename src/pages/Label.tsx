@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { sanitizeTextInput, validateDocument, validateCEP } from "@/utils/inputValidation";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface AddressData {
   name: string;
@@ -35,6 +36,8 @@ const Label = () => {
   const { user } = useAuth();
   const [selectedQuote, setSelectedQuote] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [samePickupAddress, setSamePickupAddress] = useState<boolean>(true);
+  const [alternativePickupAddress, setAlternativePickupAddress] = useState<string>("");
 
   const [senderData, setSenderData] = useState<AddressData>({
     name: "",
@@ -195,7 +198,10 @@ const Label = () => {
     const senderValid = requiredFields.every(field => senderData[field].trim() !== "");
     const recipientValid = requiredFields.every(field => recipientData[field].trim() !== "");
 
-    return senderValid && recipientValid;
+    // Validate alternative pickup address if needed
+    const pickupValid = selectedQuote?.pickup !== 'pickup' || samePickupAddress || alternativePickupAddress.trim() !== "";
+
+    return senderValid && recipientValid && pickupValid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -259,7 +265,9 @@ const Label = () => {
       // Create shipment with total price included in quote_data
       const shipmentQuoteData = {
         ...selectedQuote.quoteData,
-        totalPrice: selectedQuote.totalPrice
+        totalPrice: selectedQuote.totalPrice,
+        pickupMode: selectedQuote.pickup === 'pickup' ? 'PICKUP_D1' : 'DROP_OFF',
+        coletaAlternativa: selectedQuote.pickup === 'pickup' && !samePickupAddress ? alternativePickupAddress : null
       };
 
       const { data: shipment, error: shipmentError } = await supabase
@@ -506,6 +514,57 @@ const Label = () => {
               rows={2}
             />
           </div>
+        )}
+
+        {/* Pickup address section - only show for sender when pickup option is selected */}
+        {type === 'sender' && selectedQuote?.pickup === 'pickup' && (
+          <>
+            <Separator />
+            <div className="space-y-4">
+              <FormLabel className="text-base font-medium">Local de Coleta</FormLabel>
+              
+              <RadioGroup
+                value={samePickupAddress ? "sim" : "nao"}
+                onValueChange={(value) => {
+                  setSamePickupAddress(value === "sim");
+                  if (value === "sim") {
+                    setAlternativePickupAddress("");
+                  }
+                }}
+                className="flex flex-col space-y-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="sim" id="pickup-same" />
+                  <FormLabel htmlFor="pickup-same" className="cursor-pointer">
+                    O local de coleta é o mesmo endereço do remetente
+                  </FormLabel>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="nao" id="pickup-different" />
+                  <FormLabel htmlFor="pickup-different" className="cursor-pointer">
+                    O local de coleta é diferente
+                  </FormLabel>
+                </div>
+              </RadioGroup>
+
+              {!samePickupAddress && (
+                <div className="space-y-2">
+                  <FormLabel htmlFor="alternative-pickup-address">
+                    Informe o endereço do local de coleta *
+                  </FormLabel>
+                  <Textarea
+                    id="alternative-pickup-address"
+                    value={alternativePickupAddress}
+                    onChange={(e) => setAlternativePickupAddress(sanitizeTextInput(e.target.value))}
+                    placeholder="Ex.: Loja X, Rua H, nº 123"
+                    className="border-input-border focus:border-primary focus:ring-primary"
+                    rows={3}
+                    required
+                  />
+                </div>
+              )}
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
