@@ -71,7 +71,7 @@ const AuthModal = ({ open, onOpenChange, onSuccess }: AuthModalProps) => {
         if (error.message.includes('Invalid login credentials')) {
           setError('Email ou senha incorretos');
         } else if (error.message.includes('Email not confirmed')) {
-          setError('Confirme seu email antes de fazer login. Verifique sua caixa de entrada.');
+          setError('⚠️ Email não confirmado. Verifique sua caixa de entrada e clique no link de confirmação antes de fazer login.');
         } else if (error.message.includes('Too many requests')) {
           setError('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
         } else {
@@ -142,16 +142,17 @@ const AuthModal = ({ open, onOpenChange, onSuccess }: AuthModalProps) => {
         console.error('Signup error:', result.error);
       } else if (result.needsConfirmation) {
         toast({
-          title: "Conta criada!",
-          description: "Verifique seu email para confirmar a conta antes de fazer login.",
-          variant: "default"
+          title: "🎉 Conta criada com sucesso!",
+          description: "Verifique seu email para confirmar sua conta e depois faça login.",
         });
         resetForms();
         onOpenChange(false);
-        // Switch to login tab
-        setActiveTab('login');
+        // Switch to login tab after closing modal
+        setTimeout(() => {
+          setActiveTab('login');
+        }, 100);
       } else {
-        // Auto-login successful
+        // Auto-login successful (email confirmation disabled)
         toast({
           title: "Conta criada e login realizado!",
           description: "Você foi logado automaticamente. Continuando...",

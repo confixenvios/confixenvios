@@ -117,23 +117,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
     
-    // If user was created successfully but needs email confirmation
+    // With email confirmation enabled, user won't be logged in immediately
+    // The session will be null until they confirm their email
     if (data.user && !error) {
-      // Try to sign in immediately (works if email confirmation is disabled)
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (!signInError) {
-        // Auto login successful
+      if (data.session) {
+        // User is logged in immediately (email confirmation disabled)
         return { error: null, needsConfirmation: false };
-      } else if (signInError.message.includes('Email not confirmed')) {
-        // Email confirmation required
-        return { error: null, needsConfirmation: true };
       } else {
-        // Other login error
-        return { error: signInError, needsConfirmation: false };
+        // User needs to confirm email (email confirmation enabled)
+        return { error: null, needsConfirmation: true };
       }
     }
     

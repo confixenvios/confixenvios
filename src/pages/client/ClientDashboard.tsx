@@ -1,4 +1,5 @@
 import QuoteForm from "@/components/QuoteForm";
+import EmailConfirmationBanner from "@/components/EmailConfirmationBanner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -101,6 +102,9 @@ const ClientDashboard = () => {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Email Confirmation Banner */}
+      <EmailConfirmationBanner />
+      
       {/* Header */}
       <div className="flex flex-col space-y-2">
         <h1 className="text-3xl font-bold text-foreground">Nova Cotação</h1>
@@ -243,7 +247,7 @@ const ClientDashboard = () => {
                   Você ainda não possui remessas
                 </p>
                 <Button asChild size="sm">
-                  <Link to="#quote-form">
+                  <Link to="/">
                     Fazer primeira cotação
                   </Link>
                 </Button>
