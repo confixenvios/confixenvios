@@ -15,6 +15,7 @@ import { calculateShippingQuote, validateCep, formatCep } from "@/services/shipp
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { validateUnitValue, validateWeight, validateDimensions, sanitizeTextInput } from "@/utils/inputValidation";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface QuoteFormData {
   originCep: string;
@@ -77,6 +78,9 @@ const QuoteForm = () => {
     name: "", document: "", phone: "", email: "", cep: "", street: "",
     number: "", complement: "", neighborhood: "", city: "", state: "", reference: ""
   });
+  
+  const [samePickupAddress, setSamePickupAddress] = useState<boolean>(true);
+  const [alternativePickupAddress, setAlternativePickupAddress] = useState<string>("");
 
   const steps = [
     { number: 1, title: "Calcular Frete", icon: Calculator },
@@ -284,7 +288,7 @@ const QuoteForm = () => {
     }
   };
 
-  // Step 2: Selecionar opções e navegar para dados da etiqueta
+  // Step 2: Selecionar opções
   const handleStep2Submit = () => {
     if (!pickupOption) {
       toast({
@@ -295,23 +299,11 @@ const QuoteForm = () => {
       return;
     }
     
-    // Save quote data to sessionStorage for the label page
-    const quoteForLabel = {
-      quoteData: quoteData,
-      option: "standard", // Default option since we only have one shipping option
-      pickup: pickupOption,
-      totalPrice: getTotalPrice()
-    };
-
-    sessionStorage.setItem('selectedQuote', JSON.stringify(quoteForLabel));
-
+    setCurrentStep(3);
     toast({
       title: "Opção selecionada!",
       description: "Agora preencha os dados da etiqueta",
     });
-
-    // Navigate to label page instead of continuing to step 3
-    navigate("/etiqueta");
   };
 
   // Step 3: Criar etiqueta
@@ -324,7 +316,10 @@ const QuoteForm = () => {
     const senderValid = requiredFields.every(field => senderData[field].trim() !== "");
     const recipientValid = requiredFields.every(field => recipientData[field].trim() !== "");
 
-    if (!senderValid || !recipientValid) {
+    // Validate alternative pickup address if needed
+    const pickupValid = pickupOption !== 'pickup' || samePickupAddress || alternativePickupAddress.trim() !== "";
+
+    if (!senderValid || !recipientValid || !pickupValid) {
       toast({
         title: "Dados obrigatórios",
         description: "Preencha todos os campos obrigatórios",
@@ -360,8 +355,13 @@ const QuoteForm = () => {
 
       if (trackingError) throw trackingError;
 
-      // Create shipment with total price
-      const shipmentQuoteData = { ...quoteData, totalPrice: getTotalPrice() };
+      // Create shipment with total price and pickup info
+      const shipmentQuoteData = { 
+        ...quoteData, 
+        totalPrice: getTotalPrice(),
+        pickupMode: pickupOption === 'pickup' ? 'PICKUP_D1' : 'DROP_OFF',
+        coletaAlternativa: pickupOption === 'pickup' && !samePickupAddress ? alternativePickupAddress : null
+      };
 
       const { data: shipment, error: shipmentError } = await supabase
         .from('shipments')
@@ -937,9 +937,60 @@ const QuoteForm = () => {
                               className="h-12"
                             />
                           </div>
-                        </div>
-                      </div>
-                    </CardContent>
+                         </div>
+                       </div>
+
+                       {/* Pickup address section - only show when pickup option is selected */}
+                       {pickupOption === 'pickup' && (
+                         <>
+                           <Separator className="my-4" />
+                           <div className="space-y-4">
+                             <Label className="text-base font-medium">Local de Coleta</Label>
+                             
+                             <RadioGroup
+                               value={samePickupAddress ? "sim" : "nao"}
+                               onValueChange={(value) => {
+                                 setSamePickupAddress(value === "sim");
+                                 if (value === "sim") {
+                                   setAlternativePickupAddress("");
+                                 }
+                               }}
+                               className="flex flex-col space-y-2"
+                             >
+                               <div className="flex items-center space-x-2">
+                                 <RadioGroupItem value="sim" id="pickup-same" />
+                                 <Label htmlFor="pickup-same" className="cursor-pointer">
+                                   O local de coleta é o mesmo endereço do remetente
+                                 </Label>
+                               </div>
+                               <div className="flex items-center space-x-2">
+                                 <RadioGroupItem value="nao" id="pickup-different" />
+                                 <Label htmlFor="pickup-different" className="cursor-pointer">
+                                   O local de coleta é diferente
+                                 </Label>
+                               </div>
+                             </RadioGroup>
+
+                             {!samePickupAddress && (
+                               <div className="space-y-2">
+                                 <Label htmlFor="alternative-pickup-address">
+                                   Informe o endereço do local de coleta *
+                                 </Label>
+                                 <Textarea
+                                   id="alternative-pickup-address"
+                                   value={alternativePickupAddress}
+                                   onChange={(e) => setAlternativePickupAddress(sanitizeTextInput(e.target.value))}
+                                   placeholder="Ex.: Loja X, Rua H, nº 123"
+                                   className="border-input-border focus:border-primary focus:ring-primary"
+                                   rows={3}
+                                   required
+                                 />
+                               </div>
+                             )}
+                           </div>
+                         </>
+                       )}
+                     </CardContent>
                   </Card>
 
                   {/* Recipient Address */}
