@@ -816,9 +816,11 @@ const QuoteForm = () => {
                           <div className="space-y-2">
                             <Label>CPF/CNPJ *</Label>
                              <InputMask
-                               mask={senderData.document?.replace(/\D/g, "").length <= 11 ? "999.999.999-99" : "99.999.999/9999-99"}
+                               mask={(senderData.document?.replace(/\D/g, "").length || 0) <= 11 ? "999.999.999-99" : "99.999.999/9999-99"}
                                value={senderData.document}
                                onChange={(e) => handleAddressChange('sender', 'document', e.target.value)}
+                               maskChar={null}
+                               alwaysShowMask={false}
                              >
                               {(inputProps: any) => (
                                 <Input
@@ -1020,9 +1022,11 @@ const QuoteForm = () => {
                           <div className="space-y-2">
                             <Label>CPF/CNPJ *</Label>
                              <InputMask
-                               mask={recipientData.document?.replace(/\D/g, "").length <= 11 ? "999.999.999-99" : "99.999.999/9999-99"}
+                               mask={(recipientData.document?.replace(/\D/g, "").length || 0) <= 11 ? "999.999.999-99" : "99.999.999/9999-99"}
                                value={recipientData.document}
                                onChange={(e) => handleAddressChange('recipient', 'document', e.target.value)}
+                               maskChar={null}
+                               alwaysShowMask={false}
                              >
                               {(inputProps: any) => (
                                 <Input
