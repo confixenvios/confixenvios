@@ -813,25 +813,17 @@ const QuoteForm = () => {
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>CPF/CNPJ *</Label>
-                             <InputMask
-                               mask={(senderData.document?.replace(/\D/g, "").length || 0) <= 11 ? "999.999.999-99" : "99.999.999/9999-99"}
+                           <div className="space-y-2">
+                             <Label>CPF/CNPJ *</Label>
+                             <Input
+                               type="text"
                                value={senderData.document}
                                onChange={(e) => handleAddressChange('sender', 'document', e.target.value)}
-                               maskChar={null}
-                               alwaysShowMask={false}
-                             >
-                              {(inputProps: any) => (
-                                <Input
-                                  {...inputProps}
-                                  type="text"
-                                  placeholder="CPF ou CNPJ"
-                                  className="h-12"
-                                />
-                              )}
-                            </InputMask>
-                          </div>
+                               placeholder="CPF ou CNPJ (apenas números)"
+                               className="h-12"
+                               maxLength={18}
+                             />
+                           </div>
                           <div className="space-y-2">
                             <Label>Telefone *</Label>
                             <InputMask
@@ -1019,25 +1011,17 @@ const QuoteForm = () => {
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>CPF/CNPJ *</Label>
-                             <InputMask
-                               mask={(recipientData.document?.replace(/\D/g, "").length || 0) <= 11 ? "999.999.999-99" : "99.999.999/9999-99"}
+                           <div className="space-y-2">
+                             <Label>CPF/CNPJ *</Label>
+                             <Input
+                               type="text"
                                value={recipientData.document}
                                onChange={(e) => handleAddressChange('recipient', 'document', e.target.value)}
-                               maskChar={null}
-                               alwaysShowMask={false}
-                             >
-                              {(inputProps: any) => (
-                                <Input
-                                  {...inputProps}
-                                  type="text"
-                                  placeholder="CPF ou CNPJ"
-                                  className="h-12"
-                                />
-                              )}
-                            </InputMask>
-                          </div>
+                               placeholder="CPF ou CNPJ (apenas números)"
+                               className="h-12"
+                               maxLength={18}
+                             />
+                           </div>
                           <div className="space-y-2">
                             <Label>Telefone *</Label>
                             <InputMask
