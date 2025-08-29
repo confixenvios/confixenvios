@@ -145,11 +145,14 @@ const QuoteForm = () => {
   // Função para buscar endereço por CEP via ViaCEP
   const fetchEnderecoPorCep = async (cep: string) => {
     const apenasDigitos = cep.replace(/\D/g, "");
+    console.log('CEP digitado:', cep, 'Apenas dígitos:', apenasDigitos);
     if (apenasDigitos.length !== 8) return null;
 
     try {
+      console.log('Buscando CEP na API ViaCEP...');
       const res = await fetch(`https://viacep.com.br/ws/${apenasDigitos}/json/`);
       const data = await res.json();
+      console.log('Resposta ViaCEP:', data);
       if (data.erro) return null;
 
       return {
@@ -169,6 +172,7 @@ const QuoteForm = () => {
     type: 'sender' | 'recipient',
     value: string
   ) => {
+    console.log('CEP mudou:', type, value);
     const sanitizedValue = sanitizeTextInput(value);
     
     if (type === 'sender') {
@@ -179,8 +183,10 @@ const QuoteForm = () => {
 
     // Buscar endereço quando CEP estiver completo
     if (value.replace(/\D/g, "").length === 8) {
+      console.log('CEP completo, buscando endereço...');
       const endereco = await fetchEnderecoPorCep(value);
       if (endereco) {
+        console.log('Endereço encontrado:', endereco);
         if (type === 'sender') {
           setSenderData(prev => ({
             ...prev,
@@ -202,6 +208,13 @@ const QuoteForm = () => {
         toast({
           title: "CEP encontrado!",
           description: "Endereço preenchido automaticamente.",
+        });
+      } else {
+        console.log('CEP não encontrado');
+        toast({
+          title: "CEP não encontrado",
+          description: "Verifique se o CEP está correto.",
+          variant: "destructive"
         });
       }
     }

@@ -78,11 +78,14 @@ const Label = () => {
   // Função para buscar endereço por CEP via ViaCEP
   const fetchEnderecoPorCep = async (cep: string) => {
     const apenasDigitos = cep.replace(/\D/g, "");
+    console.log('Label - CEP digitado:', cep, 'Apenas dígitos:', apenasDigitos);
     if (apenasDigitos.length !== 8) return null;
 
     try {
+      console.log('Label - Buscando CEP na API ViaCEP...');
       const res = await fetch(`https://viacep.com.br/ws/${apenasDigitos}/json/`);
       const data = await res.json();
+      console.log('Label - Resposta ViaCEP:', data);
       if (data.erro) return null;
 
       return {
@@ -92,7 +95,7 @@ const Label = () => {
         estado: data.uf,
       };
     } catch (error) {
-      console.error('Erro ao buscar CEP:', error);
+      console.error('Label - Erro ao buscar CEP:', error);
       return null;
     }
   };
@@ -117,6 +120,7 @@ const Label = () => {
     type: 'sender' | 'recipient',
     value: string
   ) => {
+    console.log('Label - CEP mudou:', type, value);
     const sanitizedValue = sanitizeTextInput(value);
     
     if (type === 'sender') {
@@ -127,8 +131,10 @@ const Label = () => {
 
     // Buscar endereço quando CEP estiver completo
     if (value.replace(/\D/g, "").length === 8) {
+      console.log('Label - CEP completo, buscando endereço...');
       const endereco = await fetchEnderecoPorCep(value);
       if (endereco) {
+        console.log('Label - Endereço encontrado:', endereco);
         if (type === 'sender') {
           setSenderData(prev => ({
             ...prev,
@@ -150,6 +156,13 @@ const Label = () => {
         toast({
           title: "CEP encontrado!",
           description: "Endereço preenchido automaticamente.",
+        });
+      } else {
+        console.log('Label - CEP não encontrado');
+        toast({
+          title: "CEP não encontrado",
+          description: "Verifique se o CEP está correto.",
+          variant: "destructive"
         });
       }
     }
