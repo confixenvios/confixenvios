@@ -331,9 +331,9 @@ const QuoteForm = () => {
     });
   };
 
-  // Step 3: Criar etiqueta
+  // Step 3: Avançar para documento fiscal (sem criar etiqueta ainda)
   const handleStep3Submit = async () => {
-    console.log('QuoteForm - Step 3 submit iniciado');
+    console.log('QuoteForm - Step 3 submit iniciado - apenas coletando dados');
     
     const requiredFields: (keyof AddressData)[] = [
       'name', 'document', 'phone', 'email', 'cep', 'street', 
@@ -349,7 +349,7 @@ const QuoteForm = () => {
     if (!senderValid || !recipientValid || !pickupValid) {
       toast({
         title: "Dados obrigatórios",
-        description: "Preencha todos os campos obrigatórios",
+        description: "Preencha todos os campos obrigatórios antes de continuar",
         variant: "destructive"
       });
       return;
@@ -358,116 +358,56 @@ const QuoteForm = () => {
     setIsLoading(true);
 
     try {
-      // Create sender address with security validation
-      const { data: senderAddress, error: senderError } = await supabase
-        .from('addresses')
-        .insert({ 
-          ...senderData, 
-          address_type: 'sender', 
-          user_id: null // Allow anonymous users
-        })
-        .select()
-        .maybeSingle();
-
-      if (senderError) {
-        console.error('Sender address error:', senderError);
-        throw new Error(`Erro ao criar endereço do remetente: ${senderError.message}`);
-      }
-
-      if (!senderAddress) {
-        throw new Error('Falha ao criar endereço do remetente');
-      }
-
-      // Create recipient address with security validation
-      const { data: recipientAddress, error: recipientError } = await supabase
-        .from('addresses')
-        .insert({ 
-          ...recipientData, 
-          address_type: 'recipient', 
-          user_id: null // Allow anonymous users
-        })
-        .select()
-        .maybeSingle();
-
-      if (recipientError) {
-        console.error('Recipient address error:', recipientError);
-        throw new Error(`Erro ao criar endereço do destinatário: ${recipientError.message}`);
-      }
-
-      if (!recipientAddress) {
-        throw new Error('Falha ao criar endereço do destinatário');
-      }
-
-      // Generate tracking code
-      const { data: trackingResult, error: trackingError } = await supabase
-        .rpc('generate_tracking_code');
-
-      if (trackingError) throw trackingError;
-
-      // Create shipment with total price and pickup info
-      const shipmentQuoteData = { 
-        ...quoteData, 
-        totalPrice: getTotalPrice(),
-        pickupMode: pickupOption === 'pickup' ? 'PICKUP_D1' : 'DROP_OFF',
-        coletaAlternativa: pickupOption === 'pickup' && !samePickupAddress ? alternativePickupAddress : null,
-        // Dados completos da cotação
-        formData: formData,
-        pickupOption: pickupOption,
-        pickupAddress: {
-          sameAsOrigin: samePickupAddress,
-          alternativeAddress: alternativePickupAddress
-        }
-      };
-
-      const { data: shipment, error: shipmentError } = await supabase
-        .from('shipments')
-        .insert({
-          tracking_code: trackingResult,
-          sender_address_id: senderAddress.id,
-          recipient_address_id: recipientAddress.id,
-          quote_data: shipmentQuoteData,
-          selected_option: "standard",
-          pickup_option: pickupOption,
-          weight: parseFloat(formData.weight),
-          length: parseFloat(formData.length),
-          width: parseFloat(formData.width),
-          height: parseFloat(formData.height),
-          format: formData.format,
-          status: 'PENDING_DOCUMENT',
-          user_id: null // Allow anonymous users
-        })
-        .select()
-        .maybeSingle();
-
-      if (shipmentError) throw shipmentError;
-
-      // Save complete shipment data for next steps
+      // Preparar dados completos para as próximas etapas (sem salvar no banco ainda)
       const completeShipmentData = {
-        ...shipment,
-        completeQuoteData: quoteData,
-        senderData: senderData,
-        recipientData: recipientData,
+        // Dados da cotação original
+        quoteData: quoteData,
+        formData: formData,
+        selectedOption: "standard",
+        totalPrice: getTotalPrice(),
+        
+        // Dados de coleta
+        pickupOption: pickupOption,
         pickupDetails: {
           option: pickupOption,
           sameAsOrigin: samePickupAddress,
           alternativeAddress: alternativePickupAddress
-        }
+        },
+        
+        // Dados dos endereços
+        senderData: senderData,
+        recipientData: recipientData,
+        
+        // Dados de dimensões e peso
+        weight: parseFloat(formData.weight),
+        length: parseFloat(formData.length),
+        width: parseFloat(formData.width),
+        height: parseFloat(formData.height),
+        format: formData.format,
+        
+        // Status do fluxo
+        status: 'PENDING_DOCUMENT',
+        createdAt: new Date().toISOString()
       };
+
+      console.log('QuoteForm - Salvando dados completos no sessionStorage:', completeShipmentData);
       
+      // Salvar todos os dados coletados no sessionStorage para as próximas etapas
       sessionStorage.setItem('currentShipment', JSON.stringify(completeShipmentData));
 
       toast({
-        title: "Etiqueta criada!",
-        description: `Código de rastreio: ${trackingResult}`,
+        title: "Dados coletados!",
+        description: "Avançando para documento fiscal...",
       });
 
+      // Navegar diretamente para documento fiscal
       navigate("/documento");
 
     } catch (error: any) {
-      console.error('Error creating shipment:', error);
+      console.error('Error preparing shipment data:', error);
       toast({
-        title: "Erro ao criar etiqueta",
-        description: error.message || "Tente novamente mais tarde",
+        title: "Erro ao processar dados",
+        description: "Tente novamente mais tarde",
         variant: "destructive"
       });
     } finally {
@@ -1222,7 +1162,7 @@ const QuoteForm = () => {
                     {isLoading ? (
                       <div className="flex items-center space-x-2">
                         <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"></div>
-                        <span>Criando etiqueta...</span>
+                        <span>Processando...</span>
                       </div>
                     ) : (
                       <>
