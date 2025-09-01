@@ -13,7 +13,6 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { calculateShippingQuote, validateCep, formatCep } from "@/services/shippingService";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { validateUnitValue, validateWeight, validateDimensions, sanitizeTextInput } from "@/utils/inputValidation";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
@@ -47,7 +46,6 @@ interface AddressData {
 const QuoteForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -335,17 +333,8 @@ const QuoteForm = () => {
 
   // Step 3: Criar etiqueta
   const handleStep3Submit = async () => {
-    // Check if user is authenticated
-    if (!user?.id) {
-      toast({
-        title: "Erro de autenticação",
-        description: "Você precisa estar logado para criar uma etiqueta",
-        variant: "destructive"
-      });
-      navigate("/auth");
-      return;
-    }
-
+    console.log('QuoteForm - Step 3 submit iniciado');
+    
     const requiredFields: (keyof AddressData)[] = [
       'name', 'document', 'phone', 'email', 'cep', 'street', 
       'number', 'neighborhood', 'city', 'state'
@@ -375,7 +364,7 @@ const QuoteForm = () => {
         .insert({ 
           ...senderData, 
           address_type: 'sender', 
-          user_id: user.id // Remove optional chaining since we already checked it's not null
+          user_id: null // Allow anonymous users
         })
         .select()
         .maybeSingle();
@@ -395,7 +384,7 @@ const QuoteForm = () => {
         .insert({ 
           ...recipientData, 
           address_type: 'recipient', 
-          user_id: user.id // Remove optional chaining since we already checked it's not null
+          user_id: null // Allow anonymous users
         })
         .select()
         .maybeSingle();
@@ -445,7 +434,7 @@ const QuoteForm = () => {
           height: parseFloat(formData.height),
           format: formData.format,
           status: 'PENDING_DOCUMENT',
-          user_id: user.id // Remove optional chaining since we already checked it's not null
+          user_id: null // Allow anonymous users
         })
         .select()
         .maybeSingle();

@@ -14,6 +14,9 @@ const Payment = () => {
   // Get shipment data from location state or sessionStorage
   const shipmentData = location.state?.shipmentData || JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
   
+  console.log('Payment - Component montado');
+  console.log('Payment - Shipment data:', shipmentData);
+  
   const handleBack = () => {
     navigate('/documento');
   };

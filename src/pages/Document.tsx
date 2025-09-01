@@ -20,12 +20,17 @@ const Document = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    console.log('Document - Component montado');
     const savedShipment = sessionStorage.getItem('currentShipment');
+    console.log('Document - Shipment encontrado no sessionStorage:', savedShipment);
     if (!savedShipment) {
+      console.log('Document - Nenhum shipment encontrado, redirecionando para home');
       navigate('/');
       return;
     }
-    setCurrentShipment(JSON.parse(savedShipment));
+    const parsedShipment = JSON.parse(savedShipment);
+    console.log('Document - Shipment parseado:', parsedShipment);
+    setCurrentShipment(parsedShipment);
   }, [navigate]);
 
   const isFormValid = () => {
@@ -37,8 +42,10 @@ const Document = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Document - Submit iniciado');
     
     if (!isFormValid()) {
+      console.log('Document - Form inválido');
       toast({
         title: "Dados obrigatórios",
         description: "Preencha todos os campos obrigatórios",
@@ -57,6 +64,7 @@ const Document = () => {
         shipment: currentShipment
       };
 
+      console.log('Document - Salvando dados do documento:', documentData);
       sessionStorage.setItem('documentData', JSON.stringify(documentData));
 
       toast({
@@ -64,6 +72,7 @@ const Document = () => {
         description: "Redirecionando para pagamento...",
       });
 
+      console.log('Document - Navegando para pagamento');
       navigate("/pagamento");
 
     } catch (error: any) {

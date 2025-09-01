@@ -228,6 +228,10 @@ const Label = () => {
     setIsLoading(true);
 
     try {
+      console.log('Label - Iniciando criação de endereços sem autenticação');
+      console.log('Label - Dados do remetente:', senderData);
+      console.log('Label - Dados do destinatário:', recipientData);
+      
       // Create sender address without requiring authentication
       const { data: senderAddress, error: senderError } = await supabase
         .from('addresses')
@@ -239,7 +243,11 @@ const Label = () => {
         .select()
         .maybeSingle();
 
-      if (senderError) throw senderError;
+      if (senderError) {
+        console.log('Label - Erro ao criar endereço do remetente:', senderError);
+        throw senderError;
+      }
+      console.log('Label - Endereço do remetente criado:', senderAddress);
 
       // Create recipient address without requiring authentication
       const { data: recipientAddress, error: recipientError } = await supabase
@@ -252,7 +260,11 @@ const Label = () => {
         .select()
         .maybeSingle();
 
-      if (recipientError) throw recipientError;
+      if (recipientError) {
+        console.log('Label - Erro ao criar endereço do destinatário:', recipientError);
+        throw recipientError;
+      }
+      console.log('Label - Endereço do destinatário criado:', recipientAddress);
 
       // Generate tracking code
       const { data: trackingResult, error: trackingError } = await supabase
@@ -299,6 +311,7 @@ const Label = () => {
       });
 
       // Navigate to document step
+      console.log('Label - Navegando para documento');
       navigate("/documento");
 
     } catch (error: any) {
