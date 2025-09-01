@@ -19,6 +19,8 @@ const PaymentSuccess = () => {
         const paymentData = JSON.parse(sessionStorage.getItem('paymentData') || '{}');
         const shipmentId = sessionStorage.getItem('paymentShipmentId');
         const shipmentData = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
+        const documentData = JSON.parse(sessionStorage.getItem('documentData') || '{}');
+        const selectedQuote = JSON.parse(sessionStorage.getItem('selectedQuote') || '{}');
 
         if (!shipmentId || !paymentData.method) {
           navigate('/cliente/dashboard');
@@ -43,10 +45,19 @@ const PaymentSuccess = () => {
 
         setTrackingCode(shipment?.tracking_code || '');
 
-        // Dispatch webhook to external TMS system
+        // Prepare complete data payload for webhook
+        const completePayload = {
+          shipmentId: shipmentId,
+          paymentData,
+          documentData,
+          selectedQuote,
+          shipmentData
+        };
+
+        // Dispatch webhook to external TMS system with all collected data
         const { data: webhookResult, error: webhookError } = await supabase.functions
           .invoke('webhook-dispatch', {
-            body: { shipmentId: shipmentId }
+            body: completePayload
           });
 
         if (webhookError) {
@@ -58,6 +69,10 @@ const PaymentSuccess = () => {
           });
         } else {
           console.log('Webhook dispatched successfully:', webhookResult);
+          toast({
+            title: "Sucesso",
+            description: "Todos os dados foram enviados para processamento no n8n.",
+          });
         }
 
         setShipmentStatus('AWAITING_LABEL');
@@ -66,6 +81,8 @@ const PaymentSuccess = () => {
         sessionStorage.removeItem('paymentData');
         sessionStorage.removeItem('paymentShipmentId');
         sessionStorage.removeItem('currentShipment');
+        sessionStorage.removeItem('documentData');
+        sessionStorage.removeItem('selectedQuote');
         
       } catch (error) {
         console.error('Error processing payment:', error);

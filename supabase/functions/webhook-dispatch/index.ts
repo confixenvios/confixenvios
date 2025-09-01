@@ -12,7 +12,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { shipmentId } = await req.json();
+    const { shipmentId, paymentData, documentData, selectedQuote, shipmentData } = await req.json();
     
     // Create service role client to bypass RLS
     const supabaseService = createClient(
@@ -48,45 +48,83 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error(`No active integration found: ${integrationError?.message}`);
     }
 
-    // Prepare webhook payload
+    // Prepare complete webhook payload with all collected data
     const payload = {
+      // Identificação da remessa
       shipmentId: shipment.id,
       trackingCode: shipment.tracking_code,
       quoteId: shipment.quote_data?.quoteId || 'QUOTE_' + shipment.id.substring(0, 8),
+      status: shipment.status,
+      createdAt: shipment.created_at,
+      
+      // Dados da cotação original
+      cotacao: {
+        origem: selectedQuote?.quoteData?.origin || 'Aparecida de Goiânia - GO',
+        destino: selectedQuote?.quoteData?.destiny || shipment.recipient_address?.city,
+        peso: selectedQuote?.quoteData?.weight || shipment.weight,
+        dimensoes: {
+          comprimento: selectedQuote?.quoteData?.length || shipment.length,
+          largura: selectedQuote?.quoteData?.width || shipment.width,
+          altura: selectedQuote?.quoteData?.height || shipment.height,
+          formato: selectedQuote?.quoteData?.format || shipment.format
+        },
+        precoEconomico: selectedQuote?.quoteData?.economicPrice,
+        precoExpresso: selectedQuote?.quoteData?.expressPrice,
+        prazoEconomico: selectedQuote?.quoteData?.economicDays,
+        prazoExpresso: selectedQuote?.quoteData?.expressDays,
+        opcaoEscolhida: selectedQuote?.option || shipment.selected_option,
+        zona: selectedQuote?.quoteData?.zone,
+        totalPrice: selectedQuote?.totalPrice
+      },
+      
+      // Modo de coleta
       pickupMode: shipment.pickup_option,
+      coletaAlternativa: shipment.quote_data?.coletaAlternativa,
+      
+      // Dados do remetente
       remetente: {
         nome: shipment.sender_address?.name,
         cpfCnpj: shipment.sender_address?.document,
         telefone: shipment.sender_address?.phone,
         email: shipment.sender_address?.email,
-        cep: shipment.sender_address?.cep,
-        endereco: shipment.sender_address?.street,
-        numero: shipment.sender_address?.number,
-        bairro: shipment.sender_address?.neighborhood,
-        cidade: shipment.sender_address?.city,
-        estado: shipment.sender_address?.state,
-        complemento: shipment.sender_address?.complement,
-        referencia: shipment.sender_address?.reference
+        endereco: {
+          cep: shipment.sender_address?.cep,
+          logradouro: shipment.sender_address?.street,
+          numero: shipment.sender_address?.number,
+          complemento: shipment.sender_address?.complement,
+          bairro: shipment.sender_address?.neighborhood,
+          cidade: shipment.sender_address?.city,
+          estado: shipment.sender_address?.state,
+          referencia: shipment.sender_address?.reference
+        }
       },
+      
+      // Dados do destinatário
       destinatario: {
         nome: shipment.recipient_address?.name,
         cpfCnpj: shipment.recipient_address?.document,
         telefone: shipment.recipient_address?.phone,
         email: shipment.recipient_address?.email,
-        cep: shipment.recipient_address?.cep,
-        endereco: shipment.recipient_address?.street,
-        numero: shipment.recipient_address?.number,
-        bairro: shipment.recipient_address?.neighborhood,
-        cidade: shipment.recipient_address?.city,
-        estado: shipment.recipient_address?.state,
-        complemento: shipment.recipient_address?.complement,
-        referencia: shipment.recipient_address?.reference
+        endereco: {
+          cep: shipment.recipient_address?.cep,
+          logradouro: shipment.recipient_address?.street,
+          numero: shipment.recipient_address?.number,
+          complemento: shipment.recipient_address?.complement,
+          bairro: shipment.recipient_address?.neighborhood,
+          cidade: shipment.recipient_address?.city,
+          estado: shipment.recipient_address?.state,
+          referencia: shipment.recipient_address?.reference
+        }
       },
-      mercadoria: {
-        quantidade: shipment.quote_data?.quantity || 1,
-        valorUnitario: shipment.quote_data?.unitValue || 0,
-        valorTotal: shipment.quote_data?.totalValue || shipment.quote_data?.unitValue || 0
+      
+      // Dados do documento fiscal
+      documento: {
+        tipo: documentData?.documentType || 'declaration',
+        chaveNfe: documentData?.nfeKey || null,
+        descricaoMercadoria: documentData?.merchandiseDescription || null
       },
+      
+      // Dados do pacote
       pacote: {
         pesoKg: shipment.weight,
         comprimentoCm: shipment.length,
@@ -94,10 +132,21 @@ const handler = async (req: Request): Promise<Response> => {
         alturaCm: shipment.height,
         formato: shipment.format?.toUpperCase()
       },
+      
+      // Dados do pagamento
       pagamento: {
-        metodo: shipment.payment_data?.method || 'CARTAO',
-        valor: shipment.payment_data?.amount || shipment.quote_data?.totalPrice || 0,
-        status: 'PAGO'
+        metodo: paymentData?.method || shipment.payment_data?.method || 'CARTAO',
+        valor: paymentData?.amount || shipment.payment_data?.amount || selectedQuote?.totalPrice || 0,
+        status: paymentData?.status || 'PAGO',
+        processedAt: new Date().toISOString()
+      },
+      
+      // Metadados do fluxo
+      metadata: {
+        processedAt: new Date().toISOString(),
+        source: 'lovable-shipping-app',
+        version: '1.0',
+        allDataCollected: true
       }
     };
 
