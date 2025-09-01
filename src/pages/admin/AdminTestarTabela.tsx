@@ -11,42 +11,60 @@ import {
   validatePricingTables, 
   testPriceCalculation, 
   findZonesWithoutPricing,
+  testAllZonesComplete,
   type ValidationResult,
-  type PriceTestResult 
+  type PriceTestResult,
+  type CompleteTestResult 
 } from "@/services/priceValidationService";
 
 const AdminTestarTabela = () => {
   const [loading, setLoading] = useState(false);
   const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
   const [testResults, setTestResults] = useState<PriceTestResult[]>([]);
+  const [completeTestResults, setCompleteTestResults] = useState<CompleteTestResult[]>([]);
   const [zonesWithoutPricing, setZonesWithoutPricing] = useState<string[]>([]);
+  const [testSummary, setTestSummary] = useState<{
+    totalZones: number;
+    totalTests: number;
+    successfulTests: number;
+    failedTests: number;
+  } | null>(null);
   const [activeTab, setActiveTab] = useState('validation');
 
   const runCompleteValidation = async () => {
     setLoading(true);
     try {
-      // Executar todas as validações em paralelo
-        const [validation, tests, missingZones] = await Promise.all([
-          validatePricingTables(),
-          testPriceCalculation([0.5, 1, 2, 5, 10, 15, 20, 25, 30]),
-          findZonesWithoutPricing()
-        ]);
+      // Executar teste completo de todas as zonas
+      const completeTest = await testAllZonesComplete();
+      
+      // Executar validações adicionais em paralelo
+      const [validation, tests, missingZones] = await Promise.all([
+        validatePricingTables(),
+        testPriceCalculation([0.5, 1, 2, 5, 10, 15, 20, 25, 30]),
+        findZonesWithoutPricing()
+      ]);
 
+      setCompleteTestResults(completeTest.results);
+      setTestSummary({
+        totalZones: completeTest.totalZones,
+        totalTests: completeTest.totalTests,
+        successfulTests: completeTest.successfulTests,
+        failedTests: completeTest.failedTests
+      });
       setValidationResults(validation);
       setTestResults(tests);
       setZonesWithoutPricing(missingZones);
 
       const totalIssues = validation.reduce((acc, result) => acc + result.issues.length, 0);
-      const totalFailedTests = tests.filter(test => !test.found).length;
 
-      if (totalIssues === 0 && totalFailedTests === 0 && missingZones.length === 0) {
-        toast.success("✅ Todas as validações passaram! Tabelas estão consistentes.");
+      if (completeTest.failedTests === 0 && totalIssues === 0 && missingZones.length === 0) {
+        toast.success(`✅ Teste completo passou! ${completeTest.totalTests} testes realizados com sucesso em ${completeTest.totalZones} zonas.`);
       } else {
-        toast.warning(`⚠️ Encontrados ${totalIssues} problemas na estrutura e ${totalFailedTests} falhas nos testes.`);
+        toast.warning(`⚠️ Teste completo: ${completeTest.failedTests}/${completeTest.totalTests} falhas encontradas.`);
       }
     } catch (error) {
       console.error('Erro na validação:', error);
-      toast.error("Erro ao executar validação das tabelas");
+      toast.error("Erro ao executar teste completo das tabelas");
     } finally {
       setLoading(false);
     }
@@ -108,18 +126,87 @@ const AdminTestarTabela = () => {
             )}
           </Button>
           <p className="text-sm text-muted-foreground mt-2">
-            Este teste verifica lacunas, sobreposições e inconsistências nas tabelas de preço e zones.
+            Este teste completo valida TODOS os CEPs e pesos de todas as zonas cadastradas na tabela.
           </p>
         </CardContent>
       </Card>
 
       {(validationResults.length > 0 || testResults.length > 0) && (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="complete">Teste Completo</TabsTrigger>
             <TabsTrigger value="validation">Validação Estrutural</TabsTrigger>
             <TabsTrigger value="tests">Testes de Preço</TabsTrigger>
             <TabsTrigger value="summary">Resumo</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="complete">
+            <Card>
+              <CardHeader>
+                <CardTitle>Teste Completo - Todos os CEPs e Zonas</CardTitle>
+                {testSummary && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <Badge variant="outline">{testSummary.totalZones} zonas testadas</Badge>
+                    <Badge variant="outline">{testSummary.totalTests} testes realizados</Badge>
+                    <Badge className="bg-green-100 text-green-800">{testSummary.successfulTests} sucessos</Badge>
+                    <Badge variant="destructive">{testSummary.failedTests} falhas</Badge>
+                  </div>
+                )}
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {completeTestResults.map((result) => (
+                    <div key={result.zone} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <h3 className="font-semibold">{result.zone}</h3>
+                          <Badge variant="outline">{result.state} {result.zoneType}</Badge>
+                          <Badge variant="outline" className="text-xs">{result.cepRange}</Badge>
+                          {result.hasAllPrices ? (
+                            <CheckCircle className="w-5 h-5 text-green-500" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-red-500" />
+                          )}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {result.deliveryDays}d normal, {result.expressDeliveryDays}d expresso
+                        </div>
+                      </div>
+                      
+                      {!result.hasAllPrices && (
+                        <Alert className="mb-2">
+                          <AlertTriangle className="w-4 h-4" />
+                          <AlertDescription>
+                            Pesos sem preço: {result.missingWeights.join(', ')}kg
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+                        {result.testResults.slice(0, 9).map((test, index) => (
+                          <div key={index} className={`p-2 rounded border ${test.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                            <div className="font-mono">{test.cep} - {test.weight}kg</div>
+                            {test.success ? (
+                              <div className="text-green-700">
+                                R$ {test.economicPrice?.toFixed(2)} / R$ {test.expressPrice?.toFixed(2)}
+                              </div>
+                            ) : (
+                              <div className="text-red-700 text-xs">{test.error}</div>
+                            )}
+                          </div>
+                        ))}
+                        {result.testResults.length > 9 && (
+                          <div className="p-2 rounded border bg-gray-50 border-gray-200 flex items-center justify-center text-muted-foreground">
+                            +{result.testResults.length - 9} mais testes
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="validation">
             <Card>
@@ -223,12 +310,15 @@ const AdminTestarTabela = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Zonas Validadas</CardTitle>
+                  <CardTitle className="text-lg">Zonas Testadas</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{validationResults.length}</div>
+                  <div className="text-2xl font-bold">{testSummary?.totalZones || validationResults.length}</div>
                   <p className="text-sm text-muted-foreground">
-                    {validationResults.filter(r => r.hasCompleteRanges).length} com estrutura completa
+                    {testSummary ? 
+                      `${testSummary.successfulTests} testes bem-sucedidos` :
+                      `${validationResults.filter(r => r.hasCompleteRanges).length} com estrutura completa`
+                    }
                   </p>
                 </CardContent>
               </Card>
@@ -238,9 +328,12 @@ const AdminTestarTabela = () => {
                   <CardTitle className="text-lg">Testes Realizados</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{testResults.length}</div>
+                  <div className="text-2xl font-bold">{testSummary?.totalTests || testResults.length}</div>
                   <p className="text-sm text-muted-foreground">
-                    {testResults.filter(t => t.found).length} sucessos, {testResults.filter(t => !t.found).length} falhas
+                    {testSummary ?
+                      `${testSummary.failedTests} falhas encontradas` :
+                      `${testResults.filter(t => t.found).length} sucessos, ${testResults.filter(t => !t.found).length} falhas`
+                    }
                   </p>
                 </CardContent>
               </Card>

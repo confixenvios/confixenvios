@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { calculateShippingQuote } from "./shippingService";
 
 export interface ValidationResult {
   zone: string;
@@ -206,6 +207,152 @@ export const testPriceCalculation = async (testWeights: number[] = [0.5, 1, 5, 1
     throw new Error('Erro ao testar cálculo de preços');
   }
 };
+
+// Testar todas as zonas com CEPs de exemplo e diferentes pesos
+export const testAllZonesComplete = async (): Promise<{
+  totalZones: number;
+  totalTests: number;
+  successfulTests: number;
+  failedTests: number;
+  results: CompleteTestResult[];
+}> => {
+  try {
+    // Buscar todas as zonas
+    const { data: zones, error: zonesError } = await supabase
+      .from('shipping_zones')
+      .select('*')
+      .order('zone_code');
+
+    if (zonesError) throw zonesError;
+
+    const results: CompleteTestResult[] = [];
+    const testWeights = [0.5, 1, 2, 5, 10, 15, 20, 25, 30];
+    
+    let totalTests = 0;
+    let successfulTests = 0;
+
+    for (const zone of zones || []) {
+      const zoneResult: CompleteTestResult = {
+        zone: zone.zone_code,
+        state: zone.state,
+        zoneType: zone.zone_type === 'CAP' ? 'Capital' : 'Interior',
+        cepRange: `${zone.cep_start}-${zone.cep_end}`,
+        deliveryDays: zone.delivery_days,
+        expressDeliveryDays: zone.express_delivery_days,
+        testResults: [],
+        hasAllPrices: true,
+        missingWeights: []
+      };
+
+      // Gerar CEPs de teste para esta zona
+      const testCeps = generateTestCepsForZone(zone.cep_start, zone.cep_end);
+
+      for (const testCep of testCeps) {
+        for (const weight of testWeights) {
+          totalTests++;
+          
+          try {
+            // Testar cálculo de frete usando nossa função atual
+            const quote = await calculateShippingQuote({
+              destinyCep: testCep,
+              weight,
+              quantity: 1
+            });
+
+            successfulTests++;
+            zoneResult.testResults.push({
+              cep: testCep,
+              weight,
+              success: true,
+              economicPrice: quote.economicPrice,
+              expressPrice: quote.expressPrice,
+              economicDays: quote.economicDays,
+              expressDays: quote.expressDays
+            });
+
+          } catch (error) {
+            zoneResult.hasAllPrices = false;
+            zoneResult.testResults.push({
+              cep: testCep,
+              weight,
+              success: false,
+              error: error instanceof Error ? error.message : 'Erro desconhecido'
+            });
+            
+            if (!zoneResult.missingWeights.includes(weight)) {
+              zoneResult.missingWeights.push(weight);
+            }
+          }
+        }
+      }
+
+      results.push(zoneResult);
+    }
+
+    return {
+      totalZones: zones?.length || 0,
+      totalTests,
+      successfulTests,
+      failedTests: totalTests - successfulTests,
+      results
+    };
+
+  } catch (error) {
+    console.error('Erro no teste completo:', error);
+    throw new Error('Erro ao executar teste completo das zonas');
+  }
+};
+
+// Função auxiliar para gerar CEPs de teste dentro de uma faixa
+const generateTestCepsForZone = (cepStart: string, cepEnd: string): string[] => {
+  const start = parseInt(cepStart);
+  const end = parseInt(cepEnd);
+  
+  const testCeps: string[] = [];
+  
+  // CEP inicial
+  testCeps.push(cepStart.padStart(8, '0'));
+  
+  // CEP do meio
+  const middle = Math.floor((start + end) / 2);
+  testCeps.push(middle.toString().padStart(8, '0'));
+  
+  // CEP final
+  testCeps.push(cepEnd.padStart(8, '0'));
+  
+  // Mais alguns CEPs aleatórios na faixa (se a faixa for grande)
+  if (end - start > 10000) {
+    const quarter = Math.floor((start + middle) / 2);
+    const threeQuarter = Math.floor((middle + end) / 2);
+    testCeps.push(quarter.toString().padStart(8, '0'));
+    testCeps.push(threeQuarter.toString().padStart(8, '0'));
+  }
+  
+  return testCeps;
+};
+
+export interface CompleteTestResult {
+  zone: string;
+  state: string;
+  zoneType: string;
+  cepRange: string;
+  deliveryDays: number;
+  expressDeliveryDays: number;
+  testResults: TestResult[];
+  hasAllPrices: boolean;
+  missingWeights: number[];
+}
+
+export interface TestResult {
+  cep: string;
+  weight: number;
+  success: boolean;
+  economicPrice?: number;
+  expressPrice?: number;
+  economicDays?: number;
+  expressDays?: number;
+  error?: string;
+}
 
 // Buscar zonas sem configuração de preço
 export const findZonesWithoutPricing = async (): Promise<string[]> => {
