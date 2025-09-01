@@ -27,13 +27,11 @@ const Payment = () => {
   // Calcular valores do frete
   const freightPrice = shipmentData.quoteData?.shippingQuote?.economicPrice || 0;
   const pickupCost = shipmentData.pickupDetails?.option === 'pickup' ? 10 : 0;
-  const insuranceFee = 10; // Taxa fixa de seguro
-  const totalAmount = freightPrice + pickupCost + insuranceFee;
+  const totalAmount = freightPrice + pickupCost;
   
   console.log('Payment - Valores calculados:', {
     freightPrice,
     pickupCost,
-    insuranceFee,
     totalAmount
   });
   
@@ -140,10 +138,6 @@ const Payment = () => {
                   <span className="font-semibold">R$ {pickupCost.toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Taxa de Seguro</span>
-                <span className="font-semibold">R$ {insuranceFee.toFixed(2)}</span>
-              </div>
               <Separator />
               <div className="flex justify-between items-center text-lg font-bold">
                 <span>Total</span>
