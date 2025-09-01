@@ -240,7 +240,7 @@ const Document = () => {
             <div className="flex space-x-4">
               <Button
                 variant="outline"
-                onClick={() => navigate("/resultados")}
+                onClick={() => navigate("/etiqueta")}
                 className="flex-1 h-12"
               >
                 Voltar
