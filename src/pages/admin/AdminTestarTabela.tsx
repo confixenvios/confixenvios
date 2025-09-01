@@ -37,6 +37,8 @@ const AdminTestarTabela = () => {
   const runCompleteValidation = async () => {
     setLoading(true);
     try {
+      toast.info("🔍 Iniciando teste completo de todas as regiões...");
+      
       // Executar teste completo de todas as zonas
       const completeTest = await testAllZonesComplete();
       
@@ -62,11 +64,28 @@ const AdminTestarTabela = () => {
       setZonesWithoutPricing(missingZones);
 
       const totalIssues = validation.reduce((acc, result) => acc + result.issues.length, 0);
+      const problemZones = completeTest.results.filter(r => !r.hasAllPrices).length;
 
-      if (completeTest.failedTests === 0 && totalIssues === 0 && missingZones.length === 0) {
-        toast.success(`✅ Teste completo passou! ${completeTest.totalTests} testes realizados com sucesso em ${completeTest.totalZones} zonas.`);
+      // Relatório detalhado
+      console.log("=== RELATÓRIO COMPLETO DE VALIDAÇÃO ===");
+      console.log(`📊 Total de zonas testadas: ${completeTest.totalZones}`);
+      console.log(`🧪 Total de testes realizados: ${completeTest.totalTests}`);
+      console.log(`✅ Testes bem-sucedidos: ${completeTest.successfulTests}`);
+      console.log(`❌ Testes falharam: ${completeTest.failedTests}`);
+      console.log(`🗺️ Estados cobertos: ${completeTest.statesCovered.join(', ')}`);
+      console.log(`🏷️ Regiões esperadas: ${completeTest.expectedRegions.length}`);
+      console.log(`❗ Regiões faltando: ${completeTest.missingRegions.length}`);
+      console.log(`⚠️ Zonas com problemas: ${problemZones}`);
+      
+      if (completeTest.missingRegions.length > 0) {
+        console.log(`🚨 Regiões faltando na base:`, completeTest.missingRegions);
+      }
+
+      if (completeTest.failedTests === 0 && totalIssues === 0 && missingZones.length === 0 && completeTest.missingRegions.length === 0) {
+        toast.success(`✅ PERFEITO! Teste completo passou! ${completeTest.totalTests} testes realizados com sucesso em ${completeTest.totalZones} zonas. Todas as ${completeTest.expectedRegions.length} regiões estão funcionando corretamente.`);
+      } else if (completeTest.missingRegions.length > 0) {
+        toast.error(`🚨 REGIÕES FALTANDO: ${completeTest.missingRegions.length} das ${completeTest.expectedRegions.length} regiões esperadas não estão na base de dados! Isso impede cotações para essas áreas.`);
       } else {
-        const problemZones = completeTest.results.filter(r => !r.hasAllPrices).length;
         toast.error(`🚨 LACUNAS DETECTADAS: ${problemZones} zonas com problemas, ${completeTest.failedTests}/${completeTest.totalTests} falhas encontradas. Verificar faixas de peso faltando!`);
       }
     } catch (error) {
