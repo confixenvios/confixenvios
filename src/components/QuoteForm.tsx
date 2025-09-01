@@ -270,8 +270,32 @@ const QuoteForm = () => {
         quantity: quantity
       });
 
-      const newQuoteData = { ...formData, shippingQuote };
-      setQuoteData(newQuoteData);
+      // Salvar todos os dados da cotação completa
+      const completeQuoteData = {
+        // Dados da cotação original
+        originCep: formData.originCep,
+        destinyCep: formData.destinyCep,
+        weight: formData.weight,
+        length: formData.length,
+        width: formData.width,
+        height: formData.height,
+        format: formData.format,
+        quantity: formData.quantity,
+        unitValue: formData.unitValue,
+        totalMerchandiseValue: getTotalMerchandiseValue(),
+        
+        // Resultado da cotação
+        shippingQuote,
+        
+        // Metadados
+        calculatedAt: new Date().toISOString()
+      };
+
+      setQuoteData(completeQuoteData);
+      
+      // Salvar no sessionStorage para uso posterior
+      sessionStorage.setItem('completeQuoteData', JSON.stringify(completeQuoteData));
+      
       setCurrentStep(2);
       
       toast({
@@ -396,7 +420,14 @@ const QuoteForm = () => {
         ...quoteData, 
         totalPrice: getTotalPrice(),
         pickupMode: pickupOption === 'pickup' ? 'PICKUP_D1' : 'DROP_OFF',
-        coletaAlternativa: pickupOption === 'pickup' && !samePickupAddress ? alternativePickupAddress : null
+        coletaAlternativa: pickupOption === 'pickup' && !samePickupAddress ? alternativePickupAddress : null,
+        // Dados completos da cotação
+        formData: formData,
+        pickupOption: pickupOption,
+        pickupAddress: {
+          sameAsOrigin: samePickupAddress,
+          alternativeAddress: alternativePickupAddress
+        }
       };
 
       const { data: shipment, error: shipmentError } = await supabase
@@ -420,6 +451,21 @@ const QuoteForm = () => {
         .maybeSingle();
 
       if (shipmentError) throw shipmentError;
+
+      // Save complete shipment data for next steps
+      const completeShipmentData = {
+        ...shipment,
+        completeQuoteData: quoteData,
+        senderData: senderData,
+        recipientData: recipientData,
+        pickupDetails: {
+          option: pickupOption,
+          sameAsOrigin: samePickupAddress,
+          alternativeAddress: alternativePickupAddress
+        }
+      };
+      
+      sessionStorage.setItem('currentShipment', JSON.stringify(completeShipmentData));
 
       toast({
         title: "Etiqueta criada!",

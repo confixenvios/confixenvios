@@ -57,36 +57,60 @@ const handler = async (req: Request): Promise<Response> => {
       status: shipment.status,
       createdAt: shipment.created_at,
       
-      // Dados da cotação original
-      cotacao: {
-        origem: selectedQuote?.quoteData?.origin || 'Aparecida de Goiânia - GO',
-        destino: selectedQuote?.quoteData?.destiny || shipment.recipient_address?.city,
-        peso: selectedQuote?.quoteData?.weight || shipment.weight,
-        dimensoes: {
-          comprimento: selectedQuote?.quoteData?.length || shipment.length,
-          largura: selectedQuote?.quoteData?.width || shipment.width,
-          altura: selectedQuote?.quoteData?.height || shipment.height,
-          formato: selectedQuote?.quoteData?.format || shipment.format
+      // Dados completos da cotação inicial
+      cotacaoOriginal: {
+        // CEPs
+        cepOrigemInformado: selectedQuote?.completeQuoteData?.originCep || shipmentData?.completeQuoteData?.originCep || '74345-260',
+        cepDestinoInformado: selectedQuote?.completeQuoteData?.destinyCep || shipmentData?.completeQuoteData?.destinyCep,
+        
+        // Detalhes da mercadoria
+        mercadoria: {
+          quantidade: selectedQuote?.completeQuoteData?.quantity || shipmentData?.completeQuoteData?.quantity || '1',
+          valorUnitario: selectedQuote?.completeQuoteData?.unitValue || shipmentData?.completeQuoteData?.unitValue || '0',
+          valorTotal: selectedQuote?.completeQuoteData?.totalMerchandiseValue || shipmentData?.completeQuoteData?.totalMerchandiseValue || '0'
         },
-        precoEconomico: selectedQuote?.quoteData?.economicPrice,
-        precoExpresso: selectedQuote?.quoteData?.expressPrice,
-        prazoEconomico: selectedQuote?.quoteData?.economicDays,
-        prazoExpresso: selectedQuote?.quoteData?.expressDays,
-        opcaoEscolhida: selectedQuote?.option || shipment.selected_option,
-        zona: selectedQuote?.quoteData?.zone,
-        totalPrice: selectedQuote?.totalPrice
+        
+        // Detalhes do pacote  
+        pacoteDetalhes: {
+          pesoKg: selectedQuote?.completeQuoteData?.weight || shipmentData?.completeQuoteData?.weight || shipment.weight,
+          comprimentoCm: selectedQuote?.completeQuoteData?.length || shipmentData?.completeQuoteData?.length || shipment.length,
+          larguraCm: selectedQuote?.completeQuoteData?.width || shipmentData?.completeQuoteData?.width || shipment.width,
+          alturaCm: selectedQuote?.completeQuoteData?.height || shipmentData?.completeQuoteData?.height || shipment.height,
+          formato: selectedQuote?.completeQuoteData?.format || shipmentData?.completeQuoteData?.format || shipment.format
+        },
+        
+        // Resultado da cotação
+        resultadoCotacao: {
+          origem: 'Aparecida de Goiânia - GO',
+          destino: shipment.recipient_address?.city + ' - ' + shipment.recipient_address?.state,
+          precoEconomico: selectedQuote?.completeQuoteData?.shippingQuote?.economicPrice || selectedQuote?.quoteData?.economicPrice,
+          precoExpresso: selectedQuote?.completeQuoteData?.shippingQuote?.expressPrice || selectedQuote?.quoteData?.expressPrice,
+          prazoEconomico: selectedQuote?.completeQuoteData?.shippingQuote?.economicDays || selectedQuote?.quoteData?.economicDays,
+          prazoExpresso: selectedQuote?.completeQuoteData?.shippingQuote?.expressDays || selectedQuote?.quoteData?.expressDays,
+          zona: selectedQuote?.completeQuoteData?.shippingQuote?.zone || selectedQuote?.quoteData?.zone,
+          zoneName: selectedQuote?.completeQuoteData?.shippingQuote?.zoneName || selectedQuote?.quoteData?.zoneName
+        },
+        
+        calculadoEm: selectedQuote?.completeQuoteData?.calculatedAt || new Date().toISOString()
       },
       
-      // Modo de coleta
-      pickupMode: shipment.pickup_option,
-      coletaAlternativa: shipment.quote_data?.coletaAlternativa,
+      // Opções de coleta selecionadas
+      opcaoColeta: {
+        tipo: shipment.pickup_option,
+        descricao: shipment.pickup_option === 'pickup' ? 'Coleta no Local' : 'Postagem em Agência',
+        enderecoIgualOrigemRemetente: selectedQuote?.pickupDetails?.sameAsOrigin || shipmentData?.pickupDetails?.sameAsOrigin || true,
+        enderecoAlternativo: selectedQuote?.pickupDetails?.alternativeAddress || shipmentData?.pickupDetails?.alternativeAddress || null,
+        custoColeta: shipment.pickup_option === 'pickup' ? 10.00 : 0.00
+      },
       
-      // Dados do remetente
+      // Dados completos do remetente
       remetente: {
-        nome: shipment.sender_address?.name,
-        cpfCnpj: shipment.sender_address?.document,
-        telefone: shipment.sender_address?.phone,
-        email: shipment.sender_address?.email,
+        dadosPessoais: {
+          nome: shipment.sender_address?.name,
+          cpfCnpj: shipment.sender_address?.document,
+          telefone: shipment.sender_address?.phone,
+          email: shipment.sender_address?.email
+        },
         endereco: {
           cep: shipment.sender_address?.cep,
           logradouro: shipment.sender_address?.street,
@@ -99,12 +123,14 @@ const handler = async (req: Request): Promise<Response> => {
         }
       },
       
-      // Dados do destinatário
+      // Dados completos do destinatário
       destinatario: {
-        nome: shipment.recipient_address?.name,
-        cpfCnpj: shipment.recipient_address?.document,
-        telefone: shipment.recipient_address?.phone,
-        email: shipment.recipient_address?.email,
+        dadosPessoais: {
+          nome: shipment.recipient_address?.name,
+          cpfCnpj: shipment.recipient_address?.document,
+          telefone: shipment.recipient_address?.phone,
+          email: shipment.recipient_address?.email
+        },
         endereco: {
           cep: shipment.recipient_address?.cep,
           logradouro: shipment.recipient_address?.street,
@@ -117,36 +143,49 @@ const handler = async (req: Request): Promise<Response> => {
         }
       },
       
-      // Dados do documento fiscal
-      documento: {
+      // Dados completos do documento fiscal
+      documentoFiscal: {
         tipo: documentData?.documentType || 'declaration',
+        descricao: documentData?.documentType === 'nfe' ? 'Nota Fiscal Eletrônica' : 'Declaração de Conteúdo',
         chaveNfe: documentData?.nfeKey || null,
-        descricaoMercadoria: documentData?.merchandiseDescription || null
+        descricaoMercadoria: documentData?.merchandiseDescription || null,
+        informadoEm: new Date().toISOString()
       },
       
-      // Dados do pacote
-      pacote: {
-        pesoKg: shipment.weight,
-        comprimentoCm: shipment.length,
-        larguraCm: shipment.width,
-        alturaCm: shipment.height,
-        formato: shipment.format?.toUpperCase()
+      // Resumo financeiro completo
+      resumoFinanceiro: {
+        valorMercadoria: selectedQuote?.completeQuoteData?.totalMerchandiseValue || 0,
+        valorFrete: selectedQuote?.completeQuoteData?.shippingQuote?.economicPrice || selectedQuote?.quoteData?.economicPrice || 0,
+        valorColeta: shipment.pickup_option === 'pickup' ? 10.00 : 0.00,
+        valorTotal: paymentData?.amount || selectedQuote?.totalPrice || 0,
+        metodoPagamento: paymentData?.method || shipment.payment_data?.method || 'CARTAO',
+        statusPagamento: paymentData?.status || 'PAGO',
+        processadoEm: new Date().toISOString()
       },
       
-      // Dados do pagamento
-      pagamento: {
-        metodo: paymentData?.method || shipment.payment_data?.method || 'CARTAO',
-        valor: paymentData?.amount || shipment.payment_data?.amount || selectedQuote?.totalPrice || 0,
-        status: paymentData?.status || 'PAGO',
-        processedAt: new Date().toISOString()
+      // Dados técnicos do pacote
+      especificacoesTecnicas: {
+        pesoKg: parseFloat(shipment.weight),
+        dimensoes: {
+          comprimentoCm: parseFloat(shipment.length),
+          larguraCm: parseFloat(shipment.width),
+          alturaCm: parseFloat(shipment.height)
+        },
+        formato: shipment.format?.toUpperCase(),
+        volumeM3: (parseFloat(shipment.length) * parseFloat(shipment.width) * parseFloat(shipment.height)) / 1000000
       },
       
-      // Metadados do fluxo
-      metadata: {
-        processedAt: new Date().toISOString(),
-        source: 'lovable-shipping-app',
-        version: '1.0',
-        allDataCollected: true
+      // Metadados do processo
+      metadados: {
+        processadoEm: new Date().toISOString(),
+        fonte: 'lovable-shipping-app',
+        versao: '1.0',
+        todosOsDadosColetados: true,
+        etapasCompletas: ['cotacao', 'opcoes_coleta', 'dados_etiqueta', 'documento_fiscal', 'pagamento'],
+        usuario: {
+          autenticado: true,
+          processouFluxoCompleto: true
+        }
       }
     };
 
