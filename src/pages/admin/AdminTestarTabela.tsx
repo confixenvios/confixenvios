@@ -28,6 +28,9 @@ const AdminTestarTabela = () => {
     totalTests: number;
     successfulTests: number;
     failedTests: number;
+    statesCovered: string[];
+    expectedRegions: string[];
+    missingRegions: string[];
   } | null>(null);
   const [activeTab, setActiveTab] = useState('validation');
 
@@ -49,7 +52,10 @@ const AdminTestarTabela = () => {
         totalZones: completeTest.totalZones,
         totalTests: completeTest.totalTests,
         successfulTests: completeTest.successfulTests,
-        failedTests: completeTest.failedTests
+        failedTests: completeTest.failedTests,
+        statesCovered: completeTest.statesCovered,
+        expectedRegions: completeTest.expectedRegions,
+        missingRegions: completeTest.missingRegions
       });
       setValidationResults(validation);
       setTestResults(tests);
@@ -341,7 +347,7 @@ const AdminTestarTabela = () => {
           </TabsContent>
 
           <TabsContent value="summary">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Zonas Testadas</CardTitle>
@@ -383,7 +389,73 @@ const AdminTestarTabela = () => {
                   </p>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Regiões da Tabela</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {testSummary?.expectedRegions.length || 0}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {testSummary?.missingRegions.length ? (
+                      <span className="text-red-600">
+                        {testSummary.missingRegions.length} regiões faltando na base
+                      </span>
+                    ) : (
+                      'Todas as regiões encontradas'
+                    )}
+                  </p>
+                </CardContent>
+              </Card>
             </div>
+
+            {/* Card de análise de regiões */}
+            {testSummary && testSummary.missingRegions.length > 0 && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>🚨 Regiões Faltando na Base de Dados</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>CRÍTICO:</strong> {testSummary.missingRegions.length} regiões da tabela de preços não foram encontradas na base de dados.
+                      Isso significa que essas regiões não podem ser cotadas pelo sistema.
+                    </AlertDescription>
+                  </Alert>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {testSummary.missingRegions.map((region) => (
+                      <Badge key={region} variant="destructive" className="justify-center">
+                        {region}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Card de estados cobertos */}
+            {testSummary && testSummary.statesCovered.length > 0 && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Estados Cobertos na Base</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {testSummary.statesCovered.map((state) => (
+                      <Badge key={state} variant="outline">
+                        {state}
+                      </Badge>
+                    ))}
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-3">
+                    Total: {testSummary.statesCovered.length} de 22 estados brasileiros + ES e MT
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             {validationResults.length > 0 && (
               <Card className="mt-6">

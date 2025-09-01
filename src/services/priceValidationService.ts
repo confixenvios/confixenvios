@@ -216,8 +216,58 @@ export const testAllZonesComplete = async (): Promise<{
   failedTests: number;
   results: CompleteTestResult[];
   statesCovered: string[];
+  expectedRegions: string[];
+  missingRegions: string[];
 }> => {
   try {
+    // Lista completa de códigos de região esperados na tabela de preços
+    const expectedRegions = [
+      // São Paulo
+      'SPCAP.01', 'SPCAP.02', 'SPCAP.03', 'SPMET.01', 'SPINT.01', 'SPINT.02', 'SPINT.03', 'SPINT.04',
+      // Rio de Janeiro  
+      'RJCAP.01', 'RJINT.01', 'RJINT.02', 'RJINT.03',
+      // Minas Gerais
+      'MGCAP.01', 'MGINT.01', 'MGINT.02', 'MGINT.03',
+      // Espírito Santo
+      'ESCAP.01', 'ESINT.01', 'ESINT.02', 'ESINT.03',
+      // Paraná
+      'PRCAP.01', 'PRCAP.02', 'PRINT.01', 'PRINT.02', 'PRINT.03',
+      // Santa Catarina
+      'SCCAP.01', 'SCINT.01', 'SCINT.02', 'SCINT.03',
+      // Rio Grande do Sul
+      'RSCAP.01', 'RSINT.01', 'RSINT.02', 'RSINT.03',
+      // Distrito Federal
+      'DFCAP.01',
+      // Goiás
+      'GOCAP.01', 'GOCAP.02', 'GOINT.01',
+      // Mato Grosso do Sul
+      'MSCAP.01', 'MSINT.01',
+      // Mato Grosso
+      'MTCAP.01',
+      // Bahia
+      'BACAP.01', 'BAINT.01', 'BAINT.02', 'BAINT.03',
+      // Pernambuco
+      'PECAP.01', 'PEINT.01', 'PEINT.02', 'PEINT.03',
+      // Ceará
+      'CECAP.01', 'CEINT.01',
+      // Maranhão
+      'MACAP.01',
+      // Alagoas
+      'ALCAP.01', 'ALINT.01',
+      // Rio Grande do Norte
+      'RNCAP.01', 'RNINT.01',
+      // Paraíba
+      'PBCAP.01', 'PBINT.01', 'PBINT.02', 'PBINT.03',
+      // Piauí
+      'PICAP.01',
+      // Sergipe
+      'SECAP.01',
+      // Pará
+      'PACAP.01', 'PAINT.01',
+      // Tocantins
+      'TOCAP.01', 'TOINT.01', 'TOINT.02'
+    ];
+
     // Lista completa de estados brasileiros para validação
     const expectedStates = [
       'SP', 'RJ', 'MG', 'PR', 'SC', 'RS', 'DF', 'GO', 'MS', 
@@ -234,8 +284,14 @@ export const testAllZonesComplete = async (): Promise<{
 
     // Verificar quais estados estão presentes na base de dados
     const statesCovered = [...new Set((zones || []).map(zone => zone.state))].sort();
+    const zonesInDb = (zones || []).map(zone => zone.zone_code);
+    const missingRegions = expectedRegions.filter(region => !zonesInDb.includes(region));
+    
     console.log('Estados encontrados na base:', statesCovered);
     console.log('Estados esperados:', expectedStates);
+    console.log('Regiões esperadas:', expectedRegions.length);
+    console.log('Regiões na base:', zonesInDb.length);
+    console.log('Regiões faltando:', missingRegions);
     
     const missingStates = expectedStates.filter(state => !statesCovered.includes(state));
     if (missingStates.length > 0) {
@@ -312,7 +368,9 @@ export const testAllZonesComplete = async (): Promise<{
       successfulTests,
       failedTests: totalTests - successfulTests,
       results,
-      statesCovered
+      statesCovered,
+      expectedRegions,
+      missingRegions
     };
 
   } catch (error) {
