@@ -151,6 +151,9 @@ const AdminTestarTabela = () => {
                     <Badge variant="outline">{testSummary.totalTests} testes realizados</Badge>
                     <Badge className="bg-green-100 text-green-800">{testSummary.successfulTests} sucessos</Badge>
                     <Badge variant="destructive">{testSummary.failedTests} falhas</Badge>
+                    {completeTestResults.length > 0 && (
+                      <Badge variant="secondary">{[...new Set(completeTestResults.map(r => r.state))].length} estados</Badge>
+                    )}
                   </div>
                 )}
               </CardHeader>

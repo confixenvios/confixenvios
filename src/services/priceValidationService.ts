@@ -215,8 +215,15 @@ export const testAllZonesComplete = async (): Promise<{
   successfulTests: number;
   failedTests: number;
   results: CompleteTestResult[];
+  statesCovered: string[];
 }> => {
   try {
+    // Lista completa de estados brasileiros para validação
+    const expectedStates = [
+      'SP', 'RJ', 'MG', 'PR', 'SC', 'RS', 'DF', 'GO', 'MS', 
+      'BA', 'PE', 'CE', 'SE', 'MA', 'RN', 'AL', 'PB', 'PI', 'PA', 'TO', 'ES', 'MT'
+    ];
+
     // Buscar todas as zonas
     const { data: zones, error: zonesError } = await supabase
       .from('shipping_zones')
@@ -224,6 +231,16 @@ export const testAllZonesComplete = async (): Promise<{
       .order('zone_code');
 
     if (zonesError) throw zonesError;
+
+    // Verificar quais estados estão presentes na base de dados
+    const statesCovered = [...new Set((zones || []).map(zone => zone.state))].sort();
+    console.log('Estados encontrados na base:', statesCovered);
+    console.log('Estados esperados:', expectedStates);
+    
+    const missingStates = expectedStates.filter(state => !statesCovered.includes(state));
+    if (missingStates.length > 0) {
+      console.warn('Estados faltando na base de dados:', missingStates);
+    }
 
     const results: CompleteTestResult[] = [];
     const testWeights = [0.5, 1, 2, 5, 10, 15, 20, 25, 30];
@@ -294,7 +311,8 @@ export const testAllZonesComplete = async (): Promise<{
       totalTests,
       successfulTests,
       failedTests: totalTests - successfulTests,
-      results
+      results,
+      statesCovered
     };
 
   } catch (error) {
