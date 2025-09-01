@@ -230,26 +230,26 @@ const Label = () => {
     setIsLoading(true);
 
     try {
-      // Create sender address with user ownership and validation
+      // Create sender address without requiring authentication
       const { data: senderAddress, error: senderError } = await supabase
         .from('addresses')
         .insert({
           ...senderData,
           address_type: 'sender',
-          user_id: user?.id
+          user_id: null
         })
         .select()
         .maybeSingle();
 
       if (senderError) throw senderError;
 
-      // Create recipient address with user ownership and validation
+      // Create recipient address without requiring authentication
       const { data: recipientAddress, error: recipientError } = await supabase
         .from('addresses')
         .insert({
           ...recipientData,
           address_type: 'recipient',
-          user_id: user?.id
+          user_id: null
         })
         .select()
         .maybeSingle();
@@ -285,7 +285,7 @@ const Label = () => {
           height: parseFloat(selectedQuote.quoteData.height),
           format: selectedQuote.quoteData.format,
           status: 'PENDING_DOCUMENT',
-          user_id: user?.id
+          user_id: null
         })
         .select()
         .maybeSingle();
