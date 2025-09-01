@@ -45,7 +45,7 @@ const Payment = () => {
       id: 'credit',
       name: 'Cartão de Crédito',
       icon: CreditCard,
-      description: 'Até 12x sem juros',
+      description: 'Pagamento à vista',
       available: true
     },
     {
