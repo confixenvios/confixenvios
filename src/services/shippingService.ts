@@ -93,7 +93,7 @@ export const calculateShippingQuote = async ({
       economicDays: zone.delivery_days,
       expressDays: zone.express_delivery_days,
       zone: zone.zone_code,
-      zoneName: `${zone.state} ${zone.zone_type === 'CAP' ? 'Capital' : 'Interior'}`
+      zoneName: zone.state
     };
   } catch (error) {
     console.error('Erro ao calcular frete:', error);
