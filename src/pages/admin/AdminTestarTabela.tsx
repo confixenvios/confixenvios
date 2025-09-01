@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle, XCircle, AlertTriangle, Play, Loader2, Database } from "lucide-react";
+import { CheckCircle, XCircle, AlertTriangle, Play, Loader2, Database, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { 
   validatePricingTables, 
@@ -60,7 +60,8 @@ const AdminTestarTabela = () => {
       if (completeTest.failedTests === 0 && totalIssues === 0 && missingZones.length === 0) {
         toast.success(`✅ Teste completo passou! ${completeTest.totalTests} testes realizados com sucesso em ${completeTest.totalZones} zonas.`);
       } else {
-        toast.warning(`⚠️ Teste completo: ${completeTest.failedTests}/${completeTest.totalTests} falhas encontradas.`);
+        const problemZones = completeTest.results.filter(r => !r.hasAllPrices).length;
+        toast.error(`🚨 LACUNAS DETECTADAS: ${problemZones} zonas com problemas, ${completeTest.failedTests}/${completeTest.totalTests} falhas encontradas. Verificar faixas de peso faltando!`);
       }
     } catch (error) {
       console.error('Erro na validação:', error);
@@ -154,18 +155,38 @@ const AdminTestarTabela = () => {
                 )}
               </CardHeader>
               <CardContent>
+                {/* Alerta para problemas críticos */}
+                {completeTestResults.some(r => !r.hasAllPrices) && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      🚨 <strong>ATENÇÃO: Lacunas na Tabela de Preços Detectadas!</strong><br/>
+                      Foram encontradas {completeTestResults.filter(r => !r.hasAllPrices).length} zonas com lacunas nas faixas de peso. 
+                      Isso está causando os erros "Não há preço configurado" que aparecem na cotação. 
+                      <strong>As zonas com problemas estão marcadas em vermelho abaixo.</strong>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
                 <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {completeTestResults.map((result) => (
-                    <div key={result.zone} className="border rounded-lg p-4">
+                  {/* Mostrar primeiro as zonas com problemas */}
+                  {completeTestResults
+                    .sort((a, b) => {
+                      if (a.hasAllPrices && !b.hasAllPrices) return 1;
+                      if (!a.hasAllPrices && b.hasAllPrices) return -1;
+                      return a.zone.localeCompare(b.zone);
+                    })
+                    .map((result) => (
+                    <div key={result.zone} className={`border rounded-lg p-4 ${!result.hasAllPrices ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-2">
                           <h3 className="font-semibold">{result.zone}</h3>
                           <Badge variant="outline">{result.state} {result.zoneType}</Badge>
                           <Badge variant="outline" className="text-xs">{result.cepRange}</Badge>
                           {result.hasAllPrices ? (
-                            <CheckCircle className="w-5 h-5 text-green-500" />
+                            <Badge className="bg-green-100 text-green-800">✓ OK</Badge>
                           ) : (
-                            <XCircle className="w-5 h-5 text-red-500" />
+                            <Badge variant="destructive">🚨 {result.missingWeights.length} FAIXAS FALTANDO</Badge>
                           )}
                         </div>
                         <div className="text-sm text-muted-foreground">
@@ -174,10 +195,20 @@ const AdminTestarTabela = () => {
                       </div>
                       
                       {!result.hasAllPrices && (
-                        <Alert className="mb-2">
-                          <AlertTriangle className="w-4 h-4" />
+                        <Alert variant="destructive" className="mb-3">
+                          <AlertCircle className="w-4 h-4" />
                           <AlertDescription>
-                            Pesos sem preço: {result.missingWeights.join(', ')}kg
+                            <strong>⚠️ FAIXAS DE PESO SEM PREÇO CONFIGURADO:</strong><br/>
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {result.missingWeights.map((weight) => (
+                                <Badge key={weight} variant="destructive" className="text-xs">
+                                  {weight}kg
+                                </Badge>
+                              ))}
+                            </div>
+                            <div className="text-sm mt-2 text-red-800">
+                              🚨 <strong>Essas lacunas estão causando erro "Não há preço configurado" no sistema de cotação!</strong>
+                            </div>
                           </AlertDescription>
                         </Alert>
                       )}
