@@ -17,6 +17,26 @@ const Payment = () => {
   console.log('Payment - Component montado');
   console.log('Payment - Shipment data:', shipmentData);
   
+  // Verificar se há dados válidos
+  if (!shipmentData.quoteData) {
+    console.log('Payment - Nenhum dado de cotação encontrado, redirecionando para cotação');
+    // Redirecionar para cotação se não houver dados
+    setTimeout(() => navigate('/cotacao'), 100);
+  }
+  
+  // Calcular valores do frete
+  const freightPrice = shipmentData.quoteData?.shippingQuote?.economicPrice || 0;
+  const pickupCost = shipmentData.pickupDetails?.option === 'pickup' ? 10 : 0;
+  const insuranceFee = 10; // Taxa fixa de seguro
+  const totalAmount = freightPrice + pickupCost + insuranceFee;
+  
+  console.log('Payment - Valores calculados:', {
+    freightPrice,
+    pickupCost,
+    insuranceFee,
+    totalAmount
+  });
+  
   const handleBack = () => {
     navigate('/documento');
   };
@@ -59,7 +79,7 @@ const Payment = () => {
       // Update shipment with payment data
       const paymentData = {
         method: selectedMethod,
-        amount: (parseFloat(shipmentData.quote_data?.shippingQuote?.economicPrice || 0) + 10),
+        amount: totalAmount,
         status: 'PAID'
       };
 
@@ -112,16 +132,22 @@ const Payment = () => {
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Frete</span>
-                <span className="font-semibold">R$ {shipmentData.quote_data?.shippingQuote?.economicPrice?.toFixed(2) || '0,00'}</span>
+                <span className="font-semibold">R$ {freightPrice.toFixed(2)}</span>
               </div>
+              {pickupCost > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Taxa de Coleta</span>
+                  <span className="font-semibold">R$ {pickupCost.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Taxa de Seguro</span>
-                <span className="font-semibold">R$ 10,00</span>
+                <span className="font-semibold">R$ {insuranceFee.toFixed(2)}</span>
               </div>
               <Separator />
               <div className="flex justify-between items-center text-lg font-bold">
                 <span>Total</span>
-                <span className="text-primary">R$ {(parseFloat(shipmentData.quote_data?.shippingQuote?.economicPrice || 0) + 10).toFixed(2)}</span>
+                <span className="text-primary">R$ {totalAmount.toFixed(2)}</span>
               </div>
             </CardContent>
           </Card>
