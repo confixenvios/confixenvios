@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, CreditCard, Zap, Barcode, DollarSign } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Payment = () => {
   const navigate = useNavigate();
@@ -71,28 +72,42 @@ const Payment = () => {
     if (!selectedMethod) return;
     
     try {
-      // Simulate payment processing
       console.log('Processing payment with method:', selectedMethod);
       
-      // Update shipment with payment data
-      const paymentData = {
-        method: selectedMethod,
-        amount: totalAmount,
-        status: 'PAID'
-      };
+      if (selectedMethod === 'pix') {
+        // PIX não é suportado pelo Stripe no Brasil, mostrar mensagem
+        alert('PIX será implementado em breve. Por favor, use cartão ou boleto.');
+        return;
+      }
+      
+      // Call Stripe edge function
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
+          amount: totalAmount,
+          shipmentData: {
+            ...shipmentData,
+            weight: shipmentData.weight || 1,
+            senderEmail: shipmentData.senderAddress?.email || 'guest@example.com'
+          }
+        }
+      });
 
-      // Here you would integrate with real payment gateway
-      // For demo, we'll simulate a successful payment
+      if (error) {
+        console.error('Payment error:', error);
+        alert('Erro ao processar pagamento. Tente novamente.');
+        return;
+      }
+
+      console.log('Stripe session created:', data);
       
-      // Store payment data and navigate to payment success
-      sessionStorage.setItem('paymentData', JSON.stringify(paymentData));
-      sessionStorage.setItem('paymentShipmentId', shipmentData.id || 'temp-id');
-      
-      navigate('/pagamento-sucesso');
+      // Open Stripe checkout in new tab
+      if (data.url) {
+        window.open(data.url, '_blank');
+      }
       
     } catch (error) {
       console.error('Payment error:', error);
-      // Handle payment error
+      alert('Erro ao processar pagamento. Tente novamente.');
     }
   };
 
