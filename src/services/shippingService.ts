@@ -24,6 +24,11 @@ export const calculateShippingQuote = async ({
   quantity = 1
 }: QuoteRequest): Promise<ShippingQuote> => {
   try {
+    // Validar peso máximo primeiro
+    if (weight > 30) {
+      throw new Error(`Não atendemos envios acima de 30kg. Peso informado: ${weight}kg. Para cargas maiores, entre em contato conosco.`);
+    }
+
     // Remove formatação do CEP e garante 8 dígitos
     const cleanCep = destinyCep.replace(/\D/g, '').padStart(8, '0');
     

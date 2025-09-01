@@ -1,7 +1,7 @@
 // Security input validation utilities
 
 export const MAX_UNIT_VALUE = 50000; // R$ 50,000 per item
-export const MAX_WEIGHT = 50; // 50kg maximum per package
+export const MAX_WEIGHT = 30; // 30kg maximum per package
 export const MIN_WEIGHT = 0.1; // 100g minimum
 
 export const validateUnitValue = (value: number): string | null => {

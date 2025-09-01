@@ -115,14 +115,14 @@ export const validatePricingTables = async (): Promise<ValidationResult[]> => {
           }
         }
 
-        // Verificar se vai até o peso máximo esperado (50kg)
+        // Verificar se vai até o peso máximo esperado (30kg)
         const lastPrice = sortedPrices[sortedPrices.length - 1];
-        if (lastPrice.weight_max < 50) {
+        if (lastPrice.weight_max < 30) {
           issues.push({
             type: 'GAP',
-            description: `Lacuna no final: falta faixa de ${lastPrice.weight_max}kg até 50kg`,
+            description: `Lacuna no final: falta faixa de ${lastPrice.weight_max}kg até 30kg`,
             weightMin: lastPrice.weight_max,
-            weightMax: 50
+            weightMax: 30
           });
         }
       }

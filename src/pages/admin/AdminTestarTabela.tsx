@@ -26,11 +26,11 @@ const AdminTestarTabela = () => {
     setLoading(true);
     try {
       // Executar todas as validações em paralelo
-      const [validation, tests, missingZones] = await Promise.all([
-        validatePricingTables(),
-        testPriceCalculation([0.5, 1, 2, 5, 10, 15, 20, 25, 30]),
-        findZonesWithoutPricing()
-      ]);
+        const [validation, tests, missingZones] = await Promise.all([
+          validatePricingTables(),
+          testPriceCalculation([0.5, 1, 2, 5, 10, 15, 20, 25, 30]),
+          findZonesWithoutPricing()
+        ]);
 
       setValidationResults(validation);
       setTestResults(tests);
