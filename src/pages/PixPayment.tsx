@@ -190,7 +190,7 @@ const PixPayment = () => {
           <CardContent className="space-y-4">
             <div className="p-3 bg-muted rounded-lg">
               <p className="text-sm font-mono break-all text-muted-foreground">
-                {paymentIntent?.clientSecret?.slice(0, 50)}...
+                {paymentIntent?.clientSecret}
               </p>
             </div>
             

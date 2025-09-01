@@ -1,11 +1,16 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@14.21.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Generate a fake PIX code for demonstration
+function generatePixCode(amount: number, description: string): string {
+  const timestamp = Date.now().toString();
+  const randomString = Math.random().toString(36).substring(2, 15);
+  return `00020126330014BR.GOV.BCB.PIX0114${randomString}520400005303986540${amount.toFixed(2).replace('.', '')}5802BR5925CONFIANCE LOGISTICA LTDA6009Goiania62070503***6304${timestamp.slice(-4)}`;
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -19,29 +24,17 @@ serve(async (req) => {
     console.log('Create PIX payment - Starting with amount:', amount);
     console.log('Create PIX payment - Shipment data:', shipmentData);
 
-    // Initialize Stripe
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-      apiVersion: "2023-10-16",
-    });
+    // Generate a simulated PIX code
+    const pixCode = generatePixCode(amount, `Frete - Envio de ${shipmentData?.weight || 0}kg`);
+    const paymentId = `pix_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-    // Create a PIX payment intent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
-      currency: "brl",
-      payment_method_types: ["pix"],
-      description: `Frete - Envio de ${shipmentData?.weight || 0}kg`,
-      metadata: {
-        shipment_id: shipmentData?.id || 'temp-id',
-        user_email: shipmentData?.senderEmail || 'guest@example.com'
-      }
-    });
-
-    console.log('Create PIX payment - Payment Intent created:', paymentIntent.id);
+    console.log('Create PIX payment - PIX code generated:', paymentId);
 
     return new Response(JSON.stringify({ 
-      paymentIntentId: paymentIntent.id,
-      clientSecret: paymentIntent.client_secret,
-      amount: amount
+      paymentIntentId: paymentId,
+      clientSecret: pixCode,
+      amount: amount,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes from now
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
