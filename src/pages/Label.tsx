@@ -11,7 +11,6 @@ import { Separator } from "@/components/ui/separator";
 import { User, MapPin, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { sanitizeTextInput, validateDocument, validateCEP } from "@/utils/inputValidation";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
@@ -33,7 +32,6 @@ interface AddressData {
 const Label = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
   const [selectedQuote, setSelectedQuote] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [samePickupAddress, setSamePickupAddress] = useState<boolean>(true);
