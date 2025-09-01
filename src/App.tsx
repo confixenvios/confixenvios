@@ -34,6 +34,7 @@ import AdminRemessas from "./pages/admin/AdminRemessas";
 import AdminIntegracoes from "./pages/admin/AdminIntegracoes";
 import AdminWebhooks from "./pages/admin/AdminWebhooks";
 import AdminHistorico from "./pages/admin/AdminHistorico";
+import AdminTestarTabela from "./pages/admin/AdminTestarTabela";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +94,7 @@ const App = () => (
                       <Route path="integracoes" element={<AdminIntegracoes />} />
                       <Route path="webhooks" element={<AdminWebhooks />} />
                       <Route path="historico" element={<AdminHistorico />} />
+                      <Route path="testar-tabela" element={<AdminTestarTabela />} />
                     </Routes>
                   </AdminLayout>
                 </ProtectedRoute>

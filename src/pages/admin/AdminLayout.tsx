@@ -14,7 +14,8 @@ import {
   Menu,
   X,
   Shield,
-  Puzzle
+  Puzzle,
+  Database
 } from "lucide-react";
 import { NavLink, useLocation } from 'react-router-dom';
 
@@ -57,6 +58,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'Integrações', href: '/admin/integracoes', icon: Puzzle },
     { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
     { name: 'Histórico', href: '/admin/historico', icon: History },
+    { name: 'Testar Tabelas', href: '/admin/testar-tabela', icon: Database },
   ];
 
   const isActive = (path: string) => {

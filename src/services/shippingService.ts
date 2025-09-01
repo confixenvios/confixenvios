@@ -36,7 +36,7 @@ export const calculateShippingQuote = async ({
       .limit(1);
 
     if (zoneError || !zones || zones.length === 0) {
-      throw new Error(`CEP ${destinyCep} não atendido`);
+      throw new Error(`CEP ${destinyCep} não é atendido pela nossa região de cobertura`);
     }
 
     const zone = zones[0];
@@ -50,8 +50,25 @@ export const calculateShippingQuote = async ({
       .gte('weight_max', weight)
       .limit(1);
 
-    if (priceError || !pricing || pricing.length === 0) {
-      throw new Error(`Preço não encontrado para peso ${weight}kg na zona ${zone.zone_code}`);
+    if (priceError) {
+      console.error('Erro na consulta de preços:', priceError);
+      throw new Error(`Erro ao consultar tabela de preços: ${priceError.message}`);
+    }
+
+    if (!pricing || pricing.length === 0) {
+      // Busca faixas disponíveis para debug
+      const { data: availableRanges } = await supabase
+        .from('shipping_pricing')
+        .select('weight_min, weight_max')
+        .eq('zone_code', zone.zone_code)
+        .order('weight_min');
+
+      const ranges = availableRanges?.map(r => `${r.weight_min}-${r.weight_max}kg`).join(', ') || 'nenhuma';
+      
+      throw new Error(
+        `Não há preço configurado para peso ${weight}kg na zona ${zone.zone_code} (${zone.state} ${zone.zone_type === 'CAP' ? 'Capital' : 'Interior'}). ` +
+        `Faixas disponíveis: ${ranges}. Verifique a tabela de preços.`
+      );
     }
 
     const basePrice = pricing[0].price;
@@ -75,7 +92,12 @@ export const calculateShippingQuote = async ({
     };
   } catch (error) {
     console.error('Erro ao calcular frete:', error);
-    throw error;
+    // Se for erro de validação nosso, manter a mensagem amigável
+    if (error instanceof Error && error.message.includes('não')) {
+      throw error;
+    }
+    // Para outros erros, dar mensagem genérica
+    throw new Error('Erro interno no cálculo do frete. Tente novamente ou contate o suporte.');
   }
 };
 
