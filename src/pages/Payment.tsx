@@ -75,8 +75,10 @@ const Payment = () => {
       console.log('Processing payment with method:', selectedMethod);
       
       if (selectedMethod === 'pix') {
-        // PIX não é suportado pelo Stripe no Brasil, mostrar mensagem
-        alert('PIX será implementado em breve. Por favor, use cartão ou boleto.');
+        // Redirecionar para página específica do PIX
+        navigate('/pix-pagamento', { 
+          state: { amount: totalAmount, shipmentData } 
+        });
         return;
       }
       

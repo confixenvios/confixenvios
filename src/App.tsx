@@ -15,6 +15,7 @@ import Tracking from "./pages/Tracking";
 import Payment from "./pages/Payment";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentSuccessStripe from "./pages/PaymentSuccessStripe";
+import PixPayment from "./pages/PixPayment";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/etiqueta" element={<Label />} />
             <Route path="/documento" element={<Document />} />
             <Route path="/pagamento" element={<Payment />} />
+            <Route path="/pix-pagamento" element={<PixPayment />} />
             <Route path="/pagamento-sucesso" element={<PaymentSuccessStripe />} />
             <Route path="/rastreamento" element={<Tracking />} />
             <Route path="/rastreio" element={<Tracking />} />
