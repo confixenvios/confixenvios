@@ -321,6 +321,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_anonymous_addresses: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       generate_tracking_code: {
         Args: Record<PropertyKey, never>
         Returns: string
