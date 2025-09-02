@@ -24,48 +24,48 @@ const Index = () => {
       <Header />
       
       {/* Hero Section */}
-      <section className="relative py-20 px-4 overflow-hidden">
+      <section className="relative py-12 sm:py-16 md:py-20 px-2 sm:px-4 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-glow opacity-30"></div>
         
         <div className="container mx-auto text-center relative">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2">
             Envie suas encomendas com
             <span className="bg-gradient-mixed bg-clip-text text-transparent block">
               rapidez e economia
             </span>
           </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground mb-16 max-w-3xl mx-auto">
+          <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-8 sm:mb-12 md:mb-16 max-w-3xl mx-auto px-2">
             O melhor preço, o menor prazo e a máxima segurança para suas entregas.
           </p>
           
           {/* Benefícios */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16 max-w-5xl mx-auto">
-            <div className="flex flex-col items-center space-y-4 p-6 bg-card/50 backdrop-blur-sm rounded-2xl border border-border/20 shadow-card">
-              <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center">
-                <Zap className="w-8 h-8 text-accent" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mb-8 sm:mb-12 md:mb-16 max-w-5xl mx-auto px-2">
+            <div className="flex flex-col items-center space-y-3 sm:space-y-4 p-4 sm:p-6 bg-card/50 backdrop-blur-sm rounded-2xl border border-border/20 shadow-card">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-accent/10 rounded-full flex items-center justify-center">
+                <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-accent" />
               </div>
-              <h3 className="text-xl font-bold">Cotação Instantânea</h3>
-              <p className="text-muted-foreground text-center">
+              <h3 className="text-lg sm:text-xl font-bold text-center">Cotação Instantânea</h3>
+              <p className="text-sm sm:text-base text-muted-foreground text-center">
                 Tenha o melhor preço do mercado em segundos, sem complicação.
               </p>
             </div>
             
-            <div className="flex flex-col items-center space-y-4 p-6 bg-card/50 backdrop-blur-sm rounded-2xl border border-border/20 shadow-card">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                <Truck className="w-8 h-8 text-primary" />
+            <div className="flex flex-col items-center space-y-3 sm:space-y-4 p-4 sm:p-6 bg-card/50 backdrop-blur-sm rounded-2xl border border-border/20 shadow-card">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                <Truck className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
-              <h3 className="text-xl font-bold">Melhor Custo-Benefício</h3>
-              <p className="text-muted-foreground text-center">
+              <h3 className="text-lg sm:text-xl font-bold text-center">Melhor Custo-Benefício</h3>
+              <p className="text-sm sm:text-base text-muted-foreground text-center">
                 Preço justo, entrega rápida e segura. Tudo o que você precisa em um só lugar.
               </p>
             </div>
             
-             <div className="flex flex-col items-center space-y-4 p-6 bg-card/50 backdrop-blur-sm rounded-2xl border border-border/20 shadow-card">
-               <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center">
-                 <Package className="w-8 h-8 text-accent" />
-               </div>
-              <h3 className="text-xl font-bold">Rastreamento Completo</h3>
-              <p className="text-muted-foreground text-center">
+            <div className="flex flex-col items-center space-y-3 sm:space-y-4 p-4 sm:p-6 bg-card/50 backdrop-blur-sm rounded-2xl border border-border/20 shadow-card sm:col-span-2 lg:col-span-1">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-accent/10 rounded-full flex items-center justify-center">
+                <Package className="w-6 h-6 sm:w-8 sm:h-8 text-accent" />
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold text-center">Rastreamento Completo</h3>
+              <p className="text-sm sm:text-base text-muted-foreground text-center">
                 Acompanhe sua encomenda do envio à entrega, com atualizações em tempo real.
               </p>
             </div>
@@ -74,16 +74,16 @@ const Index = () => {
       </section>
 
       {/* Quote Form Section */}
-      <section className="py-16 px-4">
+      <section className="py-8 sm:py-12 md:py-16 px-2 sm:px-4">
         <div className="container mx-auto">
           <QuoteForm />
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8 px-4">
+      <footer className="border-t border-border py-6 sm:py-8 px-2 sm:px-4">
         <div className="container mx-auto text-center">
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             © 2025 Confix Envios. Todos os direitos reservados.
           </p>
         </div>

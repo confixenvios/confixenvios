@@ -19,26 +19,26 @@ const Header = () => {
 
   return (
     <header className="border-b border-border bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
-      <div className="container mx-auto px-4 py-4">
+      <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-4">
         <div className="flex items-center justify-between">
           <Link to="/cotacao" className="flex items-center space-x-2 group">
             <img 
               src={logoConfixEnvios} 
               alt="Confix Envios" 
-              className="h-20 w-auto group-hover:scale-105 transition-transform duration-200"
+              className="h-12 sm:h-16 md:h-20 w-auto group-hover:scale-105 transition-transform duration-200"
             />
           </Link>
           
-          <nav className="flex items-center space-x-6">
+          <nav className="flex items-center space-x-2 sm:space-x-6">
             <Link 
               to="/cotacao" 
-              className="text-muted-foreground hover:text-foreground transition-colors font-medium hidden md:block"
+              className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base hidden md:block"
             >
               Cotação
             </Link>
             <Link 
               to="/rastreio" 
-              className="text-muted-foreground hover:text-foreground transition-colors font-medium hidden md:block"
+              className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base hidden md:block"
             >
               Rastreio
             </Link>
@@ -46,25 +46,25 @@ const Header = () => {
             {!loading && (
               <>
                 {user ? (
-                  <div className="flex items-center space-x-4">
-                    <span className="text-sm text-muted-foreground hidden md:block">
+                  <div className="flex items-center space-x-2 sm:space-x-4">
+                    <span className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
                       Olá, {user.email}
                     </span>
                     {isAdmin && (
-                      <Badge variant="secondary" className="hidden md:flex">
+                      <Badge variant="secondary" className="hidden sm:flex text-xs">
                         <Shield className="w-3 h-3 mr-1" />
                         Admin
                       </Badge>
                     )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                          <Avatar className="w-6 h-6">
+                        <Button variant="outline" size="sm" className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 sm:px-3">
+                          <Avatar className="w-5 h-5 sm:w-6 sm:h-6">
                             <AvatarFallback className="text-xs">
                               {user.email?.[0]?.toUpperCase() || 'U'}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="hidden md:inline">Minha Conta</span>
+                          <span className="hidden sm:inline">Minha Conta</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">
@@ -95,10 +95,10 @@ const Header = () => {
                     </DropdownMenu>
                   </div>
                 ) : (
-                  <Button asChild>
+                  <Button asChild size="sm" className="text-xs sm:text-sm px-2 sm:px-4">
                     <Link to="/auth">
-                      <LogIn className="h-4 w-4 mr-2" />
-                      Entrar
+                      <LogIn className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="sm:inline">Entrar</span>
                     </Link>
                   </Button>
                 )}

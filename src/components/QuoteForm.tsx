@@ -451,64 +451,66 @@ const QuoteForm = () => {
   const isStep1Valid = Object.values(formData).every(value => value.trim() !== "");
 
   const renderStepIndicator = () => (
-    <div className="flex items-center justify-center mb-8">
-      {steps.map((step, index) => (
-        <div key={step.number} className="flex items-center">
-          <div className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-300 ${
-            currentStep === step.number 
-              ? 'bg-primary text-primary-foreground' 
-              : currentStep > step.number 
-                ? 'bg-success text-success-foreground'
-                : 'bg-muted text-muted-foreground'
-          }`}>
-            {currentStep > step.number ? (
-              <CheckCircle className="h-4 w-4" />
-            ) : (
-              <step.icon className="h-4 w-4" />
+    <div className="flex items-center justify-center mb-4 sm:mb-6 md:mb-8 overflow-x-auto pb-2">
+      <div className="flex items-center space-x-1 sm:space-x-2 min-w-max px-2">
+        {steps.map((step, index) => (
+          <div key={step.number} className="flex items-center">
+            <div className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 md:px-4 py-1 sm:py-2 rounded-full transition-all duration-300 ${
+              currentStep === step.number 
+                ? 'bg-primary text-primary-foreground' 
+                : currentStep > step.number 
+                  ? 'bg-success text-success-foreground'
+                  : 'bg-muted text-muted-foreground'
+            }`}>
+              {currentStep > step.number ? (
+                <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+              ) : (
+                <step.icon className="h-3 w-3 sm:h-4 sm:w-4" />
+              )}
+              <span className="font-medium text-xs sm:text-sm hidden sm:inline">{step.title}</span>
+            </div>
+            {index < steps.length - 1 && (
+              <div className={`w-4 sm:w-6 md:w-8 h-0.5 mx-1 sm:mx-2 transition-all duration-300 ${
+                currentStep > step.number ? 'bg-success' : 'bg-muted'
+              }`} />
             )}
-            <span className="font-medium text-sm">{step.title}</span>
           </div>
-          {index < steps.length - 1 && (
-            <div className={`w-8 h-0.5 mx-2 transition-all duration-300 ${
-              currentStep > step.number ? 'bg-success' : 'bg-muted'
-            }`} />
-          )}
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 
   return (
-    <div className="w-full max-w-5xl mx-auto">
+    <div className="w-full max-w-6xl mx-auto px-2 sm:px-4">
       <Card className="shadow-card relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-glow opacity-10"></div>
-        <CardHeader className="relative pb-4">
-          <CardTitle className="text-center text-2xl font-bold">
+        <CardHeader className="relative pb-3 sm:pb-4 px-3 sm:px-6 pt-4 sm:pt-6">
+          <CardTitle className="text-center text-xl sm:text-2xl font-bold">
             Cotação Rápida
           </CardTitle>
-          <CardDescription className="text-center">
+          <CardDescription className="text-center text-sm sm:text-base">
             Calcule o frete para sua encomenda em segundos
           </CardDescription>
         </CardHeader>
         
-        <CardContent className="relative">
+        <CardContent className="relative px-3 sm:px-6 pb-4 sm:pb-6">
           {renderStepIndicator()}
 
           <div className="animate-fade-in">
             {currentStep === 1 && (
-              <div className="space-y-6">
-                <div className="text-center mb-6">
-                  <h3 className="text-xl font-semibold flex items-center justify-center space-x-2">
-                    <Calculator className="h-5 w-5 text-accent" />
+              <div className="space-y-4 sm:space-y-6">
+                <div className="text-center mb-4 sm:mb-6">
+                  <h3 className="text-lg sm:text-xl font-semibold flex items-center justify-center space-x-2">
+                    <Calculator className="h-4 w-4 sm:h-5 sm:w-5 text-accent" />
                     <span>Calcular Frete</span>
                   </h3>
-                  <p className="text-muted-foreground mt-2">
+                  <p className="text-sm sm:text-base text-muted-foreground mt-2">
                     Insira os dados do seu envio para calcular o preço e prazo
                   </p>
                 </div>
 
                 {/* CEP Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="origin-cep" className="flex items-center space-x-2">
                       <MapPin className="h-4 w-4 text-primary" />
