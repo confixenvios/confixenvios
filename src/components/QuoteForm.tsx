@@ -484,10 +484,10 @@ const QuoteForm = () => {
         <div className="absolute inset-0 bg-gradient-glow opacity-10"></div>
         <CardHeader className="relative pb-4">
           <CardTitle className="text-center text-2xl font-bold">
-            Sistema de Envios
+            Cotação Rápida
           </CardTitle>
           <CardDescription className="text-center">
-            Complete todos os passos para criar sua etiqueta de envio
+            Calcule o frete para sua encomenda em segundos
           </CardDescription>
         </CardHeader>
         
