@@ -43,7 +43,8 @@ const AuthModal = ({
     password: '',
     confirmPassword: '',
     firstName: '',
-    lastName: ''
+    lastName: '',
+    phone: ''
   });
 
   // Close modal and call success callback when user is authenticated
@@ -64,7 +65,7 @@ const AuthModal = ({
       setError('');
       setIsLoading(false);
       setLoginData({ email: '', password: '' });
-      setSignupData({ email: '', password: '', confirmPassword: '', firstName: '', lastName: '' });
+      setSignupData({ email: '', password: '', confirmPassword: '', firstName: '', lastName: '', phone: '' });
       setActiveTab('login');
     }
   }, [isOpen]);
@@ -105,7 +106,7 @@ const AuthModal = ({
     setIsLoading(true);
     setError('');
 
-    if (!signupData.email || !signupData.password || !signupData.confirmPassword) {
+    if (!signupData.email || !signupData.password || !signupData.confirmPassword || !signupData.phone) {
       setError('Preencha todos os campos obrigatórios');
       setIsLoading(false);
       return;
@@ -128,7 +129,8 @@ const AuthModal = ({
         signupData.email,
         signupData.password,
         signupData.firstName,
-        signupData.lastName
+        signupData.lastName,
+        signupData.phone
       );
       
       if (result.error) {
@@ -154,7 +156,8 @@ const AuthModal = ({
           password: '',
           confirmPassword: '',
           firstName: '',
-          lastName: ''
+          lastName: '',
+          phone: ''
         });
         setError('');
       }
@@ -274,6 +277,21 @@ const AuthModal = ({
                       disabled={isLoading}
                     />
                   </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="modal-signup-phone">WhatsApp *</Label>
+                  <Input
+                    id="modal-signup-phone"
+                    type="tel"
+                    placeholder="(11) 99999-9999"
+                    value={signupData.phone}
+                    onChange={(e) => setSignupData(prev => ({
+                      ...prev,
+                      phone: e.target.value
+                    }))}
+                    disabled={isLoading}
+                  />
                 </div>
                 
                 <div className="space-y-2">

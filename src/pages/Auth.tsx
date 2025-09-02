@@ -34,7 +34,8 @@ const Auth = () => {
     password: '',
     confirmPassword: '',
     firstName: '',
-    lastName: ''
+    lastName: '',
+    phone: ''
   });
 
   // Reset password form
@@ -122,7 +123,7 @@ const Auth = () => {
     setIsLoading(true);
     setError('');
 
-    if (!signupData.email || !signupData.password || !signupData.confirmPassword) {
+    if (!signupData.email || !signupData.password || !signupData.confirmPassword || !signupData.phone) {
       setError('Preencha todos os campos obrigatórios');
       setIsLoading(false);
       return;
@@ -145,7 +146,8 @@ const Auth = () => {
         signupData.email,
         signupData.password,
         signupData.firstName,
-        signupData.lastName
+        signupData.lastName,
+        signupData.phone
       );
       
       if (result.error) {
@@ -170,7 +172,8 @@ const Auth = () => {
           password: '',
           confirmPassword: '',
           firstName: '',
-          lastName: ''
+          lastName: '',
+          phone: ''
         });
         setError('');
       } else {
@@ -336,6 +339,21 @@ const Auth = () => {
                         disabled={isLoading}
                       />
                     </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-phone">WhatsApp *</Label>
+                    <Input
+                      id="signup-phone"
+                      type="tel"
+                      placeholder="(11) 99999-9999"
+                      value={signupData.phone}
+                      onChange={(e) => setSignupData(prev => ({
+                        ...prev,
+                        phone: e.target.value
+                      }))}
+                      disabled={isLoading}
+                    />
                   </div>
                   
                   <div className="space-y-2">
