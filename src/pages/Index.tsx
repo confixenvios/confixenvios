@@ -30,7 +30,7 @@ const Index = () => {
         <div className="container mx-auto text-center relative">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
             Envie suas encomendas com
-            <span className="bg-gradient-primary bg-clip-text text-transparent block">
+            <span className="bg-gradient-mixed bg-clip-text text-transparent block">
               rapidez e economia
             </span>
           </h1>
@@ -41,8 +41,8 @@ const Index = () => {
           {/* Benefícios */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16 max-w-5xl mx-auto">
             <div className="flex flex-col items-center space-y-4 p-6 bg-card/50 backdrop-blur-sm rounded-2xl border border-border/20 shadow-card">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                <Zap className="w-8 h-8 text-primary" />
+              <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center">
+                <Zap className="w-8 h-8 text-accent" />
               </div>
               <h3 className="text-xl font-bold">Cotação Instantânea</h3>
               <p className="text-muted-foreground text-center">
@@ -60,10 +60,10 @@ const Index = () => {
               </p>
             </div>
             
-            <div className="flex flex-col items-center space-y-4 p-6 bg-card/50 backdrop-blur-sm rounded-2xl border border-border/20 shadow-card">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                <Package className="w-8 h-8 text-primary" />
-              </div>
+             <div className="flex flex-col items-center space-y-4 p-6 bg-card/50 backdrop-blur-sm rounded-2xl border border-border/20 shadow-card">
+               <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center">
+                 <Package className="w-8 h-8 text-accent" />
+               </div>
               <h3 className="text-xl font-bold">Rastreamento Completo</h3>
               <p className="text-muted-foreground text-center">
                 Acompanhe sua encomenda do envio à entrega, com atualizações em tempo real.

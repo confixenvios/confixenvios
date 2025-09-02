@@ -499,7 +499,7 @@ const QuoteForm = () => {
               <div className="space-y-6">
                 <div className="text-center mb-6">
                   <h3 className="text-xl font-semibold flex items-center justify-center space-x-2">
-                    <Calculator className="h-5 w-5 text-primary" />
+                    <Calculator className="h-5 w-5 text-accent" />
                     <span>Calcular Frete</span>
                   </h3>
                   <p className="text-muted-foreground mt-2">
@@ -672,11 +672,11 @@ const QuoteForm = () => {
                 <Button
                   onClick={handleStep1Submit}
                   disabled={!isStep1Valid || isLoading}
-                  className="w-full h-14 text-lg font-semibold bg-gradient-primary hover:shadow-primary transition-all duration-300"
+                  className="w-full h-14 text-lg font-semibold bg-gradient-mixed hover:shadow-accent transition-all duration-300"
                 >
                   {isLoading ? (
                     <div className="flex items-center space-x-2">
-                      <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"></div>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                       <span>Calculando...</span>
                     </div>
                   ) : (
