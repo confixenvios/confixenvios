@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Confix Envios Design System - Clean light theme with blue primary and red highlights */
+/* Confix Envios Design System - Clean light theme with blue primary */
 
 @layer base {
   :root {
@@ -23,10 +23,10 @@
     --primary-foreground: 0 0% 100%;     /* White text on blue */
     --primary-glow: 217 100% 62%;        /* Lighter blue for glows */
     
-    /* Accent - Confix brand red */
-    --accent: 0 85% 60%;                 /* #E53E3E - Confix red accent */
-    --accent-foreground: 0 0% 100%;      /* White text on red */
-    --accent-glow: 0 85% 70%;            /* Lighter red for glows */
+    /* Accent - Confix brand blue accent */
+    --accent: 217 100% 62%;              /* #3B82F6 - Blue accent */
+    --accent-foreground: 0 0% 100%;      /* White text on blue */
+    --accent-glow: 217 100% 72%;         /* Lighter blue for glows */
     
     /* Muted tones */
     --muted: 220 14% 96%;                /* Light muted background */
@@ -43,7 +43,7 @@
     --warning: 38 92% 50%;               /* Amber warning */
     --warning-foreground: 0 0% 100%;
     
-    --destructive: 348 83% 47%;          /* #E11D48 - Red highlight */
+    --destructive: 217 100% 52%;         /* #0B5FFF - Blue highlight */
     --destructive-foreground: 0 0% 100%;
     
     /* Input and border colors */
@@ -54,18 +54,18 @@
     
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(217 100% 52%), hsl(217 100% 62%));
-    --gradient-accent: linear-gradient(135deg, hsl(0 85% 60%), hsl(0 85% 70%));
-    --gradient-mixed: linear-gradient(135deg, hsl(217 100% 52%), hsl(0 85% 60%));
+    --gradient-accent: linear-gradient(135deg, hsl(217 100% 62%), hsl(217 100% 72%));
+    --gradient-mixed: linear-gradient(135deg, hsl(217 100% 52%), hsl(217 100% 62%));
     --gradient-light: linear-gradient(180deg, hsl(0 0% 100%), hsl(220 14% 96%));
     --gradient-glow: radial-gradient(circle at center, hsl(217 100% 52% / 0.1), transparent 70%);
-    --gradient-glow-red: radial-gradient(circle at center, hsl(0 85% 60% / 0.1), transparent 70%);
+    --gradient-glow-blue: radial-gradient(circle at center, hsl(217 100% 62% / 0.1), transparent 70%);
     
     /* Shadows */
     --shadow-primary: 0 10px 40px hsl(217 100% 52% / 0.15);
-    --shadow-accent: 0 10px 40px hsl(0 85% 60% / 0.15);
+    --shadow-accent: 0 10px 40px hsl(217 100% 62% / 0.15);
     --shadow-card: 0 4px 20px hsl(217 40% 13% / 0.1);
     --shadow-glow: 0 0 60px hsl(217 100% 52% / 0.2);
-    --shadow-glow-red: 0 0 60px hsl(0 85% 60% / 0.2);
+    --shadow-glow-blue: 0 0 60px hsl(217 100% 62% / 0.2);
     
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -124,11 +124,11 @@
     z-index: -1;
   }
 
-  .glow-effect-red::before {
+  .glow-effect-blue::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: var(--gradient-glow-red);
+    background: var(--gradient-glow-blue);
     border-radius: inherit;
     z-index: -1;
   }

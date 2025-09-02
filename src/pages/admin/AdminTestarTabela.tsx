@@ -99,9 +99,9 @@ const AdminTestarTabela = () => {
   const getIssueIcon = (type: string) => {
     switch (type) {
       case 'GAP': return <AlertTriangle className="w-4 h-4 text-orange-500" />;
-      case 'OVERLAP': return <XCircle className="w-4 h-4 text-red-500" />;
-      case 'MISSING_ZONE': return <XCircle className="w-4 h-4 text-red-500" />;
-      case 'INVALID_RANGE': return <XCircle className="w-4 h-4 text-red-500" />;
+      case 'OVERLAP': return <XCircle className="w-4 h-4 text-blue-500" />;
+      case 'MISSING_ZONE': return <XCircle className="w-4 h-4 text-blue-500" />;
+      case 'INVALID_RANGE': return <XCircle className="w-4 h-4 text-blue-500" />;
       default: return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
     }
   };
@@ -205,7 +205,7 @@ const AdminTestarTabela = () => {
                       return a.zone.localeCompare(b.zone);
                     })
                     .map((result) => (
-                    <div key={result.zone} className={`border rounded-lg p-4 ${!result.hasAllPrices ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
+                    <div key={result.zone} className={`border rounded-lg p-4 ${!result.hasAllPrices ? 'border-blue-300 bg-blue-50' : 'border-gray-200'}`}>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-2">
                           <h3 className="font-semibold">{result.zone}</h3>
@@ -234,7 +234,7 @@ const AdminTestarTabela = () => {
                                 </Badge>
                               ))}
                             </div>
-                            <div className="text-sm mt-2 text-red-800">
+                            <div className="text-sm mt-2 text-blue-800">
                               🚨 <strong>Essas lacunas estão causando erro "Não há preço configurado" no sistema de cotação!</strong>
                             </div>
                           </AlertDescription>
@@ -243,14 +243,14 @@ const AdminTestarTabela = () => {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
                         {result.testResults.slice(0, 9).map((test, index) => (
-                          <div key={index} className={`p-2 rounded border ${test.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                          <div key={index} className={`p-2 rounded border ${test.success ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}>
                             <div className="font-mono">{test.cep} - {test.weight}kg</div>
                             {test.success ? (
                               <div className="text-green-700">
                                 R$ {test.economicPrice?.toFixed(2)} / R$ {test.expressPrice?.toFixed(2)}
                               </div>
                             ) : (
-                              <div className="text-red-700 text-xs">{test.error}</div>
+                              <div className="text-blue-700 text-xs">{test.error}</div>
                             )}
                           </div>
                         ))}
@@ -283,7 +283,7 @@ const AdminTestarTabela = () => {
                           {result.hasCompleteRanges ? (
                             <CheckCircle className="w-5 h-5 text-green-500" />
                           ) : (
-                            <XCircle className="w-5 h-5 text-red-500" />
+                            <XCircle className="w-5 h-5 text-blue-500" />
                           )}
                         </div>
                         <Badge variant={result.hasCompleteRanges ? "default" : "destructive"}>
@@ -354,7 +354,7 @@ const AdminTestarTabela = () => {
                         <TableCell>
                           {test.price ? `R$ ${test.price.toFixed(2)}` : '-'}
                         </TableCell>
-                        <TableCell className="text-red-600 text-sm">
+                        <TableCell className="text-blue-600 text-sm">
                           {test.error || '-'}
                         </TableCell>
                       </TableRow>
@@ -419,7 +419,7 @@ const AdminTestarTabela = () => {
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {testSummary?.missingRegions.length ? (
-                      <span className="text-red-600">
+                      <span className="text-blue-600">
                         {testSummary.missingRegions.length} regiões faltando na base
                       </span>
                     ) : (

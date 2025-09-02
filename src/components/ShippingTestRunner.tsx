@@ -164,7 +164,7 @@ const ShippingTestRunner = () => {
                 <div className="text-sm text-muted-foreground">Sucessos</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">{summary.failed}</div>
+                <div className="text-2xl font-bold text-blue-600">{summary.failed}</div>
                 <div className="text-sm text-muted-foreground">Falhas</div>
               </div>
               <div className="text-center">
@@ -189,7 +189,7 @@ const ShippingTestRunner = () => {
                   className={`p-4 rounded-lg border ${
                     result.success 
                       ? 'border-green-200 bg-green-50' 
-                      : 'border-red-200 bg-red-50'
+                      : 'border-blue-200 bg-blue-50'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -197,7 +197,7 @@ const ShippingTestRunner = () => {
                       {result.success ? (
                         <CheckCircle className="h-5 w-5 text-green-600" />
                       ) : (
-                        <XCircle className="h-5 w-5 text-red-600" />
+                        <XCircle className="h-5 w-5 text-blue-600" />
                       )}
                       <span className="font-semibold">
                         {result.city}/{result.state}
@@ -232,7 +232,7 @@ const ShippingTestRunner = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="text-sm text-red-600">
+                    <div className="text-sm text-blue-600">
                       <span className="font-medium">Erro:</span> {result.error}
                     </div>
                   )}
