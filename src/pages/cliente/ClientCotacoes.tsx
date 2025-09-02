@@ -5,8 +5,8 @@ import { Calculator } from "lucide-react";
 
 const ClientCotacoes = () => {
   return (
-    <div className="px-2 py-4 md:px-6 md:py-6 min-h-screen">
-      <div className="w-full max-w-2xl mx-auto">
+    <div className="px-1 py-4 md:px-4 md:py-6 min-h-screen">
+      <div className="w-full max-w-4xl mx-auto">
         <div className="mb-4 md:mb-6">
           <h1 className="text-2xl md:text-3xl font-bold flex items-center">
             <Calculator className="mr-2 md:mr-3 h-6 w-6 md:h-8 md:w-8 text-primary" />
@@ -27,7 +27,7 @@ const ClientCotacoes = () => {
         </Card>
       </div>
 
-      <div className="mt-8 w-full max-w-2xl mx-auto px-2 md:px-0">
+      <div className="mt-8 w-full max-w-4xl mx-auto px-1 md:px-0">
         <ShippingTestRunner />
       </div>
     </div>
