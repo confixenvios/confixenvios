@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,71 +7,120 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Package, Eye, Download, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from '@/integrations/supabase/client';
 
 interface Shipment {
   id: string;
-  trackingCode: string;
-  client: string;
-  origin: string;
-  destination: string;
-  weight: string;
-  value: number;
-  status: 'PENDING_LABEL' | 'PENDING_DOCUMENT' | 'PAID' | 'IN_TRANSIT' | 'DELIVERED';
-  createdAt: string;
+  tracking_code: string | null;
+  client_name: string;
+  sender_address: {
+    cep: string;
+    city: string;
+    state: string;
+  } | null;
+  recipient_address: {
+    cep: string;
+    city: string;
+    state: string;
+  } | null;
+  weight: number;
+  quote_data: any;
+  payment_data: any;
+  status: string;
+  created_at: string;
+  label_pdf_url: string | null;
 }
 
 const AdminRemessas = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [shipments, setShipments] = useState<Shipment[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for demo
-  const mockShipments: Shipment[] = [
-    {
-      id: "1",
-      trackingCode: "TRK-2024ABC123",
-      client: "João Silva",
-      origin: "01310-100",
-      destination: "04567-890",
-      weight: "2.5kg",
-      value: 55.80,
-      status: "IN_TRANSIT",
-      createdAt: "2024-01-28T10:30:00"
-    },
-    {
-      id: "2", 
-      trackingCode: "TRK-2024XYZ789",
-      client: "Maria Santos",
-      origin: "20040-020",
-      destination: "30112-000",
-      weight: "1.2kg",
-      value: 45.50,
-      status: "DELIVERED",
-      createdAt: "2024-01-27T14:15:00"
-    },
-    {
-      id: "3",
-      trackingCode: "TRK-2024DEF456",
-      client: "Pedro Oliveira", 
-      origin: "90010-150",
-      destination: "80010-000",
-      weight: "3.8kg",
-      value: 75.20,
-      status: "PENDING_DOCUMENT",
-      createdAt: "2024-01-29T09:20:00"
-    },
-    {
-      id: "4",
-      trackingCode: "TRK-2024GHI789",
-      client: "Ana Costa",
-      origin: "50070-110",
-      destination: "40020-110",
-      weight: "0.8kg", 
-      value: 35.90,
-      status: "PAID",
-      createdAt: "2024-01-29T16:45:00"
+  useEffect(() => {
+    loadShipments();
+  }, []);
+
+  const loadShipments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('shipments')
+        .select(`
+          id,
+          tracking_code,
+          weight,
+          quote_data,
+          payment_data,
+          status,
+          created_at,
+          label_pdf_url,
+          user_id,
+          sender_address_id,
+          recipient_address_id
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Buscar informações dos endereços e clientes separadamente
+      const shipmentsWithDetails = await Promise.all(
+        (data || []).map(async (shipment) => {
+          // Buscar endereços
+          const [senderResult, recipientResult] = await Promise.all([
+            supabase
+              .from('addresses')
+              .select('cep, city, state')
+              .eq('id', shipment.sender_address_id)
+              .single(),
+            supabase
+              .from('addresses')
+              .select('cep, city, state')
+              .eq('id', shipment.recipient_address_id)
+              .single()
+          ]);
+
+          // Buscar perfil do cliente se existe user_id
+          let clientProfile = null;
+          if (shipment.user_id) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('first_name, last_name, email')
+              .eq('id', shipment.user_id)
+              .single();
+            clientProfile = profile;
+          }
+
+          return {
+            id: shipment.id,
+            tracking_code: shipment.tracking_code,
+            client_name: clientProfile 
+              ? `${clientProfile.first_name || ''} ${clientProfile.last_name || ''}`.trim() || clientProfile.email || 'Cliente Anônimo'
+              : 'Cliente Anônimo',
+            sender_address: senderResult.data,
+            recipient_address: recipientResult.data,
+            weight: shipment.weight,
+            quote_data: shipment.quote_data,
+            payment_data: shipment.payment_data,
+            status: shipment.status,
+            created_at: shipment.created_at,
+            label_pdf_url: shipment.label_pdf_url
+          };
+        })
+      );
+
+      setShipments(shipmentsWithDetails);
+    } catch (error) {
+      console.error('Error loading shipments:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar remessas",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -93,20 +142,27 @@ const AdminRemessas = () => {
   const handleViewShipment = (shipment: Shipment) => {
     toast({
       title: "Detalhes da Remessa",
-      description: `Visualizando remessa ${shipment.trackingCode}`,
+      description: `Visualizando remessa ${shipment.tracking_code || 'N/A'}`,
     });
   };
 
   const handleDownloadLabel = (shipment: Shipment) => {
     toast({
       title: "Download iniciado",
-      description: `Baixando etiqueta para ${shipment.trackingCode}`,
+      description: `Baixando etiqueta para ${shipment.tracking_code || 'N/A'}`,
     });
   };
 
-  const filteredShipments = mockShipments.filter(shipment => {
-    const matchesSearch = shipment.trackingCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         shipment.client.toLowerCase().includes(searchTerm.toLowerCase());
+  const getQuoteValue = (quoteData: any) => {
+    if (quoteData?.selectedQuote?.price) {
+      return parseFloat(quoteData.selectedQuote.price);
+    }
+    return 0;
+  };
+
+  const filteredShipments = shipments.filter(shipment => {
+    const matchesSearch = (shipment.tracking_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          shipment.client_name.toLowerCase().includes(searchTerm.toLowerCase())) ?? false;
     const matchesStatus = statusFilter === "all" || shipment.status === statusFilter;
     
     return matchesSearch && matchesStatus;
@@ -196,79 +252,87 @@ const AdminRemessas = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Origem → Destino</TableHead>
-                  <TableHead>Peso</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredShipments.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="text-muted-foreground mt-2">Carregando remessas...</p>
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
-                      <div className="text-muted-foreground">
-                        <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p>Nenhuma remessa encontrada</p>
-                        <p className="text-sm">Tente ajustar os filtros</p>
-                      </div>
-                    </TableCell>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Origem → Destino</TableHead>
+                    <TableHead>Peso</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ) : (
-                  filteredShipments.map((shipment) => (
-                    <TableRow key={shipment.id}>
-                      <TableCell className="font-medium font-mono">
-                        {shipment.trackingCode}
-                      </TableCell>
-                      <TableCell>{shipment.client}</TableCell>
-                      <TableCell className="text-sm">
-                        <div className="space-y-1">
-                          <div>{shipment.origin}</div>
-                          <div className="text-muted-foreground">↓</div>
-                          <div>{shipment.destination}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{shipment.weight}</TableCell>
-                      <TableCell className="font-medium">
-                        R$ {shipment.value.toFixed(2)}
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(shipment.status)}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {new Date(shipment.createdAt).toLocaleDateString('pt-BR')}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewShipment(shipment)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleDownloadLabel(shipment)}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
+                </TableHeader>
+                <TableBody>
+                  {filteredShipments.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8">
+                        <div className="text-muted-foreground">
+                          <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p>Nenhuma remessa encontrada</p>
+                          <p className="text-sm">Tente ajustar os filtros</p>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ) : (
+                    filteredShipments.map((shipment) => (
+                      <TableRow key={shipment.id}>
+                        <TableCell className="font-medium font-mono">
+                          {shipment.tracking_code || 'N/A'}
+                        </TableCell>
+                        <TableCell>{shipment.client_name}</TableCell>
+                        <TableCell className="text-sm">
+                          <div className="space-y-1">
+                            <div>{shipment.sender_address?.cep || 'N/A'}</div>
+                            <div className="text-muted-foreground">↓</div>
+                            <div>{shipment.recipient_address?.cep || 'N/A'}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{shipment.weight}kg</TableCell>
+                        <TableCell className="font-medium">
+                          R$ {getQuoteValue(shipment.quote_data).toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          {getStatusBadge(shipment.status)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(shipment.created_at).toLocaleDateString('pt-BR')}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewShipment(shipment as any)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDownloadLabel(shipment as any)}
+                              disabled={!shipment.label_pdf_url}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
