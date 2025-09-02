@@ -35,7 +35,7 @@ const Index = () => {
             </span>
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-16 max-w-3xl mx-auto">
-            Cote fretes em segundos, escolha a melhor opção e acompanhe tudo em tempo real.
+            O melhor preço, o menor prazo e a máxima segurança para suas entregas.
           </p>
           
           {/* Benefícios */}
@@ -44,9 +44,9 @@ const Index = () => {
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
                 <Zap className="w-8 h-8 text-primary" />
               </div>
-              <h3 className="text-xl font-bold">Cotação Rápida em 1 Minuto</h3>
+              <h3 className="text-xl font-bold">Cotação Instantânea</h3>
               <p className="text-muted-foreground text-center">
-                Compare preços instantaneamente e descubra o frete mais barato para sua entrega.
+                Tenha o melhor preço do mercado em segundos, sem complicação.
               </p>
             </div>
             
@@ -54,9 +54,9 @@ const Index = () => {
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
                 <Truck className="w-8 h-8 text-primary" />
               </div>
-              <h3 className="text-xl font-bold">Entrega Ágil e Segura</h3>
+              <h3 className="text-xl font-bold">Melhor Custo-Benefício</h3>
               <p className="text-muted-foreground text-center">
-                Escolha opções expressas ou econômicas, sempre com rastreio atualizado.
+                Preço justo, entrega rápida e segura. Tudo o que você precisa em um só lugar.
               </p>
             </div>
             
@@ -66,7 +66,7 @@ const Index = () => {
               </div>
               <h3 className="text-xl font-bold">Rastreamento Completo</h3>
               <p className="text-muted-foreground text-center">
-                Acompanhe cada etapa da sua remessa, do envio à entrega final, direto no painel.
+                Acompanhe sua encomenda do envio à entrega, com atualizações em tempo real.
               </p>
             </div>
           </div>
