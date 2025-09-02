@@ -17,7 +17,8 @@ import {
   Filter,
   Eye,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Crown
 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 
@@ -190,6 +191,10 @@ const ActiveClients = () => {
     return client.email || 'Cliente';
   };
 
+  const isMasterUser = (client: ClientData) => {
+    return client.email === 'grupoconfix@gmail.com';
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -286,12 +291,20 @@ const ActiveClients = () => {
 
                   <div className="space-y-2 flex-1">
                     <div className="flex items-center space-x-2">
-                      <h3 className="font-semibold text-foreground">
-                        {getClientName(client)}
+                      <h3 className="font-semibold text-foreground flex items-center space-x-2">
+                        <span>{getClientName(client)}</span>
+                        {isMasterUser(client) && (
+                          <Crown className="h-4 w-4 text-amber-500" />
+                        )}
                       </h3>
                       <Badge className={`text-xs ${getStatusColor(getClientStatus(client))}`}>
                         {getClientStatus(client)}
                       </Badge>
+                      {isMasterUser(client) && (
+                        <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
+                          Master
+                        </Badge>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-muted-foreground">
