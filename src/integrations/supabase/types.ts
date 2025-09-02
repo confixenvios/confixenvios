@@ -74,10 +74,44 @@ export type Database = {
         }
         Relationships: []
       }
+      integration_audit_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          integration_id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          integration_id: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          integration_id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       integrations: {
         Row: {
           active: boolean | null
           created_at: string
+          encrypted_secret_key: string | null
           id: string
           name: string
           secret_key: string | null
@@ -87,6 +121,7 @@ export type Database = {
         Insert: {
           active?: boolean | null
           created_at?: string
+          encrypted_secret_key?: string | null
           id?: string
           name: string
           secret_key?: string | null
@@ -96,6 +131,7 @@ export type Database = {
         Update: {
           active?: boolean | null
           created_at?: string
+          encrypted_secret_key?: string | null
           id?: string
           name?: string
           secret_key?: string | null
@@ -357,12 +393,49 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      integrations_secure: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string | null
+          name: string | null
+          secret_status: string | null
+          updated_at: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string | null
+          name?: string | null
+          secret_status?: never
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string | null
+          name?: string | null
+          secret_status?: never
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       cleanup_anonymous_addresses: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      decrypt_integration_secret: {
+        Args: { encrypted_value: string; integration_id: string }
+        Returns: string
+      }
+      encrypt_integration_secret: {
+        Args: { integration_id: string; secret_value: string }
+        Returns: string
       }
       generate_tracking_code: {
         Args: Record<PropertyKey, never>
