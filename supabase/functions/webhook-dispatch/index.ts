@@ -113,14 +113,19 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Sending webhook to: ${integration.webhook_url}`);
     console.log('Payload:', JSON.stringify(payload, null, 2));
 
-    // Send webhook to external system
+    // Send webhook to external system (only for admin notifications)
     const webhookResponse = await fetch(integration.webhook_url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-Admin-Notification': 'true', // Indicador que é notificação administrativa
         ...(integration.secret_key && { 'Authorization': `Bearer ${integration.secret_key}` })
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        ...payload,
+        notificationType: 'admin-only', // Especifica que é apenas para administradores
+        adminNotification: true
+      })
     });
 
     const webhookResult = await webhookResponse.text();

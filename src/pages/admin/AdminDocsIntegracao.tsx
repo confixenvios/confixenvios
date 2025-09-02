@@ -35,6 +35,8 @@ const AdminDocsIntegracao = () => {
   "shipmentId": "SID123",
   "clienteId": "CID456",
   "status": "PAGO_AGUARDANDO_ETIQUETA",
+  "notificationType": "admin-only",
+  "adminNotification": true,
   
   "remetente": {
     "nome": "Loja X",
@@ -199,6 +201,24 @@ const AdminDocsIntegracao = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-amber-800 dark:text-amber-300 mb-2">
+                      🔒 Notificações Apenas para Administradores
+                    </h4>
+                    <p className="text-sm text-amber-700 dark:text-amber-400 mb-2">
+                      <strong>IMPORTANTE:</strong> Os webhooks enviados pelo Confix Envios são destinados exclusivamente para administradores do sistema.
+                    </p>
+                    <ul className="text-sm text-amber-700 dark:text-amber-400 space-y-1 ml-4">
+                      <li>• Header <code>X-Admin-Notification: true</code> indica notificação administrativa</li>
+                      <li>• Campo <code>adminNotification: true</code> confirma destinação apenas para admins</li>
+                      <li>• Não enviar notificações para clientes finais</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <h3 className="font-semibold mb-2">Informações Técnicas</h3>

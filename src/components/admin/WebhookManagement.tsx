@@ -165,6 +165,8 @@ const WebhookManagement = () => {
         shipmentId: "test-" + Date.now(),
         clienteId: "TEST_CLIENT",
         status: "PAGO_AGUARDANDO_ETIQUETA",
+        notificationType: "admin-only",
+        adminNotification: true,
 
         remetente: {
           nome: "Loja Teste",
