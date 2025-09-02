@@ -1,4 +1,3 @@
-import QuoteForm from "@/components/QuoteForm";
 import EmailConfirmationBanner from "@/components/EmailConfirmationBanner";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -117,9 +116,9 @@ const ClientDashboard = () => {
       
       {/* Header */}
       <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold text-foreground">Nova Cotação</h1>
+        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground">
-          Calcule o frete para sua remessa de forma rápida e segura
+          Visão geral das suas remessas e ações rápidas
         </p>
       </div>
 
@@ -174,21 +173,6 @@ const ClientDashboard = () => {
         </Card>
       </div>
 
-      {/* Quote Form */}
-      <Card className="border-border/50 shadow-card">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Calculator className="w-5 h-5" />
-            <span>Calcular Frete</span>
-          </CardTitle>
-          <CardDescription>
-            Preencha os dados abaixo para calcular o valor do frete
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <QuoteForm />
-        </CardContent>
-      </Card>
 
       {/* Quick Access & Recent Shipments */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -205,6 +189,13 @@ const ClientDashboard = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <Button asChild className="w-full justify-start">
+              <Link to="/cliente/cotacoes">
+                <Calculator className="w-4 h-4 mr-2" />
+                Nova Cotação
+              </Link>
+            </Button>
+            
+            <Button asChild variant="outline" className="w-full justify-start">
               <Link to="/cliente/remessas">
                 <Package className="w-4 h-4 mr-2" />
                 Ver Minhas Remessas
