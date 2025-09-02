@@ -21,14 +21,12 @@ export type Database = {
           city: string
           complement: string | null
           created_at: string
-          document: string
-          email: string
           id: string
           name: string
           neighborhood: string
           number: string
-          phone: string
           reference: string | null
+          secure_data_id: string | null
           session_id: string | null
           state: string
           street: string
@@ -41,14 +39,12 @@ export type Database = {
           city: string
           complement?: string | null
           created_at?: string
-          document: string
-          email: string
           id?: string
           name: string
           neighborhood: string
           number: string
-          phone: string
           reference?: string | null
+          secure_data_id?: string | null
           session_id?: string | null
           state: string
           street: string
@@ -61,21 +57,27 @@ export type Database = {
           city?: string
           complement?: string | null
           created_at?: string
-          document?: string
-          email?: string
           id?: string
           name?: string
           neighborhood?: string
           number?: string
-          phone?: string
           reference?: string | null
+          secure_data_id?: string | null
           session_id?: string | null
           state?: string
           street?: string
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "addresses_secure_data_id_fkey"
+            columns: ["secure_data_id"]
+            isOneToOne: false
+            referencedRelation: "secure_personal_data"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       anonymous_sessions: {
         Row: {
@@ -200,6 +202,42 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      secure_personal_data: {
+        Row: {
+          access_level: string
+          address_id: string
+          created_at: string
+          data_hash: string
+          encrypted_document: string | null
+          encrypted_email: string | null
+          encrypted_phone: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          access_level?: string
+          address_id: string
+          created_at?: string
+          data_hash: string
+          encrypted_document?: string | null
+          encrypted_email?: string | null
+          encrypted_phone?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          access_level?: string
+          address_id?: string
+          created_at?: string
+          data_hash?: string
+          encrypted_document?: string | null
+          encrypted_email?: string | null
+          encrypted_phone?: string | null
+          id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -448,8 +486,25 @@ export type Database = {
         Args: { encrypted_value: string; integration_id: string }
         Returns: string
       }
+      decrypt_personal_data: {
+        Args: { data_id: string }
+        Returns: {
+          document: string
+          email: string
+          phone: string
+        }[]
+      }
       encrypt_integration_secret: {
         Args: { integration_id: string; secret_value: string }
+        Returns: string
+      }
+      encrypt_personal_data: {
+        Args: {
+          address_ref: string
+          raw_document: string
+          raw_email: string
+          raw_phone: string
+        }
         Returns: string
       }
       generate_tracking_code: {
@@ -459,6 +514,14 @@ export type Database = {
       get_current_session_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_masked_personal_data: {
+        Args: { address_ref: string }
+        Returns: {
+          email_domain: string
+          masked_document: string
+          masked_phone: string
+        }[]
       }
       get_secure_integrations: {
         Args: Record<PropertyKey, never>
@@ -485,6 +548,10 @@ export type Database = {
       }
       validate_anonymous_session: {
         Args: { session_token: string }
+        Returns: string
+      }
+      validate_session_with_rate_limiting: {
+        Args: { client_ip?: string; session_token: string }
         Returns: string
       }
     }
