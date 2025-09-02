@@ -451,49 +451,51 @@ const QuoteForm = () => {
   const isStep1Valid = Object.values(formData).every(value => value.trim() !== "");
 
   const renderStepIndicator = () => (
-    <div className="flex items-center justify-center mb-4 sm:mb-6 md:mb-8 overflow-x-auto pb-2">
-      <div className="flex items-center space-x-1 sm:space-x-2 min-w-max px-2">
-        {steps.map((step, index) => (
-          <div key={step.number} className="flex items-center">
-            <div className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 md:px-4 py-1 sm:py-2 rounded-full transition-all duration-300 ${
-              currentStep === step.number 
-                ? 'bg-primary text-primary-foreground' 
-                : currentStep > step.number 
-                  ? 'bg-success text-success-foreground'
-                  : 'bg-muted text-muted-foreground'
-            }`}>
-              {currentStep > step.number ? (
-                <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
-              ) : (
-                <step.icon className="h-3 w-3 sm:h-4 sm:w-4" />
+    <div className="mb-6 sm:mb-8">
+      <div className="flex items-center justify-center">
+        <div className="flex items-center space-x-2 sm:space-x-4 lg:space-x-6">
+          {steps.map((step, index) => (
+            <div key={step.number} className="flex items-center">
+              <div className={`flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-2 px-2 sm:px-3 py-2 sm:py-3 rounded-lg transition-all duration-300 ${
+                currentStep === step.number 
+                  ? 'bg-primary text-primary-foreground shadow-lg' 
+                  : currentStep > step.number 
+                    ? 'bg-success text-success-foreground'
+                    : 'bg-muted text-muted-foreground'
+              }`}>
+                {currentStep > step.number ? (
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                ) : (
+                  <step.icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                )}
+                <span className="font-medium text-xs sm:text-sm text-center">{step.title}</span>
+              </div>
+              {index < steps.length - 1 && (
+                <div className={`hidden sm:block w-6 lg:w-12 h-0.5 mx-2 transition-all duration-300 ${
+                  currentStep > step.number ? 'bg-success' : 'bg-muted'
+                }`} />
               )}
-              <span className="font-medium text-xs sm:text-sm hidden sm:inline">{step.title}</span>
             </div>
-            {index < steps.length - 1 && (
-              <div className={`w-4 sm:w-6 md:w-8 h-0.5 mx-1 sm:mx-2 transition-all duration-300 ${
-                currentStep > step.number ? 'bg-success' : 'bg-muted'
-              }`} />
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-1 sm:px-2 md:px-4">
-      <Card className="shadow-card relative overflow-hidden mx-1 sm:mx-0">
-        <div className="absolute inset-0 bg-gradient-glow opacity-10"></div>
-        <CardHeader className="relative pb-3 sm:pb-4 px-2 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
-          <CardTitle className="text-center text-xl sm:text-2xl font-bold">
+    <div className="w-full">
+      <Card className="shadow-card relative overflow-hidden border-border/50">
+        <div className="absolute inset-0 bg-gradient-subtle opacity-30"></div>
+        <CardHeader className="relative pb-4 sm:pb-6 px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
+          <CardTitle className="text-center text-2xl sm:text-3xl font-bold">
             Cotação Rápida
           </CardTitle>
-          <CardDescription className="text-center text-sm sm:text-base">
+          <CardDescription className="text-center text-base sm:text-lg">
             Calcule o frete para sua encomenda em segundos
           </CardDescription>
         </CardHeader>
         
-        <CardContent className="relative px-2 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+        <CardContent className="relative px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
           {renderStepIndicator()}
 
           <div className="animate-fade-in">
@@ -510,10 +512,10 @@ const QuoteForm = () => {
                 </div>
 
                 {/* CEP Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="origin-cep" className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-primary" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+                  <div className="space-y-3">
+                    <Label htmlFor="origin-cep" className="flex items-center space-x-2 text-base font-medium">
+                      <MapPin className="h-5 w-5 text-primary" />
                       <span>CEP de Origem</span>
                     </Label>
                     <Input
@@ -521,16 +523,16 @@ const QuoteForm = () => {
                       type="text"
                       value={formData.originCep}
                       disabled
-                      className="border-input-border bg-muted text-muted-foreground h-12"
+                      className="border-input-border bg-muted text-muted-foreground h-14 text-lg"
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       Goiânia e Região / Origem fixa
                     </p>
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="destiny-cep" className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-primary" />
+                  <div className="space-y-3">
+                    <Label htmlFor="destiny-cep" className="flex items-center space-x-2 text-base font-medium">
+                      <MapPin className="h-5 w-5 text-primary" />
                       <span>CEP de Destino</span>
                     </Label>
                     <InputMask
@@ -544,7 +546,7 @@ const QuoteForm = () => {
                           id="destiny-cep"
                           type="text"
                           placeholder="00000-000"
-                          className="border-input-border focus:border-primary focus:ring-primary h-12"
+                          className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
                         />
                       )}
                     </InputMask>
@@ -552,15 +554,15 @@ const QuoteForm = () => {
                 </div>
 
                 {/* Merchandise Details */}
-                <div className="space-y-4">
-                  <Label className="flex items-center space-x-2 text-base font-medium">
-                    <DollarSign className="h-4 w-4 text-primary" />
+                <div className="space-y-6">
+                  <Label className="flex items-center space-x-2 text-lg font-semibold">
+                    <DollarSign className="h-5 w-5 text-primary" />
                     <span>Detalhes da Mercadoria</span>
                   </Label>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="quantity">Quantidade</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="space-y-3">
+                      <Label htmlFor="quantity" className="text-base font-medium">Quantidade</Label>
                       <Input
                         id="quantity"
                         type="number"
@@ -568,12 +570,12 @@ const QuoteForm = () => {
                         placeholder="1"
                         value={formData.quantity}
                         onChange={(e) => handleInputChange("quantity", e.target.value)}
-                        className="border-input-border focus:border-primary focus:ring-primary h-12"
+                        className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
                       />
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="unitValue">Valor Unitário (R$)</Label>
+                    <div className="space-y-3">
+                      <Label htmlFor="unitValue" className="text-base font-medium">Valor Unitário (R$)</Label>
                       <Input
                         id="unitValue"
                         type="number"
@@ -582,13 +584,13 @@ const QuoteForm = () => {
                         placeholder="100.00"
                         value={formData.unitValue}
                         onChange={(e) => handleInputChange("unitValue", e.target.value)}
-                        className="border-input-border focus:border-primary focus:ring-primary h-12"
+                        className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
                       />
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label>Valor Total</Label>
-                      <div className="h-12 flex items-center px-3 py-2 rounded-md border border-input-border bg-muted text-foreground font-medium">
+                    <div className="space-y-3">
+                      <Label className="text-base font-medium">Valor Total</Label>
+                      <div className="h-14 flex items-center px-4 py-2 rounded-md border border-input-border bg-accent text-foreground font-semibold text-lg">
                         R$ {getTotalMerchandiseValue().toFixed(2)}
                       </div>
                     </div>
@@ -596,15 +598,15 @@ const QuoteForm = () => {
                 </div>
 
                 {/* Package Details */}
-                <div className="space-y-4">
-                  <Label className="flex items-center space-x-2 text-base font-medium">
-                    <Package className="h-4 w-4 text-primary" />
+                <div className="space-y-6">
+                  <Label className="flex items-center space-x-2 text-lg font-semibold">
+                    <Package className="h-5 w-5 text-primary" />
                     <span>Detalhes do Pacote</span>
                   </Label>
                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="weight">Peso (kg)</Label>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                    <div className="space-y-3">
+                      <Label htmlFor="weight" className="text-base font-medium">Peso (kg)</Label>
                       <Input
                         id="weight"
                         type="number"
@@ -612,51 +614,51 @@ const QuoteForm = () => {
                         placeholder="0.5"
                         value={formData.weight}
                         onChange={(e) => handleInputChange("weight", e.target.value)}
-                        className="border-input-border focus:border-primary focus:ring-primary h-12"
+                        className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
                       />
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="length">Comp. (cm)</Label>
+                    <div className="space-y-3">
+                      <Label htmlFor="length" className="text-base font-medium">Comp. (cm)</Label>
                       <Input
                         id="length"
                         type="number"
                         placeholder="20"
                         value={formData.length}
                         onChange={(e) => handleInputChange("length", e.target.value)}
-                        className="border-input-border focus:border-primary focus:ring-primary h-12"
+                        className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
                       />
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="width">Larg. (cm)</Label>
+                    <div className="space-y-3">
+                      <Label htmlFor="width" className="text-base font-medium">Larg. (cm)</Label>
                       <Input
                         id="width"
                         type="number"
                         placeholder="15"
                         value={formData.width}
                         onChange={(e) => handleInputChange("width", e.target.value)}
-                        className="border-input-border focus:border-primary focus:ring-primary h-12"
+                        className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
                       />
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="height">Alt. (cm)</Label>
+                    <div className="space-y-3">
+                      <Label htmlFor="height" className="text-base font-medium">Alt. (cm)</Label>
                       <Input
                         id="height"
                         type="number"
                         placeholder="10"
                         value={formData.height}
                         onChange={(e) => handleInputChange("height", e.target.value)}
-                        className="border-input-border focus:border-primary focus:ring-primary h-12"
+                        className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-2 max-w-md">
-                    <Label htmlFor="format">Formato</Label>
+                  <div className="space-y-3 max-w-sm">
+                    <Label htmlFor="format" className="text-base font-medium">Formato</Label>
                     <Select onValueChange={(value) => handleInputChange("format", value)}>
-                      <SelectTrigger className="border-input-border focus:border-primary focus:ring-primary h-12">
+                      <SelectTrigger className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg">
                         <SelectValue placeholder="Selecione o formato" />
                       </SelectTrigger>
                       <SelectContent>
@@ -674,16 +676,16 @@ const QuoteForm = () => {
                 <Button
                   onClick={handleStep1Submit}
                   disabled={!isStep1Valid || isLoading}
-                  className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300"
+                  className="w-full h-16 text-lg font-semibold bg-gradient-primary hover:shadow-primary transition-all duration-300 mt-8"
                 >
                   {isLoading ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"></div>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"></div>
                       <span>Calculando...</span>
                     </div>
                   ) : (
                     <>
-                      <Calculator className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      <Calculator className="mr-3 h-5 w-5" />
                       Calcular Frete
                     </>
                   )}

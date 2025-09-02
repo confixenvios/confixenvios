@@ -4,8 +4,8 @@ import { Calculator } from "lucide-react";
 
 const ClientCotacoes = () => {
   return (
-    <div className="px-1 py-4 md:px-4 md:py-6 min-h-screen">
-      <div className="w-full max-w-4xl mx-auto">
+    <div className="px-2 py-4 md:px-6 md:py-8 min-h-screen bg-background">
+      <div className="w-full max-w-7xl mx-auto">
         <div className="mb-4 md:mb-6">
           <h1 className="text-2xl md:text-3xl font-bold flex items-center">
             <Calculator className="mr-2 md:mr-3 h-6 w-6 md:h-8 md:w-8 text-primary" />
