@@ -594,7 +594,7 @@ const QuoteForm = () => {
                     
                     <div className="space-y-3">
                       <Label className="text-base font-medium">Valor Total</Label>
-                      <div className="h-14 flex items-center px-4 py-2 rounded-md border border-input-border bg-accent text-foreground font-semibold text-lg">
+                      <div className="h-14 flex items-center px-4 py-2 rounded-md border border-input-border text-foreground font-semibold text-lg">
                         R$ {getTotalMerchandiseValue().toFixed(2)}
                       </div>
                     </div>
