@@ -151,13 +151,66 @@ const AdminIntegracoes = () => {
 
   const handleTestIntegration = async (integration: Integration) => {
     try {
-      // Create a test webhook payload
+      // Create consolidated webhook payload matching the new system
       const testPayload = {
-        shipmentId: "test-shipment-id",
-        trackingCode: "TRK-TEST123",
-        cteKey: "35200214200166000187550000000000123456789",
-        labelPdfUrl: "https://example.com/test-label.pdf",
-        status: "LABEL_AVAILABLE"
+        event: "shipment_confirmed",
+        shipmentId: "test-shipment-" + Date.now(),
+        clienteId: "TEST_CLIENT",
+        status: "PAGO_AGUARDANDO_ETIQUETA",
+
+        remetente: {
+          nome: "Loja Teste",
+          cpfCnpj: "12345678901",
+          telefone: "62999999999",
+          email: "teste@loja.com",
+          cep: "74345260",
+          endereco: "Rua Teste",
+          numero: "123",
+          bairro: "Centro",
+          cidade: "Goiânia",
+          estado: "GO",
+          referencia: "Próximo ao mercado"
+        },
+
+        destinatario: {
+          nome: "João Teste",
+          cpfCnpj: "98765432100",
+          telefone: "11988887777",
+          email: "joao@teste.com",
+          cep: "01307001",
+          endereco: "Rua Teste Destino",
+          numero: "456",
+          bairro: "Centro",
+          cidade: "São Paulo",
+          estado: "SP",
+          referencia: "Apto 10"
+        },
+
+        pacote: {
+          pesoKg: 2.5,
+          comprimentoCm: 30,
+          larguraCm: 20,
+          alturaCm: 15,
+          formato: "CAIXA"
+        },
+
+        mercadoria: {
+          quantidade: 1,
+          valorUnitario: 50.00,
+          valorTotal: 50.00,
+          documentoFiscal: {
+            tipo: "DECLARACAO_CONTEUDO",
+            temNotaFiscal: false,
+            chaveNfe: null
+          }
+        },
+
+        pagamento: {
+          metodo: "PIX",
+          valor: 25.90,
+          status: "PAID",
+          dataPagamento: new Date().toISOString()
+        }
       };
 
       const response = await fetch(integration.webhook_url, {
@@ -172,7 +225,7 @@ const AdminIntegracoes = () => {
       if (response.ok) {
         toast({
           title: "Sucesso",
-          description: "Teste de webhook enviado com sucesso!"
+          description: "Webhook consolidado de teste enviado com sucesso!"
         });
       } else {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -181,7 +234,7 @@ const AdminIntegracoes = () => {
       console.error('Error testing integration:', error);
       toast({
         title: "Erro no Teste",
-        description: `Não foi possível testar o webhook: ${error.message}`,
+        description: `Não foi possível testar o webhook: ${error}`,
         variant: "destructive"
       });
     }
@@ -301,16 +354,20 @@ const AdminIntegracoes = () => {
       </div>
 
       {/* Warning Info */}
-      <Card className="border-warning/20 bg-warning/5">
+      <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
+            <Settings className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
             <div className="space-y-2 text-sm">
-              <p className="font-medium">Como funciona o fluxo de webhook:</p>
-              <div className="text-muted-foreground space-y-1">
-                <p>1. Cliente faz pagamento → Sistema dispara POST para URL configurada</p>
-                <p>2. Sistema externo processa e responde via <code>/api/webhooks/tms</code></p>
-                <p>3. Status da remessa é atualizado para "Etiqueta Disponível"</p>
+              <p className="font-medium text-blue-900 dark:text-blue-100">Fluxo do Webhook Consolidado:</p>
+              <div className="text-blue-700 dark:text-blue-300 space-y-1">
+                <p><strong>1.</strong> Cliente conclui pagamento → Sistema envia payload consolidado completo</p>
+                <p><strong>2.</strong> Sistema externo (n8n/TMS) processa todos os dados</p>
+                <p><strong>3.</strong> TMS retorna etiqueta via <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">/functions/v1/webhook-tms</code></p>
+                <p><strong>4.</strong> Status atualizado para "ETIQUETA_DISPONIVEL"</p>
+              </div>
+              <div className="mt-3 p-2 bg-blue-100 dark:bg-blue-900 rounded text-xs">
+                <strong>Payload consolidado inclui:</strong> Remetente, Destinatário, Pacote, Mercadoria e Pagamento
               </div>
             </div>
           </div>
@@ -363,39 +420,42 @@ const AdminIntegracoes = () => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleTestIntegration(integration)}
-                    >
-                      <TestTube className="h-4 w-4" />
-                    </Button>
-                    
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleToggleActive(integration)}
-                    >
-                      <Switch checked={integration.active} />
-                    </Button>
-                    
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleEditIntegration(integration)}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleDeleteIntegration(integration.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleTestIntegration(integration)}
+                        className="text-xs"
+                      >
+                        <TestTube className="h-3 w-3 mr-1" />
+                        Testar
+                      </Button>
+                      
+                      <Switch 
+                        checked={integration.active}
+                        onCheckedChange={() => handleToggleActive(integration)}
+                      />
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleEditIntegration(integration)}
+                        className="text-xs"
+                      >
+                        <Edit2 className="h-3 w-3 mr-1" />
+                        Editar
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDeleteIntegration(integration.id)}
+                        className="text-xs text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Excluir
+                      </Button>
+                    </div>
                 </div>
               </CardContent>
             </Card>
