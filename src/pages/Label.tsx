@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { User, MapPin, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { createAddress } from "@/services/addressService";
 import { sanitizeTextInput, validateDocument, validateCEP } from "@/utils/inputValidation";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
@@ -228,42 +229,24 @@ const Label = () => {
     setIsLoading(true);
 
     try {
-      console.log('Label - Iniciando criação de endereços sem autenticação');
+      console.log('Label - Iniciando criação de endereços com segurança');
       console.log('Label - Dados do remetente:', senderData);
       console.log('Label - Dados do destinatário:', recipientData);
       
-      // Create sender address without requiring authentication
-      const { data: senderAddress, error: senderError } = await supabase
-        .from('addresses')
-        .insert({
-          ...senderData,
-          address_type: 'sender',
-          user_id: null
-        })
-        .select()
-        .maybeSingle();
-
-      if (senderError) {
-        console.log('Label - Erro ao criar endereço do remetente:', senderError);
-        throw senderError;
-      }
+      // Create sender address using secure service
+      const senderAddress = await createAddress({
+        ...senderData,
+        address_type: 'sender',
+        user_id: null
+      });
       console.log('Label - Endereço do remetente criado:', senderAddress);
 
-      // Create recipient address without requiring authentication
-      const { data: recipientAddress, error: recipientError } = await supabase
-        .from('addresses')
-        .insert({
-          ...recipientData,
-          address_type: 'recipient',
-          user_id: null
-        })
-        .select()
-        .maybeSingle();
-
-      if (recipientError) {
-        console.log('Label - Erro ao criar endereço do destinatário:', recipientError);
-        throw recipientError;
-      }
+      // Create recipient address using secure service
+      const recipientAddress = await createAddress({
+        ...recipientData,
+        address_type: 'recipient',
+        user_id: null
+      });
       console.log('Label - Endereço do destinatário criado:', recipientAddress);
 
       // Generate tracking code

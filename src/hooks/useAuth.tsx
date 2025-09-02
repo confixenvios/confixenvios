@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { SessionManager } from '@/utils/sessionManager';
 
 interface Profile {
   id: string;
@@ -205,6 +206,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
+      // Clear anonymous session
+      SessionManager.clearSession();
+      
       // Clear local state first
       setUser(null);
       setSession(null);

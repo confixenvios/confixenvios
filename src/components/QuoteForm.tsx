@@ -17,6 +17,7 @@ import { validateUnitValue, validateWeight, validateDimensions, sanitizeTextInpu
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/hooks/useAuth";
 import AuthModal from "@/components/AuthModal";
+import { SessionManager } from "@/utils/sessionManager";
 
 interface QuoteFormData {
   originCep: string;
@@ -87,6 +88,9 @@ const QuoteForm = () => {
   // Restaurar dados do formulário quando o usuário faz login
   useEffect(() => {
     if (user) {
+      // Clear anonymous session when user logs in
+      SessionManager.clearOnLogin();
+      
       const savedFormData = sessionStorage.getItem('quoteFormData');
       if (savedFormData) {
         try {

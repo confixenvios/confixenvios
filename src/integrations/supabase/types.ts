@@ -29,6 +29,7 @@ export type Database = {
           number: string
           phone: string
           reference: string | null
+          session_id: string | null
           state: string
           street: string
           updated_at: string
@@ -48,6 +49,7 @@ export type Database = {
           number: string
           phone: string
           reference?: string | null
+          session_id?: string | null
           state: string
           street: string
           updated_at?: string
@@ -67,6 +69,7 @@ export type Database = {
           number?: string
           phone?: string
           reference?: string | null
+          session_id?: string | null
           state?: string
           street?: string
           updated_at?: string
