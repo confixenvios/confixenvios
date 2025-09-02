@@ -11,8 +11,17 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let responseStatus = 500;
+  let responseBody: any = { error: 'Internal server error' };
+  let payload: any = {};
+  let sourceIp = 'unknown';
+  let userAgent = 'unknown';
+
   try {
-    const payload = await req.json();
+    payload = await req.json();
+    sourceIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    userAgent = req.headers.get('user-agent') || 'unknown';
+    
     console.log('Received TMS webhook:', JSON.stringify(payload, null, 2));
     
     // Create service role client to bypass RLS
@@ -75,25 +84,53 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Successfully updated shipment ${shipment.id} to status: ${updateData.status}`);
 
-    return new Response(JSON.stringify({
+    responseStatus = 200;
+    responseBody = {
       success: true,
       message: 'Shipment updated successfully',
       shipmentId: shipment.id,
       status: updateData.status
-    }), {
-      status: 200,
+    };
+
+    return new Response(JSON.stringify(responseBody), {
+      status: responseStatus,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('Error in webhook-tms:', error);
-    return new Response(JSON.stringify({
+    responseStatus = 500;
+    responseBody = {
       error: error.message,
       success: false
-    }), {
-      status: 500,
+    };
+    
+    return new Response(JSON.stringify(responseBody), {
+      status: responseStatus,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
+  } finally {
+    // Log the webhook call to database (best effort, don't fail if this fails)
+    try {
+      const supabaseService = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      );
+      
+      await supabaseService
+        .from('webhook_logs')
+        .insert({
+          shipment_id: payload.shipmentId || 'unknown',
+          event_type: payload.event || 'unknown',
+          payload: payload,
+          response_status: responseStatus,
+          response_body: responseBody,
+          source_ip: sourceIp,
+          user_agent: userAgent
+        });
+    } catch (logError) {
+      console.error('Failed to log webhook call:', logError);
+    }
   }
 };
 

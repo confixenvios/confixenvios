@@ -267,7 +267,14 @@ const AdminDashboard = () => {
             </Button>
             
             <Button asChild variant="outline" className="w-full justify-start">
-              <Link to="/admin/webhooks">
+              <Link to="/admin/docs-integracao">
+                <FileText className="w-4 h-4 mr-2" />
+                Documentação TMS
+              </Link>
+            </Button>
+            
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link to="/admin/webhooks/logs">
                 <FileText className="w-4 h-4 mr-2" />
                 Ver Logs de Webhooks
               </Link>

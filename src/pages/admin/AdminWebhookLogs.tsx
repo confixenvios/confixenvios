@@ -44,60 +44,16 @@ const AdminWebhookLogs = () => {
     try {
       setLoading(true);
       
-      // Primeiro vamos simular alguns logs para demonstração
-      // Em produção, isso viria de uma tabela real de logs
-      const mockLogs: WebhookLog[] = [
-        {
-          id: '1',
-          shipment_id: 'SID123',
-          event_type: 'shipment_label_ready',
-          payload: {
-            event: 'shipment_label_ready',
-            shipmentId: 'SID123',
-            pedidoExterno: 'EXT-20250902-98765',
-            labelPdfUrl: 'https://tms.externo/etiquetas/SID123.pdf',
-            status: 'ETIQUETA_DISPONIVEL'
-          },
-          response_status: 200,
-          response_body: { success: true, message: 'Etiqueta registrada com sucesso' },
-          created_at: new Date().toISOString(),
-          source_ip: '192.168.1.100',
-          user_agent: 'TMS-Integration/1.0'
-        },
-        {
-          id: '2',
-          shipment_id: 'SID124',
-          event_type: 'shipment_label_ready',
-          payload: {
-            event: 'shipment_label_ready',
-            shipmentId: 'SID124',
-            status: 'ETIQUETA_DISPONIVEL'
-          },
-          response_status: 400,
-          response_body: { error: 'labelPdfUrl é obrigatório' },
-          created_at: new Date(Date.now() - 3600000).toISOString(),
-          source_ip: '192.168.1.101',
-          user_agent: 'TMS-Integration/1.0'
-        },
-        {
-          id: '3',
-          shipment_id: 'SID125',
-          event_type: 'shipment_label_ready',
-          payload: {
-            event: 'shipment_label_ready',
-            shipmentId: 'SID999',
-            labelPdfUrl: 'https://tms.externo/etiquetas/SID999.pdf',
-            status: 'ETIQUETA_DISPONIVEL'
-          },
-          response_status: 404,
-          response_body: { error: 'Shipment not found: SID999' },
-          created_at: new Date(Date.now() - 7200000).toISOString(),
-          source_ip: '192.168.1.102',
-          user_agent: 'TMS-Integration/1.0'
-        }
-      ];
+      // Load real webhook logs from database
+      const { data: webhookLogs, error } = await supabase
+        .from('webhook_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
 
-      setLogs(mockLogs);
+      if (error) throw error;
+
+      setLogs(webhookLogs || []);
     } catch (error) {
       console.error('Error loading webhook logs:', error);
       toast({
