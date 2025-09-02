@@ -38,14 +38,11 @@ const Auth = () => {
     if (user && !loading) {
       // Wait for user role to be loaded before redirecting
       if (userRole !== null) {
-        if (isAdmin) {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/cliente/dashboard');
-        }
+        // This is client auth page, all users go to client dashboard
+        navigate('/cliente/dashboard');
       }
     }
-  }, [user, loading, userRole, isAdmin, navigate]);
+  }, [user, loading, userRole, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,6 +154,10 @@ const Auth = () => {
     navigate('/cotacao');
   };
 
+  const handleAdminLogin = () => {
+    navigate('/admin/auth');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex items-center justify-center">
@@ -171,20 +172,29 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Button 
-          variant="ghost" 
-          onClick={handleBack}
-          className="mb-6 hover:bg-background/80"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
-        </Button>
+        <div className="flex gap-2 mb-6">
+          <Button 
+            variant="ghost" 
+            onClick={handleBack}
+            className="hover:bg-background/80"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleAdminLogin}
+            className="hover:bg-background/80"
+          >
+            Sou Admin
+          </Button>
+        </div>
         
         <Card className="border-border/50 shadow-lg">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Confix Envios</CardTitle>
+            <CardTitle className="text-2xl font-bold">Confix Envios - Cliente</CardTitle>
             <CardDescription>
-              Faça login ou crie sua conta para continuar
+              Faça login ou crie sua conta de cliente para continuar
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -352,6 +362,20 @@ const Auth = () => {
             </Tabs>
           </CardContent>
         </Card>
+        
+        <div className="text-center mt-4">
+          <p className="text-xs text-muted-foreground mb-2">
+            Área de acesso para clientes
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Administradores devem usar o <button 
+              onClick={handleAdminLogin}
+              className="underline hover:text-foreground cursor-pointer"
+            >
+              login administrativo
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );

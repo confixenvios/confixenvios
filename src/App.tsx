@@ -17,6 +17,7 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentSuccessStripe from "./pages/PaymentSuccessStripe";
 import PixPayment from "./pages/PixPayment";
 import Auth from "./pages/Auth";
+import AdminAuth from "./pages/admin/AdminAuth";
 import NotFound from "./pages/NotFound";
 
 // Client pages
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="/" element={<Navigate to="/cotacao" replace />} />
             <Route path="/cotacao" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/admin/auth" element={<AdminAuth />} />
             <Route path="/login" element={<Navigate to="/auth" replace />} />
             <Route path="/cadastro" element={<Navigate to="/auth" replace />} />
             <Route path="/resultados" element={<Results />} />

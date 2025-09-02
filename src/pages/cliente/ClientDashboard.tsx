@@ -1,6 +1,6 @@
 import QuoteForm from "@/components/QuoteForm";
 import EmailConfirmationBanner from "@/components/EmailConfirmationBanner";
-import AdminAccessCard from "@/components/AdminAccessCard";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -114,9 +114,6 @@ const ClientDashboard = () => {
     <div className="p-6 space-y-6">
       {/* Email Confirmation Banner */}
       <EmailConfirmationBanner />
-
-      {/* Admin Access Card - Only visible for admins */}
-      <AdminAccessCard />
       
       {/* Header */}
       <div className="flex flex-col space-y-2">
