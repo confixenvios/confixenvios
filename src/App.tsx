@@ -38,6 +38,8 @@ import AdminIntegracoes from "./pages/admin/AdminIntegracoes";
 import AdminWebhooks from "./pages/admin/AdminWebhooks";
 import AdminHistorico from "./pages/admin/AdminHistorico";
 import AdminTestarTabela from "./pages/admin/AdminTestarTabela";
+import AdminDocsIntegracao from "./pages/admin/AdminDocsIntegracao";
+import AdminWebhookLogs from "./pages/admin/AdminWebhookLogs";
 
 const queryClient = new QueryClient();
 
@@ -99,6 +101,8 @@ const App = () => (
                       <Route path="remessas" element={<AdminRemessas />} />
                       <Route path="integracoes" element={<AdminIntegracoes />} />
                       <Route path="webhooks" element={<AdminWebhooks />} />
+                      <Route path="docs-integracao" element={<AdminDocsIntegracao />} />
+                      <Route path="webhooks/logs" element={<AdminWebhookLogs />} />
                       <Route path="historico" element={<AdminHistorico />} />
                       <Route path="testar-tabela" element={<AdminTestarTabela />} />
                     </Routes>
