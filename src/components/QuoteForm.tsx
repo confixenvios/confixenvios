@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import InputMask from "react-input-mask";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,8 @@ import { calculateShippingQuote, validateCep, formatCep } from "@/services/shipp
 import { supabase } from "@/integrations/supabase/client";
 import { validateUnitValue, validateWeight, validateDimensions, sanitizeTextInput } from "@/utils/inputValidation";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useAuth } from "@/hooks/useAuth";
+import AuthModal from "@/components/AuthModal";
 
 interface QuoteFormData {
   originCep: string;
@@ -46,8 +48,10 @@ interface AddressData {
 const QuoteForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   
   // Step 1: Cotação
   const [formData, setFormData] = useState<QuoteFormData>({
@@ -79,6 +83,22 @@ const QuoteForm = () => {
   
   const [samePickupAddress, setSamePickupAddress] = useState<boolean>(true);
   const [alternativePickupAddress, setAlternativePickupAddress] = useState<string>("");
+
+  // Restaurar dados do formulário quando o usuário faz login
+  useEffect(() => {
+    if (user) {
+      const savedFormData = sessionStorage.getItem('quoteFormData');
+      if (savedFormData) {
+        try {
+          const parsedData = JSON.parse(savedFormData);
+          setFormData(parsedData);
+          sessionStorage.removeItem('quoteFormData'); // Limpar após restaurar
+        } catch (error) {
+          console.error('Erro ao restaurar dados do formulário:', error);
+        }
+      }
+    }
+  }, [user]);
 
   const steps = [
     { number: 1, title: "Calcular Frete", icon: Calculator },
@@ -227,6 +247,19 @@ const QuoteForm = () => {
 
   // Step 1: Calcular Cotação
   const handleStep1Submit = async () => {
+    // Verificar se o usuário está logado antes de prosseguir
+    if (!user) {
+      // Salvar os dados do formulário no sessionStorage
+      sessionStorage.setItem('quoteFormData', JSON.stringify(formData));
+      setShowAuthModal(true);
+      return;
+    }
+
+    await processQuoteCalculation();
+  };
+
+  // Função para processar o cálculo da cotação
+  const processQuoteCalculation = async () => {
     setIsLoading(true);
 
     try {
@@ -1177,6 +1210,15 @@ const QuoteForm = () => {
           </div>
         </CardContent>
       </Card>
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => {
+          // Dados já foram salvos no sessionStorage, continuar com o cálculo
+          processQuoteCalculation();
+        }}
+      />
     </div>
   );
 };

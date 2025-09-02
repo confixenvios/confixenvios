@@ -1,22 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, LogIn, UserPlus } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Loader2, LogIn, UserPlus, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
 interface AuthModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  isOpen: boolean;
+  onClose: () => void;
   onSuccess?: () => void;
+  title?: string;
+  description?: string;
 }
 
-const AuthModal = ({ open, onOpenChange, onSuccess }: AuthModalProps) => {
-  const { signIn, signUp } = useAuth();
+const AuthModal = ({ 
+  isOpen, 
+  onClose, 
+  onSuccess, 
+  title = "Login Necessário",
+  description = "Faça login ou crie sua conta para continuar com a cotação"
+}: AuthModalProps) => {
+  const { signIn, signUp, user } = useAuth();
   const { toast } = useToast();
   
   const [isLoading, setIsLoading] = useState(false);
@@ -35,23 +43,31 @@ const AuthModal = ({ open, onOpenChange, onSuccess }: AuthModalProps) => {
     password: '',
     confirmPassword: '',
     firstName: '',
-    lastName: '',
-    phone: ''
+    lastName: ''
   });
 
-  const resetForms = () => {
-    setLoginData({ email: '', password: '' });
-    setSignupData({
-      email: '',
-      password: '',
-      confirmPassword: '',
-      firstName: '',
-      lastName: '',
-      phone: ''
-    });
-    setError('');
-    setIsLoading(false);
-  };
+  // Close modal and call success callback when user is authenticated
+  useEffect(() => {
+    if (user && isOpen) {
+      onSuccess?.();
+      onClose();
+      toast({
+        title: "Login realizado com sucesso!",
+        description: "Continuando com sua cotação...",
+      });
+    }
+  }, [user, isOpen, onSuccess, onClose, toast]);
+
+  // Reset form data when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setError('');
+      setIsLoading(false);
+      setLoginData({ email: '', password: '' });
+      setSignupData({ email: '', password: '', confirmPassword: '', firstName: '', lastName: '' });
+      setActiveTab('login');
+    }
+  }, [isOpen]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,26 +88,12 @@ const AuthModal = ({ open, onOpenChange, onSuccess }: AuthModalProps) => {
           setError('Email ou senha incorretos');
         } else if (error.message.includes('Email not confirmed')) {
           setError('⚠️ Email não confirmado. Verifique sua caixa de entrada e clique no link de confirmação antes de fazer login.');
-        } else if (error.message.includes('Too many requests')) {
-          setError('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
         } else {
-          setError(`Erro ao fazer login: ${error.message}`);
+          setError(error.message);
         }
-        console.error('Login error:', error);
-      } else {
-        toast({
-          title: "Login realizado com sucesso!",
-          description: "Continuando o processo...",
-        });
-        resetForms();
-        onOpenChange(false);
-        // Wait a bit for auth state to settle
-        setTimeout(() => {
-          onSuccess?.();
-        }, 1000);
       }
+      // Success is handled by useEffect
     } catch (error: any) {
-      console.error('Unexpected login error:', error);
       setError('Erro inesperado. Tente novamente.');
     } finally {
       setIsLoading(false);
@@ -103,7 +105,7 @@ const AuthModal = ({ open, onOpenChange, onSuccess }: AuthModalProps) => {
     setIsLoading(true);
     setError('');
 
-    if (!signupData.email || !signupData.password || !signupData.confirmPassword || !signupData.firstName) {
+    if (!signupData.email || !signupData.password || !signupData.confirmPassword) {
       setError('Preencha todos os campos obrigatórios');
       setIsLoading(false);
       return;
@@ -142,230 +144,205 @@ const AuthModal = ({ open, onOpenChange, onSuccess }: AuthModalProps) => {
         console.error('Signup error:', result.error);
       } else if (result.needsConfirmation) {
         toast({
-          title: "🎉 Conta criada com sucesso!",
+          title: "🎉 Conta criada com sucesso!",  
           description: "Verifique seu email para confirmar sua conta e depois faça login.",
         });
-        resetForms();
-        onOpenChange(false);
-        // Switch to login tab after closing modal
-        setTimeout(() => {
-          setActiveTab('login');
-        }, 100);
-      } else {
-        // Auto-login successful (email confirmation disabled)
-        toast({
-          title: "Conta criada e login realizado!",
-          description: "Você foi logado automaticamente. Continuando...",
+        // Switch to login tab
+        setActiveTab('login');
+        setSignupData({
+          email: '',
+          password: '',
+          confirmPassword: '',
+          firstName: '',
+          lastName: ''
         });
-        resetForms();
-        onOpenChange(false);
-        // Wait a bit for auth state to settle
-        setTimeout(() => {
-          onSuccess?.();
-        }, 1000);
+        setError('');
       }
+      // Auto-login success is handled by useEffect
     } catch (error: any) {
-      console.error('Unexpected signup error:', error);
       setError('Erro inesperado. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      resetForms();
-    }
-    onOpenChange(newOpen);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader className="text-center">
-          <DialogTitle className="text-2xl font-bold">Login Necessário</DialogTitle>
-          <DialogDescription>
-            Faça login ou crie sua conta para continuar com o envio
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-center flex items-center justify-center">
+            <Shield className="h-5 w-5 mr-2 text-primary" />
+            {title}
+          </DialogTitle>
+          <DialogDescription className="text-center">
+            {description}
           </DialogDescription>
         </DialogHeader>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">
-              <LogIn className="h-4 w-4 mr-2" />
-              Entrar
-            </TabsTrigger>
-            <TabsTrigger value="signup">
-              <UserPlus className="h-4 w-4 mr-2" />
-              Criar conta
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="login" className="space-y-4 mt-6">
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="modal-login-email">E-mail</Label>
-                <Input
-                  id="modal-login-email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={loginData.email}
-                  onChange={(e) => setLoginData(prev => ({
-                    ...prev,
-                    email: e.target.value
-                  }))}
-                  disabled={isLoading}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="modal-login-password">Senha</Label>
-                <Input
-                  id="modal-login-password"
-                  type="password"
-                  placeholder="Sua senha"
-                  value={loginData.password}
-                  onChange={(e) => setLoginData(prev => ({
-                    ...prev,
-                    password: e.target.value
-                  }))}
-                  disabled={isLoading}
-                />
-              </div>
-
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <LogIn className="h-4 w-4 mr-2" />
-                )}
-                Entrar
-              </Button>
-            </form>
-          </TabsContent>
-          
-          <TabsContent value="signup" className="space-y-4 mt-6">
-            <form onSubmit={handleSignup} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+        <div className="mt-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">
+                <LogIn className="h-4 w-4 mr-2" />
+                Login
+              </TabsTrigger>
+              <TabsTrigger value="signup">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Cadastro
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="login" className="space-y-4 mt-6">
+              <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="modal-signup-firstname">Nome *</Label>
+                  <Label htmlFor="modal-login-email">Email</Label>
                   <Input
-                    id="modal-signup-firstname"
-                    placeholder="Seu nome"
-                    value={signupData.firstName}
-                    onChange={(e) => setSignupData(prev => ({
+                    id="modal-login-email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={loginData.email}
+                    onChange={(e) => setLoginData(prev => ({
                       ...prev,
-                      firstName: e.target.value
+                      email: e.target.value
                     }))}
                     disabled={isLoading}
                   />
                 </div>
+                
                 <div className="space-y-2">
-                  <Label htmlFor="modal-signup-lastname">Sobrenome</Label>
+                  <Label htmlFor="modal-login-password">Senha</Label>
                   <Input
-                    id="modal-signup-lastname"
-                    placeholder="Seu sobrenome"
-                    value={signupData.lastName}
-                    onChange={(e) => setSignupData(prev => ({
+                    id="modal-login-password"
+                    type="password"
+                    placeholder="Sua senha"
+                    value={loginData.password}
+                    onChange={(e) => setLoginData(prev => ({
                       ...prev,
-                      lastName: e.target.value
+                      password: e.target.value
                     }))}
                     disabled={isLoading}
                   />
                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="modal-signup-email">E-mail *</Label>
-                <Input
-                  id="modal-signup-email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={signupData.email}
-                  onChange={(e) => setSignupData(prev => ({
-                    ...prev,
-                    email: e.target.value
-                  }))}
-                  disabled={isLoading}
-                />
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="modal-signup-phone">Telefone</Label>
-                <Input
-                  id="modal-signup-phone"
-                  type="tel"
-                  placeholder="(XX) XXXXX-XXXX"
-                  value={signupData.phone}
-                  onChange={(e) => setSignupData(prev => ({
-                    ...prev,
-                    phone: e.target.value
-                  }))}
-                  disabled={isLoading}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="modal-signup-password">Senha *</Label>
-                <Input
-                  id="modal-signup-password"
-                  type="password"
-                  placeholder="Mínimo 6 caracteres"
-                  value={signupData.password}
-                  onChange={(e) => setSignupData(prev => ({
-                    ...prev,
-                    password: e.target.value
-                  }))}
-                  disabled={isLoading}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="modal-signup-confirm">Confirmar Senha *</Label>
-                <Input
-                  id="modal-signup-confirm"
-                  type="password"
-                  placeholder="Repita sua senha"
-                  value={signupData.confirmPassword}
-                  onChange={(e) => setSignupData(prev => ({
-                    ...prev,
-                    confirmPassword: e.target.value
-                  }))}
-                  disabled={isLoading}
-                />
-              </div>
-
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <UserPlus className="h-4 w-4 mr-2" />
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
                 )}
-                Cadastrar
-              </Button>
-            </form>
-          </TabsContent>
-        </Tabs>
+
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <LogIn className="h-4 w-4 mr-2" />
+                  )}
+                  Entrar
+                </Button>
+              </form>
+            </TabsContent>
+            
+            <TabsContent value="signup" className="space-y-4 mt-6">
+              <form onSubmit={handleSignup} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="modal-signup-firstname">Nome</Label>
+                    <Input
+                      id="modal-signup-firstname"
+                      placeholder="Seu nome"
+                      value={signupData.firstName}
+                      onChange={(e) => setSignupData(prev => ({
+                        ...prev,
+                        firstName: e.target.value
+                      }))}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="modal-signup-lastname">Sobrenome</Label>
+                    <Input
+                      id="modal-signup-lastname"
+                      placeholder="Seu sobrenome"
+                      value={signupData.lastName}
+                      onChange={(e) => setSignupData(prev => ({
+                        ...prev,
+                        lastName: e.target.value
+                      }))}
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="modal-signup-email">Email *</Label>
+                  <Input
+                    id="modal-signup-email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={signupData.email}
+                    onChange={(e) => setSignupData(prev => ({
+                      ...prev,
+                      email: e.target.value
+                    }))}
+                    disabled={isLoading}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="modal-signup-password">Senha *</Label>
+                  <Input
+                    id="modal-signup-password"
+                    type="password"
+                    placeholder="Mínimo 6 caracteres"
+                    value={signupData.password}
+                    onChange={(e) => setSignupData(prev => ({
+                      ...prev,
+                      password: e.target.value
+                    }))}
+                    disabled={isLoading}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="modal-signup-confirm">Confirmar Senha *</Label>
+                  <Input
+                    id="modal-signup-confirm"
+                    type="password"
+                    placeholder="Repita sua senha"
+                    value={signupData.confirmPassword}
+                    onChange={(e) => setSignupData(prev => ({
+                      ...prev,
+                      confirmPassword: e.target.value
+                    }))}
+                    disabled={isLoading}
+                  />
+                </div>
+
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-2" />
+                  )}
+                  Criar Conta
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );

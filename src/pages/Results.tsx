@@ -261,8 +261,8 @@ const Results = () => {
       </div>
 
       <AuthModal 
-        open={showAuthModal}
-        onOpenChange={setShowAuthModal}
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
         onSuccess={handleAuthSuccess}
       />
     </div>
