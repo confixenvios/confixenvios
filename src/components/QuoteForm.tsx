@@ -55,7 +55,7 @@ const QuoteForm = () => {
   
   // Step 1: Cotação
   const [formData, setFormData] = useState<QuoteFormData>({
-    originCep: "74345-260",
+    originCep: "74900-000",
     destinyCep: "",
     weight: "",
     length: "",
