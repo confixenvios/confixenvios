@@ -70,41 +70,70 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    let authSubscription: any;
+    
+    const initAuth = async () => {
+      try {
+        // Set up auth state listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('Auth event:', event, 'Session:', !!session);
+            
+            if (event === 'SIGNED_OUT') {
+              // Clear all local state immediately on signout
+              setSession(null);
+              setUser(null);
+              setProfile(null);
+              setUserRole(null);
+              setLoading(false);
+              return;
+            }
+            
+            setSession(session);
+            setUser(session?.user ?? null);
+            
+            if (session?.user) {
+              // Defer profile loading to prevent deadlocks
+              setTimeout(() => {
+                loadUserProfile(session.user.id);
+              }, 0);
+            } else {
+              setProfile(null);
+              setUserRole(null);
+            }
+            
+            setLoading(false);
+          }
+        );
+        
+        authSubscription = subscription;
+
+        // Check for existing session
+        const { data: { session } } = await supabase.auth.getSession();
+        
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Defer profile loading to prevent deadlocks
           setTimeout(() => {
             loadUserProfile(session.user.id);
           }, 0);
-        } else {
-          setProfile(null);
-          setUserRole(null);
         }
         
         setLoading(false);
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        setLoading(false);
       }
-    );
+    };
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        setTimeout(() => {
-          loadUserProfile(session.user.id);
-        }, 0);
+    initAuth();
+
+    return () => {
+      if (authSubscription) {
+        authSubscription.unsubscribe();
       }
-      
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, firstName = '', lastName = '') => {
@@ -155,11 +184,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
+      // Clear local state first
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      setUserRole(null);
+      
+      // Clear any stored auth data from localStorage
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      // Try to sign out from Supabase (may fail if session doesn't exist)
       await supabase.auth.signOut({ scope: 'global' });
-      // Force page reload for clean state
-      window.location.href = '/';
     } catch (error) {
       console.error('Error signing out:', error);
+      // Even if signOut fails, we still want to clear local state
+    } finally {
+      // Force navigation to home page
+      window.location.href = '/';
     }
   };
 
