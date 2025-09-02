@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { SecureIntegrationsService, SecureIntegration } from "@/services/secureIntegrationsService";
 import { 
   Webhook, 
   Plus, 
@@ -17,22 +17,13 @@ import {
   XCircle,
   Copy,
   Send,
-  AlertCircle
+  AlertCircle,
+  Shield
 } from "lucide-react";
-
-interface Integration {
-  id: string;
-  name: string;
-  webhook_url: string;
-  secret_key?: string;
-  active: boolean;
-  created_at: string;
-  updated_at: string;
-}
 
 const WebhookManagement = () => {
   const { toast } = useToast();
-  const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [integrations, setIntegrations] = useState<SecureIntegration[]>([]);
   const [loading, setLoading] = useState(true);
   const [newWebhook, setNewWebhook] = useState({
     name: '',
@@ -48,13 +39,8 @@ const WebhookManagement = () => {
 
   const loadIntegrations = async () => {
     try {
-      const { data, error } = await supabase
-        .from('integrations')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setIntegrations(data || []);
+      const data = await SecureIntegrationsService.getSecureIntegrations();
+      setIntegrations(data);
     } catch (error) {
       console.error('Error loading integrations:', error);
       toast({
@@ -78,23 +64,19 @@ const WebhookManagement = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('integrations')
-        .insert([{
-          name: newWebhook.name,
-          webhook_url: newWebhook.webhook_url,
-          secret_key: newWebhook.secret_key || null,
-          active: true
-        }]);
-
-      if (error) throw error;
+      await SecureIntegrationsService.createIntegration({
+        name: newWebhook.name,
+        webhook_url: newWebhook.webhook_url,
+        secret_key: newWebhook.secret_key || undefined,
+        active: true
+      });
 
       setNewWebhook({ name: '', webhook_url: '', secret_key: '' });
       loadIntegrations();
       
       toast({
         title: "Webhook Adicionado",
-        description: "Webhook configurado com sucesso"
+        description: "Webhook configurado com sucesso e chave secreta criptografada"
       });
     } catch (error) {
       console.error('Error adding webhook:', error);
@@ -110,17 +92,12 @@ const WebhookManagement = () => {
     if (!confirm('Tem certeza que deseja remover este webhook?')) return;
 
     try {
-      const { error } = await supabase
-        .from('integrations')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await SecureIntegrationsService.deleteIntegration(id);
 
       loadIntegrations();
       toast({
         title: "Webhook Removido",
-        description: "Webhook removido com sucesso"
+        description: "Webhook e chaves secretas removidos com segurança"
       });
     } catch (error) {
       console.error('Error removing webhook:', error);
@@ -134,12 +111,9 @@ const WebhookManagement = () => {
 
   const toggleWebhook = async (id: string, currentActive: boolean) => {
     try {
-      const { error } = await supabase
-        .from('integrations')
-        .update({ active: !currentActive })
-        .eq('id', id);
-
-      if (error) throw error;
+      await SecureIntegrationsService.updateIntegration(id, { 
+        active: !currentActive 
+      });
 
       loadIntegrations();
       toast({
@@ -156,7 +130,7 @@ const WebhookManagement = () => {
     }
   };
 
-  const testWebhook = async (url: string) => {
+  const testWebhook = async (integration: SecureIntegration) => {
     setTesting(true);
     try {
       // Send consolidated webhook payload for testing
@@ -223,6 +197,37 @@ const WebhookManagement = () => {
         }
       };
 
+      const response = await SecureIntegrationsService.testWebhook(integration, testPayload);
+
+      if (response.ok) {
+        toast({
+          title: "Teste Enviado",
+          description: "Webhook consolidado de teste enviado com sucesso com autenticação segura."
+        });
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      toast({
+        title: "Erro no Teste",
+        description: `Falha ao enviar webhook de teste: ${error}`,
+        variant: "destructive"
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const testQuickWebhook = async (url: string) => {
+    setTesting(true);
+    try {
+      const testPayload = {
+        event: "shipment_confirmed",
+        shipmentId: "test-" + Date.now(),
+        clienteId: "TEST_CLIENT",
+        status: "PAGO_AGUARDANDO_ETIQUETA"
+      };
+
       await fetch(url, {
         method: "POST",
         headers: {
@@ -233,8 +238,8 @@ const WebhookManagement = () => {
       });
 
       toast({
-        title: "Teste Enviado",
-        description: "Webhook consolidado de teste enviado. Verifique o destino para confirmar."
+        title: "Teste Rápido Enviado",
+        description: "Webhook de teste básico enviado."
       });
     } catch (error) {
       toast({
@@ -273,16 +278,17 @@ const WebhookManagement = () => {
         <h2 className="text-2xl font-bold text-foreground">Gestão de Webhooks</h2>
       </div>
 
-      {/* Info Card */}
-      <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+      {/* Security Info Card */}
+      <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+            <Shield className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
             <div className="space-y-2 text-sm">
-              <p className="font-medium text-blue-900 dark:text-blue-100">Sistema de Webhook Consolidado</p>
-              <div className="text-blue-700 dark:text-blue-300 space-y-1">
-                <p>• Um único webhook com todas as informações da remessa é enviado após pagamento</p>
-                <p>• Inclui dados do remetente, destinatário, pacote, mercadoria e pagamento</p>
+              <p className="font-medium text-green-900 dark:text-green-100">Sistema de Webhook Seguro</p>
+              <div className="text-green-700 dark:text-green-300 space-y-1">
+                <p>• Chaves secretas são criptografadas usando Supabase Vault</p>
+                <p>• Acesso auditado com logs de segurança</p>
+                <p>• Proteção contra compromisso de contas administrativas</p>
                 <p>• Sistema externo deve responder com etiqueta via endpoint de retorno</p>
               </div>
             </div>
@@ -359,7 +365,7 @@ const WebhookManagement = () => {
               onChange={(e) => setTestUrl(e.target.value)}
             />
             <Button 
-              onClick={() => testWebhook(testUrl)}
+              onClick={() => testQuickWebhook(testUrl)}
               disabled={!testUrl || testing}
             >
               {testing ? "Enviando..." : "Testar"}
@@ -430,7 +436,7 @@ const WebhookManagement = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => testWebhook(integration.webhook_url)}
+                        onClick={() => testWebhook(integration)}
                         disabled={testing}
                       >
                         <Send className="h-4 w-4" />

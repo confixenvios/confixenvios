@@ -393,36 +393,7 @@ export type Database = {
       }
     }
     Views: {
-      integrations_secure: {
-        Row: {
-          active: boolean | null
-          created_at: string | null
-          id: string | null
-          name: string | null
-          secret_status: string | null
-          updated_at: string | null
-          webhook_url: string | null
-        }
-        Insert: {
-          active?: boolean | null
-          created_at?: string | null
-          id?: string | null
-          name?: string | null
-          secret_status?: never
-          updated_at?: string | null
-          webhook_url?: string | null
-        }
-        Update: {
-          active?: boolean | null
-          created_at?: string | null
-          id?: string | null
-          name?: string | null
-          secret_status?: never
-          updated_at?: string | null
-          webhook_url?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       cleanup_anonymous_addresses: {
@@ -440,6 +411,18 @@ export type Database = {
       generate_tracking_code: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_secure_integrations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          secret_status: string
+          updated_at: string
+          webhook_url: string
+        }[]
       }
       has_role: {
         Args: {
