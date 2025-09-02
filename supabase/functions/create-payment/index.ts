@@ -56,6 +56,63 @@ serve(async (req) => {
 
     console.log('Create payment - Stripe session created:', session.id);
 
+    // Create Supabase service client for webhook dispatch
+    const supabaseService = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
+
+    try {
+      // After successful payment session creation, prepare and dispatch webhook
+      const webhhookPayload = {
+        event: "payment_session_created",
+        sessionId: session.id,
+        stripeSessionId: session.id,
+        amount: amount,
+        currency: "BRL",
+        shipmentData: shipmentData,
+        paymentMethod: "stripe_checkout",
+        status: "payment_initiated",
+        createdAt: new Date().toISOString()
+      };
+
+      // Get active integration for webhook dispatch
+      const { data: integration, error: integrationError } = await supabaseService
+        .from('integrations')
+        .select('webhook_url')
+        .eq('active', true)
+        .single();
+
+      if (integration?.webhook_url) {
+        console.log('Create payment - Dispatching webhook to:', integration.webhook_url);
+        
+        // Dispatch webhook to N8n
+        const webhookResponse = await fetch(integration.webhook_url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'Confix-Envios/1.0'
+          },
+          body: JSON.stringify(webhhookPayload)
+        });
+
+        console.log('Create payment - Webhook response status:', webhookResponse.status);
+        
+        // Log webhook dispatch
+        await supabaseService.from('webhook_logs').insert({
+          event_type: 'payment_session_created',
+          shipment_id: shipmentData?.id || session.id,
+          payload: webhhookPayload,
+          response_status: webhookResponse.status,
+          response_body: { webhook_dispatched: true }
+        });
+      }
+    } catch (webhookError) {
+      console.error('Create payment - Webhook error (non-blocking):', webhookError);
+      // Continue with payment flow even if webhook fails
+    }
+
     return new Response(JSON.stringify({ 
       sessionId: session.id,
       url: session.url 
