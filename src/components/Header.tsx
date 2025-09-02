@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { LayoutDashboard, Shield, RefreshCw, LogOut } from 'lucide-react';
+import logoConfixEnvios from '@/assets/logo-confix-envios.png';
 
 const Header = () => {
   const { user, loading, signOut, isAdmin, refreshUserData } = useAuth();
@@ -21,13 +22,11 @@ const Header = () => {
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <Link to="/cotacao" className="flex items-center space-x-2 group">
-            <div className="relative">
-              <Package className="h-8 w-8 text-primary group-hover:scale-110 transition-transform duration-200" />
-              <div className="absolute inset-0 bg-primary rounded-full blur-xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
-            </div>
-            <span className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              Confix Envios
-            </span>
+            <img 
+              src={logoConfixEnvios} 
+              alt="Confix Envios" 
+              className="h-10 w-auto group-hover:scale-105 transition-transform duration-200"
+            />
           </Link>
           
           <nav className="flex items-center space-x-6">

@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, LogIn, UserPlus, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import logoConfixEnvios from '@/assets/logo-confix-envios.png';
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -179,7 +180,14 @@ const Auth = () => {
         
         <Card className="border-border/50 shadow-lg">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Confix Envios - Cliente</CardTitle>
+            <div className="flex justify-center mb-4">
+              <img 
+                src={logoConfixEnvios} 
+                alt="Confix Envios" 
+                className="h-12 w-auto"
+              />
+            </div>
+            <CardTitle className="text-2xl font-bold">Cliente</CardTitle>
             <CardDescription>
               Faça login ou crie sua conta de cliente para continuar
             </CardDescription>
