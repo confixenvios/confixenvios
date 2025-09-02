@@ -5,26 +5,29 @@ import { Calculator } from "lucide-react";
 
 const ClientCotacoes = () => {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Fixed header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="max-w-3xl mx-auto px-4 py-4">
+    <div className="px-2 py-4 md:px-6 md:py-6 min-h-screen">
+      <div className="w-full max-w-2xl mx-auto">
+        <div className="mb-4 md:mb-6">
           <h1 className="text-2xl md:text-3xl font-bold flex items-center">
-            <Calculator className="mr-3 h-7 w-7 text-primary" />
-            Cotação Rápida
+            <Calculator className="mr-2 md:mr-3 h-6 w-6 md:h-8 md:w-8 text-primary" />
+            Cotações
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <p className="text-muted-foreground mt-2">
             Calcule o frete dos seus envios
           </p>
         </div>
+
+        <Card className="shadow-card w-full">
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="text-lg md:text-xl">Nova Cotação</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 md:p-6">
+            <QuoteForm />
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Main content */}
-      <div className="max-w-3xl mx-auto px-4 py-6">
-        <QuoteForm />
-      </div>
-
-      <div className="max-w-3xl mx-auto px-4 pb-6">
+      <div className="mt-8 w-full max-w-2xl mx-auto px-2 md:px-0">
         <ShippingTestRunner />
       </div>
     </div>
