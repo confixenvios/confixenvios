@@ -219,9 +219,9 @@ const ClientDashboard = () => {
             </Button>
             
             <Button asChild variant="outline" className="w-full justify-start">
-              <Link to="/rastreio">
+              <Link to="/cliente/rastreamento">
                 <Search className="w-4 h-4 mr-2" />
-                Rastrear Encomenda
+                Rastrear Remessa
               </Link>
             </Button>
           </CardContent>

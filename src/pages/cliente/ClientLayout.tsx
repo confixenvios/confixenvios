@@ -55,6 +55,7 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
     { name: 'Cotações', href: '/cliente/cotacoes', icon: Calculator },
     { name: 'Remessas', href: '/cliente/remessas', icon: Package2 },
     { name: 'Etiquetas', href: '/cliente/etiquetas', icon: FileText },
+    { name: 'Rastreamento', href: '/cliente/rastreamento', icon: Truck },
     { name: 'Histórico', href: '/cliente/historico', icon: History },
     { name: 'Minha Conta', href: '/cliente/minha-conta', icon: User },
   ];

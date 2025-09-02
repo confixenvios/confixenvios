@@ -26,6 +26,7 @@ import ClientDashboard from "./pages/cliente/ClientDashboard";
 import ClientCotacoes from "./pages/cliente/ClientCotacoes";
 import ClientRemessas from "./pages/cliente/ClientRemessas";
 import ClientEtiquetas from "./pages/cliente/ClientEtiquetas";
+import ClientRastreio from "./pages/cliente/ClientRastreio";
 import ClientHistorico from "./pages/cliente/ClientHistorico";
 import ClientConta from "./pages/cliente/ClientConta";
 
@@ -80,6 +81,7 @@ const App = () => (
                       <Route path="cotacoes" element={<ClientCotacoes />} />
                       <Route path="remessas" element={<ClientRemessas />} />
                       <Route path="etiquetas" element={<ClientEtiquetas />} />
+                      <Route path="rastreamento" element={<ClientRastreio />} />
                       <Route path="historico" element={<ClientHistorico />} />
                       <Route path="minha-conta" element={<ClientConta />} />
                     </Routes>
