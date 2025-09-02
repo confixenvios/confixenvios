@@ -184,7 +184,7 @@ const Auth = () => {
               <img 
                 src={logoConfixEnvios} 
                 alt="Confix Envios" 
-                className="h-12 w-auto"
+                className="h-24 w-auto"
               />
             </div>
             <CardTitle className="text-2xl font-bold">Cliente</CardTitle>
