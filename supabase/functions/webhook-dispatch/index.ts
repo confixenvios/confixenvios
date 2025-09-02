@@ -55,14 +55,43 @@ const handler = async (req: Request): Promise<Response> => {
       clienteId: shipment.user_id || "GUEST",
       status: "PAGO_AGUARDANDO_ETIQUETA",
 
+      // DADOS COMPLETOS DA COTAÇÃO ORIGINAL
+      cotacao: {
+        originCep: selectedQuote?.completeQuoteData?.originCep || shipmentData?.quoteData?.originCep || "",
+        destinyCep: selectedQuote?.completeQuoteData?.destinyCep || shipmentData?.quoteData?.destinyCep || "",
+        weight: selectedQuote?.completeQuoteData?.weight || shipmentData?.weight || 0,
+        length: selectedQuote?.completeQuoteData?.length || shipmentData?.length || 0,
+        width: selectedQuote?.completeQuoteData?.width || shipmentData?.width || 0,
+        height: selectedQuote?.completeQuoteData?.height || shipmentData?.height || 0,
+        format: selectedQuote?.completeQuoteData?.format || shipmentData?.format || "",
+        quantity: selectedQuote?.completeQuoteData?.quantity || shipmentData?.quoteData?.quantity || 1,
+        unitValue: selectedQuote?.completeQuoteData?.unitValue || shipmentData?.quoteData?.unitValue || 0,
+        totalMerchandiseValue: selectedQuote?.completeQuoteData?.totalMerchandiseValue || shipmentData?.quoteData?.totalMerchandiseValue || 0,
+        calculatedAt: selectedQuote?.completeQuoteData?.calculatedAt || shipmentData?.quoteData?.calculatedAt || new Date().toISOString(),
+        shippingQuote: selectedQuote?.completeQuoteData?.shippingQuote || shipmentData?.quoteData?.shippingQuote || {}
+      },
+
+      // OPÇÕES DE COLETA E ENTREGA
+      opcoes: {
+        pickupOption: selectedQuote?.pickup || shipmentData?.pickupOption || shipmentData?.pickupDetails?.option || "",
+        selectedOption: selectedQuote?.option || shipmentData?.selectedOption || "standard",
+        totalPrice: selectedQuote?.totalPrice || shipmentData?.totalPrice || 0,
+        pickupDetails: shipmentData?.pickupDetails || {
+          option: selectedQuote?.pickup || "",
+          sameAsOrigin: true,
+          alternativeAddress: ""
+        }
+      },
+
       remetente: {
         nome: shipment.sender_address?.name || "",
-        cpfCnpj: shipment.sender_address?.document || "",
-        telefone: shipment.sender_address?.phone || "",
-        email: shipment.sender_address?.email || "",
+        cpfCnpj: shipmentData?.senderData?.document || "",
+        telefone: shipmentData?.senderData?.phone || "",
+        email: shipmentData?.senderData?.email || "",
         cep: shipment.sender_address?.cep || "",
         endereco: shipment.sender_address?.street || "",
         numero: shipment.sender_address?.number || "",
+        complemento: shipment.sender_address?.complement || "",
         bairro: shipment.sender_address?.neighborhood || "",
         cidade: shipment.sender_address?.city || "",
         estado: shipment.sender_address?.state || "",
@@ -71,12 +100,13 @@ const handler = async (req: Request): Promise<Response> => {
 
       destinatario: {
         nome: shipment.recipient_address?.name || "",
-        cpfCnpj: shipment.recipient_address?.document || "",
-        telefone: shipment.recipient_address?.phone || "",
-        email: shipment.recipient_address?.email || "",
+        cpfCnpj: shipmentData?.recipientData?.document || "",
+        telefone: shipmentData?.recipientData?.phone || "",
+        email: shipmentData?.recipientData?.email || "",
         cep: shipment.recipient_address?.cep || "",
         endereco: shipment.recipient_address?.street || "",
         numero: shipment.recipient_address?.number || "",
+        complemento: shipment.recipient_address?.complement || "",
         bairro: shipment.recipient_address?.neighborhood || "",
         cidade: shipment.recipient_address?.city || "",
         estado: shipment.recipient_address?.state || "",
@@ -92,13 +122,20 @@ const handler = async (req: Request): Promise<Response> => {
       },
 
       mercadoria: {
-        quantidade: parseInt(selectedQuote?.completeQuoteData?.quantity || shipmentData?.completeQuoteData?.quantity || "1"),
-        valorUnitario: parseFloat(selectedQuote?.completeQuoteData?.unitValue || shipmentData?.completeQuoteData?.unitValue || "0"),
-        valorTotal: parseFloat(selectedQuote?.completeQuoteData?.totalMerchandiseValue || shipmentData?.completeQuoteData?.totalMerchandiseValue || "0"),
+        quantidade: parseInt(selectedQuote?.completeQuoteData?.quantity || shipmentData?.quoteData?.quantity || "1"),
+        valorUnitario: parseFloat(selectedQuote?.completeQuoteData?.unitValue || shipmentData?.quoteData?.unitValue || "0"),
+        valorTotal: parseFloat(selectedQuote?.completeQuoteData?.totalMerchandiseValue || shipmentData?.quoteData?.totalMerchandiseValue || "0"),
+        
+        // DADOS DO DOCUMENTO FISCAL COMPLETOS
         documentoFiscal: {
           tipo: documentData?.documentType === 'nfe' ? 'NOTA_FISCAL' : 'DECLARACAO_CONTEUDO',
           temNotaFiscal: documentData?.documentType === 'nfe',
-          chaveNfe: documentData?.nfeKey || null
+          chaveNfe: documentData?.nfeKey || null,
+          descricaoMercadoria: documentData?.merchandiseDescription || "",
+          
+          // Dados extras do documento
+          documentType: documentData?.documentType || "",
+          createdAt: new Date().toISOString()
         }
       },
 
@@ -106,7 +143,23 @@ const handler = async (req: Request): Promise<Response> => {
         metodo: paymentData?.method?.toUpperCase() || shipment.payment_data?.method?.toUpperCase() || "PIX",
         valor: parseFloat(paymentData?.amount || shipment.payment_data?.amount || "0"),
         status: "PAID",
-        dataPagamento: new Date().toISOString()
+        dataPagamento: new Date().toISOString(),
+        sessionId: paymentData?.session_id || shipment.payment_data?.session_id || null
+      },
+
+      // DADOS TÉCNICOS COMPLETOS PARA DEBUG
+      dadosTecnicos: {
+        trackingCode: shipment.tracking_code,
+        createdAt: shipment.created_at,
+        updatedAt: shipment.updated_at,
+        originalFormData: shipmentData?.formData || {},
+        completeQuoteData: selectedQuote?.completeQuoteData || shipmentData?.quoteData || {},
+        allOriginalData: {
+          selectedQuote: selectedQuote || {},
+          shipmentData: shipmentData || {},
+          documentData: documentData || {},
+          paymentData: paymentData || {}
+        }
       }
     };
 
