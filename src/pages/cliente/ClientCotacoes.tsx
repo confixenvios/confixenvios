@@ -1,5 +1,4 @@
 import QuoteForm from '@/components/QuoteForm';
-import ShippingTestRunner from '@/components/ShippingTestRunner';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calculator } from "lucide-react";
 
@@ -25,10 +24,6 @@ const ClientCotacoes = () => {
             <QuoteForm />
           </CardContent>
         </Card>
-      </div>
-
-      <div className="mt-8 w-full max-w-4xl mx-auto px-1 md:px-0">
-        <ShippingTestRunner />
       </div>
     </div>
   );
