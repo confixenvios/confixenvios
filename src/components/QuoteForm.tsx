@@ -481,10 +481,10 @@ const QuoteForm = () => {
   );
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-2 sm:px-4">
-      <Card className="shadow-card relative overflow-hidden">
+    <div className="w-full max-w-6xl mx-auto px-1 sm:px-2 md:px-4">
+      <Card className="shadow-card relative overflow-hidden mx-1 sm:mx-0">
         <div className="absolute inset-0 bg-gradient-glow opacity-10"></div>
-        <CardHeader className="relative pb-3 sm:pb-4 px-3 sm:px-6 pt-4 sm:pt-6">
+        <CardHeader className="relative pb-3 sm:pb-4 px-2 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
           <CardTitle className="text-center text-xl sm:text-2xl font-bold">
             Cotação Rápida
           </CardTitle>
@@ -493,7 +493,7 @@ const QuoteForm = () => {
           </CardDescription>
         </CardHeader>
         
-        <CardContent className="relative px-3 sm:px-6 pb-4 sm:pb-6">
+        <CardContent className="relative px-2 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
           {renderStepIndicator()}
 
           <div className="animate-fade-in">
@@ -501,7 +501,7 @@ const QuoteForm = () => {
               <div className="space-y-4 sm:space-y-6">
                 <div className="text-center mb-4 sm:mb-6">
                   <h3 className="text-lg sm:text-xl font-semibold flex items-center justify-center space-x-2">
-                    <Calculator className="h-4 w-4 sm:h-5 sm:w-5 text-accent" />
+                    <Calculator className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     <span>Calcular Frete</span>
                   </h3>
                   <p className="text-sm sm:text-base text-muted-foreground mt-2">
@@ -674,16 +674,16 @@ const QuoteForm = () => {
                 <Button
                   onClick={handleStep1Submit}
                   disabled={!isStep1Valid || isLoading}
-                  className="w-full h-14 text-lg font-semibold bg-gradient-mixed hover:shadow-accent transition-all duration-300"
+                  className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300"
                 >
                   {isLoading ? (
                     <div className="flex items-center space-x-2">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"></div>
                       <span>Calculando...</span>
                     </div>
                   ) : (
                     <>
-                      <Calculator className="mr-2 h-5 w-5" />
+                      <Calculator className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                       Calcular Frete
                     </>
                   )}

@@ -30,7 +30,7 @@ const Index = () => {
         <div className="container mx-auto text-center relative">
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2">
             Envie suas encomendas com
-            <span className="bg-gradient-mixed bg-clip-text text-transparent block">
+            <span className="bg-gradient-primary bg-clip-text text-transparent block">
               rapidez e economia
             </span>
           </h1>
@@ -41,8 +41,8 @@ const Index = () => {
           {/* Benefícios */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mb-8 sm:mb-12 md:mb-16 max-w-5xl mx-auto px-2">
             <div className="flex flex-col items-center space-y-3 sm:space-y-4 p-4 sm:p-6 bg-card/50 backdrop-blur-sm rounded-2xl border border-border/20 shadow-card">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-accent/10 rounded-full flex items-center justify-center">
-                <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-accent" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
               <h3 className="text-lg sm:text-xl font-bold text-center">Cotação Instantânea</h3>
               <p className="text-sm sm:text-base text-muted-foreground text-center">
@@ -61,8 +61,8 @@ const Index = () => {
             </div>
             
             <div className="flex flex-col items-center space-y-3 sm:space-y-4 p-4 sm:p-6 bg-card/50 backdrop-blur-sm rounded-2xl border border-border/20 shadow-card sm:col-span-2 lg:col-span-1">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-accent/10 rounded-full flex items-center justify-center">
-                <Package className="w-6 h-6 sm:w-8 sm:h-8 text-accent" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                <Package className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
               <h3 className="text-lg sm:text-xl font-bold text-center">Rastreamento Completo</h3>
               <p className="text-sm sm:text-base text-muted-foreground text-center">
@@ -74,7 +74,7 @@ const Index = () => {
       </section>
 
       {/* Quote Form Section */}
-      <section className="py-8 sm:py-12 md:py-16 px-2 sm:px-4">
+      <section className="py-8 sm:py-12 md:py-16 px-1 sm:px-2 md:px-4">
         <div className="container mx-auto">
           <QuoteForm />
         </div>
