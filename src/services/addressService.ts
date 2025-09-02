@@ -1,5 +1,5 @@
 // Secure address operations with session management
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, createSecureSupabaseClient } from '@/integrations/supabase/client';
 import { SessionManager } from '@/utils/sessionManager';
 
 interface AddressData {
@@ -20,10 +20,10 @@ interface AddressData {
 }
 
 /**
- * Create address with proper session management for anonymous users
+ * Create address with secure session validation for anonymous users
  */
 export async function createAddress(addressData: AddressData) {
-  const sessionId = SessionManager.getSessionId();
+  const sessionId = await SessionManager.getSessionId();
   
   // Add session_id for anonymous users
   const dataWithSession = {
@@ -31,15 +31,10 @@ export async function createAddress(addressData: AddressData) {
     session_id: addressData.user_id ? null : sessionId
   };
 
-  // Create a custom request with session headers
-  const requestInit = {
-    headers: {
-      'x-session-id': sessionId,
-      'Content-Type': 'application/json'
-    }
-  };
-
-  const { data, error } = await supabase
+  // Use secure client that includes session token in headers
+  const secureClient = createSecureSupabaseClient();
+  
+  const { data, error } = await secureClient
     .from('addresses')
     .insert(dataWithSession)
     .select()
@@ -54,7 +49,7 @@ export async function createAddress(addressData: AddressData) {
 }
 
 /**
- * Get addresses for current user/session
+ * Get addresses for current user/session with secure validation
  */
 export async function getAddresses(userId?: string) {
   if (userId) {
@@ -71,10 +66,13 @@ export async function getAddresses(userId?: string) {
 
     return data || [];
   } else {
-    // Anonymous user - get by session_id
-    const sessionId = SessionManager.getSessionId();
+    // Anonymous user - get by session_id with server validation
+    const sessionId = await SessionManager.getSessionId();
     
-    const { data, error } = await supabase
+    // Use secure client that includes session token in headers
+    const secureClient = createSecureSupabaseClient();
+    
+    const { data, error } = await secureClient
       .from('addresses')
       .select('*')
       .eq('session_id', sessionId)
@@ -90,12 +88,18 @@ export async function getAddresses(userId?: string) {
 }
 
 /**
- * Update address with session validation
+ * Update address with secure session validation
  */
 export async function updateAddress(addressId: string, updates: Partial<AddressData>, userId?: string) {
-  const sessionId = SessionManager.getSessionId();
+  const sessionId = await SessionManager.getSessionId();
 
-  let query = supabase
+  let client = supabase;
+  if (!userId) {
+    // Use secure client for anonymous users
+    client = createSecureSupabaseClient();
+  }
+
+  let query = client
     .from('addresses')
     .update(updates)
     .eq('id', addressId);

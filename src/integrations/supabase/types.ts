@@ -77,6 +77,36 @@ export type Database = {
         }
         Relationships: []
       }
+      anonymous_sessions: {
+        Row: {
+          client_fingerprint: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          last_accessed: string
+          session_hash: string
+          session_token: string
+        }
+        Insert: {
+          client_fingerprint?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_accessed?: string
+          session_hash: string
+          session_token: string
+        }
+        Update: {
+          client_fingerprint?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_accessed?: string
+          session_hash?: string
+          session_token?: string
+        }
+        Relationships: []
+      }
       integration_audit_logs: {
         Row: {
           action: string
@@ -403,6 +433,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_expired_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      create_anonymous_session: {
+        Args: { client_fingerprint?: string }
+        Returns: {
+          session_id: string
+          session_token: string
+        }[]
+      }
       decrypt_integration_secret: {
         Args: { encrypted_value: string; integration_id: string }
         Returns: string
@@ -412,6 +453,10 @@ export type Database = {
         Returns: string
       }
       generate_tracking_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_current_session_id: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
@@ -437,6 +482,10 @@ export type Database = {
       promote_to_admin: {
         Args: { user_email: string }
         Returns: undefined
+      }
+      validate_anonymous_session: {
+        Args: { session_token: string }
+        Returns: string
       }
     }
     Enums: {
