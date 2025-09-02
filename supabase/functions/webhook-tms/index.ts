@@ -22,27 +22,27 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
     const { 
+      event,
       shipmentId, 
-      trackingCode, 
-      cteKey, 
+      pedidoExterno, 
       labelPdfUrl, 
       status = 'LABEL_AVAILABLE' 
     } = payload;
 
-    if (!shipmentId && !trackingCode) {
-      throw new Error('Either shipmentId or trackingCode is required');
+    console.log(`Processing TMS webhook for shipment: ${shipmentId}`);
+    console.log('Event:', event);
+    console.log('Status:', status);
+
+    if (!shipmentId) {
+      throw new Error('shipmentId is required');
     }
 
-    // Find shipment by ID or tracking code
-    let query = supabaseService.from('shipments').select('*');
-    
-    if (shipmentId) {
-      query = query.eq('id', shipmentId);
-    } else {
-      query = query.eq('tracking_code', trackingCode);
-    }
-
-    const { data: shipment, error: shipmentError } = await query.single();
+    // Find shipment by ID
+    const { data: shipment, error: shipmentError } = await supabaseService
+      .from('shipments')
+      .select('*')
+      .eq('id', shipmentId)
+      .single();
 
     if (shipmentError || !shipment) {
       throw new Error(`Shipment not found: ${shipmentError?.message}`);
@@ -52,12 +52,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Update shipment with label information
     const updateData: any = {
-      status: status,
+      status: status === 'ETIQUETA_DISPONIVEL' ? 'LABEL_AVAILABLE' : status,
       updated_at: new Date().toISOString()
     };
 
-    if (cteKey) {
-      updateData.cte_key = cteKey;
+    if (pedidoExterno) {
+      updateData.cte_key = pedidoExterno;
     }
 
     if (labelPdfUrl) {
@@ -73,13 +73,13 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error(`Failed to update shipment: ${updateError.message}`);
     }
 
-    console.log(`Successfully updated shipment ${shipment.id} to status: ${status}`);
+    console.log(`Successfully updated shipment ${shipment.id} to status: ${updateData.status}`);
 
     return new Response(JSON.stringify({
       success: true,
       message: 'Shipment updated successfully',
       shipmentId: shipment.id,
-      status: status
+      status: updateData.status
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

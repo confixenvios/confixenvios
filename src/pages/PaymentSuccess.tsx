@@ -75,7 +75,7 @@ const PaymentSuccess = () => {
           });
         }
 
-        setShipmentStatus('AWAITING_LABEL');
+        setShipmentStatus('PAGO_AGUARDANDO_ETIQUETA');
         
         // Clean up session storage
         sessionStorage.removeItem('paymentData');
@@ -150,12 +150,12 @@ const PaymentSuccess = () => {
               {/* Label Generation */}
               <div className={`flex items-center gap-3 p-3 rounded-lg ${
                 isProcessing ? 'bg-warning/5 border border-warning/20' : 
-                shipmentStatus === 'AWAITING_LABEL' ? 'bg-warning/5 border border-warning/20' : 
+                shipmentStatus === 'PAGO_AGUARDANDO_ETIQUETA' ? 'bg-warning/5 border border-warning/20' : 
                 'bg-success/5 border border-success/20'
               }`}>
                 {isProcessing ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-warning" />
-                ) : shipmentStatus === 'AWAITING_LABEL' ? (
+                ) : shipmentStatus === 'PAGO_AGUARDANDO_ETIQUETA' ? (
                   <Clock className="h-5 w-5 text-warning" />
                 ) : (
                   <CheckCircle className="h-5 w-5 text-success" />
@@ -163,16 +163,16 @@ const PaymentSuccess = () => {
                 <div>
                   <p className={`font-medium ${
                     isProcessing ? 'text-warning' : 
-                    shipmentStatus === 'AWAITING_LABEL' ? 'text-warning' : 
+                    shipmentStatus === 'PAGO_AGUARDANDO_ETIQUETA' ? 'text-warning' : 
                     'text-success'
                   }`}>
                     {isProcessing ? 'Processando...' : 
-                     shipmentStatus === 'AWAITING_LABEL' ? 'Aguardando Geração da Etiqueta' : 
+                     shipmentStatus === 'PAGO_AGUARDANDO_ETIQUETA' ? 'Aguardando Geração da Etiqueta' : 
                      'Etiqueta Disponível'}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {isProcessing ? 'Enviando dados para o sistema de etiquetas...' :
-                     shipmentStatus === 'AWAITING_LABEL' ? 'Aguardando confirmação do sistema externo' :
+                     shipmentStatus === 'PAGO_AGUARDANDO_ETIQUETA' ? 'Aguardando confirmação do sistema externo' :
                      'Sua etiqueta está pronta para download'}
                   </p>
                 </div>
