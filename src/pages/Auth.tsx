@@ -1,23 +1,26 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, LogIn, UserPlus, ArrowLeft } from "lucide-react";
+import { Loader2, LogIn, UserPlus, ArrowLeft, Mail, Key } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import logoConfixEnvios from '@/assets/logo-confix-envios.png';
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, user, loading, userRole, isAdmin } = useAuth();
+  const [searchParams] = useSearchParams();
+  const isResetMode = searchParams.get('reset') === 'true';
+  const { signIn, signUp, resetPassword, user, loading, userRole, isAdmin } = useAuth();
   const { toast } = useToast();
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   
   // Login form
   const [loginData, setLoginData] = useState({
@@ -33,6 +36,9 @@ const Auth = () => {
     firstName: '',
     lastName: ''
   });
+
+  // Reset password form
+  const [resetEmail, setResetEmail] = useState('');
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -72,6 +78,37 @@ const Auth = () => {
           title: "Login realizado com sucesso!",
           description: "Redirecionando...",
         });
+      }
+    } catch (error: any) {
+      setError('Erro inesperado. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    if (!resetEmail) {
+      setError('Digite seu email');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await resetPassword(resetEmail);
+      
+      if (error) {
+        setError('Erro ao enviar email de redefinição: ' + error.message);
+      } else {
+        toast({
+          title: "Email enviado!",
+          description: "Verifique sua caixa de entrada para redefinir sua senha.",
+        });
+        setShowForgotPassword(false);
+        setResetEmail('');
       }
     } catch (error: any) {
       setError('Erro inesperado. Tente novamente.');
@@ -237,6 +274,18 @@ const Auth = () => {
                     />
                   </div>
 
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      onClick={() => setShowForgotPassword(true)}
+                      className="p-0 h-auto text-sm text-primary"
+                    >
+                      Esqueci minha senha
+                    </Button>
+                  </div>
+
                   {error && (
                     <Alert variant="destructive">
                       <AlertDescription>{error}</AlertDescription>
@@ -355,6 +404,60 @@ const Auth = () => {
                 </form>
               </TabsContent>
             </Tabs>
+
+            {/* Forgot Password Modal */}
+            {showForgotPassword && (
+              <div className="mt-6 p-4 border border-border rounded-lg bg-accent/20">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold flex items-center">
+                    <Mail className="w-5 h-5 mr-2 text-primary" />
+                    Redefinir Senha
+                  </h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setShowForgotPassword(false);
+                      setResetEmail('');
+                      setError('');
+                    }}
+                  >
+                    ✕
+                  </Button>
+                </div>
+                
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email">Email</Label>
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="Digite seu email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  
+                  <p className="text-sm text-muted-foreground">
+                    Enviaremos um link para redefinir sua senha no email informado.
+                  </p>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Mail className="h-4 w-4 mr-2" />
+                    )}
+                    Enviar Link de Redefinição
+                  </Button>
+                </form>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
