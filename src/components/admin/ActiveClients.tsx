@@ -66,6 +66,84 @@ const ActiveClients = () => {
     loadClients();
   }, []);
 
+  // Helper functions - defined before being used
+  const getClientStatus = (client: ClientData) => {
+    // Se não tem nenhuma remessa criada, é inativo
+    if (client.shipment_count === 0) return 'Inativo';
+    
+    // Se tem remessas, considerar ativo baseado na última atividade
+    const lastShipment = client.last_shipment ? new Date(client.last_shipment) : null;
+    const daysSinceLastShipment = lastShipment 
+      ? Math.floor((Date.now() - lastShipment.getTime()) / (1000 * 60 * 60 * 24))
+      : null;
+
+    // Se tem remessas mas não conseguimos determinar a data, considerar ativo
+    if (daysSinceLastShipment === null) return 'Ativo';
+    
+    // Classificar baseado na última atividade
+    if (daysSinceLastShipment <= 7) return 'Muito Ativo';
+    if (daysSinceLastShipment <= 30) return 'Ativo';
+    if (daysSinceLastShipment <= 90) return 'Pouco Ativo';
+    return 'Inativo'; // Mais de 90 dias sem atividade
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Muito Ativo': return 'bg-success text-success-foreground';
+      case 'Ativo': return 'bg-primary text-primary-foreground';
+      case 'Pouco Ativo': return 'bg-warning text-warning-foreground';
+      case 'Inativo': return 'bg-muted text-muted-foreground';
+      default: return 'bg-muted text-muted-foreground';
+    }
+  };
+
+  const getClientInitials = (client: ClientData) => {
+    if (client.first_name && client.last_name) {
+      return `${client.first_name.charAt(0)}${client.last_name.charAt(0)}`.toUpperCase();
+    }
+    if (client.first_name) {
+      return client.first_name.charAt(0).toUpperCase();
+    }
+    if (client.email) {
+      return client.email.charAt(0).toUpperCase();
+    }
+    return 'U';
+  };
+
+  const getClientName = (client: ClientData) => {
+    if (client.first_name && client.last_name) {
+      return `${client.first_name} ${client.last_name}`;
+    }
+    if (client.first_name) {
+      return client.first_name;
+    }
+    return client.email || 'Cliente';
+  };
+
+  const isMasterUser = (client: ClientData) => {
+    return client.email === 'grupoconfix@gmail.com';
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
+  };
+
+  const getShipmentStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'delivered': return 'bg-success text-success-foreground';
+      case 'in_transit': return 'bg-primary text-primary-foreground';
+      case 'pending_label': return 'bg-warning text-warning-foreground';
+      default: return 'bg-muted text-muted-foreground';
+    }
+  };
+
   const loadClients = async () => {
     try {
       // Buscar clientes com estatísticas completas
@@ -222,83 +300,6 @@ const ActiveClients = () => {
 
     return matchesSearch && matchesFilter;
   });
-
-  const getClientStatus = (client: ClientData) => {
-    // Se não tem nenhuma remessa criada, é inativo
-    if (client.shipment_count === 0) return 'Inativo';
-    
-    // Se tem remessas, considerar ativo baseado na última atividade
-    const lastShipment = client.last_shipment ? new Date(client.last_shipment) : null;
-    const daysSinceLastShipment = lastShipment 
-      ? Math.floor((Date.now() - lastShipment.getTime()) / (1000 * 60 * 60 * 24))
-      : null;
-
-    // Se tem remessas mas não conseguimos determinar a data, considerar ativo
-    if (daysSinceLastShipment === null) return 'Ativo';
-    
-    // Classificar baseado na última atividade
-    if (daysSinceLastShipment <= 7) return 'Muito Ativo';
-    if (daysSinceLastShipment <= 30) return 'Ativo';
-    if (daysSinceLastShipment <= 90) return 'Pouco Ativo';
-    return 'Inativo'; // Mais de 90 dias sem atividade
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Muito Ativo': return 'bg-success text-success-foreground';
-      case 'Ativo': return 'bg-primary text-primary-foreground';
-      case 'Pouco Ativo': return 'bg-warning text-warning-foreground';
-      case 'Inativo': return 'bg-muted text-muted-foreground';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
-
-  const getClientInitials = (client: ClientData) => {
-    if (client.first_name && client.last_name) {
-      return `${client.first_name.charAt(0)}${client.last_name.charAt(0)}`.toUpperCase();
-    }
-    if (client.first_name) {
-      return client.first_name.charAt(0).toUpperCase();
-    }
-    if (client.email) {
-      return client.email.charAt(0).toUpperCase();
-    }
-    return 'U';
-  };
-
-  const getClientName = (client: ClientData) => {
-    if (client.first_name && client.last_name) {
-      return `${client.first_name} ${client.last_name}`;
-    }
-    if (client.first_name) {
-      return client.first_name;
-    }
-    return client.email || 'Cliente';
-  };
-
-  const isMasterUser = (client: ClientData) => {
-    return client.email === 'grupoconfix@gmail.com';
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
-
-  const getShipmentStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'delivered': return 'bg-success text-success-foreground';
-      case 'in_transit': return 'bg-primary text-primary-foreground';
-      case 'pending_label': return 'bg-warning text-warning-foreground';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
 
   if (loading) {
     return (
