@@ -356,7 +356,24 @@ const SavedSendersManager = ({ currentSenderData, onSenderSelect, onSenderSave }
                   {isNewSender ? "Adicionar Novo Remetente" : "Editar Remetente"}
                 </DialogTitle>
               </DialogHeader>
-              {/* Formulário de edição seria implementado aqui */}
+              <SenderFormContent 
+                editingSender={editingSender} 
+                isNewSender={isNewSender}
+                onSave={(senderData) => {
+                  if (isNewSender) {
+                    saveSender(senderData, false);
+                  } else if (editingSender) {
+                    updateSender(editingSender.id, senderData);
+                  }
+                  setShowEditDialog(false);
+                }}
+                onCancel={() => {
+                  setShowEditDialog(false);
+                  setEditingSender(null);
+                  setIsNewSender(false);
+                }}
+                loading={loading}
+              />
             </DialogContent>
           </Dialog>
         </CardTitle>
@@ -475,6 +492,220 @@ const SavedSendersManager = ({ currentSenderData, onSenderSelect, onSenderSave }
         )}
       </CardContent>
     </Card>
+  );
+};
+
+// Componente interno do formulário
+interface SenderFormContentProps {
+  editingSender: SavedSender | null;
+  isNewSender: boolean;
+  onSave: (senderData: AddressData) => void;
+  onCancel: () => void;
+  loading: boolean;
+}
+
+const SenderFormContent = ({ editingSender, isNewSender, onSave, onCancel, loading }: SenderFormContentProps) => {
+  const [formData, setFormData] = useState<AddressData>({
+    name: editingSender?.name || "",
+    document: editingSender?.document || "",
+    phone: editingSender?.phone || "",
+    email: editingSender?.email || "",
+    cep: editingSender?.cep || "",
+    street: editingSender?.street || "",
+    number: editingSender?.number || "",
+    complement: editingSender?.complement || "",
+    neighborhood: editingSender?.neighborhood || "",
+    city: editingSender?.city || "",
+    state: editingSender?.state || "",
+    reference: editingSender?.reference || ""
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  const handleInputChange = (field: keyof AddressData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Nome Completo */}
+        <div className="md:col-span-2">
+          <Label htmlFor="name">Nome Completo *</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => handleInputChange("name", e.target.value)}
+            placeholder="Nome do remetente"
+            required
+          />
+        </div>
+
+        {/* CPF/CNPJ */}
+        <div>
+          <Label htmlFor="document">CPF/CNPJ *</Label>
+          <InputMask
+            mask="999.999.999-99"
+            value={formData.document}
+            onChange={(e: any) => handleInputChange("document", e.target.value)}
+          >
+            {(inputProps: any) => (
+              <Input
+                {...inputProps}
+                id="document"
+                placeholder="000.000.000-00"
+                required
+              />
+            )}
+          </InputMask>
+        </div>
+
+        {/* Telefone */}
+        <div>
+          <Label htmlFor="phone">Telefone *</Label>
+          <InputMask
+            mask="(99) 99999-9999"
+            value={formData.phone}
+            onChange={(e: any) => handleInputChange("phone", e.target.value)}
+          >
+            {(inputProps: any) => (
+              <Input
+                {...inputProps}
+                id="phone"
+                placeholder="(00) 00000-0000"
+                required
+              />
+            )}
+          </InputMask>
+        </div>
+
+        {/* Email */}
+        <div className="md:col-span-2">
+          <Label htmlFor="email">E-mail *</Label>
+          <Input
+            id="email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => handleInputChange("email", e.target.value)}
+            placeholder="email@exemplo.com"
+            required
+          />
+        </div>
+
+        {/* CEP */}
+        <div>
+          <Label htmlFor="cep">CEP *</Label>
+          <InputMask
+            mask="99999-999"
+            value={formData.cep}
+            onChange={(e: any) => handleInputChange("cep", e.target.value)}
+          >
+            {(inputProps: any) => (
+              <Input
+                {...inputProps}
+                id="cep"
+                placeholder="00000-000"
+                required
+              />
+            )}
+          </InputMask>
+        </div>
+
+        {/* Estado */}
+        <div>
+          <Label htmlFor="state">Estado *</Label>
+          <Input
+            id="state"
+            value={formData.state}
+            onChange={(e) => handleInputChange("state", e.target.value)}
+            placeholder="Ex: GO"
+            required
+          />
+        </div>
+
+        {/* Cidade */}
+        <div>
+          <Label htmlFor="city">Cidade *</Label>
+          <Input
+            id="city"
+            value={formData.city}
+            onChange={(e) => handleInputChange("city", e.target.value)}
+            placeholder="Nome da cidade"
+            required
+          />
+        </div>
+
+        {/* Bairro */}
+        <div>
+          <Label htmlFor="neighborhood">Bairro *</Label>
+          <Input
+            id="neighborhood"
+            value={formData.neighborhood}
+            onChange={(e) => handleInputChange("neighborhood", e.target.value)}
+            placeholder="Nome do bairro"
+            required
+          />
+        </div>
+
+        {/* Rua */}
+        <div className="md:col-span-2">
+          <Label htmlFor="street">Rua/Avenida *</Label>
+          <Input
+            id="street"
+            value={formData.street}
+            onChange={(e) => handleInputChange("street", e.target.value)}
+            placeholder="Nome da rua ou avenida"
+            required
+          />
+        </div>
+
+        {/* Número */}
+        <div>
+          <Label htmlFor="number">Número *</Label>
+          <Input
+            id="number"
+            value={formData.number}
+            onChange={(e) => handleInputChange("number", e.target.value)}
+            placeholder="123"
+            required
+          />
+        </div>
+
+        {/* Complemento */}
+        <div>
+          <Label htmlFor="complement">Complemento</Label>
+          <Input
+            id="complement"
+            value={formData.complement}
+            onChange={(e) => handleInputChange("complement", e.target.value)}
+            placeholder="Apto, bloco, etc."
+          />
+        </div>
+
+        {/* Referência */}
+        <div className="md:col-span-2">
+          <Label htmlFor="reference">Ponto de Referência</Label>
+          <Input
+            id="reference"
+            value={formData.reference}
+            onChange={(e) => handleInputChange("reference", e.target.value)}
+            placeholder="Próximo ao shopping, etc."
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? "Salvando..." : isNewSender ? "Adicionar Remetente" : "Atualizar Remetente"}
+        </Button>
+      </div>
+    </form>
   );
 };
 
