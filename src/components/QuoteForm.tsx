@@ -19,6 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import AuthModal from "@/components/AuthModal";
 import { SessionManager } from "@/utils/sessionManager";
 import SavedSendersManager from "@/components/SavedSendersManager";
+import SavedRecipientsManager from "@/components/SavedRecipientsManager";
 
 interface QuoteFormData {
   originCep: string;
@@ -1064,9 +1065,23 @@ const QuoteForm = () => {
                         <MapPin className="h-5 w-5 text-primary" />
                         <span>Dados do Destinatário</span>
                       </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 gap-4">
+                     </CardHeader>
+                     <CardContent className="space-y-4">
+                       {/* Gerenciador de Destinatários Salvos */}
+                       <SavedRecipientsManager
+                         currentRecipientData={recipientData}
+                         onRecipientSelect={(data) => setRecipientData(data)}
+                         onRecipientSave={(data) => {
+                           toast({
+                             title: "Destinatário salvo!",
+                             description: "Dados salvos para futuras cotações"
+                           });
+                         }}
+                       />
+                       
+                       <Separator />
+                       
+                       <div className="grid grid-cols-1 gap-4">
                         <div className="space-y-2">
                           <Label>Nome completo *</Label>
                           <Input
