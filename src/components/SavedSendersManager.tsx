@@ -675,24 +675,13 @@ const SenderFormContent = ({ editingSender, isNewSender, onSave, onCancel, loadi
         </div>
 
         {/* Complemento */}
-        <div>
+        <div className="md:col-span-2">
           <Label htmlFor="complement">Complemento</Label>
           <Input
             id="complement"
             value={formData.complement}
             onChange={(e) => handleInputChange("complement", e.target.value)}
             placeholder="Apto, bloco, etc."
-          />
-        </div>
-
-        {/* Referência */}
-        <div className="md:col-span-2">
-          <Label htmlFor="reference">Ponto de Referência</Label>
-          <Input
-            id="reference"
-            value={formData.reference}
-            onChange={(e) => handleInputChange("reference", e.target.value)}
-            placeholder="Próximo ao shopping, etc."
           />
         </div>
       </div>
