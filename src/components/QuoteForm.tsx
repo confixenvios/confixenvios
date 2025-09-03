@@ -18,6 +18,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/hooks/useAuth";
 import AuthModal from "@/components/AuthModal";
 import { SessionManager } from "@/utils/sessionManager";
+import SavedSendersManager from "@/components/SavedSendersManager";
 
 interface QuoteFormData {
   originCep: string;
@@ -853,6 +854,20 @@ const QuoteForm = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                      {/* Gerenciador de Remetentes Salvos */}
+                      <SavedSendersManager
+                        currentSenderData={senderData}
+                        onSenderSelect={(data) => setSenderData(data)}
+                        onSenderSave={(data) => {
+                          toast({
+                            title: "Remetente salvo!",
+                            description: "Dados salvos para futuras cotações"
+                          });
+                        }}
+                      />
+                      
+                      <Separator />
+                      
                       <div className="grid grid-cols-1 gap-4">
                         <div className="space-y-2">
                           <Label>Nome completo *</Label>

@@ -6,10 +6,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSavedSenders } from "@/hooks/useSavedSenders";
 
 const PaymentSuccessStripe = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { saveApprovedSender } = useSavedSenders();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get('session_id');
   const [isProcessing, setIsProcessing] = useState(true);
@@ -77,6 +79,20 @@ const PaymentSuccessStripe = () => {
 
         setTrackingCode(shipment?.tracking_code || '');
         setPaymentConfirmed(true);
+
+        // Salvar remetente automaticamente após pagamento aprovado
+        if (shipmentData.senderData) {
+          try {
+            console.log('Salvando remetente aprovado:', shipmentData.senderData);
+            const senderSaved = await saveApprovedSender(shipmentData.senderData, true);
+            if (senderSaved) {
+              console.log('Remetente salvo com sucesso como padrão');
+            }
+          } catch (error) {
+            console.error('Erro ao salvar remetente aprovado:', error);
+            // Não bloquear o fluxo por erro no salvamento do remetente
+          }
+        }
 
         // Dispatch webhook to N8n with consolidated data
         const webhookPayload = {

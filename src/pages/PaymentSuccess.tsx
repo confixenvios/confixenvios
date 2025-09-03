@@ -5,10 +5,12 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSavedSenders } from "@/hooks/useSavedSenders";
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { saveApprovedSender } = useSavedSenders();
   const [isProcessing, setIsProcessing] = useState(true);
   const [shipmentStatus, setShipmentStatus] = useState('PAYMENT_CONFIRMED');
   const [trackingCode, setTrackingCode] = useState('');
@@ -44,6 +46,20 @@ const PaymentSuccess = () => {
         }
 
         setTrackingCode(shipment?.tracking_code || '');
+
+        // Salvar remetente automaticamente após pagamento aprovado
+        if (shipmentData.senderData) {
+          try {
+            console.log('Salvando remetente aprovado:', shipmentData.senderData);
+            const senderSaved = await saveApprovedSender(shipmentData.senderData, true);
+            if (senderSaved) {
+              console.log('Remetente salvo com sucesso como padrão');
+            }
+          } catch (error) {
+            console.error('Erro ao salvar remetente aprovado:', error);
+            // Não bloquear o fluxo por erro no salvamento do remetente
+          }
+        }
 
         // Prepare complete data payload for webhook
         const completePayload = {

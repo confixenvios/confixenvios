@@ -208,6 +208,66 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_senders: {
+        Row: {
+          cep: string
+          city: string
+          complement: string | null
+          created_at: string
+          document: string
+          email: string
+          id: string
+          is_default: boolean | null
+          name: string
+          neighborhood: string
+          number: string
+          phone: string
+          reference: string | null
+          state: string
+          street: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          cep: string
+          city: string
+          complement?: string | null
+          created_at?: string
+          document: string
+          email: string
+          id?: string
+          is_default?: boolean | null
+          name: string
+          neighborhood: string
+          number: string
+          phone: string
+          reference?: string | null
+          state: string
+          street: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          cep?: string
+          city?: string
+          complement?: string | null
+          created_at?: string
+          document?: string
+          email?: string
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          neighborhood?: string
+          number?: string
+          phone?: string
+          reference?: string | null
+          state?: string
+          street?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       secure_personal_data: {
         Row: {
           access_level: string
