@@ -27,7 +27,15 @@ serve(async (req) => {
       throw new Error("User not authenticated");
     }
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    console.log("Stripe key exists:", !!stripeKey);
+    console.log("Stripe key prefix:", stripeKey ? stripeKey.substring(0, 7) : "no key");
+    
+    if (!stripeKey) {
+      throw new Error("STRIPE_SECRET_KEY not found in environment variables");
+    }
+
+    const stripe = new Stripe(stripeKey, {
       apiVersion: "2023-10-16",
     });
 
