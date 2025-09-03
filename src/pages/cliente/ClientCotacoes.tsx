@@ -1,6 +1,8 @@
 import QuoteForm from '@/components/QuoteForm';
+import PaymentTestRunner from '@/components/PaymentTestRunner';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calculator } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calculator, TestTube } from "lucide-react";
 
 const ClientCotacoes = () => {
   return (
@@ -16,14 +18,33 @@ const ClientCotacoes = () => {
           </p>
         </div>
 
-        <Card className="shadow-card w-full">
-          <CardHeader className="p-4 md:p-6">
-            <CardTitle className="text-lg md:text-xl">Nova Cotação</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 md:p-6">
-            <QuoteForm />
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="cotacao" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="cotacao" className="flex items-center gap-2">
+              <Calculator className="h-4 w-4" />
+              Nova Cotação
+            </TabsTrigger>
+            <TabsTrigger value="teste" className="flex items-center gap-2">
+              <TestTube className="h-4 w-4" />
+              Teste Sistema
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="cotacao">
+            <Card className="shadow-card w-full">
+              <CardHeader className="p-4 md:p-6">
+                <CardTitle className="text-lg md:text-xl">Nova Cotação</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 md:p-6">
+                <QuoteForm />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="teste">
+            <PaymentTestRunner />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
