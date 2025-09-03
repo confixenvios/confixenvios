@@ -32,8 +32,10 @@ import ClientConta from "./pages/cliente/ClientConta";
 
 // Admin pages
 import AdminLayout from "./pages/admin/AdminLayout";
-import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminDashboardEnhanced from "./pages/admin/AdminDashboardEnhanced";
 import AdminClientes from "./pages/admin/AdminClientes";
+import AdminClienteDetalhes from "./pages/admin/AdminClienteDetalhes";
+import AdminFaturamento from "./pages/admin/AdminFaturamento";
 import AdminRemessas from "./pages/admin/AdminRemessas";
 import AdminIntegracoes from "./pages/admin/AdminIntegracoes";
 import AdminWebhooks from "./pages/admin/AdminWebhooks";
@@ -98,8 +100,10 @@ const App = () => (
                   <AdminLayout>
                     <Routes>
                       <Route index element={<Navigate to="dashboard" replace />} />
-                      <Route path="dashboard" element={<AdminDashboard />} />
+                      <Route path="dashboard" element={<AdminDashboardEnhanced />} />
                       <Route path="clientes" element={<AdminClientes />} />
+                      <Route path="clientes/:id" element={<AdminClienteDetalhes />} />
+                      <Route path="faturamento" element={<AdminFaturamento />} />
                       <Route path="remessas" element={<AdminRemessas />} />
                       <Route path="integracoes" element={<AdminIntegracoes />} />
                       <Route path="webhooks" element={<AdminWebhooks />} />

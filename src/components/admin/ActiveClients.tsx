@@ -393,7 +393,7 @@ const ActiveClients = () => {
                                 )}
                               </div>
                             </div>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => window.open(`/admin/clientes/${client.id}`, '_blank')}>
                               <Eye className="h-3 w-3" />
                             </Button>
                           </div>
