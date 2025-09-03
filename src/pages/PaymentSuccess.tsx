@@ -18,16 +18,55 @@ const PaymentSuccess = () => {
   useEffect(() => {
     const processPaymentAndWebhook = async () => {
       try {
-        const paymentData = JSON.parse(sessionStorage.getItem('paymentData') || '{}');
-        const shipmentId = sessionStorage.getItem('paymentShipmentId');
-        const shipmentData = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
-        const documentData = JSON.parse(sessionStorage.getItem('documentData') || '{}');
-        const selectedQuote = JSON.parse(sessionStorage.getItem('selectedQuote') || '{}');
+        // Get session_id from URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const stripeSessionId = urlParams.get('session_id');
 
-        if (!shipmentId || !paymentData.method) {
+        // Try to get data from sessionStorage first, then localStorage as fallback
+        let paymentData = JSON.parse(sessionStorage.getItem('paymentData') || '{}');
+        let shipmentId = sessionStorage.getItem('paymentShipmentId');
+        let shipmentData = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
+        let documentData = JSON.parse(sessionStorage.getItem('documentData') || '{}');
+        let selectedQuote = JSON.parse(sessionStorage.getItem('selectedQuote') || '{}');
+
+        // Fallback to localStorage if sessionStorage is empty
+        if (!shipmentData.id && !shipmentId) {
+          console.log('PaymentSuccess - Tentando recuperar dados do localStorage');
+          shipmentData = JSON.parse(localStorage.getItem('currentShipment_backup') || '{}');
+          const savedStripeSession = localStorage.getItem('shipmentData_stripe_session');
+          
+          if (stripeSessionId && savedStripeSession === stripeSessionId) {
+            console.log('PaymentSuccess - Dados recuperados do localStorage com sucesso');
+            // Set payment data based on Stripe session
+            paymentData = {
+              method: 'stripe_checkout',
+              session_id: stripeSessionId,
+              amount: shipmentData.totalPrice || 0
+            };
+            shipmentId = shipmentData.id;
+          }
+        }
+
+        console.log('PaymentSuccess - Dados encontrados:', {
+          hasShipmentData: !!shipmentData.id,
+          hasShipmentId: !!shipmentId,
+          hasPaymentData: !!paymentData.method,
+          stripeSessionId
+        });
+
+        if (!shipmentId && !shipmentData.id) {
+          console.error('PaymentSuccess - Nenhum dado de remessa encontrado');
+          toast({
+            title: "Erro",
+            description: `Dados do envio não encontrados após o pagamento. Por favor, entre em contato com o suporte informando o Session ID: ${stripeSessionId}`,
+            variant: "destructive"
+          });
           navigate('/cliente/dashboard');
           return;
         }
+
+        // Use shipmentId from data or shipmentData
+        const finalShipmentId = shipmentId || shipmentData.id;
 
         // First update the shipment with payment data and status
         const { data: shipment, error: updateError } = await supabase
@@ -37,7 +76,7 @@ const PaymentSuccess = () => {
             payment_data: paymentData,
             updated_at: new Date().toISOString()
           })
-          .eq('id', shipmentId)
+          .eq('id', finalShipmentId)
           .select()
           .single();
 
@@ -63,7 +102,7 @@ const PaymentSuccess = () => {
 
         // Prepare complete data payload for webhook
         const completePayload = {
-          shipmentId: shipmentId,
+          shipmentId: finalShipmentId,
           paymentData,
           documentData,
           selectedQuote,
@@ -93,12 +132,16 @@ const PaymentSuccess = () => {
 
         setShipmentStatus('PAGO_AGUARDANDO_ETIQUETA');
         
-        // Clean up session storage
+        // Clean up both session and local storage
         sessionStorage.removeItem('paymentData');
         sessionStorage.removeItem('paymentShipmentId');
         sessionStorage.removeItem('currentShipment');
         sessionStorage.removeItem('documentData');
         sessionStorage.removeItem('selectedQuote');
+        
+        // Clean up localStorage backup after successful processing
+        localStorage.removeItem('currentShipment_backup');
+        localStorage.removeItem('shipmentData_stripe_session');
         
       } catch (error) {
         console.error('Error processing payment:', error);
