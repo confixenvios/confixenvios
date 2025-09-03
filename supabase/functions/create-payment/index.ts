@@ -64,12 +64,45 @@ serve(async (req) => {
 
     console.log('Create payment - Stripe session created:', session.id);
 
-    // Create Supabase service client for webhook dispatch
+    // Create Supabase service client for both shipment update and webhook dispatch
     const supabaseService = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { persistSession: false } }
     );
+
+    // Se temos um shipment_id válido, atualizar com o session_id
+    if (shipmentData?.id) {
+      try {
+        console.log('Create payment - Atualizando shipment com session_id:', session.id);
+        
+        // Atualizar shipment com session_id nos payment_data
+        const { error: updateError } = await supabaseService
+          .from('shipments')
+          .update({
+            payment_data: {
+              session_id: session.id,
+              stripe_session_id: session.id,  
+              amount: amount,
+              currency: "BRL",
+              method: "stripe_checkout",
+              status: "payment_initiated",
+              created_at: new Date().toISOString()
+            },
+            status: 'PENDING_PAYMENT',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', shipmentData.id);
+
+        if (updateError) {
+          console.error('Create payment - Erro ao atualizar shipment:', updateError);
+        } else {
+          console.log('Create payment - Shipment atualizado com sucesso');
+        }
+      } catch (updateError) {
+        console.error('Create payment - Erro na atualização:', updateError);
+      }
+    }
 
     try {
       // After successful payment session creation, prepare and dispatch webhook

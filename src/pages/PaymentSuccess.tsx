@@ -22,40 +22,108 @@ const PaymentSuccess = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const stripeSessionId = urlParams.get('session_id');
 
-        // Try to get data from sessionStorage first, then localStorage as fallback
-        let paymentData = JSON.parse(sessionStorage.getItem('paymentData') || '{}');
-        let shipmentId = sessionStorage.getItem('paymentShipmentId');
-        let shipmentData = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
-        let documentData = JSON.parse(sessionStorage.getItem('documentData') || '{}');
-        let selectedQuote = JSON.parse(sessionStorage.getItem('selectedQuote') || '{}');
+        console.log('PaymentSuccess - Session ID encontrado:', stripeSessionId);
 
-        // Fallback to localStorage if sessionStorage is empty
-        if (!shipmentData.id && !shipmentId) {
-          console.log('PaymentSuccess - Tentando recuperar dados do localStorage');
-          shipmentData = JSON.parse(localStorage.getItem('currentShipment_backup') || '{}');
-          const savedStripeSession = localStorage.getItem('shipmentData_stripe_session');
+        if (!stripeSessionId) {
+          console.error('PaymentSuccess - Session ID não encontrado na URL');
+          toast({
+            title: "Erro",
+            description: "Session ID não encontrado. Redirecionando...",
+            variant: "destructive"
+          });
+          navigate('/cliente/dashboard');
+          return;
+        }
+
+        // Primeiro, tentar encontrar o shipment pelo session_id no banco
+        let shipment = null;
+        let paymentData = null;
+        let shipmentData = null;
+        let documentData = null;
+        let selectedQuote = null;
+
+        // Buscar shipment que tenha esse session_id nos payment_data
+        const { data: shipments, error: searchError } = await supabase
+          .from('shipments')
+          .select('*')
+          .contains('payment_data', { session_id: stripeSessionId })
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (searchError) {
+          console.error('PaymentSuccess - Erro ao buscar shipment:', searchError);
+        }
+
+        if (shipments && shipments.length > 0) {
+          shipment = shipments[0];
+          console.log('PaymentSuccess - Shipment encontrado no banco:', shipment.id);
+        } else {
+          // Se não encontrou no banco, tentar localStorage/sessionStorage
+          console.log('PaymentSuccess - Tentando recuperar dados do storage');
           
-          if (stripeSessionId && savedStripeSession === stripeSessionId) {
-            console.log('PaymentSuccess - Dados recuperados do localStorage com sucesso');
-            // Set payment data based on Stripe session
-            paymentData = {
-              method: 'stripe_checkout',
-              session_id: stripeSessionId,
-              amount: shipmentData.totalPrice || 0
-            };
-            shipmentId = shipmentData.id;
+          // Try to get data from sessionStorage first, then localStorage as fallback
+          paymentData = JSON.parse(sessionStorage.getItem('paymentData') || '{}');
+          let shipmentId = sessionStorage.getItem('paymentShipmentId');
+          shipmentData = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
+          documentData = JSON.parse(sessionStorage.getItem('documentData') || '{}');
+          selectedQuote = JSON.parse(sessionStorage.getItem('selectedQuote') || '{}');
+
+          // Fallback to localStorage if sessionStorage is empty
+          if (!shipmentData.id && !shipmentId) {
+            console.log('PaymentSuccess - Tentando recuperar dados do localStorage');
+            shipmentData = JSON.parse(localStorage.getItem('currentShipment_backup') || '{}');
+            const savedStripeSession = localStorage.getItem('shipmentData_stripe_session');
+            
+            if (stripeSessionId && savedStripeSession === stripeSessionId) {
+              console.log('PaymentSuccess - Dados recuperados do localStorage com sucesso');
+              paymentData = {
+                method: 'stripe_checkout',
+                session_id: stripeSessionId,
+                amount: shipmentData.totalPrice || 0
+              };
+              shipmentId = shipmentData.id;
+            }
+          }
+
+          // Se ainda não temos dados suficientes, tentar buscar qualquer shipment recente
+          if (!shipmentId && !shipmentData.id) {
+            console.log('PaymentSuccess - Buscando shipment mais recente...');
+            const { data: recentShipments } = await supabase
+              .from('shipments')
+              .select('*')
+              .order('created_at', { ascending: false })
+              .limit(5);
+
+            if (recentShipments && recentShipments.length > 0) {
+              // Procurar por um shipment que ainda não tenha payment_data ou que esteja pendente
+              const candidateShipment = recentShipments.find(s => 
+                !s.payment_data || 
+                s.status === 'PENDING_PAYMENT' ||
+                s.status === 'PENDING_DOCUMENT'
+              );
+
+              if (candidateShipment) {
+                shipment = candidateShipment;
+                console.log('PaymentSuccess - Usando shipment candidato:', shipment.id);
+              }
+            }
+          } else {
+            // Buscar shipment específico
+            const finalShipmentId = shipmentId || shipmentData.id;
+            const { data: foundShipment } = await supabase
+              .from('shipments')
+              .select('*')
+              .eq('id', finalShipmentId)
+              .single();
+
+            if (foundShipment) {
+              shipment = foundShipment;
+            }
           }
         }
 
-        console.log('PaymentSuccess - Dados encontrados:', {
-          hasShipmentData: !!shipmentData.id,
-          hasShipmentId: !!shipmentId,
-          hasPaymentData: !!paymentData.method,
-          stripeSessionId
-        });
-
-        if (!shipmentId && !shipmentData.id) {
-          console.error('PaymentSuccess - Nenhum dado de remessa encontrado');
+        if (!shipment) {
+          console.error('PaymentSuccess - Nenhum shipment encontrado');
           toast({
             title: "Erro",
             description: `Dados do envio não encontrados após o pagamento. Por favor, entre em contato com o suporte informando o Session ID: ${stripeSessionId}`,
@@ -65,48 +133,49 @@ const PaymentSuccess = () => {
           return;
         }
 
-        // Use shipmentId from data or shipmentData
-        const finalShipmentId = shipmentId || shipmentData.id;
+        console.log('PaymentSuccess - Processando shipment:', shipment.id);
+
+        // Preparar dados de pagamento se não existirem
+        if (!paymentData) {
+          paymentData = {
+            method: 'stripe_checkout',
+            session_id: stripeSessionId,
+            amount: shipment.quote_data?.totalPrice || 0,
+            confirmed_at: new Date().toISOString()
+          };
+        }
 
         // First update the shipment with payment data and status
-        const { data: shipment, error: updateError } = await supabase
+        const { data: updatedShipment, error: updateError } = await supabase
           .from('shipments')
           .update({
             status: 'PAYMENT_CONFIRMED',
             payment_data: paymentData,
             updated_at: new Date().toISOString()
           })
-          .eq('id', finalShipmentId)
+          .eq('id', shipment.id)
           .select()
           .single();
 
         if (updateError) {
+          console.error('PaymentSuccess - Erro ao atualizar shipment:', updateError);
           throw updateError;
         }
 
-        setTrackingCode(shipment?.tracking_code || '');
+        setTrackingCode(updatedShipment?.tracking_code || '');
 
-        // Salvar remetente automaticamente após pagamento aprovado
-        if (shipmentData.senderData) {
-          try {
-            console.log('Salvando remetente aprovado:', shipmentData.senderData);
-            const senderSaved = await saveApprovedSender(shipmentData.senderData, true);
-            if (senderSaved) {
-              console.log('Remetente salvo com sucesso como padrão');
-            }
-          } catch (error) {
-            console.error('Erro ao salvar remetente aprovado:', error);
-            // Não bloquear o fluxo por erro no salvamento do remetente
-          }
-        }
-
-        // Prepare complete data payload for webhook
+        // Preparar dados para webhook usando dados do banco ou storage
         const completePayload = {
-          shipmentId: finalShipmentId,
+          shipmentId: shipment.id,
           paymentData,
-          documentData,
-          selectedQuote,
-          shipmentData
+          documentData: documentData || {},
+          selectedQuote: selectedQuote || shipment.quote_data || {},
+          shipmentData: shipmentData || {
+            id: shipment.id,
+            quoteData: shipment.quote_data,
+            weight: shipment.weight,
+            totalPrice: paymentData.amount
+          }
         };
 
         // Dispatch webhook to external TMS system with all collected data
@@ -126,20 +195,14 @@ const PaymentSuccess = () => {
           console.log('Webhook dispatched successfully:', webhookResult);
           toast({
             title: "Sucesso",
-            description: "Todos os dados foram enviados para processamento no n8n.",
+            description: "Pagamento confirmado e dados enviados para processamento!",
           });
         }
 
         setShipmentStatus('PAGO_AGUARDANDO_ETIQUETA');
         
         // Clean up both session and local storage
-        sessionStorage.removeItem('paymentData');
-        sessionStorage.removeItem('paymentShipmentId');
-        sessionStorage.removeItem('currentShipment');
-        sessionStorage.removeItem('documentData');
-        sessionStorage.removeItem('selectedQuote');
-        
-        // Clean up localStorage backup after successful processing
+        sessionStorage.clear();
         localStorage.removeItem('currentShipment_backup');
         localStorage.removeItem('shipmentData_stripe_session');
         
