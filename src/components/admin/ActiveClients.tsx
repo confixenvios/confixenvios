@@ -28,16 +28,30 @@ interface ClientData {
   last_name: string | null;
   email: string | null;
   phone: string | null;
+  document: string | null;
   created_at: string;
+  updated_at: string;
   shipment_count: number;
   last_shipment: string | null;
   total_value: number;
+  successful_shipments: number;
+  pending_shipments: number;
   recent_shipments: Array<{
     id: string;
     tracking_code: string | null;
     status: string;
     created_at: string;
     quote_data: any;
+    sender_address: any;
+    recipient_address: any;
+    weight: number;
+    format: string;
+  }>;
+  addresses_used: Array<{
+    cep: string;
+    city: string;
+    state: string;
+    address_type: string;
   }>;
 }
 
@@ -54,7 +68,7 @@ const ActiveClients = () => {
 
   const loadClients = async () => {
     try {
-      // Buscar clientes com estatísticas
+      // Buscar clientes com estatísticas completas
       const { data: profilesData } = await supabase
         .from('profiles')
         .select(`
@@ -63,20 +77,36 @@ const ActiveClients = () => {
           last_name,
           email,
           phone,
-          created_at
+          document,
+          created_at,
+          updated_at
         `)
         .order('created_at', { ascending: false });
 
       if (!profilesData) return;
 
-      // Para cada cliente, buscar estatísticas de envios
+      // Para cada cliente, buscar estatísticas detalhadas de envios
       const clientsWithStats = await Promise.all(
         profilesData.map(async (profile) => {
-          // Contar envios
+          // Contar envios totais
           const { count: shipmentCount } = await supabase
             .from('shipments')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', profile.id);
+
+          // Contar envios bem-sucedidos
+          const { count: successfulCount } = await supabase
+            .from('shipments')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', profile.id)
+            .in('status', ['DELIVERED', 'PAGO_AGUARDANDO_ETIQUETA', 'PAYMENT_CONFIRMED']);
+
+          // Contar envios pendentes
+          const { count: pendingCount } = await supabase
+            .from('shipments')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', profile.id)
+            .in('status', ['PENDING_LABEL', 'PENDING_PAYMENT', 'PENDING_DOCUMENT']);
 
           // Buscar último envio
           const { data: lastShipment } = await supabase
@@ -87,7 +117,7 @@ const ActiveClients = () => {
             .limit(1)
             .single();
 
-          // Buscar envios recentes para histórico
+          // Buscar envios recentes com endereços para histórico completo
           const { data: recentShipments } = await supabase
             .from('shipments')
             .select(`
@@ -95,30 +125,78 @@ const ActiveClients = () => {
               tracking_code,
               status,
               created_at,
-              quote_data
+              quote_data,
+              weight,
+              format,
+              sender_address:addresses!sender_address_id(
+                cep,
+                city,
+                state,
+                street,
+                number,
+                neighborhood
+              ),
+              recipient_address:addresses!recipient_address_id(
+                cep,
+                city,
+                state,
+                street,
+                number,
+                neighborhood
+              )
             `)
             .eq('user_id', profile.id)
             .order('created_at', { ascending: false })
-            .limit(5);
+            .limit(10);
 
-          // Calcular valor total estimado dos envios
+          // Buscar endereços únicos utilizados pelo cliente
+          const { data: addressesData } = await supabase
+            .from('addresses')
+            .select('cep, city, state, address_type')
+            .eq('user_id', profile.id)
+            .order('created_at', { ascending: false });
+
+          // Remover duplicatas de endereços
+          const uniqueAddresses = addressesData ? 
+            addressesData.reduce((acc: any[], current) => {
+              const exists = acc.find(addr => addr.cep === current.cep && addr.address_type === current.address_type);
+              if (!exists) {
+                acc.push(current);
+              }
+              return acc;
+            }, []).slice(0, 5) : [];
+
+          // Calcular valor total dos envios
           let totalValue = 0;
           if (recentShipments) {
             totalValue = recentShipments.reduce((sum, shipment) => {
               const quoteData = shipment.quote_data as any;
+              
+              // Tentar diferentes caminhos para encontrar o preço
+              let price = 0;
               if (quoteData?.selectedQuote?.price) {
-                return sum + parseFloat(quoteData.selectedQuote.price);
+                price = parseFloat(quoteData.selectedQuote.price);
+              } else if (quoteData?.totalPrice) {
+                price = parseFloat(quoteData.totalPrice);
+              } else if (quoteData?.shippingQuote?.economicPrice) {
+                price = parseFloat(quoteData.shippingQuote.economicPrice);
               }
-              return sum;
+              
+              return sum + price;
             }, 0);
           }
 
           return {
             ...profile,
+            document: profile.document || null,
+            updated_at: profile.updated_at || profile.created_at,
             shipment_count: shipmentCount || 0,
+            successful_shipments: successfulCount || 0,
+            pending_shipments: pendingCount || 0,
             last_shipment: lastShipment?.created_at || null,
             total_value: totalValue,
-            recent_shipments: recentShipments || []
+            recent_shipments: recentShipments || [],
+            addresses_used: uniqueAddresses
           };
         })
       );
@@ -357,49 +435,174 @@ const ActiveClients = () => {
               {expandedClient === client.id && (
                 <>
                   <Separator className="my-4" />
-                  <div className="space-y-4">
-                    <h4 className="font-semibold text-foreground flex items-center space-x-2">
-                      <Package className="h-4 w-4" />
-                      <span>Histórico de Envios</span>
-                    </h4>
+                  <div className="space-y-6">
+                    
+                    {/* Informações Pessoais Detalhadas */}
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-foreground flex items-center space-x-2">
+                        <Users className="h-4 w-4" />
+                        <span>Informações Detalhadas</span>
+                      </h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
+                        {client.document && (
+                          <div className="space-y-1">
+                            <span className="text-xs font-medium text-muted-foreground">CPF/CNPJ</span>
+                            <div className="text-sm font-mono">{client.document}</div>
+                          </div>
+                        )}
+                        
+                        <div className="space-y-1">
+                          <span className="text-xs font-medium text-muted-foreground">Envios Bem-sucedidos</span>
+                          <div className="text-sm font-semibold text-success">{client.successful_shipments}</div>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <span className="text-xs font-medium text-muted-foreground">Envios Pendentes</span>
+                          <div className="text-sm font-semibold text-warning">{client.pending_shipments}</div>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <span className="text-xs font-medium text-muted-foreground">Última Atualização</span>
+                          <div className="text-sm">{formatDate(client.updated_at)}</div>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <span className="text-xs font-medium text-muted-foreground">Taxa de Sucesso</span>
+                          <div className="text-sm font-semibold">
+                            {client.shipment_count > 0 
+                              ? `${Math.round((client.successful_shipments / client.shipment_count) * 100)}%`
+                              : '0%'
+                            }
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <span className="text-xs font-medium text-muted-foreground">Valor Médio</span>
+                          <div className="text-sm font-semibold">
+                            {client.shipment_count > 0 
+                              ? formatCurrency(client.total_value / client.shipment_count)
+                              : formatCurrency(0)
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-                    {client.recent_shipments.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">
-                        Nenhum envio realizado ainda
-                      </p>
-                    ) : (
+                    {/* Endereços Utilizados */}
+                    {client.addresses_used.length > 0 && (
                       <div className="space-y-3">
-                        {client.recent_shipments.map((shipment) => (
-                          <div 
-                            key={shipment.id} 
-                            className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                          >
-                            <div className="space-y-1">
-                              <div className="flex items-center space-x-2">
-                                <span className="font-mono text-sm font-medium">
-                                  {shipment.tracking_code || 'N/A'}
-                                </span>
-                                <Badge 
-                                  variant="secondary" 
-                                  className={`text-xs ${getShipmentStatusColor(shipment.status)}`}
-                                >
-                                  {shipment.status}
+                        <h4 className="font-semibold text-foreground flex items-center space-x-2">
+                          <MapPin className="h-4 w-4" />
+                          <span>Endereços Utilizados</span>
+                        </h4>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {client.addresses_used.map((address, index) => (
+                            <div key={index} className="p-3 bg-muted/30 rounded-lg">
+                              <div className="flex items-center justify-between mb-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {address.address_type === 'sender' ? 'Remetente' : 'Destinatário'}
                                 </Badge>
+                                <span className="text-xs text-muted-foreground font-mono">
+                                  {address.cep}
+                                </span>
                               </div>
-                              <div className="text-xs text-muted-foreground">
-                                {formatDate(shipment.created_at)}
+                              <div className="text-sm font-medium">
+                                {address.city}, {address.state}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Histórico Detalhado de Envios */}
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-foreground flex items-center space-x-2">
+                        <Package className="h-4 w-4" />
+                        <span>Histórico Detalhado de Envios</span>
+                      </h4>
+
+                      {client.recent_shipments.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">
+                          Nenhum envio realizado ainda
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {client.recent_shipments.map((shipment) => (
+                            <div 
+                              key={shipment.id} 
+                              className="p-4 bg-muted/30 rounded-lg border border-border/30"
+                            >
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-mono text-sm font-medium">
+                                    {shipment.tracking_code || 'N/A'}
+                                  </span>
+                                  <Badge 
+                                    variant="secondary" 
+                                    className={`text-xs ${getShipmentStatusColor(shipment.status)}`}
+                                  >
+                                    {shipment.status}
+                                  </Badge>
+                                </div>
+                                <Button variant="ghost" size="sm" onClick={() => window.open(`/admin/clientes/${client.id}`, '_blank')}>
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs text-muted-foreground">
+                                <div>
+                                  <span className="font-medium">Data:</span> {formatDate(shipment.created_at)}
+                                </div>
+                                
+                                {shipment.weight && (
+                                  <div>
+                                    <span className="font-medium">Peso:</span> {shipment.weight}kg
+                                  </div>
+                                )}
+                                
+                                {shipment.format && (
+                                  <div>
+                                    <span className="font-medium">Formato:</span> {shipment.format}
+                                  </div>
+                                )}
+                                
                                 {shipment.quote_data?.selectedQuote?.price && (
-                                  <> • {formatCurrency(parseFloat(shipment.quote_data.selectedQuote.price))}</>
+                                  <div>
+                                    <span className="font-medium">Valor:</span> {formatCurrency(parseFloat(shipment.quote_data.selectedQuote.price))}
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Endereços do Envio */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 pt-3 border-t border-border/30">
+                                {shipment.sender_address && (
+                                  <div className="space-y-1">
+                                    <span className="text-xs font-medium text-muted-foreground">Origem:</span>
+                                    <div className="text-xs">
+                                      {shipment.sender_address.city}, {shipment.sender_address.state}
+                                      <span className="font-mono ml-1">({shipment.sender_address.cep})</span>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {shipment.recipient_address && (
+                                  <div className="space-y-1">
+                                    <span className="text-xs font-medium text-muted-foreground">Destino:</span>
+                                    <div className="text-xs">
+                                      {shipment.recipient_address.city}, {shipment.recipient_address.state}
+                                      <span className="font-mono ml-1">({shipment.recipient_address.cep})</span>
+                                    </div>
+                                  </div>
                                 )}
                               </div>
                             </div>
-                            <Button variant="ghost" size="sm" onClick={() => window.open(`/admin/clientes/${client.id}`, '_blank')}>
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </>
               )}
