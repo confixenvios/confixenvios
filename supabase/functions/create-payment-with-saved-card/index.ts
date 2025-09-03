@@ -76,7 +76,7 @@ serve(async (req) => {
 
     const { data: integration, error: integrationError } = await supabaseService
       .from('integrations')
-      .select('webhook_url')
+      .select('webhook_url, secret_key')
       .eq('active', true)
       .single();
 
@@ -100,6 +100,7 @@ serve(async (req) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...(integration.secret_key && { 'Authorization': `Bearer ${integration.secret_key}` })
           },
           body: JSON.stringify(webhookPayload)
         });
