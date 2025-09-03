@@ -215,25 +215,32 @@ const ActiveClients = () => {
       client.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
+    const clientStatus = getClientStatus(client);
     const matchesFilter = filterBy === 'all' || 
-      (filterBy === 'active' && client.shipment_count > 0) ||
-      (filterBy === 'inactive' && client.shipment_count === 0);
+      (filterBy === 'active' && clientStatus !== 'Inativo') ||
+      (filterBy === 'inactive' && clientStatus === 'Inativo');
 
     return matchesSearch && matchesFilter;
   });
 
   const getClientStatus = (client: ClientData) => {
+    // Se não tem nenhuma remessa criada, é inativo
     if (client.shipment_count === 0) return 'Inativo';
     
+    // Se tem remessas, considerar ativo baseado na última atividade
     const lastShipment = client.last_shipment ? new Date(client.last_shipment) : null;
     const daysSinceLastShipment = lastShipment 
       ? Math.floor((Date.now() - lastShipment.getTime()) / (1000 * 60 * 60 * 24))
       : null;
 
-    if (daysSinceLastShipment === null) return 'Inativo';
+    // Se tem remessas mas não conseguimos determinar a data, considerar ativo
+    if (daysSinceLastShipment === null) return 'Ativo';
+    
+    // Classificar baseado na última atividade
     if (daysSinceLastShipment <= 7) return 'Muito Ativo';
     if (daysSinceLastShipment <= 30) return 'Ativo';
-    return 'Pouco Ativo';
+    if (daysSinceLastShipment <= 90) return 'Pouco Ativo';
+    return 'Inativo'; // Mais de 90 dias sem atividade
   };
 
   const getStatusColor = (status: string) => {
