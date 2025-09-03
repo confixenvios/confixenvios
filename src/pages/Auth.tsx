@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, LogIn, UserPlus, ArrowLeft, Mail, Key } from "lucide-react";
+import { Loader2, LogIn, UserPlus, ArrowLeft, Mail, Key, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import logoConfixEnvios from '@/assets/logo-confix-envios.png';
+import { formatDocument, validateDocument } from "@/utils/documentValidation";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -35,7 +36,8 @@ const Auth = () => {
     confirmPassword: '',
     firstName: '',
     lastName: '',
-    phone: ''
+    phone: '',
+    document: ''
   });
 
   // Reset password form
@@ -123,8 +125,16 @@ const Auth = () => {
     setIsLoading(true);
     setError('');
 
-    if (!signupData.email || !signupData.password || !signupData.confirmPassword || !signupData.phone) {
+    if (!signupData.email || !signupData.password || !signupData.confirmPassword || !signupData.phone || !signupData.document) {
       setError('Preencha todos os campos obrigatórios');
+      setIsLoading(false);
+      return;
+    }
+
+    // Validate document (CPF/CNPJ)
+    const documentValidation = validateDocument(signupData.document);
+    if (!documentValidation.isValid) {
+      setError('CPF ou CNPJ inválido');
       setIsLoading(false);
       return;
     }
@@ -147,7 +157,8 @@ const Auth = () => {
         signupData.password,
         signupData.firstName,
         signupData.lastName,
-        signupData.phone
+        signupData.phone,
+        signupData.document
       );
       
       if (result.error) {
@@ -173,7 +184,8 @@ const Auth = () => {
           confirmPassword: '',
           firstName: '',
           lastName: '',
-          phone: ''
+          phone: '',
+          document: ''
         });
         setError('');
       } else {
@@ -353,6 +365,28 @@ const Auth = () => {
                         phone: e.target.value
                       }))}
                       disabled={isLoading}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-document" className="flex items-center">
+                      <FileText className="h-4 w-4 mr-2" />
+                      CPF ou CNPJ *
+                    </Label>
+                    <Input
+                      id="signup-document"
+                      type="text"
+                      placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                      value={signupData.document}
+                      onChange={(e) => {
+                        const formattedValue = formatDocument(e.target.value);
+                        setSignupData(prev => ({
+                          ...prev,
+                          document: formattedValue
+                        }));
+                      }}
+                      disabled={isLoading}
+                      maxLength={18}
                     />
                   </div>
                   

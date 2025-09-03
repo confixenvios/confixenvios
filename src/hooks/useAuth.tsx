@@ -9,6 +9,7 @@ interface Profile {
   last_name: string | null;
   email: string | null;
   phone: string | null;
+  document: string | null;
 }
 
 interface UserRole {
@@ -21,7 +22,7 @@ interface AuthContextType {
   profile: Profile | null;
   userRole: UserRole | null;
   loading: boolean;
-  signUp: (email: string, password: string, firstName?: string, lastName?: string, phone?: string) => Promise<{ error: any; needsConfirmation?: boolean }>;
+  signUp: (email: string, password: string, firstName?: string, lastName?: string, phone?: string, document?: string) => Promise<{ error: any; needsConfirmation?: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
@@ -139,7 +140,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const signUp = async (email: string, password: string, firstName = '', lastName = '', phone = '') => {
+  const signUp = async (email: string, password: string, firstName = '', lastName = '', phone = '', document = '') => {
     const redirectUrl = `${window.location.origin}/auth`;
     
     const { data, error } = await supabase.auth.signUp({
@@ -151,6 +152,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           first_name: firstName,
           last_name: lastName,
           phone: phone,
+          document: document,
         }
       }
     });
