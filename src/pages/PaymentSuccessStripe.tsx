@@ -26,18 +26,28 @@ const PaymentSuccessStripe = () => {
           return;
         }
 
-        // Get shipment data from session storage
-        const shipmentData = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
-        const documentData = JSON.parse(sessionStorage.getItem('documentData') || '{}');
+        // Get shipment data from session storage or backup in localStorage
+        let shipmentData = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
+        let documentData = JSON.parse(sessionStorage.getItem('documentData') || '{}');
+        
+        // If not found in sessionStorage, try localStorage backup
+        if (!shipmentData || !shipmentData.id) {
+          console.log('Shipment data not found in sessionStorage, trying localStorage backup');
+          const backupShipmentData = localStorage.getItem('currentShipment_backup');
+          if (backupShipmentData) {
+            shipmentData = JSON.parse(backupShipmentData);
+            console.log('Recovered shipment data from localStorage backup:', shipmentData);
+          }
+        }
         
         console.log('Processing Stripe payment success for session:', sessionId);
         console.log('Shipment data:', shipmentData);
         
         if (!shipmentData || !shipmentData.id) {
-          console.log('No shipment data found in session storage');
+          console.error('PaymentSuccessStripe - Nenhum dado de envio encontrado em sessionStorage ou localStorage');
           toast({
             title: "Erro",
-            description: "Dados do envio não encontrados. Redirecionando...",
+            description: "Dados do envio não encontrados após o pagamento. Por favor, entre em contato com o suporte informando o Session ID: " + (sessionId?.slice(-8) || 'N/A'),
             variant: "destructive"
           });
           navigate('/');
@@ -105,9 +115,11 @@ const PaymentSuccessStripe = () => {
           });
         }
 
-        // Clean up session storage
+        // Clean up session storage and localStorage backup
         sessionStorage.removeItem('currentShipment');
         sessionStorage.removeItem('documentData');
+        localStorage.removeItem('currentShipment_backup');
+        localStorage.removeItem('shipmentData_stripe_session');
 
       } catch (error) {
         console.error('Error processing Stripe payment success:', error);

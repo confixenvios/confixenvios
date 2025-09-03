@@ -102,9 +102,16 @@ const Payment = () => {
 
       console.log('Stripe session created:', data);
       
-      // Open Stripe checkout in new tab
+      // Save current shipment data with backup before redirecting to Stripe
+      if (shipmentData && shipmentData.id) {
+        localStorage.setItem('currentShipment_backup', JSON.stringify(shipmentData));
+        localStorage.setItem('shipmentData_stripe_session', data.sessionId);
+        console.log('Payment - Dados salvos no localStorage como backup antes do Stripe');
+      }
+      
+      // Redirect to Stripe checkout in same tab to preserve session
       if (data.url) {
-        window.open(data.url, '_blank');
+        window.location.href = data.url;
       }
       
     } catch (error) {

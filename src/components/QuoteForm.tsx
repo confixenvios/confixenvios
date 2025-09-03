@@ -429,8 +429,11 @@ const QuoteForm = () => {
 
       console.log('QuoteForm - Salvando dados completos no sessionStorage:', completeShipmentData);
       
-      // Salvar todos os dados coletados no sessionStorage para as próximas etapas
+      // Salvar todos os dados coletados no sessionStorage E localStorage para as próximas etapas
       sessionStorage.setItem('currentShipment', JSON.stringify(completeShipmentData));
+      localStorage.setItem('currentShipment_backup', JSON.stringify(completeShipmentData));
+      
+      console.log('QuoteForm - Dados salvos no sessionStorage e localStorage como backup');
 
       toast({
         title: "Dados coletados!",
