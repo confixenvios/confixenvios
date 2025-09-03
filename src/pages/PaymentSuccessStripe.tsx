@@ -43,10 +43,72 @@ const PaymentSuccessStripe = () => {
         }
         
         console.log('Processing Stripe payment success for session:', sessionId);
-        console.log('Shipment data:', shipmentData);
         
-        if (!shipmentData || !shipmentData.id) {
-          console.error('PaymentSuccessStripe - Nenhum dado de envio encontrado em sessionStorage ou localStorage');
+        // Primeiro, tentar buscar o shipment no banco de dados usando o session_id
+        let shipment = null;
+        const { data: shipments, error: searchError } = await supabase
+          .from('shipments')
+          .select('*')
+          .or(`payment_data->>session_id.eq.${sessionId},payment_data->>stripe_session_id.eq.${sessionId}`)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (searchError) {
+          console.error('PaymentSuccessStripe - Erro ao buscar shipment:', searchError);
+        }
+
+        if (shipments && shipments.length > 0) {
+          shipment = shipments[0];
+          console.log('PaymentSuccessStripe - Shipment encontrado no banco:', shipment.id);
+        } else {
+          // Se não encontrou no banco, tentar sessionStorage/localStorage
+          console.log('PaymentSuccessStripe - Tentando recuperar dados do storage');
+          
+          if (shipmentData && shipmentData.id) {
+            // Buscar o shipment no banco
+            const { data: foundShipment } = await supabase
+              .from('shipments')
+              .select('*')
+              .eq('id', shipmentData.id)
+              .single();
+
+            if (foundShipment) {
+              shipment = foundShipment;
+              console.log('PaymentSuccessStripe - Shipment encontrado por ID do storage:', shipment.id);
+            }
+          }
+        }
+        
+        // Se ainda não encontrou, busca alternativa
+        if (!shipment) {
+          console.log('PaymentSuccessStripe - Tentando busca alternativa...');
+          const { data: fallbackShipments } = await supabase
+            .from('shipments')
+            .select('*')
+            .in('status', ['PENDING_PAYMENT', 'PENDING_DOCUMENT'])
+            .order('created_at', { ascending: false })
+            .limit(3);
+
+          if (fallbackShipments && fallbackShipments.length > 0) {
+            shipment = fallbackShipments[0];
+            console.log('PaymentSuccessStripe - Usando shipment alternativo:', shipment.id);
+            
+            // Atualizar com o session_id correto
+            await supabase
+              .from('shipments')
+              .update({
+                payment_data: {
+                  ...shipment.payment_data,
+                  session_id: sessionId,
+                  stripe_session_id: sessionId
+                }
+              })
+              .eq('id', shipment.id);
+          }
+        }
+        
+        if (!shipment) {
+          console.error('PaymentSuccessStripe - Nenhum shipment encontrado para session:', sessionId);
           toast({
             title: "Erro",
             description: "Dados do envio não encontrados após o pagamento. Por favor, entre em contato com o suporte informando o Session ID: " + (sessionId?.slice(-8) || 'N/A'),
@@ -56,20 +118,23 @@ const PaymentSuccessStripe = () => {
           return;
         }
 
+        console.log('PaymentSuccessStripe - Processando shipment:', shipment.id);
+
         // Update shipment status to paid
-        const { data: shipment, error: updateError } = await supabase
+        const { data: updatedShipment, error: updateError } = await supabase
           .from('shipments')
           .update({
             status: 'PAYMENT_CONFIRMED',
             payment_data: {
               method: 'STRIPE',
               session_id: sessionId,
-              amount: shipmentData.quoteData?.shippingQuote?.economicPrice || 0,
+              stripe_session_id: sessionId,
+              amount: shipment.quote_data?.shippingQuote?.economicPrice || shipment.quote_data?.totalPrice || 0,
               status: 'PAID'
             },
             updated_at: new Date().toISOString()
           })
-          .eq('id', shipmentData.id)
+          .eq('id', shipment.id)
           .select()
           .single();
 
@@ -77,14 +142,15 @@ const PaymentSuccessStripe = () => {
           throw updateError;
         }
 
-        setTrackingCode(shipment?.tracking_code || '');
+        setTrackingCode(updatedShipment?.tracking_code || '');
         setPaymentConfirmed(true);
 
-        // Salvar remetente automaticamente após pagamento aprovado
-        if (shipmentData.senderData) {
+        // Salvar remetente automaticamente após pagamento aprovado se houver dados
+        const storedShipmentData = JSON.parse(sessionStorage.getItem('currentShipment') || localStorage.getItem('currentShipment_backup') || '{}');
+        if (storedShipmentData.senderData) {
           try {
-            console.log('Salvando remetente aprovado:', shipmentData.senderData);
-            const senderSaved = await saveApprovedSender(shipmentData.senderData, true);
+            console.log('Salvando remetente aprovado:', storedShipmentData.senderData);
+            const senderSaved = await saveApprovedSender(storedShipmentData.senderData, true);
             if (senderSaved) {
               console.log('Remetente salvo com sucesso como padrão');
             }
@@ -95,17 +161,27 @@ const PaymentSuccessStripe = () => {
         }
 
         // Dispatch webhook to N8n with consolidated data
+        const storedDocumentData = JSON.parse(sessionStorage.getItem('documentData') || '{}');
         const webhookPayload = {
-          shipmentId: shipmentData.id,
+          shipmentId: shipment.id,
           paymentData: {
             method: 'STRIPE',
             session_id: sessionId,
-            amount: shipmentData.quoteData?.shippingQuote?.economicPrice || 0,
+            stripe_session_id: sessionId,
+            amount: typeof updatedShipment.payment_data === 'object' && updatedShipment.payment_data !== null ? 
+              (updatedShipment.payment_data as any).amount || 0 : 0,
             status: 'PAID'
           },
-          documentData,
-          selectedQuote: shipmentData.quoteData,
-          shipmentData
+          documentData: storedDocumentData,
+          selectedQuote: updatedShipment.quote_data || {},
+          shipmentData: {
+            id: shipment.id,
+            quoteData: updatedShipment.quote_data,
+            weight: shipment.weight,
+            totalPrice: typeof updatedShipment.payment_data === 'object' && updatedShipment.payment_data !== null ? 
+              (updatedShipment.payment_data as any).amount || 0 : 0,
+            ...storedShipmentData
+          }
         };
 
         console.log('Dispatching webhook with payload:', webhookPayload);

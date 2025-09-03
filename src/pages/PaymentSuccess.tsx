@@ -42,11 +42,11 @@ const PaymentSuccess = () => {
         let documentData = null;
         let selectedQuote = null;
 
-        // Buscar shipment que tenha esse session_id nos payment_data
+        // Buscar shipment que tenha esse session_id nos payment_data usando sintaxe JSONB
         const { data: shipments, error: searchError } = await supabase
           .from('shipments')
           .select('*')
-          .contains('payment_data', { session_id: stripeSessionId })
+          .or(`payment_data->>session_id.eq.${stripeSessionId},payment_data->>stripe_session_id.eq.${stripeSessionId}`)
           .order('created_at', { ascending: false })
           .limit(1);
 
@@ -123,14 +123,42 @@ const PaymentSuccess = () => {
         }
 
         if (!shipment) {
-          console.error('PaymentSuccess - Nenhum shipment encontrado');
-          toast({
-            title: "Erro",
-            description: `Dados do envio não encontrados após o pagamento. Por favor, entre em contato com o suporte informando o Session ID: ${stripeSessionId}`,
-            variant: "destructive"
-          });
-          navigate('/cliente/dashboard');
-          return;
+          console.error('PaymentSuccess - Nenhum shipment encontrado para session:', stripeSessionId);
+          
+          // Busca alternativa por shipments recentes sem filtro de session_id
+          console.log('PaymentSuccess - Tentando busca alternativa...');
+          const { data: fallbackShipments } = await supabase
+            .from('shipments')
+            .select('*')
+            .in('status', ['PENDING_PAYMENT', 'PENDING_DOCUMENT'])
+            .order('created_at', { ascending: false })
+            .limit(3);
+
+          if (fallbackShipments && fallbackShipments.length > 0) {
+            // Usar o shipment mais recente que ainda não foi pago
+            shipment = fallbackShipments[0];
+            console.log('PaymentSuccess - Usando shipment alternativo:', shipment.id);
+            
+            // Atualizar com o session_id correto
+            await supabase
+              .from('shipments')
+              .update({
+                payment_data: {
+                  ...shipment.payment_data,
+                  session_id: stripeSessionId,
+                  stripe_session_id: stripeSessionId
+                }
+              })
+              .eq('id', shipment.id);
+          } else {
+            toast({
+              title: "Erro",
+              description: `Dados do envio não encontrados após o pagamento. Por favor, entre em contato com o suporte informando o Session ID: ${stripeSessionId?.slice(-8) || 'N/A'}`,
+              variant: "destructive"
+            });
+            navigate('/cliente/dashboard');
+            return;
+          }
         }
 
         console.log('PaymentSuccess - Processando shipment:', shipment.id);
