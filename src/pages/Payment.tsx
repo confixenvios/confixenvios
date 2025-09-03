@@ -2,15 +2,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, CreditCard, Zap, Barcode, DollarSign } from "lucide-react";
+import { ArrowLeft, CreditCard, Zap, Barcode, DollarSign, Loader2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import SavedCardsSelector from "@/components/SavedCardsSelector";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const Payment = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
   
   // Get shipment data from location state or sessionStorage
   const shipmentData = location.state?.shipmentData || JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
@@ -42,8 +49,15 @@ const Payment = () => {
 
   const paymentMethods = [
     {
+      id: 'saved_credit',
+      name: 'Cartão de Crédito Salvo',
+      icon: CreditCard,
+      description: 'Use um cartão salvo',
+      available: !!user // Only available for logged users
+    },
+    {
       id: 'credit',
-      name: 'Cartão de Crédito',
+      name: 'Novo Cartão de Crédito',
       icon: CreditCard,
       description: 'Pagamento à vista',
       available: true
@@ -62,7 +76,7 @@ const Payment = () => {
       description: 'Vencimento em 3 dias úteis',
       available: true
     }
-  ];
+  ].filter(method => method.available);
 
   const handlePaymentSelect = (methodId: string) => {
     setSelectedMethod(methodId);
@@ -71,52 +85,108 @@ const Payment = () => {
   const handleConfirmPayment = async () => {
     if (!selectedMethod) return;
     
+    setProcessing(true);
+    
     try {
       console.log('Processing payment with method:', selectedMethod);
       
       if (selectedMethod === 'pix') {
-        // Redirecionar para página específica do PIX
         navigate('/pix-pagamento', { 
           state: { amount: totalAmount, shipmentData } 
         });
         return;
       }
-      
-      // Call Stripe edge function
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
-          amount: totalAmount,
-          shipmentData: {
-            ...shipmentData,
-            weight: shipmentData.weight || 1,
-            senderEmail: shipmentData.senderAddress?.email || 'guest@example.com'
-          }
-        }
-      });
 
-      if (error) {
-        console.error('Payment error:', error);
-        alert('Erro ao processar pagamento. Tente novamente.');
+      if (selectedMethod === 'saved_credit') {
+        if (!selectedCard) {
+          toast({
+            title: "Erro",
+            description: "Selecione um cartão salvo ou adicione um novo",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        // Process payment with saved card
+        const { data, error } = await supabase.functions.invoke('create-payment-with-saved-card', {
+          body: {
+            paymentMethodId: selectedCard,
+            amount: totalAmount,
+            shipmentData: {
+              ...shipmentData,
+              weight: shipmentData.weight || 1,
+              senderEmail: shipmentData.senderAddress?.email || user?.email || 'guest@example.com'
+            }
+          }
+        });
+
+        if (error) {
+          console.error('Saved card payment error:', error);
+          toast({
+            title: "Erro no pagamento",
+            description: "Erro ao processar pagamento com cartão salvo. Tente novamente.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        console.log('Saved card payment response:', data);
+        
+        if (data.success) {
+          window.location.href = data.redirectUrl;
+        } else if (data.requiresAction) {
+          window.location.href = data.redirectUrl;
+        }
         return;
       }
+      
+      // Handle new credit card (existing Stripe flow)
+      if (selectedMethod === 'credit') {
+        const { data, error } = await supabase.functions.invoke('create-payment', {
+          body: {
+            amount: totalAmount,
+            shipmentData: {
+              ...shipmentData,
+              weight: shipmentData.weight || 1,
+              senderEmail: shipmentData.senderAddress?.email || user?.email || 'guest@example.com'
+            }
+          }
+        });
 
-      console.log('Stripe session created:', data);
-      
-      // Save current shipment data with backup before redirecting to Stripe
-      if (shipmentData && shipmentData.id) {
-        localStorage.setItem('currentShipment_backup', JSON.stringify(shipmentData));
-        localStorage.setItem('shipmentData_stripe_session', data.sessionId);
-        console.log('Payment - Dados salvos no localStorage como backup antes do Stripe');
-      }
-      
-      // Redirect to Stripe checkout in same tab to preserve session
-      if (data.url) {
-        window.location.href = data.url;
+        if (error) {
+          console.error('Payment error:', error);
+          toast({
+            title: "Erro no pagamento",
+            description: "Erro ao processar pagamento. Tente novamente.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        console.log('Stripe session created:', data);
+        
+        // Save current shipment data with backup before redirecting to Stripe
+        if (shipmentData && shipmentData.id) {
+          localStorage.setItem('currentShipment_backup', JSON.stringify(shipmentData));
+          localStorage.setItem('shipmentData_stripe_session', data.sessionId);
+          console.log('Payment - Dados salvos no localStorage como backup antes do Stripe');
+        }
+        
+        // Redirect to Stripe checkout in same tab to preserve session
+        if (data.url) {
+          window.location.href = data.url;
+        }
       }
       
     } catch (error) {
       console.error('Payment error:', error);
-      alert('Erro ao processar pagamento. Tente novamente.');
+      toast({
+        title: "Erro no pagamento",
+        description: "Erro ao processar pagamento. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -208,13 +278,29 @@ const Payment = () => {
             </CardContent>
           </Card>
 
+          {/* Show saved cards selector when credit card with saved cards is selected */}
+          {selectedMethod === 'saved_credit' && (
+            <SavedCardsSelector
+              onCardSelected={(cardId) => setSelectedCard(cardId)}
+              onNewCard={() => setSelectedMethod('credit')}
+              disabled={processing}
+            />
+          )}
+
           {/* Confirm Button */}
           <Button 
             onClick={handleConfirmPayment}
-            disabled={!selectedMethod}
+            disabled={!selectedMethod || processing || (selectedMethod === 'saved_credit' && !selectedCard)}
             className="w-full h-12 text-base font-semibold"
           >
-            Confirmar Pagamento
+            {processing ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Processando...
+              </>
+            ) : (
+              'Confirmar Pagamento'
+            )}
           </Button>
         </div>
       </div>

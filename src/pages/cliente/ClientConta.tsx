@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { User, Mail, Phone, Calendar, Lock, Key } from "lucide-react";
+import { User, Mail, Phone, Calendar, Lock, Key, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import PaymentMethodsManager from "@/components/PaymentMethodsManager";
 import { useState } from "react";
 
 const ClientConta = () => {
@@ -123,6 +124,16 @@ const ClientConta = () => {
             </div>
 
             <div className="flex items-center space-x-3">
+              <FileText className="w-4 h-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">CPF/CNPJ</p>
+                <p className="text-sm text-muted-foreground">
+                  {profile?.document || 'Não informado'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
               <Calendar className="w-4 h-4 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium">Membro desde</p>
@@ -218,6 +229,11 @@ const ClientConta = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Payment Methods Section */}
+      <div className="mt-6">
+        <PaymentMethodsManager />
       </div>
     </div>
   );

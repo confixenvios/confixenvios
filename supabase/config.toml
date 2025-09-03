@@ -11,3 +11,18 @@ verify_jwt = false
 
 [functions.create-pix-payment]
 verify_jwt = false
+
+[functions.send-custom-email]
+verify_jwt = false
+
+[functions.list-payment-methods]
+verify_jwt = true
+
+[functions.create-setup-intent]
+verify_jwt = true
+
+[functions.remove-payment-method]
+verify_jwt = true
+
+[functions.create-payment-with-saved-card]
+verify_jwt = true
