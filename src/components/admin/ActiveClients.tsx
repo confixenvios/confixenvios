@@ -448,50 +448,104 @@ const ActiveClients = () => {
                     <div className="space-y-3">
                       <h4 className="font-semibold text-foreground flex items-center space-x-2">
                         <Users className="h-4 w-4" />
-                        <span>Informações Detalhadas</span>
+                        <span>Dados de Cadastro</span>
                       </h4>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
-                        {client.document && (
-                          <div className="space-y-1">
-                            <span className="text-xs font-medium text-muted-foreground">CPF/CNPJ</span>
-                            <div className="text-sm font-mono">{client.document}</div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-muted/30 rounded-lg">
+                        {/* Informações Pessoais */}
+                        <div className="space-y-4">
+                          <h5 className="font-medium text-sm text-muted-foreground border-b pb-2">
+                            INFORMAÇÕES PESSOAIS
+                          </h5>
+                          
+                          <div className="space-y-3">
+                            <div>
+                              <span className="text-xs font-medium text-muted-foreground block">Nome Completo</span>
+                              <div className="text-sm font-medium">
+                                {getClientName(client)}
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <span className="text-xs font-medium text-muted-foreground block">E-mail</span>
+                              <div className="text-sm font-mono">
+                                {client.email || 'Não informado'}
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <span className="text-xs font-medium text-muted-foreground block">Telefone</span>
+                              <div className="text-sm">
+                                {client.phone || 'Não informado'}
+                              </div>
+                            </div>
+                            
+                            {client.document && (
+                              <div>
+                                <span className="text-xs font-medium text-muted-foreground block">CPF/CNPJ</span>
+                                <div className="text-sm font-mono">{client.document}</div>
+                              </div>
+                            )}
                           </div>
-                        )}
-                        
-                        <div className="space-y-1">
-                          <span className="text-xs font-medium text-muted-foreground">Envios Bem-sucedidos</span>
-                          <div className="text-sm font-semibold text-success">{client.successful_shipments}</div>
                         </div>
                         
-                        <div className="space-y-1">
-                          <span className="text-xs font-medium text-muted-foreground">Envios Pendentes</span>
-                          <div className="text-sm font-semibold text-warning">{client.pending_shipments}</div>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <span className="text-xs font-medium text-muted-foreground">Última Atualização</span>
-                          <div className="text-sm">{formatDate(client.updated_at)}</div>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <span className="text-xs font-medium text-muted-foreground">Taxa de Sucesso</span>
-                          <div className="text-sm font-semibold">
-                            {client.shipment_count > 0 
-                              ? `${Math.round((client.successful_shipments / client.shipment_count) * 100)}%`
-                              : '0%'
-                            }
+                        {/* Informações da Conta */}
+                        <div className="space-y-4">
+                          <h5 className="font-medium text-sm text-muted-foreground border-b pb-2">
+                            INFORMAÇÕES DA CONTA
+                          </h5>
+                          
+                          <div className="space-y-3">
+                            <div>
+                              <span className="text-xs font-medium text-muted-foreground block">Data de Cadastro</span>
+                              <div className="text-sm">{formatDate(client.created_at)}</div>
+                            </div>
+                            
+                            <div>
+                              <span className="text-xs font-medium text-muted-foreground block">Última Atualização</span>
+                              <div className="text-sm">{formatDate(client.updated_at)}</div>
+                            </div>
+                            
+                            <div>
+                              <span className="text-xs font-medium text-muted-foreground block">Status da Conta</span>
+                              <Badge className={`text-xs ${getStatusColor(getClientStatus(client))}`}>
+                                {getClientStatus(client)}
+                              </Badge>
+                            </div>
+                            
+                            {isMasterUser(client) && (
+                              <div>
+                                <span className="text-xs font-medium text-muted-foreground block">Tipo de Conta</span>
+                                <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
+                                  <Crown className="h-3 w-3 mr-1" />
+                                  Conta Master
+                                </Badge>
+                              </div>
+                            )}
                           </div>
                         </div>
+                      </div>
+                      
+                      {/* Resumo de Atividade */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-primary">{client.shipment_count}</div>
+                          <div className="text-xs text-muted-foreground">Total de Remessas</div>
+                        </div>
                         
-                        <div className="space-y-1">
-                          <span className="text-xs font-medium text-muted-foreground">Valor Médio</span>
-                          <div className="text-sm font-semibold">
-                            {client.shipment_count > 0 
-                              ? formatCurrency(client.total_value / client.shipment_count)
-                              : formatCurrency(0)
-                            }
-                          </div>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-success">{client.successful_shipments}</div>
+                          <div className="text-xs text-muted-foreground">Bem-sucedidas</div>
+                        </div>
+                        
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-warning">{client.pending_shipments}</div>
+                          <div className="text-xs text-muted-foreground">Pendentes</div>
+                        </div>
+                        
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-primary">{formatCurrency(client.total_value)}</div>
+                          <div className="text-xs text-muted-foreground">Valor Total</div>
                         </div>
                       </div>
                     </div>
