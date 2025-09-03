@@ -106,34 +106,6 @@ const Document = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Shipment Info */}
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Package className="h-5 w-5 text-primary" />
-                  <span>Envio {currentShipment.tracking_code}</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Status:</span>
-                    <div className="font-medium">{currentShipment.status}</div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Peso:</span>
-                    <div className="font-medium">{currentShipment.weight}kg</div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Opção:</span>
-                    <div className="font-medium">
-                      {currentShipment.selected_option === 'economic' ? 'Menor Preço' : 'Menor Prazo'}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Document Type */}
             <Card className="shadow-card">
               <CardHeader>
