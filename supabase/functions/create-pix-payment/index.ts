@@ -47,7 +47,7 @@ serve(async (req) => {
       );
     }
     
-    console.log('API Key configurada:', abacateApiKey.substring(0, 8) + '...');
+    console.log('API Key configurada (modo produção):', abacateApiKey.substring(0, 10) + '...');
 
     // Limpar e validar dados
     const cleanPhone = phone.replace(/\D/g, '');
