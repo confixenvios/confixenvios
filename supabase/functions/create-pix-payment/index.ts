@@ -14,8 +14,10 @@ serve(async (req) => {
   try {
     const { name, phone, email, cpf, amount, description, userId } = await req.json();
 
+    console.log('=== INÍCIO DEBUG PIX ===');
     console.log('Dados recebidos:', { name, phone, email, cpf, amount, description, userId });
-
+    console.log('Headers da requisição:', Object.fromEntries(req.headers.entries()));
+    
     // Validar campos obrigatórios
     if (!name || !phone || !email || !cpf || !amount) {
       console.error('Campos obrigatórios faltando:', { 
@@ -36,10 +38,13 @@ serve(async (req) => {
 
     // Obter chave da API do Abacate Pay
     const abacateApiKey = Deno.env.get('ABACATE_PAY_API_KEY');
+    console.log('Tentando obter ABACATE_PAY_API_KEY...');
+    console.log('Variáveis de ambiente disponíveis:', Object.keys(Deno.env.toObject()));
+    
     if (!abacateApiKey) {
-      console.error('API Key não encontrada');
+      console.error('ERRO CRÍTICO: API Key não encontrada nas variáveis de ambiente');
       return new Response(
-        JSON.stringify({ error: 'Chave da API não configurada' }),
+        JSON.stringify({ error: 'Chave da API não configurada - verifique as secrets do Supabase' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -47,8 +52,8 @@ serve(async (req) => {
       );
     }
     
-    console.log('API Key configurada (modo produção):', abacateApiKey.substring(0, 12) + '...');
-    console.log('Tipo de API Key:', abacateApiKey.includes('prod') ? 'PRODUÇÃO ✓' : 'DESENVOLVIMENTO ⚠️');
+    console.log('✓ API Key encontrada:', abacateApiKey.substring(0, 12) + '...');
+    console.log('✓ Tipo de API Key:', abacateApiKey.includes('prod') ? 'PRODUÇÃO ✓' : 'DESENVOLVIMENTO ⚠️');
 
     // Limpar e validar dados
     const cleanPhone = phone.replace(/\D/g, '');
