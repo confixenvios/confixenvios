@@ -49,17 +49,17 @@ serve(async (req) => {
     // Criar pagamento PIX via Abacate Pay
     const pixPayload = {
       amount: Math.round(amount * 100), // Converter reais para centavos
-      expiresIn: 30 * 60, // 30 minutos em segundos
+      expiresIn: 1800, // 30 minutos em segundos
       description: description || 'Pagamento via PIX',
       customer: {
-        name: name,
-        email: email,
-        cellphone: phone,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        cellphone: phone.replace(/\D/g, ''), // Remove formatação do telefone
         taxId: cpf.replace(/\D/g, '') // Remove formatação do CPF
       },
       metadata: {
         externalId: `pix_${Date.now()}`,
-        userId: userId || null // Incluir user_id para associar ao cliente
+        userId: userId || null
       }
     };
 
