@@ -175,6 +175,42 @@ export type Database = {
         }
         Relationships: []
       }
+      motoristas: {
+        Row: {
+          cpf: string
+          created_at: string
+          email: string
+          id: string
+          nome: string
+          senha: string
+          status: string
+          telefone: string
+          updated_at: string
+        }
+        Insert: {
+          cpf: string
+          created_at?: string
+          email: string
+          id?: string
+          nome: string
+          senha: string
+          status?: string
+          telefone: string
+          updated_at?: string
+        }
+        Update: {
+          cpf?: string
+          created_at?: string
+          email?: string
+          id?: string
+          nome?: string
+          senha?: string
+          status?: string
+          telefone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -364,6 +400,48 @@ export type Database = {
         }
         Relationships: []
       }
+      shipment_status_history: {
+        Row: {
+          created_at: string
+          id: string
+          motorista_id: string | null
+          observacoes: string | null
+          shipment_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          motorista_id?: string | null
+          observacoes?: string | null
+          shipment_id: string
+          status: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          motorista_id?: string | null
+          observacoes?: string | null
+          shipment_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipment_status_history_motorista_id_fkey"
+            columns: ["motorista_id"]
+            isOneToOne: false
+            referencedRelation: "motoristas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipment_status_history_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shipments: {
         Row: {
           created_at: string
@@ -373,6 +451,7 @@ export type Database = {
           id: string
           label_pdf_url: string | null
           length: number
+          motorista_id: string | null
           payment_data: Json | null
           pickup_option: string
           quote_data: Json
@@ -394,6 +473,7 @@ export type Database = {
           id?: string
           label_pdf_url?: string | null
           length: number
+          motorista_id?: string | null
           payment_data?: Json | null
           pickup_option: string
           quote_data: Json
@@ -415,6 +495,7 @@ export type Database = {
           id?: string
           label_pdf_url?: string | null
           length?: number
+          motorista_id?: string | null
           payment_data?: Json | null
           pickup_option?: string
           quote_data?: Json
@@ -429,6 +510,13 @@ export type Database = {
           width?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "shipments_motorista_id_fkey"
+            columns: ["motorista_id"]
+            isOneToOne: false
+            referencedRelation: "motoristas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shipments_recipient_address_id_fkey"
             columns: ["recipient_address_id"]
@@ -590,6 +678,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      authenticate_motorista: {
+        Args: { input_email: string; input_senha: string }
+        Returns: {
+          motorista_id: string
+          nome: string
+          status: string
+        }[]
+      }
       cleanup_anonymous_addresses: {
         Args: Record<PropertyKey, never>
         Returns: undefined

@@ -17,7 +17,8 @@ import {
   Puzzle,
   Database,
   FileText,
-  DollarSign
+  DollarSign,
+  Truck
 } from "lucide-react";
 import { NavLink, useLocation } from 'react-router-dom';
 
@@ -56,6 +57,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const navigation = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Clientes', href: '/admin/clientes', icon: Users },
+    { name: 'Motoristas', href: '/admin/motoristas', icon: Truck },
     { name: 'Faturamento', href: '/admin/faturamento', icon: DollarSign },
     { name: 'Remessas', href: '/admin/remessas', icon: Package },
     { name: 'Integrações', href: '/admin/integracoes', icon: Puzzle },

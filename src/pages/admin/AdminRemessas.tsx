@@ -5,9 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Package, Eye, Download, Filter } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Search, Package, Eye, Download, Filter, UserPlus, Truck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface Shipment {
   id: string;
@@ -29,6 +32,19 @@ interface Shipment {
   status: string;
   created_at: string;
   label_pdf_url: string | null;
+  motoristas?: {
+    nome: string;
+    telefone: string;
+    email: string;
+  };
+}
+
+interface Motorista {
+  id: string;
+  nome: string;
+  telefone: string;
+  email: string;
+  status: string;
 }
 
 const AdminRemessas = () => {
@@ -37,9 +53,13 @@ const AdminRemessas = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [motoristas, setMotoristas] = useState<Motorista[]>([]);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [selectedShipment, setSelectedShipment] = useState<string | null>(null);
 
   useEffect(() => {
     loadShipments();
+    loadMotoristas();
   }, []);
 
   const loadShipments = async () => {
@@ -47,67 +67,41 @@ const AdminRemessas = () => {
       const { data, error } = await supabase
         .from('shipments')
         .select(`
-          id,
-          tracking_code,
-          weight,
-          quote_data,
-          payment_data,
-          status,
-          created_at,
-          label_pdf_url,
-          user_id,
-          sender_address_id,
-          recipient_address_id
+          *,
+          sender_address:addresses!shipments_sender_address_id_fkey(*),
+          recipient_address:addresses!shipments_recipient_address_id_fkey(*),
+          profiles(first_name, last_name, email),
+          motoristas(nome, telefone, email)
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Buscar informações dos endereços e clientes separadamente
-      const shipmentsWithDetails = await Promise.all(
-        (data || []).map(async (shipment) => {
-          // Buscar endereços
-          const [senderResult, recipientResult] = await Promise.all([
-            supabase
-              .from('addresses')
-              .select('cep, city, state')
-              .eq('id', shipment.sender_address_id)
-              .single(),
-            supabase
-              .from('addresses')
-              .select('cep, city, state')
-              .eq('id', shipment.recipient_address_id)
-              .single()
-          ]);
-
-          // Buscar perfil do cliente se existe user_id
-          let clientProfile = null;
-          if (shipment.user_id) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('first_name, last_name, email')
-              .eq('id', shipment.user_id)
-              .single();
-            clientProfile = profile;
-          }
-
-          return {
-            id: shipment.id,
-            tracking_code: shipment.tracking_code,
-            client_name: clientProfile 
-              ? `${clientProfile.first_name || ''} ${clientProfile.last_name || ''}`.trim() || clientProfile.email || 'Cliente Anônimo'
-              : 'Cliente Anônimo',
-            sender_address: senderResult.data,
-            recipient_address: recipientResult.data,
-            weight: shipment.weight,
-            quote_data: shipment.quote_data,
-            payment_data: shipment.payment_data,
-            status: shipment.status,
-            created_at: shipment.created_at,
-            label_pdf_url: shipment.label_pdf_url
-          };
-        })
-      );
+      // Transform data to match expected format
+      const shipmentsWithDetails = (data || []).map((shipment) => ({
+        id: shipment.id,
+        tracking_code: shipment.tracking_code,
+        client_name: shipment.profiles && typeof shipment.profiles === 'object'
+          ? `${shipment.profiles.first_name || ''} ${shipment.profiles.last_name || ''}`.trim() || shipment.profiles.email || 'Cliente Anônimo'
+          : 'Cliente Anônimo',
+        sender_address: shipment.sender_address ? {
+          cep: shipment.sender_address.cep,
+          city: shipment.sender_address.city,
+          state: shipment.sender_address.state
+        } : null,
+        recipient_address: shipment.recipient_address ? {
+          cep: shipment.recipient_address.cep,
+          city: shipment.recipient_address.city,
+          state: shipment.recipient_address.state
+        } : null,
+        weight: shipment.weight,
+        quote_data: shipment.quote_data,
+        payment_data: shipment.payment_data,
+        status: shipment.status,
+        created_at: shipment.created_at,
+        label_pdf_url: shipment.label_pdf_url,
+        motoristas: shipment.motoristas
+      }));
 
       setShipments(shipmentsWithDetails);
     } catch (error) {
@@ -122,16 +116,34 @@ const AdminRemessas = () => {
     }
   };
 
+  const loadMotoristas = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('motoristas')
+        .select('*')
+        .eq('status', 'ativo')
+        .order('nome');
+
+      if (error) throw error;
+      setMotoristas(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar motoristas:', error);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       'PENDING_LABEL': { label: 'Aguardando Etiqueta', variant: 'destructive' as const },
       'PENDING_DOCUMENT': { label: 'Aguardando Documento', variant: 'destructive' as const },
       'PAID': { label: 'Pago', variant: 'default' as const },
+      'COLETA_ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
+      'COLETA_FINALIZADA': { label: 'Coleta Finalizada', variant: 'default' as const },
       'IN_TRANSIT': { label: 'Em Trânsito', variant: 'default' as const },
+      'ENTREGA_FINALIZADA': { label: 'Entrega Finalizada', variant: 'secondary' as const },
       'DELIVERED': { label: 'Entregue', variant: 'secondary' as const }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig];
+    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'outline' as const };
     return (
       <Badge variant={config.variant}>
         {config.label}
@@ -151,6 +163,34 @@ const AdminRemessas = () => {
       title: "Download iniciado",
       description: `Baixando etiqueta para ${shipment.tracking_code || 'N/A'}`,
     });
+  };
+
+  const handleAssignMotorista = async (motoristaId: string) => {
+    if (!selectedShipment) return;
+
+    try {
+      const { error } = await supabase
+        .from('shipments')
+        .update({ motorista_id: motoristaId })
+        .eq('id', selectedShipment);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Motorista designado com sucesso!",
+      });
+      setShowAssignDialog(false);
+      setSelectedShipment(null);
+      loadShipments();
+    } catch (error) {
+      console.error('Erro ao designar motorista:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao designar motorista",
+        variant: "destructive"
+      });
+    }
   };
 
   const getQuoteValue = (quoteData: any) => {
@@ -218,7 +258,10 @@ const AdminRemessas = () => {
                   <SelectItem value="PENDING_LABEL">Aguardando Etiqueta</SelectItem>
                   <SelectItem value="PENDING_DOCUMENT">Aguardando Documento</SelectItem>
                   <SelectItem value="PAID">Pago</SelectItem>
+                  <SelectItem value="COLETA_ACEITA">Coleta Aceita</SelectItem>
+                  <SelectItem value="COLETA_FINALIZADA">Coleta Finalizada</SelectItem>
                   <SelectItem value="IN_TRANSIT">Em Trânsito</SelectItem>
+                  <SelectItem value="ENTREGA_FINALIZADA">Entrega Finalizada</SelectItem>
                   <SelectItem value="DELIVERED">Entregue</SelectItem>
                 </SelectContent>
               </Select>
@@ -268,6 +311,7 @@ const AdminRemessas = () => {
                     <TableHead>Peso</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Motorista</TableHead>
                     <TableHead>Data</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -275,7 +319,7 @@ const AdminRemessas = () => {
                 <TableBody>
                   {filteredShipments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
+                      <TableCell colSpan={9} className="text-center py-8">
                         <div className="text-muted-foreground">
                           <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
                           <p>Nenhuma remessa encontrada</p>
@@ -304,8 +348,18 @@ const AdminRemessas = () => {
                         <TableCell>
                           {getStatusBadge(shipment.status)}
                         </TableCell>
+                        <TableCell>
+                          {shipment.motoristas ? (
+                            <div>
+                              <p className="font-medium text-sm">{shipment.motoristas.nome}</p>
+                              <p className="text-xs text-muted-foreground">{shipment.motoristas.telefone}</p>
+                            </div>
+                          ) : (
+                            <Badge variant="outline">Não designado</Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {new Date(shipment.created_at).toLocaleDateString('pt-BR')}
+                          {format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end space-x-2">
@@ -324,6 +378,16 @@ const AdminRemessas = () => {
                             >
                               <Download className="h-4 w-4" />
                             </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedShipment(shipment.id);
+                                setShowAssignDialog(true);
+                              }}
+                            >
+                              <UserPlus className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -335,6 +399,43 @@ const AdminRemessas = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Assign Motorista Dialog */}
+      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Designar Motorista</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Selecione um motorista para esta remessa:
+            </p>
+            <div className="space-y-2">
+              {motoristas.map((motorista) => (
+                <Button
+                  key={motorista.id}
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => handleAssignMotorista(motorista.id)}
+                >
+                  <Truck className="h-4 w-4 mr-2" />
+                  <div className="text-left">
+                    <p className="font-medium">{motorista.nome}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {motorista.telefone} • {motorista.email}
+                    </p>
+                  </div>
+                </Button>
+              ))}
+              {motoristas.length === 0 && (
+                <p className="text-center text-muted-foreground py-4">
+                  Nenhum motorista ativo disponível
+                </p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -33,16 +33,20 @@ import ClientConta from "./pages/cliente/ClientConta";
 // Admin pages
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboardEnhanced from "./pages/admin/AdminDashboardEnhanced";
-import AdminClientes from "./pages/admin/AdminClientes";
 import AdminClienteDetalhes from "./pages/admin/AdminClienteDetalhes";
-import AdminFaturamento from "./pages/admin/AdminFaturamento";
+import AdminClientes from "./pages/admin/AdminClientes";
+import AdminMotoristas from "./pages/admin/AdminMotoristas";
 import AdminRemessas from "./pages/admin/AdminRemessas";
+import AdminFaturamento from "./pages/admin/AdminFaturamento";
+import AdminHistorico from "./pages/admin/AdminHistorico";
 import AdminIntegracoes from "./pages/admin/AdminIntegracoes";
 import AdminWebhooks from "./pages/admin/AdminWebhooks";
-import AdminHistorico from "./pages/admin/AdminHistorico";
+import AdminWebhookLogs from "./pages/admin/AdminWebhookLogs";
 import AdminTestarTabela from "./pages/admin/AdminTestarTabela";
 import AdminDocsIntegracao from "./pages/admin/AdminDocsIntegracao";
-import AdminWebhookLogs from "./pages/admin/AdminWebhookLogs";
+import AdminAuth from "./pages/admin/AdminAuth";
+import MotoristaAuth from "./pages/motorista/MotoristaAuth";
+import MotoristaDashboard from "./pages/motorista/MotoristaDashboard";
 
 const queryClient = new QueryClient();
 
@@ -103,6 +107,7 @@ const App = () => (
                       <Route path="dashboard" element={<AdminDashboardEnhanced />} />
                       <Route path="clientes" element={<AdminClientes />} />
                       <Route path="clientes/:id" element={<AdminClienteDetalhes />} />
+                      <Route path="motoristas" element={<AdminMotoristas />} />
                       <Route path="faturamento" element={<AdminFaturamento />} />
                       <Route path="remessas" element={<AdminRemessas />} />
                       <Route path="integracoes" element={<AdminIntegracoes />} />
@@ -116,6 +121,11 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+
+            {/* Motorista Routes */}
+            <Route path="/motorista/auth" element={<MotoristaAuth />} />
+            <Route path="/motorista" element={<MotoristaDashboard />} />
+            <Route path="/motorista/dashboard" element={<MotoristaDashboard />} />
 
             {/* Legacy redirects */}
             <Route path="/dashboard/*" element={<Navigate to="/cliente" replace />} />
