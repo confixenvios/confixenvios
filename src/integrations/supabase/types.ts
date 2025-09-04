@@ -711,10 +711,29 @@ export type Database = {
         Args: { input_email: string; input_password: string }
         Returns: Json
       }
+      authenticate_motorista_secure: {
+        Args: { p_email: string; p_password: string }
+        Returns: {
+          email: string
+          id: string
+          nome: string
+          status: string
+          telefone: string
+        }[]
+      }
       check_rate_limit: {
         Args: {
           action_type: string
           client_ip: string
+          max_attempts?: number
+          time_window_minutes?: number
+        }
+        Returns: boolean
+      }
+      check_rate_limit_secure: {
+        Args: {
+          action_type: string
+          client_identifier: string
           max_attempts?: number
           time_window_minutes?: number
         }
@@ -725,6 +744,10 @@ export type Database = {
         Returns: undefined
       }
       cleanup_expired_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      cleanup_old_security_logs: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
@@ -828,6 +851,10 @@ export type Database = {
       validate_anonymous_session: {
         Args: { session_token: string }
         Returns: string
+      }
+      validate_input_security: {
+        Args: { input_text: string }
+        Returns: boolean
       }
       validate_session_with_rate_limiting: {
         Args: { client_ip?: string; session_token: string }
