@@ -46,14 +46,26 @@ const PixPayment = () => {
 
   useEffect(() => {
     // Polling para verificar status do pagamento
-    if (!paymentIntent?.paymentId) return;
+    if (!paymentIntent?.paymentId || paymentStatus === 'PAID') return;
+    
+    console.log('🔄 Iniciando polling de status do PIX');
     
     const pollInterval = setInterval(async () => {
+      console.log('🔍 Verificando status do pagamento:', paymentIntent.paymentId);
       await checkPaymentStatus();
-    }, 5000); // Verifica a cada 5 segundos
+    }, 3000); // Verifica a cada 3 segundos
 
-    return () => clearInterval(pollInterval);
-  }, [paymentIntent?.paymentId]);
+    // Cleanup - parar polling após 10 minutos
+    const timeout = setTimeout(() => {
+      clearInterval(pollInterval);
+      console.log('⏰ Polling interrompido após 10 minutos');
+    }, 10 * 60 * 1000);
+
+    return () => {
+      clearInterval(pollInterval);
+      clearTimeout(timeout);
+    };
+  }, [paymentIntent?.paymentId, paymentStatus]);
 
   const createPixPayment = async () => {
     try {
@@ -139,7 +151,7 @@ const PixPayment = () => {
   };
 
   const checkPaymentStatus = async () => {
-    if (!paymentIntent?.paymentId || isCheckingPayment) return;
+    if (!paymentIntent?.paymentId || isCheckingPayment || paymentStatus === 'PAID') return;
     
     try {
       setIsCheckingPayment(true);
@@ -149,31 +161,31 @@ const PixPayment = () => {
         body: { paymentId: paymentIntent.paymentId }
       });
 
-      console.log('📊 Status PIX response (raw):', { data, error });
+      console.log('📊 Status response:', { data, error });
 
       if (error) {
         console.error('❌ Erro ao verificar status PIX:', error);
         return;
       }
 
-      console.log('📊 Status response:', data);
-      
-      if (data?.success && data?.isPaid) {
-        console.log('🎉 PIX foi pago! Redirecionando para sucesso...');
-        setPaymentStatus('PAID');
+      if (data?.success) {
+        console.log('✅ Status atual:', data.status, 'isPaid:', data.isPaid);
         
-        // Redirecionar para tela de sucesso
-        navigate('/pix-sucesso', {
-          state: {
-            paymentId: paymentIntent.paymentId,
-            amount,
-            shipmentData
-          }
-        });
-      } else if (data?.success) {
-        console.log(`⏳ PIX ainda não pago. Status: ${data.status}, isPaid: ${data.isPaid}`);
+        if (data.isPaid) {
+          console.log('🎉 PIX foi pago! Redirecionando...');
+          setPaymentStatus('PAID');
+          
+          // Redirecionar para tela de sucesso
+          navigate('/pix-sucesso', {
+            state: {
+              paymentId: paymentIntent.paymentId,
+              amount,
+              shipmentData
+            }
+          });
+        }
       } else {
-        console.error('❌ Resposta inválida da verificação PIX:', data);
+        console.error('❌ Resposta inválida da API de status:', data);
       }
       
     } catch (error) {

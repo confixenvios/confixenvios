@@ -82,9 +82,13 @@ serve(async (req) => {
 
     const paymentData = statusData.data || statusData;
     
+    // Enhanced validation: check for different possible "paid" statuses
     const isPaid = paymentData.status === 'COMPLETED' || 
                    paymentData.status === 'PAID' || 
-                   paymentData.paid === true;
+                   paymentData.status === 'APPROVED' ||
+                   paymentData.status === 'SUCCESS' ||
+                   paymentData.paid === true ||
+                   paymentData.completed === true;
 
     console.log(`💰 Payment status: ${paymentData.status}, isPaid: ${isPaid}`);
 
