@@ -47,16 +47,27 @@ const PixPayment = () => {
       setIsLoading(true);
       console.log('Iniciando criação do PIX payment...');
       
-      // Dados do formulário ou usuário logado
+      // Usar dados reais do formulário em produção
       const pixData = {
-        name: shipmentData?.senderData?.name || "Nome do pagador",
-        phone: shipmentData?.senderData?.phone || "",
-        email: shipmentData?.senderData?.email || "",
-        cpf: shipmentData?.senderData?.document || "",
+        name: shipmentData?.senderData?.name || "Nome Obrigatório",
+        phone: shipmentData?.senderData?.phone || "(00) 00000-0000",
+        email: shipmentData?.senderData?.email || "email@obrigatorio.com",
+        cpf: shipmentData?.senderData?.document || "000.000.000-00",
         amount,
         description: `Frete - Envio de ${shipmentData?.weight || 0}kg`,
         userId: shipmentData?.user_id || null
       };
+
+      // Validar dados obrigatórios
+      if (!pixData.name || pixData.name === "Nome Obrigatório") {
+        toast({
+          title: "Dados Incompletos",
+          description: "É necessário preencher os dados do remetente para gerar o PIX.",
+          variant: "destructive"
+        });
+        navigate('/pagamento');
+        return;
+      }
 
       console.log('Dados do PIX antes do envio:', pixData);
 

@@ -12,68 +12,109 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🔍 PIX Status check request started');
+    
     const { paymentId } = await req.json();
-
-    console.log('Verificando status PIX:', paymentId);
-
-    // Obter chave da API do Abacate Pay
-    const abacateApiKey = Deno.env.get('ABACATE_PAY_API_KEY');
-    if (!abacateApiKey) {
+    
+    if (!paymentId) {
+      console.error('❌ Missing paymentId');
       return new Response(
-        JSON.stringify({ error: 'Chave da API não configurada' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Payment ID é obrigatório' 
+        }),
         { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
         }
       );
     }
 
-    // Consultar status na API da Abacate Pay
-    const abacateResponse = await fetch(`https://api.abacatepay.com/v1/pixQrCode/check?id=${paymentId}`, {
+    // Get API key
+    const abacateApiKey = Deno.env.get('ABACATE_PAY_API_KEY');
+    if (!abacateApiKey) {
+      console.error('❌ ABACATE_PAY_API_KEY not found');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Configuração não encontrada' 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    console.log('🔍 Checking PIX status for payment:', paymentId);
+
+    // Check PIX status with Abacate Pay
+    const statusResponse = await fetch(`https://api.abacatepay.com/v1/pixQrCode/${paymentId}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${abacateApiKey}`,
         'Content-Type': 'application/json',
+        'User-Agent': 'Confix-Envios/1.0'
       }
     });
 
-    if (!abacateResponse.ok) {
-      const errorText = await abacateResponse.text();
-      console.error('Erro ao verificar status PIX:', errorText);
+    console.log('📊 Status response:', statusResponse.status);
+
+    if (!statusResponse.ok) {
+      const errorText = await statusResponse.text();
+      console.error('❌ Status check error:', errorText);
+      
       return new Response(
-        JSON.stringify({ error: 'Erro ao verificar status do pagamento' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Erro ao verificar status do pagamento',
+          details: errorText
+        }),
         { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
         }
       );
     }
 
-    const pixData = await abacateResponse.json();
-    const responseData = pixData.data || pixData;
+    const statusData = await statusResponse.json();
+    console.log('✅ Status data:', JSON.stringify(statusData, null, 2));
 
-    console.log('Status PIX retornado:', responseData);
+    const paymentData = statusData.data || statusData;
+    
+    const isPaid = paymentData.status === 'COMPLETED' || 
+                   paymentData.status === 'PAID' || 
+                   paymentData.paid === true;
+
+    console.log(`💰 Payment status: ${paymentData.status}, isPaid: ${isPaid}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        status: responseData.status,
         paymentId: paymentId,
-        expiresAt: responseData.expiresAt,
-        isPaid: responseData.status === 'PAID'
+        status: paymentData.status,
+        isPaid: isPaid,
+        expiresAt: paymentData.expiresAt,
+        paidAt: paymentData.paidAt || null
       }),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
       }
     );
 
   } catch (error) {
-    console.error('Erro interno:', error);
+    console.error('💥 Status check error:', error);
+    
     return new Response(
-      JSON.stringify({ error: 'Erro interno do servidor' }),
+      JSON.stringify({ 
+        success: false,
+        error: 'Erro interno ao verificar status',
+        details: error.message 
+      }),
       { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
       }
     );
   }

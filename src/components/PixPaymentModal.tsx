@@ -153,35 +153,46 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     setLoading(true);
     
     try {
+      console.log('🔵 Iniciando criação do PIX...');
+      
+      const pixPayload = {
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email,
+        cpf: formData.cpf,
+        amount: amount,
+        description: description || 'Pagamento via PIX - Confix Envios',
+        userId: user?.id || null
+      };
+      
+      console.log('📤 Enviando payload:', pixPayload);
+
       const { data, error } = await supabase.functions.invoke('create-pix-payment', {
-        body: {
-          name: formData.name,
-          phone: formData.phone,
-          email: formData.email,
-          cpf: formData.cpf,
-          amount: amount,
-          description: description || 'Pagamento via PIX',
-          userId: user?.id || null // Incluir ID do usuário se logado
-        }
+        body: pixPayload
       });
 
+      console.log('📥 Resposta recebida:', { data, error });
+
       if (error) {
-        console.error('Erro ao criar PIX:', error);
-        toast.error('Erro ao gerar código PIX');
+        console.error('❌ Erro da função:', error);
+        toast.error(error.message || 'Erro ao gerar código PIX');
         return;
       }
 
-      if (data.success) {
-        setPixData(data);
-        setStep('qrcode');
-        toast.success('QR Code PIX gerado com sucesso!');
-      } else {
-        console.error('Erro da API:', data);
-        const errorMessage = data.error || data.details || 'Erro ao gerar PIX';
+      if (!data || !data.success) {
+        console.error('❌ Resposta inválida:', data);
+        const errorMessage = data?.error || 'Erro desconhecido ao gerar PIX';
         toast.error(errorMessage);
+        return;
       }
+
+      console.log('✅ PIX criado com sucesso:', data);
+      setPixData(data);
+      setStep('qrcode');
+      toast.success('QR Code PIX gerado com sucesso!');
+      
     } catch (error) {
-      console.error('Erro:', error);
+      console.error('💥 Erro na criação do PIX:', error);
       toast.error('Erro ao processar pagamento PIX');
     } finally {
       setLoading(false);
@@ -206,27 +217,33 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     let intervalId: NodeJS.Timeout;
 
     if (step === 'qrcode' && pixData?.paymentId && paymentStatus === 'pending') {
+      console.log('🔄 Iniciando polling de status do PIX');
       setPaymentStatus('checking');
       
       const checkPaymentStatus = async () => {
         try {
+          console.log('🔍 Verificando status do pagamento:', pixData.paymentId);
+          
           const { data, error } = await supabase.functions.invoke('check-pix-status', {
             body: { paymentId: pixData.paymentId }
           });
 
+          console.log('📊 Status response:', { data, error });
+
           if (error) {
-            console.error('Erro ao verificar status:', error);
+            console.error('❌ Erro ao verificar status:', error);
             return;
           }
 
-          if (data.success && data.isPaid) {
+          if (data && data.success && data.isPaid) {
+            console.log('🎉 Pagamento confirmado!');
             setPaymentStatus('paid');
             setStep('paid');
             toast.success('Pagamento recebido com sucesso! 🎉');
             clearInterval(intervalId);
           }
         } catch (error) {
-          console.error('Erro ao verificar pagamento:', error);
+          console.error('💥 Erro ao verificar pagamento:', error);
         }
       };
 
