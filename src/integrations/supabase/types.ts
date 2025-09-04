@@ -680,11 +680,7 @@ export type Database = {
     Functions: {
       authenticate_motorista: {
         Args: { input_email: string; input_password: string }
-        Returns: {
-          motorista_id: string
-          nome: string
-          status: string
-        }[]
+        Returns: Json
       }
       cleanup_anonymous_addresses: {
         Args: Record<PropertyKey, never>

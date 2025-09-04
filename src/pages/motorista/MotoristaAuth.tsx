@@ -8,6 +8,15 @@ import { Truck, Mail, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+// Interface para a resposta da autenticação
+interface AuthResponse {
+  success: boolean;
+  motorista_id?: string;
+  nome?: string;
+  status?: string;
+  error?: string;
+}
+
 const MotoristaAuth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -21,26 +30,38 @@ const MotoristaAuth = () => {
     setLoading(true);
 
     try {
+      console.log('Tentando login com:', formData.email);
+      
       // Usar nossa função customizada de autenticação de motorista
-      const { data: motoristaData, error: motoristaError } = await supabase
+      const { data: authResult, error: motoristaError } = await supabase
         .rpc('authenticate_motorista', {
           input_email: formData.email,
           input_password: formData.senha
         });
 
-      if (motoristaError || !motoristaData || motoristaData.length === 0) {
-        throw new Error('E-mail ou senha incorretos');
+      console.log('Resultado da autenticação:', authResult);
+
+      if (motoristaError) {
+        console.error('Erro na chamada RPC:', motoristaError);
+        throw new Error('Erro na comunicação com o servidor');
+      }
+
+      // Fazer cast para o tipo correto (through unknown for safety)
+      const result = authResult as unknown as AuthResponse;
+
+      if (!result || !result.success) {
+        throw new Error(result?.error || 'E-mail ou senha incorretos');
       }
 
       // Store motorista session in localStorage
       localStorage.setItem('motorista_session', JSON.stringify({
-        id: motoristaData[0].motorista_id,
-        nome: motoristaData[0].nome,
+        id: result.motorista_id,
+        nome: result.nome,
         email: formData.email,
-        status: motoristaData[0].status
+        status: result.status
       }));
 
-      toast.success(`Bem-vindo, ${motoristaData[0].nome}!`);
+      toast.success(`Bem-vindo, ${result.nome}!`);
       navigate('/motorista/dashboard');
 
     } catch (error: any) {
