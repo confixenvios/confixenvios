@@ -186,11 +186,18 @@ serve(async (req) => {
     const responseData = {
       success: true,
       pixCode: pixData.brCode,
-      qrCodeImage: pixData.brCodeBase64 ? `data:image/png;base64,${pixData.brCodeBase64}` : null,
+      qrCodeImage: pixData.qrCodeBase64 ? `data:image/png;base64,${pixData.qrCodeBase64}` : null,
       paymentId: pixData.id,
       amount: amount,
       expiresAt: pixData.expiresAt || new Date(Date.now() + 30 * 60 * 1000).toISOString()
     };
+
+    console.log('✅ Response prepared:', {
+      success: responseData.success,
+      hasQrCode: !!responseData.qrCodeImage,
+      hasPixCode: !!responseData.pixCode,
+      paymentId: responseData.paymentId
+    });
 
     return new Response(
       JSON.stringify(responseData),

@@ -356,29 +356,59 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
 
   const renderQRCode = () => (
     <div className="space-y-4 text-center">
-      {pixData?.qrCodeImage && (
-        <div className="flex justify-center">
-          <img 
-            src={pixData.qrCodeImage} 
-            alt="QR Code PIX" 
-            className="w-64 h-64 border rounded-lg"
-          />
-        </div>
-      )}
+      <div className="flex justify-center">
+        {pixData?.qrCodeImage ? (
+          <div className="relative">
+            <img 
+              src={pixData.qrCodeImage} 
+              alt="QR Code PIX" 
+              className="w-64 h-64 border rounded-lg object-contain bg-white"
+              onError={(e) => {
+                console.error('Erro ao carregar QR Code:', e);
+                e.currentTarget.style.display = 'none';
+              }}
+              onLoad={() => {
+                console.log('✅ QR Code carregado com sucesso');
+              }}
+            />
+            {/* Fallback se a imagem não carregar */}
+            <div 
+              className="absolute inset-0 flex items-center justify-center bg-muted border rounded-lg"
+              style={{ display: 'none' }}
+              id="qr-fallback"
+            >
+              <div className="text-center">
+                <QrCode className="h-16 w-16 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  QR Code temporariamente indisponível
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="w-64 h-64 bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-border">
+            <div className="text-center">
+              <QrCode className="h-16 w-16 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">Carregando QR Code...</p>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="space-y-2">
         <p className="text-sm text-muted-foreground">
           Escaneie o QR Code ou copie o código PIX:
         </p>
         
-        <div className="bg-muted p-3 rounded-lg break-all text-sm font-mono">
-          {pixData?.pixCode}
+        <div className="bg-muted p-3 rounded-lg break-all text-sm font-mono max-h-24 overflow-auto">
+          {pixData?.pixCode || 'Carregando código PIX...'}
         </div>
         
         <Button
           variant="outline"
           onClick={handleCopyPixCode}
           className="w-full"
+          disabled={!pixData?.pixCode}
         >
           {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
           {copied ? 'Copiado!' : 'Copiar Código PIX'}
