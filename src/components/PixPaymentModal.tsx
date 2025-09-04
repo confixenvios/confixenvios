@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { QrCode, Copy, Check, CheckCircle, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 interface PixPaymentModalProps {
@@ -29,8 +30,10 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
   amount, 
   description 
 }) => {
+  const { user } = useAuth();
   const [step, setStep] = useState<'form' | 'qrcode' | 'paid'>('form');
   const [loading, setLoading] = useState(false);
+  const [loadingUserData, setLoadingUserData] = useState(false);
   const [copied, setCopied] = useState(false);
   const [pixData, setPixData] = useState<PixData | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'checking' | 'paid'>('pending');
@@ -40,6 +43,48 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     email: '',
     cpf: ''
   });
+
+  // Carregar dados do usuário automaticamente quando o modal abrir
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (open && user?.id) {
+        setLoadingUserData(true);
+        try {
+          console.log('Carregando dados do usuário:', user.id);
+          
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          if (error) {
+            console.error('Erro ao carregar perfil:', error);
+            return;
+          }
+
+          if (profile) {
+            console.log('Dados do perfil carregados:', profile);
+            
+            setFormData({
+              name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || '',
+              phone: profile.phone || '',
+              email: profile.email || user.email || '',
+              cpf: profile.document || ''
+            });
+            
+            toast.success('Dados carregados do seu perfil!');
+          }
+        } catch (error) {
+          console.error('Erro ao buscar dados do usuário:', error);
+        } finally {
+          setLoadingUserData(false);
+        }
+      }
+    };
+
+    loadUserData();
+  }, [open, user?.id, user?.email]);
 
   const formatCPF = (value: string) => {
     const numbers = value.replace(/\D/g, '');
@@ -199,6 +244,24 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
 
   const renderForm = () => (
     <div className="space-y-4">
+      {loadingUserData && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+          <p className="text-sm text-blue-800 dark:text-blue-200 flex items-center gap-2">
+            <Clock className="h-4 w-4 animate-spin" />
+            Carregando seus dados do perfil...
+          </p>
+        </div>
+      )}
+      
+      {user && !loadingUserData && formData.name && (
+        <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+          <p className="text-sm text-green-800 dark:text-green-200 flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" />
+            Dados preenchidos automaticamente do seu perfil
+          </p>
+        </div>
+      )}
+      
       <div>
         <Label htmlFor="name">Nome Completo</Label>
         <Input
@@ -206,6 +269,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
           value={formData.name}
           onChange={(e) => handleInputChange('name', e.target.value)}
           placeholder="Seu nome completo"
+          disabled={loadingUserData}
         />
       </div>
 
@@ -217,6 +281,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
           value={formData.email}
           onChange={(e) => handleInputChange('email', e.target.value)}
           placeholder="seu@email.com"
+          disabled={loadingUserData}
         />
       </div>
 
@@ -228,6 +293,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
           onChange={(e) => handleInputChange('phone', e.target.value)}
           placeholder="(11) 99999-9999"
           maxLength={15}
+          disabled={loadingUserData}
         />
       </div>
 
@@ -239,6 +305,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
           onChange={(e) => handleInputChange('cpf', e.target.value)}
           placeholder="000.000.000-00"
           maxLength={14}
+          disabled={loadingUserData}
         />
       </div>
 
@@ -252,9 +319,9 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
       <Button 
         onClick={handleCreateQRCode} 
         className="w-full"
-        disabled={loading}
+        disabled={loading || loadingUserData}
       >
-        {loading ? 'Gerando QR Code...' : 'Gerar QR Code PIX'}
+        {loading ? 'Gerando QR Code...' : loadingUserData ? 'Carregando dados...' : 'Gerar QR Code PIX'}
       </Button>
     </div>
   );
