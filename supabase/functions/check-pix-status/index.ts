@@ -78,7 +78,13 @@ serve(async (req) => {
     }
 
     const statusData = await statusResponse.json();
-    console.log('✅ Status data:', JSON.stringify(statusData, null, 2));
+    console.log('📊 Status data received:', JSON.stringify(statusData, null, 2));
+
+    // Log the raw API response for debugging
+    console.log('🔍 Raw API Response Structure:');
+    console.log('- Has data property:', 'data' in statusData);
+    console.log('- Status value:', statusData.data?.status || statusData.status);
+    console.log('- Full object keys:', Object.keys(statusData));
 
     const paymentData = statusData.data || statusData;
     
@@ -87,10 +93,15 @@ serve(async (req) => {
                    paymentData.status === 'PAID' || 
                    paymentData.status === 'APPROVED' ||
                    paymentData.status === 'SUCCESS' ||
+                   paymentData.status === 'CONFIRMED' ||
                    paymentData.paid === true ||
                    paymentData.completed === true;
 
-    console.log(`💰 Payment status: ${paymentData.status}, isPaid: ${isPaid}`);
+    console.log(`💰 Payment Analysis:`);
+    console.log(`- Status: "${paymentData.status}"`);
+    console.log(`- Paid field: ${paymentData.paid}`);
+    console.log(`- Completed field: ${paymentData.completed}`);
+    console.log(`- Final isPaid result: ${isPaid}`);
 
     return new Response(
       JSON.stringify({

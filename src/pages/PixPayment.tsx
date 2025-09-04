@@ -196,11 +196,11 @@ const PixPayment = () => {
   };
 
   const handleManualCheck = async () => {
-    if (!paymentIntent?.paymentId || isCheckingPayment) return;
+    if (!paymentIntent?.paymentId) return;
     
     try {
       setIsCheckingPayment(true);
-      console.log('🔍 Verificação manual do PIX iniciada:', paymentIntent.paymentId);
+      console.log('🔍 Verificação manual iniciada para:', paymentIntent.paymentId);
       
       toast({
         title: "Verificando pagamento...",
@@ -211,7 +211,7 @@ const PixPayment = () => {
         body: { paymentId: paymentIntent.paymentId }
       });
 
-      console.log('📊 Verificação manual - response:', { data, error });
+      console.log('📊 Verificação manual - response completa:', { data, error });
 
       if (error) {
         console.error('❌ Erro na verificação manual:', error);
@@ -223,42 +223,74 @@ const PixPayment = () => {
         return;
       }
 
-      if (data?.success && data?.isPaid) {
-        console.log('🎉 PIX confirmado manualmente! Redirecionando...');
-        setPaymentStatus('PAID');
+      if (data?.success) {
+        console.log('✅ Dados recebidos - Status:', data.status, 'isPaid:', data.isPaid);
         
-        toast({
-          title: "Pagamento confirmado!",
-          description: "PIX processado com sucesso. Redirecionando..."
-        });
-        
-        // Redirecionar para tela de sucesso
-        navigate('/pix-sucesso', {
-          state: {
-            paymentId: paymentIntent.paymentId,
-            amount,
-            shipmentData
-          }
-        });
+        if (data.isPaid) {
+          console.log('🎉 PIX confirmado manualmente! Redirecionando...');
+          setPaymentStatus('PAID');
+          
+          toast({
+            title: "Pagamento confirmado!",
+            description: "PIX processado com sucesso. Redirecionando..."
+          });
+          
+          // Redirecionar para tela de sucesso
+          navigate('/pix-sucesso', {
+            state: {
+              paymentId: paymentIntent.paymentId,
+              amount,
+              shipmentData
+            }
+          });
+        } else {
+          console.log('⏳ PIX ainda não foi pago segundo a API');
+          toast({
+            title: "PIX ainda pendente",
+            description: `Status atual: ${data.status}. Tente novamente em alguns instantes.`,
+            variant: "destructive"
+          });
+        }
       } else {
-        console.log(`⏳ Verificação manual - PIX não pago. Status: ${data?.status}`);
+        console.error('❌ Resposta inválida da verificação:', data);
         toast({
-          title: "PIX ainda não processado",
-          description: "O pagamento ainda não foi confirmado. Tente novamente em alguns segundos.",
-          variant: "default"
+          title: "Erro na verificação",
+          description: "Resposta inválida da API de verificação.",
+          variant: "destructive"
         });
       }
       
     } catch (error) {
       console.error('💥 Erro na verificação manual:', error);
       toast({
-        title: "Erro interno",
-        description: "Erro ao processar verificação manual.",
+        title: "Erro",
+        description: "Erro interno ao verificar status.",
         variant: "destructive"
       });
     } finally {
       setIsCheckingPayment(false);
     }
+  };
+
+  // Função temporária para simular pagamento pago (para teste)
+  const simulatePaymentPaid = () => {
+    console.log('🧪 SIMULANDO PAGAMENTO PAGO - Para teste apenas');
+    
+    toast({
+      title: "Simulando pagamento pago",
+      description: "Testando o fluxo de sucesso..."
+    });
+    
+    setPaymentStatus('PAID');
+    
+    // Simular redirecionamento
+    navigate('/pix-sucesso', {
+      state: {
+        paymentId: paymentIntent?.paymentId || 'test-payment-id',
+        amount,
+        shipmentData
+      }
+    });
   };
 
   const formatTime = (seconds: number) => {
@@ -407,21 +439,32 @@ const PixPayment = () => {
                 )}
               </div>
               
-              <Button 
-                variant="outline" 
-                onClick={handleManualCheck}
-                disabled={isCheckingPayment}
-                className="w-full"
-              >
-                {isCheckingPayment ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                    Verificando...
-                  </>
-                ) : (
-                  'Já Paguei - Verificar Status'
-                )}
-              </Button>
+              <div className="space-y-3">
+                <Button 
+                  variant="outline" 
+                  onClick={handleManualCheck}
+                  disabled={isCheckingPayment}
+                  className="w-full"
+                >
+                  {isCheckingPayment ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                      Verificando...
+                    </>
+                  ) : (
+                    'Já Paguei - Verificar Status'
+                  )}
+                </Button>
+
+                {/* Botão temporário para testar fluxo */}
+                <Button 
+                  onClick={simulatePaymentPaid}
+                  variant="default"
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  🧪 TESTAR: Simular PIX Pago
+                </Button>
+              </div>
               
               <p className="text-xs text-muted-foreground">
                 O sistema verifica automaticamente o pagamento a cada 5 segundos
