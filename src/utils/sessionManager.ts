@@ -36,19 +36,64 @@ export class SessionManager {
   }
 
   /**
-   * Validate session with server-side security
+   * Validate session with enhanced security monitoring
    */
   private static async validateSession(sessionToken: string): Promise<boolean> {
     try {
-      // Use RPC to validate session without exposing internal logic
-      const { data, error } = await supabase.rpc('validate_anonymous_session', {
-        session_token: sessionToken
+      // Get client IP for security monitoring
+      const clientIP = await this.getClientIP();
+      
+      // Use enhanced RPC with security monitoring
+      const { data, error } = await supabase.rpc('validate_session_with_security_monitoring', {
+        session_token: sessionToken,
+        client_ip: clientIP
       });
       
       return !error && data !== null;
     } catch (error) {
       console.error('Session validation error:', error);
+      // Log security incident for failed validations
+      this.logSecurityIncident('session_validation_failed', {
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
       return false;
+    }
+  }
+
+  /**
+   * Get client IP address for security monitoring
+   */
+  private static async getClientIP(): Promise<string> {
+    try {
+      // Try to get IP from various sources
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip || 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  }
+
+  /**
+   * Log security incidents
+   */
+  private static async logSecurityIncident(incident: string, details: any): Promise<void> {
+    try {
+      await supabase.from('webhook_logs').insert({
+        event_type: 'security_incident',
+        shipment_id: 'session_manager',
+        payload: {
+          incident,
+          details,
+          user_agent: navigator.userAgent,
+          timestamp: new Date().toISOString()
+        },
+        response_status: 400,
+        response_body: { status: 'security_incident_logged' }
+      });
+    } catch (error) {
+      console.error('Failed to log security incident:', error);
     }
   }
 

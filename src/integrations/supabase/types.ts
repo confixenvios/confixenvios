@@ -773,6 +773,10 @@ export type Database = {
         Args: { client_ip?: string; session_token: string }
         Returns: string
       }
+      validate_session_with_security_monitoring: {
+        Args: { client_ip?: string; session_token: string }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "user"

@@ -1,9 +1,61 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Security configuration
+const MAX_REQUESTS_PER_IP = 5; // Max requests per IP per hour
+const MAX_AMOUNT = 50000; // R$ 50,000 maximum
+const MIN_AMOUNT = 1; // R$ 1 minimum
+
+// Input validation functions
+function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && email.length <= 254;
+}
+
+function validateCPF(cpf: string): boolean {
+  const cleanCpf = cpf.replace(/\D/g, '');
+  if (cleanCpf.length !== 11) return false;
+  
+  // Check for invalid patterns
+  const invalidPatterns = ['00000000000', '11111111111', '22222222222', 
+                          '33333333333', '44444444444', '55555555555',
+                          '66666666666', '77777777777', '88888888888', '99999999999'];
+  if (invalidPatterns.includes(cleanCpf)) return false;
+  
+  return true;
+}
+
+function validatePhone(phone: string): boolean {
+  const cleanPhone = phone.replace(/\D/g, '');
+  return cleanPhone.length >= 10 && cleanPhone.length <= 11;
+}
+
+function sanitizeString(input: string, maxLength: number = 255): string {
+  return input
+    .replace(/[<>\"'&\x00-\x1f\x7f-\x9f]/g, '') // Remove dangerous chars
+    .trim()
+    .substring(0, maxLength);
+}
+
+async function checkRateLimit(supabase: any, clientIP: string): Promise<void> {
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  
+  const { data, error } = await supabase
+    .from('webhook_logs')
+    .select('id')
+    .eq('event_type', 'pix_payment_request')
+    .gte('created_at', oneHourAgo)
+    .contains('payload', { client_ip: clientIP });
+  
+  if (!error && data && data.length >= MAX_REQUESTS_PER_IP) {
+    throw new Error(`Rate limit exceeded. Maximum ${MAX_REQUESTS_PER_IP} requests per hour per IP.`);
+  }
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -11,168 +63,163 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const clientIP = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+  const userAgent = req.headers.get("user-agent") || "unknown";
+  
+  // Create Supabase client for logging and rate limiting
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false } }
+  );
+
   try {
-    const { name, phone, email, cpf, amount, description, userId } = await req.json();
+    const requestData = await req.json();
+    const { name, phone, email, cpf, amount, description, userId } = requestData;
 
-    console.log('=== INÍCIO DEBUG PIX ===');
-    console.log('Dados recebidos:', { name, phone, email, cpf, amount, description, userId });
-    console.log('Headers da requisição:', Object.fromEntries(req.headers.entries()));
+    console.log('=== SECURITY ENHANCED PIX REQUEST ===');
+    console.log('Client IP:', clientIP);
+    console.log('User Agent:', userAgent);
+    console.log('Request validation starting...');
+
+    // Rate limiting check
+    await checkRateLimit(supabase, clientIP);
     
-    // Validar campos obrigatórios
+    // Comprehensive input validation
     if (!name || !phone || !email || !cpf || !amount) {
-      console.error('Campos obrigatórios faltando:', { 
-        hasName: !!name,
-        hasPhone: !!phone, 
-        hasEmail: !!email,
-        hasCpf: !!cpf,
-        hasAmount: !!amount
-      });
-      return new Response(
-        JSON.stringify({ error: 'Todos os campos são obrigatórios' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+      console.error('Missing required fields');
+      throw new Error('Todos os campos são obrigatórios');
     }
 
-    // Obter chave da API do Abacate Pay
+    // Validate and sanitize inputs
+    const sanitizedName = sanitizeString(name, 100);
+    const sanitizedEmail = sanitizeString(email, 254).toLowerCase();
+    const sanitizedDescription = description ? sanitizeString(description, 500) : 'Pagamento PIX';
+    
+    if (!validateEmail(sanitizedEmail)) {
+      throw new Error('Email inválido');
+    }
+    
+    if (!validateCPF(cpf)) {
+      throw new Error('CPF inválido');
+    }
+    
+    if (!validatePhone(phone)) {
+      throw new Error('Telefone inválido');
+    }
+    
+    if (typeof amount !== 'number' || amount < MIN_AMOUNT || amount > MAX_AMOUNT) {
+      throw new Error(`Valor deve estar entre R$ ${MIN_AMOUNT} e R$ ${MAX_AMOUNT.toLocaleString('pt-BR')}`);
+    }
+
+    // Log the request for monitoring
+    await supabase.from('webhook_logs').insert({
+      event_type: 'pix_payment_request',
+      shipment_id: userId || 'anonymous',
+      payload: {
+        client_ip: clientIP,
+        user_agent: userAgent,
+        amount: amount,
+        timestamp: new Date().toISOString()
+      },
+      response_status: 200,
+      response_body: { status: 'request_logged' }
+    });
+
+    // Get API key
     const abacateApiKey = Deno.env.get('ABACATE_PAY_API_KEY');
-    console.log('Tentando obter ABACATE_PAY_API_KEY...');
-    console.log('Variáveis de ambiente disponíveis:', Object.keys(Deno.env.toObject()));
-    
     if (!abacateApiKey) {
-      console.error('ERRO CRÍTICO: API Key não encontrada nas variáveis de ambiente');
-      return new Response(
-        JSON.stringify({ error: 'Chave da API não configurada - verifique as secrets do Supabase' }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+      console.error('ABACATE_PAY_API_KEY not found');
+      throw new Error('Configuração de pagamento não encontrada');
     }
     
-    console.log('✓ API Key encontrada:', abacateApiKey.substring(0, 12) + '...');
-    console.log('✓ Tipo de API Key:', abacateApiKey.includes('prod') ? 'PRODUÇÃO ✓' : 'DESENVOLVIMENTO ⚠️');
+    console.log('✓ API Key found, type:', abacateApiKey.includes('prod') ? 'PRODUCTION' : 'DEVELOPMENT');
 
-    // Limpar e validar dados
+    // Clean and format data
     const cleanPhone = phone.replace(/\D/g, '');
     const cleanCpf = cpf.replace(/\D/g, '');
     
-    console.log('Dados recebidos para processamento:', { 
-      name: name.trim(), 
-      email: email.trim().toLowerCase(), 
-      cleanPhone, 
-      cleanCpf, 
-      amount 
-    });
-    
-    // Validar CPF
-    if (cleanCpf.length !== 11) {
-      console.error('CPF inválido - deve ter 11 dígitos:', cleanCpf);
-      return new Response(
-        JSON.stringify({ error: 'CPF deve ter 11 dígitos' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    // Validar telefone
-    if (cleanPhone.length < 10 || cleanPhone.length > 11) {
-      console.error('Telefone inválido:', cleanPhone);
-      return new Response(
-        JSON.stringify({ error: 'Telefone deve ter 10 ou 11 dígitos' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    // Formatar telefone corretamente para Abacate Pay (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+    // Format phone number correctly for Abacate Pay
     const formattedPhone = cleanPhone.length === 11 
-      ? cleanPhone.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3')  // (11) 99999-9999
-      : cleanPhone.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');  // (11) 9999-9999
+      ? cleanPhone.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3')
+      : cleanPhone.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
 
-    // Payload conforme documentação oficial do Abacate Pay
+    // Create secure payload
     const pixPayload = {
-      amount: Math.round(amount * 100), // Centavos
-      expiresIn: 1800, // 30 minutos (obrigatório)
-      description: description || 'Pagamento PIX',
+      amount: Math.round(amount * 100), // Convert to cents
+      expiresIn: 1800, // 30 minutes
+      description: sanitizedDescription,
       customer: {
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        cellphone: formattedPhone, // Formato brasileiro: (XX) XXXXX-XXXX
-        taxId: cleanCpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') // XXX.XXX.XXX-XX
+        name: sanitizedName,
+        email: sanitizedEmail,
+        cellphone: formattedPhone,
+        taxId: cleanCpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
       },
       metadata: {
-        externalId: `shipment_${Date.now()}`,
-        userId: userId || 'anonymous'
+        externalId: `secure_shipment_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        userId: userId || 'anonymous',
+        clientIP: clientIP
       }
     };
 
-    console.log('✅ PIX payload final:', JSON.stringify(pixPayload, null, 2));
+    console.log('✅ Secure payload created, making API request...');
 
-    // Chamar API do Abacate Pay
-    console.log('🚀 Fazendo requisição para Abacate Pay...');
+    // Call Abacate Pay API
     const abacateResponse = await fetch('https://api.abacatepay.com/v1/pixQrCode/create', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${abacateApiKey}`,
         'Content-Type': 'application/json',
+        'User-Agent': 'ConFix-Secure-API/1.0'
       },
       body: JSON.stringify(pixPayload)
     });
 
-    console.log('📊 Status da resposta Abacate:', abacateResponse.status);
-    console.log('📋 Headers da resposta:', Object.fromEntries(abacateResponse.headers.entries()));
+    console.log('📊 Abacate API response status:', abacateResponse.status);
 
     if (!abacateResponse.ok) {
       const errorText = await abacateResponse.text();
-      console.error('Erro da API Abacate Pay - Status:', abacateResponse.status);
-      console.error('Erro da API Abacate Pay - Response:', errorText);
+      console.error('Abacate API error:', errorText);
       
-      let errorMessage = 'Erro ao processar pagamento PIX';
-      try {
-        const errorData = JSON.parse(errorText);
-        errorMessage = errorData.message || errorData.error || errorMessage;
-      } catch (e) {
-        // Se não conseguir fazer parse do JSON, usar mensagem padrão
-      }
+      // Log the error securely (without exposing sensitive data)
+      await supabase.from('webhook_logs').insert({
+        event_type: 'pix_api_error',
+        shipment_id: userId || 'anonymous',
+        payload: {
+          status: abacateResponse.status,
+          client_ip: clientIP,
+          error_type: 'abacate_api_failure'
+        },
+        response_status: abacateResponse.status,
+        response_body: { error: 'API request failed' }
+      });
       
-      return new Response(
-        JSON.stringify({ 
-          error: errorMessage,
-          details: errorText,
-          status: abacateResponse.status 
-        }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+      throw new Error('Erro ao processar pagamento PIX. Tente novamente.');
     }
 
     const pixData = await abacateResponse.json();
-    console.log('Resposta completa do Abacate:', JSON.stringify(pixData, null, 2));
-
-    // Acessar os dados da resposta
     const responseData = pixData.data || pixData;
 
-    if (!responseData) {
-      console.error('Dados não encontrados na resposta:', pixData);
-      return new Response(
-        JSON.stringify({ error: 'Resposta inválida da API' }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+    if (!responseData || !responseData.brCode) {
+      console.error('Invalid API response structure');
+      throw new Error('Resposta inválida da API de pagamento');
     }
 
-    console.log('Dados de resposta extraídos:', responseData);
+    console.log('✅ PIX payment created successfully');
+
+    // Log successful payment creation
+    await supabase.from('webhook_logs').insert({
+      event_type: 'pix_payment_created',
+      shipment_id: userId || 'anonymous',
+      payload: {
+        payment_id: responseData.id,
+        amount: amount,
+        client_ip: clientIP,
+        success: true
+      },
+      response_status: 200,
+      response_body: { status: 'pix_created' }
+    });
 
     return new Response(
       JSON.stringify({
@@ -190,15 +237,37 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Erro interno completo:', error);
-    console.error('Stack trace:', error.stack);
+    console.error('PIX payment error:', error.message);
+    
+    // Log the error for monitoring
+    try {
+      await supabase.from('webhook_logs').insert({
+        event_type: 'pix_payment_error',
+        shipment_id: 'error',
+        payload: {
+          error: error.message,
+          client_ip: clientIP,
+          user_agent: userAgent,
+          timestamp: new Date().toISOString()
+        },
+        response_status: 500,
+        response_body: { error: 'Internal error' }
+      });
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
+    
     return new Response(
       JSON.stringify({ 
-        error: 'Erro interno do servidor',
-        details: error.message 
+        error: error.message.includes('Rate limit') || 
+               error.message.includes('inválido') || 
+               error.message.includes('obrigatórios') || 
+               error.message.includes('Valor deve') 
+               ? error.message 
+               : 'Erro interno do servidor. Tente novamente.'
       }),
       { 
-        status: 500, 
+        status: error.message.includes('Rate limit') ? 429 : 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
