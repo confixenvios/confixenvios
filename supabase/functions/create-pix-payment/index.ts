@@ -193,21 +193,14 @@ serve(async (req) => {
 
     console.log('🎉 PIX payment created successfully');
 
-    // Determinar qual campo contém a imagem base64
-    let qrCodeImage = null;
-    if (pixData.qrCodeBase64) {
-      qrCodeImage = `data:image/png;base64,${pixData.qrCodeBase64}`;
-      console.log('📱 QR Code usando qrCodeBase64');
-    } else if (pixData.brCodeBase64) {
-      qrCodeImage = `data:image/png;base64,${pixData.brCodeBase64}`;
-      console.log('📱 QR Code usando brCodeBase64');
-    } else if (pixData.qrcode) {
-      qrCodeImage = `data:image/png;base64,${pixData.qrcode}`;
-      console.log('📱 QR Code usando qrcode');
-    } else {
-      console.log('⚠️ Nenhuma imagem QR Code encontrada nos campos: qrCodeBase64, brCodeBase64, qrcode');
-      console.log('🔍 Campos disponíveis:', Object.keys(pixData));
-    }
+    // Usar brCodeBase64 diretamente da resposta (já vem com data:image/png;base64)
+    const qrCodeImage = pixData.brCodeBase64 || null;
+    
+    console.log('📱 QR Code info:', {
+      brCodeBase64_available: !!pixData.brCodeBase64,
+      brCodeBase64_length: pixData.brCodeBase64?.length || 0,
+      brCodeBase64_prefix: pixData.brCodeBase64?.substring(0, 30) || 'N/A'
+    });
 
     const responseData = {
       success: true,
