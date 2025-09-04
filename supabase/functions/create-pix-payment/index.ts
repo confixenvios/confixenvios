@@ -54,8 +54,8 @@ serve(async (req) => {
       customer: {
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        cellphone: phone.replace(/\D/g, ''), // Remove formatação do telefone
-        taxId: cpf.replace(/\D/g, '') // Remove formatação do CPF
+        cellphone: phone.replace(/\D/g, '').replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3'), // Formatar telefone
+        taxId: cpf.replace(/\D/g, '').replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') // Formatar CPF
       },
       metadata: {
         externalId: `pix_${Date.now()}`,

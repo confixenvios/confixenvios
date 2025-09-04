@@ -47,7 +47,15 @@ const PixPayment = () => {
       setIsLoading(true);
       
       const { data, error } = await supabase.functions.invoke('create-pix-payment', {
-        body: { amount, shipmentData }
+        body: { 
+          name: "Kennedy Oliveira",
+          phone: "62999191438",
+          email: "ksobrgo@gmail.com", 
+          cpf: "062.623.400-09",
+          amount,
+          description: `Frete - Envio de ${shipmentData?.weight || 0}kg`,
+          userId: "028fb887-ae40-4501-b6c8-8727c8834682"
+        }
       });
 
       if (error) {
