@@ -4,9 +4,91 @@ import { Truck, Clock, Shield, Zap, Package, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const [isTestingShipment, setIsTestingShipment] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // Função de teste para simular criação de remessa
+  const testShipmentCreation = async () => {
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar logado para testar.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setIsTestingShipment(true);
+      console.log('🧪 TESTE: Iniciando criação de remessa simulada');
+
+      // Dados simulados para teste
+      const testShipmentData = {
+        user_id: user.id,
+        sender_address_id: null,
+        recipient_address_id: null,
+        weight: 1,
+        length: 20,
+        width: 15,
+        height: 10,
+        format: 'package',
+        pickup_option: 'collection',
+        selected_option: 'standard',
+        quote_data: {
+          totalPrice: 10,
+          test: true
+        },
+        payment_data: {
+          method: 'pix',
+          payment_id: 'test_' + Date.now(),
+          amount: 10,
+          confirmed_at: new Date().toISOString()
+        },
+        status: 'PAYMENT_CONFIRMED'
+      };
+
+      console.log('🧪 TESTE: Dados da remessa:', testShipmentData);
+
+      const { data: newShipment, error: shipmentError } = await supabase
+        .from('shipments')
+        .insert(testShipmentData)
+        .select()
+        .single();
+
+      if (shipmentError) {
+        console.error('🧪 TESTE: Erro ao criar remessa:', shipmentError);
+        throw shipmentError;
+      }
+
+      console.log('🧪 TESTE: Remessa criada com sucesso:', newShipment);
+      
+      toast({
+        title: "✅ Teste Concluído!",
+        description: `Remessa de teste criada: ID ${newShipment.id}`,
+      });
+
+      // Redirecionar para remessas
+      navigate('/cliente/remessas');
+
+    } catch (error) {
+      console.error('🧪 TESTE: Erro:', error);
+      toast({
+        title: "❌ Teste Falhou",
+        description: "Erro ao criar remessa de teste: " + error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsTestingShipment(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -34,6 +116,30 @@ const Index = () => {
               rapidez e economia
             </span>
           </h1>
+          
+          {/* Botão de Teste para DEBUG */}
+          {user && (
+            <div className="mb-6">
+              <Button
+                onClick={testShipmentCreation}
+                disabled={isTestingShipment}
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-3"
+              >
+                {isTestingShipment ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    Testando...
+                  </>
+                ) : (
+                  '🧪 TESTE: Criar Remessa Simulada'
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                Botão de teste para verificar se o fluxo de criação de remessa funciona
+              </p>
+            </div>
+          )}
+          
           <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-8 sm:mb-12 md:mb-16 max-w-3xl mx-auto px-2">
             O melhor preço, o menor prazo e a máxima segurança para suas entregas.
           </p>
