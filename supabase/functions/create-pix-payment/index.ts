@@ -81,8 +81,8 @@ serve(async (req) => {
       customer: {
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        cellphone: formattedPhone, 
-        taxId: formattedCpf
+        cellphone: cleanPhone, // Usar telefone sem formatação
+        taxId: cleanCpf // Usar CPF sem formatação
       },
       metadata: {
         externalId: `pix_${Date.now()}`,
