@@ -14,6 +14,8 @@ const PixPayment = () => {
   const [paymentIntent, setPaymentIntent] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
+  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState('PENDING');
   
   // Get payment data from location state
   const { amount, shipmentData } = location.state || {};
@@ -41,6 +43,17 @@ const PixPayment = () => {
 
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    // Polling para verificar status do pagamento
+    if (!paymentIntent?.paymentId) return;
+    
+    const pollInterval = setInterval(async () => {
+      await checkPaymentStatus();
+    }, 5000); // Verifica a cada 5 segundos
+
+    return () => clearInterval(pollInterval);
+  }, [paymentIntent?.paymentId]);
 
   const createPixPayment = async () => {
     try {
@@ -123,6 +136,57 @@ const PixPayment = () => {
       title: "Código PIX copiado!",
       description: "Cole no seu app do banco para realizar o pagamento."
     });
+  };
+
+  const checkPaymentStatus = async () => {
+    if (!paymentIntent?.paymentId || isCheckingPayment) return;
+    
+    try {
+      setIsCheckingPayment(true);
+      console.log('Verificando status do PIX:', paymentIntent.paymentId);
+      
+      const { data, error } = await supabase.functions.invoke('check-pix-status', {
+        body: { paymentId: paymentIntent.paymentId }
+      });
+
+      if (error) {
+        console.error('Erro ao verificar status PIX:', error);
+        return;
+      }
+
+      console.log('Status PIX response:', data);
+      
+      if (data?.success && data?.isPaid) {
+        console.log('PIX foi pago! Redirecionando...');
+        setPaymentStatus('PAID');
+        
+        // Redirecionar para tela de sucesso
+        navigate('/pix-sucesso', {
+          state: {
+            paymentId: paymentIntent.paymentId,
+            amount,
+            shipmentData
+          }
+        });
+      }
+      
+    } catch (error) {
+      console.error('Erro ao verificar status:', error);
+    } finally {
+      setIsCheckingPayment(false);
+    }
+  };
+
+  const handleManualCheck = async () => {
+    await checkPaymentStatus();
+    
+    if (paymentStatus !== 'PAID') {
+      toast({
+        title: "Aguardando Pagamento",
+        description: "PIX ainda não foi confirmado. Aguarde alguns instantes após o pagamento.",
+        variant: "default"
+      });
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -258,17 +322,38 @@ const PixPayment = () => {
         <Card className="border-border/50">
           <CardContent className="pt-6">
             <div className="text-center space-y-3">
-              <div className="animate-pulse text-sm text-muted-foreground">
-                Aguardando confirmação do pagamento...
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                {isCheckingPayment ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    Verificando pagamento...
+                  </>
+                ) : (
+                  <>
+                    <div className="animate-pulse">Aguardando confirmação do pagamento...</div>
+                  </>
+                )}
               </div>
               
               <Button 
                 variant="outline" 
-                onClick={() => window.location.href = 'https://confixenvios.com.br/pagamento-sucesso'}
+                onClick={handleManualCheck}
+                disabled={isCheckingPayment}
                 className="w-full"
               >
-                Já Paguei - Verificar Status
+                {isCheckingPayment ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Verificando...
+                  </>
+                ) : (
+                  'Já Paguei - Verificar Status'
+                )}
               </Button>
+              
+              <p className="text-xs text-muted-foreground">
+                O sistema verifica automaticamente o pagamento a cada 5 segundos
+              </p>
             </div>
           </CardContent>
         </Card>
