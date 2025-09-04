@@ -44,7 +44,6 @@ import AdminWebhooks from "./pages/admin/AdminWebhooks";
 import AdminWebhookLogs from "./pages/admin/AdminWebhookLogs";
 import AdminTestarTabela from "./pages/admin/AdminTestarTabela";
 import AdminDocsIntegracao from "./pages/admin/AdminDocsIntegracao";
-import AdminAuth from "./pages/admin/AdminAuth";
 import MotoristaAuth from "./pages/motorista/MotoristaAuth";
 import MotoristaDashboard from "./pages/motorista/MotoristaDashboard";
 

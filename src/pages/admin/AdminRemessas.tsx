@@ -81,9 +81,17 @@ const AdminRemessas = () => {
       const shipmentsWithDetails = (data || []).map((shipment) => ({
         id: shipment.id,
         tracking_code: shipment.tracking_code,
-        client_name: shipment.profiles && typeof shipment.profiles === 'object'
-          ? `${shipment.profiles.first_name || ''} ${shipment.profiles.last_name || ''}`.trim() || shipment.profiles.email || 'Cliente Anônimo'
-          : 'Cliente Anônimo',
+        client_name: (() => {
+          const profile = shipment.profiles;
+          if (profile && typeof profile === 'object') {
+            const firstName = (profile as any).first_name || '';
+            const lastName = (profile as any).last_name || '';
+            const email = (profile as any).email || '';
+            const fullName = `${firstName} ${lastName}`.trim();
+            return fullName || email || 'Cliente Anônimo';
+          }
+          return 'Cliente Anônimo';
+        })(),
         sender_address: shipment.sender_address ? {
           cep: shipment.sender_address.cep,
           city: shipment.sender_address.city,
