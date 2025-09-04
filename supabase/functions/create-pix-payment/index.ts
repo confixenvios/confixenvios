@@ -110,7 +110,8 @@ serve(async (req) => {
         qrCodeImage: responseData.brCodeBase64,
         paymentId: responseData.id,
         amount: amount,
-        expiresAt: responseData.expiresAt
+        expiresAt: responseData.expiresAt,
+        webhookUrl: `${Deno.env.get('SUPABASE_URL')}/functions/v1/abacate-webhook`
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

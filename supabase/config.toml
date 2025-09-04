@@ -12,6 +12,12 @@ verify_jwt = false
 [functions.create-pix-payment]
 verify_jwt = false
 
+[functions.check-pix-status]
+verify_jwt = false
+
+[functions.abacate-webhook]
+verify_jwt = false
+
 [functions.send-custom-email]
 verify_jwt = false
 
