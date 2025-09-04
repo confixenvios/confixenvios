@@ -113,9 +113,10 @@ serve(async (req) => {
       }
     };
 
-    console.log('PIX payload formatado:', JSON.stringify(pixPayload, null, 2));
+    console.log('✅ PIX payload final:', JSON.stringify(pixPayload, null, 2));
 
     // Chamar API do Abacate Pay
+    console.log('🚀 Fazendo requisição para Abacate Pay...');
     const abacateResponse = await fetch('https://api.abacatepay.com/v1/pixQrCode/create', {
       method: 'POST',
       headers: {
@@ -125,7 +126,8 @@ serve(async (req) => {
       body: JSON.stringify(pixPayload)
     });
 
-    console.log('Status da resposta Abacate:', abacateResponse.status);
+    console.log('📊 Status da resposta Abacate:', abacateResponse.status);
+    console.log('📋 Headers da resposta:', Object.fromEntries(abacateResponse.headers.entries()));
 
     if (!abacateResponse.ok) {
       const errorText = await abacateResponse.text();
