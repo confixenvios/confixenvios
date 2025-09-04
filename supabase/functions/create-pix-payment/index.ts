@@ -1,13 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -18,10 +14,11 @@ serve(async (req) => {
   try {
     const { name, phone, email, cpf, amount, description, userId } = await req.json();
 
-    console.log('Creating PIX payment:', { name, phone, email, cpf, amount, description, userId });
+    console.log('Dados recebidos:', { name, phone, email, cpf, amount, description, userId });
 
     // Validar campos obrigatórios
     if (!name || !phone || !email || !cpf || !amount) {
+      console.error('Campos obrigatórios faltando:', { name, phone, email, cpf, amount });
       return new Response(
         JSON.stringify({ error: 'Todos os campos são obrigatórios' }),
         { 
@@ -46,6 +43,10 @@ serve(async (req) => {
     
     console.log('API Key configurada:', abacateApiKey.substring(0, 8) + '...');
 
+    // Formatar os dados corretamente
+    const formattedPhone = phone.replace(/\D/g, '').replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3');
+    const formattedCpf = cpf.replace(/\D/g, '').replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+
     // Criar pagamento PIX via Abacate Pay
     const pixPayload = {
       amount: Math.round(amount * 100), // Converter reais para centavos
@@ -54,8 +55,8 @@ serve(async (req) => {
       customer: {
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        cellphone: phone.replace(/\D/g, '').replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3'), // Formatar telefone
-        taxId: cpf.replace(/\D/g, '').replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') // Formatar CPF
+        cellphone: formattedPhone, 
+        taxId: formattedCpf
       },
       metadata: {
         externalId: `pix_${Date.now()}`,
@@ -63,7 +64,7 @@ serve(async (req) => {
       }
     };
 
-    console.log('PIX payload:', pixPayload);
+    console.log('PIX payload formatado:', JSON.stringify(pixPayload, null, 2));
 
     // Chamar API do Abacate Pay
     const abacateResponse = await fetch('https://api.abacatepay.com/v1/pixQrCode/create', {
@@ -75,11 +76,12 @@ serve(async (req) => {
       body: JSON.stringify(pixPayload)
     });
 
+    console.log('Status da resposta Abacate:', abacateResponse.status);
+
     if (!abacateResponse.ok) {
       const errorText = await abacateResponse.text();
       console.error('Erro da API Abacate Pay - Status:', abacateResponse.status);
       console.error('Erro da API Abacate Pay - Response:', errorText);
-      console.error('Erro da API Abacate Pay - Headers:', Object.fromEntries(abacateResponse.headers.entries()));
       
       let errorMessage = 'Erro ao processar pagamento PIX';
       try {
@@ -103,10 +105,23 @@ serve(async (req) => {
     }
 
     const pixData = await abacateResponse.json();
-    console.log('PIX response:', pixData);
+    console.log('Resposta completa do Abacate:', JSON.stringify(pixData, null, 2));
 
     // Acessar os dados da resposta
     const responseData = pixData.data || pixData;
+
+    if (!responseData) {
+      console.error('Dados não encontrados na resposta:', pixData);
+      return new Response(
+        JSON.stringify({ error: 'Resposta inválida da API' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.log('Dados de resposta extraídos:', responseData);
 
     return new Response(
       JSON.stringify({
@@ -124,9 +139,13 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Erro interno:', error);
+    console.error('Erro interno completo:', error);
+    console.error('Stack trace:', error.stack);
     return new Response(
-      JSON.stringify({ error: 'Erro interno do servidor' }),
+      JSON.stringify({ 
+        error: 'Erro interno do servidor',
+        details: error.message 
+      }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

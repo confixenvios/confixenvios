@@ -46,23 +46,36 @@ const PixPayment = () => {
     try {
       setIsLoading(true);
       
+      // Buscar dados do perfil do usuário
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', 'b28911e8-d3f5-4207-bf25-a43a5a3d92ed')
+        .single();
+      
+      const pixData = {
+        name: profile?.first_name && profile?.last_name 
+          ? `${profile.first_name} ${profile.last_name}`
+          : "Cliente",
+        phone: profile?.phone || "62999191438",
+        email: profile?.email || "cliente@example.com",
+        cpf: profile?.document || "000.000.000-00",
+        amount,
+        description: `Frete - Envio de ${shipmentData?.weight || 0}kg`,
+        userId: 'b28911e8-d3f5-4207-bf25-a43a5a3d92ed'
+      };
+
+      console.log('Dados do PIX:', pixData);
+
       const { data, error } = await supabase.functions.invoke('create-pix-payment', {
-        body: { 
-          name: "Kennedy Oliveira",
-          phone: "62999191438",
-          email: "ksobrgo@gmail.com", 
-          cpf: "062.623.400-09",
-          amount,
-          description: `Frete - Envio de ${shipmentData?.weight || 0}kg`,
-          userId: "028fb887-ae40-4501-b6c8-8727c8834682"
-        }
+        body: pixData
       });
 
       if (error) {
         console.error('PIX payment error:', error);
         toast({
           title: "Erro ao gerar PIX",
-          description: "Tente novamente em alguns instantes.",
+          description: error.message || "Tente novamente em alguns instantes.",
           variant: "destructive"
         });
         navigate('/pagamento');
