@@ -29,15 +29,57 @@ serve(async (req) => {
       // Criar client do Supabase com service role
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-      // Buscar dados do shipment temporário (se houver um sistema de cache/sessão)
-      // Por agora vamos criar uma remessa básica com os dados do pagamento
+      // Extrair user_id do metadata se existir
+      const userId = paymentData.metadata?.userId || null;
+      
+      console.log('User ID extraído do pagamento:', userId);
+
+      // Criar endereços temporários para a remessa
+      const tempAddress = {
+        name: paymentData.customer?.name || 'Cliente',
+        street: 'Endereço a ser definido',
+        number: '0',
+        neighborhood: 'Centro',
+        city: 'A definir',
+        state: 'GO',
+        cep: '00000000',
+        address_type: 'residential',
+        user_id: userId
+      };
+
+      // Criar endereço de origem (remetente)
+      const { data: senderAddress, error: senderError } = await supabase
+        .from('addresses')
+        .insert([{ ...tempAddress, address_type: 'commercial' }])
+        .select()
+        .single();
+
+      if (senderError) {
+        console.error('Erro ao criar endereço do remetente:', senderError);
+        throw senderError;
+      }
+
+      // Criar endereço de destino (destinatário)
+      const { data: recipientAddress, error: recipientError } = await supabase
+        .from('addresses')
+        .insert([tempAddress])
+        .select()
+        .single();
+
+      if (recipientError) {
+        console.error('Erro ao criar endereço do destinatário:', recipientError);
+        throw recipientError;
+      }
 
       // Gerar código de rastreamento
       const trackingCode = `TRK-${new Date().getFullYear()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
       // Criar remessa no sistema
       const shipmentData = {
+        user_id: userId, // Associar ao usuário se logado
         tracking_code: trackingCode,
+        sender_address_id: senderAddress.id,
+        recipient_address_id: recipientAddress.id,
         quote_data: {
           paymentMethod: 'pix',
           pixPaymentId: paymentData.id,
@@ -52,7 +94,7 @@ serve(async (req) => {
         width: 20, 
         height: 20,
         format: 'caixa',
-        status: 'PENDING_PICKUP',
+        status: 'PAYMENT_RECEIVED',
         payment_data: {
           method: 'pix',
           status: 'paid',
@@ -80,8 +122,8 @@ serve(async (req) => {
         .from('shipment_status_history')
         .insert([{
           shipment_id: newShipment.id,
-          status: 'PENDING_PICKUP',
-          observacoes: `Pagamento PIX aprovado. Valor: R$ ${(paymentData.amount / 100).toFixed(2)}`
+          status: 'PAYMENT_RECEIVED',
+          observacoes: `Pagamento PIX aprovado. Valor: R$ ${(paymentData.amount / 100).toFixed(2)}. ${userId ? 'Cliente logado.' : 'Cliente anônimo.'}`
         }]);
 
       if (historyError) {

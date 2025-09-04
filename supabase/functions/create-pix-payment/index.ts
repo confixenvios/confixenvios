@@ -1,9 +1,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -12,9 +16,9 @@ serve(async (req) => {
   }
 
   try {
-    const { name, phone, email, cpf, amount, description } = await req.json();
+    const { name, phone, email, cpf, amount, description, userId } = await req.json();
 
-    console.log('Creating PIX payment:', { name, phone, email, cpf, amount, description });
+    console.log('Creating PIX payment:', { name, phone, email, cpf, amount, description, userId });
 
     // Validar campos obrigatórios
     if (!name || !phone || !email || !cpf || !amount) {
@@ -54,7 +58,8 @@ serve(async (req) => {
         taxId: cpf.replace(/\D/g, '') // Remove formatação do CPF
       },
       metadata: {
-        externalId: `pix_${Date.now()}`
+        externalId: `pix_${Date.now()}`,
+        userId: userId || null // Incluir user_id para associar ao cliente
       }
     };
 

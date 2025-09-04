@@ -160,7 +160,8 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
           email: formData.email,
           cpf: formData.cpf,
           amount: amount,
-          description: description || 'Pagamento via PIX'
+          description: description || 'Pagamento via PIX',
+          userId: user?.id || null // Incluir ID do usuário se logado
         }
       });
 
