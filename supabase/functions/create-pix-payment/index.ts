@@ -18,7 +18,13 @@ serve(async (req) => {
 
     // Validar campos obrigatórios
     if (!name || !phone || !email || !cpf || !amount) {
-      console.error('Campos obrigatórios faltando:', { name, phone, email, cpf, amount });
+      console.error('Campos obrigatórios faltando:', { 
+        hasName: !!name,
+        hasPhone: !!phone, 
+        hasEmail: !!email,
+        hasCpf: !!cpf,
+        hasAmount: !!amount
+      });
       return new Response(
         JSON.stringify({ error: 'Todos os campos são obrigatórios' }),
         { 
@@ -44,8 +50,28 @@ serve(async (req) => {
     console.log('API Key configurada:', abacateApiKey.substring(0, 8) + '...');
 
     // Formatar os dados corretamente
-    const formattedPhone = phone.replace(/\D/g, '').replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3');
-    const formattedCpf = cpf.replace(/\D/g, '').replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+    const cleanPhone = phone.replace(/\D/g, '');
+    const cleanCpf = cpf.replace(/\D/g, '');
+    
+    console.log('Dados limpos:', { cleanPhone, cleanCpf });
+    
+    // Validar CPF tem 11 dígitos
+    if (cleanCpf.length !== 11) {
+      console.error('CPF inválido - deve ter 11 dígitos:', cleanCpf);
+      return new Response(
+        JSON.stringify({ error: 'CPF deve ter 11 dígitos' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const formattedPhone = cleanPhone.length === 11 
+      ? cleanPhone.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3')
+      : cleanPhone.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
+    
+    const formattedCpf = cleanCpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
 
     // Criar pagamento PIX via Abacate Pay
     const pixPayload = {

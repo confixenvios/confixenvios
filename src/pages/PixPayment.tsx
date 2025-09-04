@@ -45,54 +45,57 @@ const PixPayment = () => {
   const createPixPayment = async () => {
     try {
       setIsLoading(true);
+      console.log('Iniciando criação do PIX payment...');
       
-      // Buscar dados do perfil do usuário
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', 'b28911e8-d3f5-4207-bf25-a43a5a3d92ed')
-        .single();
-      
+      // Dados fixos para teste
       const pixData = {
-        name: profile?.first_name && profile?.last_name 
-          ? `${profile.first_name} ${profile.last_name}`
-          : "Cliente",
-        phone: profile?.phone || "62999191438",
-        email: profile?.email || "cliente@example.com",
-        cpf: profile?.document || "000.000.000-00",
+        name: "Kennedy Oliveira",
+        phone: "62999191438",
+        email: "ksobrgo@gmail.com",
+        cpf: "06262340009",
         amount,
         description: `Frete - Envio de ${shipmentData?.weight || 0}kg`,
-        userId: 'b28911e8-d3f5-4207-bf25-a43a5a3d92ed'
+        userId: "028fb887-ae40-4501-b6c8-8727c8834682"
       };
 
-      console.log('Dados do PIX:', pixData);
+      console.log('Dados do PIX antes do envio:', pixData);
 
       const { data, error } = await supabase.functions.invoke('create-pix-payment', {
         body: pixData
       });
 
+      console.log('Resposta da função:', { data, error });
+
       if (error) {
-        console.error('PIX payment error:', error);
+        console.error('Erro da função PIX:', error);
         toast({
           title: "Erro ao gerar PIX",
-          description: error.message || "Tente novamente em alguns instantes.",
+          description: error.message || "Erro desconhecido",
           variant: "destructive"
         });
-        navigate('/pagamento');
         return;
       }
 
-      console.log('PIX payment created:', data);
+      if (!data || !data.success) {
+        console.error('Resposta inválida:', data);
+        toast({
+          title: "Erro ao gerar PIX",
+          description: data?.error || "Resposta inválida da API",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('PIX criado com sucesso:', data);
       setPaymentIntent(data);
       
     } catch (error) {
-      console.error('PIX payment error:', error);
+      console.error('Erro na função createPixPayment:', error);
       toast({
         title: "Erro ao gerar PIX", 
-        description: "Tente novamente em alguns instantes.",
+        description: error.message || "Erro interno",
         variant: "destructive"
       });
-      navigate('/pagamento');
     } finally {
       setIsLoading(false);
     }
