@@ -179,17 +179,21 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
         return;
       }
 
-      if (!data || !data.success) {
+      if (data && data.success) {
+        console.log('✅ PIX criado com sucesso:', data);
+        console.log('🔍 Debug QR Code:', {
+          hasQrCodeImage: !!data.qrCodeImage,
+          qrCodeImageLength: data.qrCodeImage?.length || 0,
+          qrCodeImagePrefix: data.qrCodeImage?.substring(0, 50) || 'N/A'
+        });
+        setPixData(data);
+        setStep('qrcode');
+        toast.success('QR Code PIX gerado com sucesso!');
+      } else {
         console.error('❌ Resposta inválida:', data);
         const errorMessage = data?.error || 'Erro desconhecido ao gerar PIX';
         toast.error(errorMessage);
-        return;
       }
-
-      console.log('✅ PIX criado com sucesso:', data);
-      setPixData(data);
-      setStep('qrcode');
-      toast.success('QR Code PIX gerado com sucesso!');
       
     } catch (error) {
       console.error('💥 Erro na criação do PIX:', error);

@@ -139,16 +139,20 @@ serve(async (req) => {
     }
 
     const pixResponse = await abacateResponse.json();
-    console.log('✅ PIX Response:', JSON.stringify(pixResponse, null, 2));
+    console.log('✅ PIX Response completa:', JSON.stringify(pixResponse, null, 2));
 
     const pixData = pixResponse.data || pixResponse;
+    console.log('📋 PIX Data extraído:', JSON.stringify(pixData, null, 2));
 
     if (!pixData || !pixData.brCode) {
       console.error('❌ Invalid response structure:', pixResponse);
+      console.error('❌ pixData:', pixData);
+      console.error('❌ brCode:', pixData?.brCode);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Resposta inválida do provedor de pagamento'
+          error: 'Resposta inválida do provedor de pagamento',
+          debug: { pixResponse, pixData }
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -156,6 +160,12 @@ serve(async (req) => {
         }
       );
     }
+
+    console.log('🔍 Verificando QR Code:');
+    console.log('- brCode:', pixData.brCode ? 'OK' : 'MISSING');
+    console.log('- qrCodeBase64:', pixData.qrCodeBase64 ? 'OK' : 'MISSING');
+    console.log('- brCodeBase64:', pixData.brCodeBase64 ? 'OK' : 'MISSING');
+    console.log('- id:', pixData.id ? 'OK' : 'MISSING');
 
     // Log successful creation
     try {
@@ -183,20 +193,37 @@ serve(async (req) => {
 
     console.log('🎉 PIX payment created successfully');
 
+    // Determinar qual campo contém a imagem base64
+    let qrCodeImage = null;
+    if (pixData.qrCodeBase64) {
+      qrCodeImage = `data:image/png;base64,${pixData.qrCodeBase64}`;
+      console.log('📱 QR Code usando qrCodeBase64');
+    } else if (pixData.brCodeBase64) {
+      qrCodeImage = `data:image/png;base64,${pixData.brCodeBase64}`;
+      console.log('📱 QR Code usando brCodeBase64');
+    } else if (pixData.qrcode) {
+      qrCodeImage = `data:image/png;base64,${pixData.qrcode}`;
+      console.log('📱 QR Code usando qrcode');
+    } else {
+      console.log('⚠️ Nenhuma imagem QR Code encontrada nos campos: qrCodeBase64, brCodeBase64, qrcode');
+      console.log('🔍 Campos disponíveis:', Object.keys(pixData));
+    }
+
     const responseData = {
       success: true,
       pixCode: pixData.brCode,
-      qrCodeImage: pixData.qrCodeBase64 ? `data:image/png;base64,${pixData.qrCodeBase64}` : null,
+      qrCodeImage: qrCodeImage,
       paymentId: pixData.id,
       amount: amount,
       expiresAt: pixData.expiresAt || new Date(Date.now() + 30 * 60 * 1000).toISOString()
     };
 
-    console.log('✅ Response prepared:', {
+    console.log('✅ Response preparada:', {
       success: responseData.success,
       hasQrCode: !!responseData.qrCodeImage,
       hasPixCode: !!responseData.pixCode,
-      paymentId: responseData.paymentId
+      paymentId: responseData.paymentId,
+      qrCodeLength: responseData.qrCodeImage?.length || 0
     });
 
     return new Response(
