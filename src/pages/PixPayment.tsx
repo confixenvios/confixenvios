@@ -47,15 +47,15 @@ const PixPayment = () => {
       setIsLoading(true);
       console.log('Iniciando criação do PIX payment...');
       
-      // Dados fixos para teste
+      // Dados do formulário ou usuário logado
       const pixData = {
-        name: "Kennedy Oliveira",
-        phone: "62999191438",
-        email: "ksobrgo@gmail.com",
-        cpf: "06262340009",
+        name: shipmentData?.senderData?.name || "Nome do pagador",
+        phone: shipmentData?.senderData?.phone || "",
+        email: shipmentData?.senderData?.email || "",
+        cpf: shipmentData?.senderData?.document || "",
         amount,
         description: `Frete - Envio de ${shipmentData?.weight || 0}kg`,
-        userId: "028fb887-ae40-4501-b6c8-8727c8834682"
+        userId: shipmentData?.user_id || null
       };
 
       console.log('Dados do PIX antes do envio:', pixData);
@@ -253,7 +253,7 @@ const PixPayment = () => {
               
               <Button 
                 variant="outline" 
-                onClick={() => navigate('/pagamento-sucesso')}
+                onClick={() => window.location.href = 'https://confixenvios.com.br/pagamento-sucesso'}
                 className="w-full"
               >
                 Já Paguei - Verificar Status

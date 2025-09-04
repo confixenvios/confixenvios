@@ -54,8 +54,8 @@ serve(async (req) => {
       ],
       // Note: PIX is not directly supported by Stripe in Brazil checkout
       // You would need to use a Brazilian payment provider like PagSeguro, Mercado Pago, etc.
-      success_url: `${req.headers.get("origin")}/pagamento-sucesso?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get("origin")}/pagamento`,
+      success_url: `https://confixenvios.com.br/pagamento-sucesso?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `https://confixenvios.com.br/pagamento`,
       metadata: {
         shipment_id: shipmentData?.id || 'temp-id',
         user_email: shipmentData?.senderEmail || 'guest@example.com'
