@@ -42,20 +42,23 @@ serve(async (req) => {
     // Criar pagamento PIX via Abacate Pay
     const pixPayload = {
       amount: amount, // Valor em reais
+      expiresIn: 30 * 60, // 30 minutos em segundos
       description: description || 'Pagamento via PIX',
-      external_id: `pix_${Date.now()}`, // ID único
-      payer: {
+      customer: {
         name: name,
         email: email,
-        phone: phone,
-        document: cpf.replace(/\D/g, '') // Remove formatação do CPF
+        cellphone: phone,
+        taxId: cpf.replace(/\D/g, '') // Remove formatação do CPF
+      },
+      metadata: {
+        externalId: `pix_${Date.now()}`
       }
     };
 
     console.log('PIX payload:', pixPayload);
 
     // Chamar API do Abacate Pay
-    const abacateResponse = await fetch('https://api.abacatepay.com/v1/billing/pix', {
+    const abacateResponse = await fetch('https://api.abacatepay.com/v1/pixQrCode/create', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${abacateApiKey}`,
@@ -79,15 +82,17 @@ serve(async (req) => {
     const pixData = await abacateResponse.json();
     console.log('PIX response:', pixData);
 
+    // Acessar os dados da resposta
+    const responseData = pixData.data || pixData;
+
     return new Response(
       JSON.stringify({
         success: true,
-        pixCode: pixData.pix_code || pixData.qr_code,
-        pixKey: pixData.pix_key,
-        qrCodeImage: pixData.qr_code_image_url,
-        paymentId: pixData.id,
+        pixCode: responseData.brCode,
+        qrCodeImage: responseData.brCodeBase64,
+        paymentId: responseData.id,
         amount: amount,
-        expiresAt: pixData.expires_at
+        expiresAt: responseData.expiresAt
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
