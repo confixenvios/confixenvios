@@ -48,17 +48,14 @@ serve(async (req) => {
 
     console.log('🔍 Checking PIX status for payment:', paymentId);
 
-    // Check PIX status with Abacate Pay using the correct endpoint
-    const statusResponse = await fetch('https://api.abacatepay.com/v1/pixQrCode/check', {
-      method: 'POST',
+    // Check PIX status with Abacate Pay using the correct endpoint with query parameter
+    const statusResponse = await fetch(`https://api.abacatepay.com/v1/pixQrCode/check?id=${paymentId}`, {
+      method: 'GET',
       headers: {
         'Authorization': `Bearer ${abacateApiKey}`,
         'Content-Type': 'application/json',
         'User-Agent': 'Confix-Envios/1.0'
-      },
-      body: JSON.stringify({
-        paymentId: paymentId
-      })
+      }
     });
 
     console.log('📊 Status response:', statusResponse.status);
