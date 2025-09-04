@@ -44,7 +44,7 @@ serve(async (req) => {
 
     // Criar pagamento PIX via Abacate Pay
     const pixPayload = {
-      amount: amount, // Valor em reais
+      amount: Math.round(amount * 100), // Converter reais para centavos
       expiresIn: 30 * 60, // 30 minutos em segundos
       description: description || 'Pagamento via PIX',
       customer: {
