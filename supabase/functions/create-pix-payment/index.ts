@@ -140,25 +140,6 @@ serve(async (req) => {
     const pixData = await abacateResponse.json();
     console.log('Resposta completa do Abacate:', JSON.stringify(pixData, null, 2));
 
-    // Verificar se está em modo de desenvolvimento
-    if (pixData.data && pixData.data.devMode === true) {
-      console.error('ERRO: Abacate Pay está em modo de desenvolvimento!');
-      console.error('PIX em devMode não funcionam em apps bancários reais');
-      console.error('brCode gerado:', pixData.data.brCode);
-      
-      return new Response(
-        JSON.stringify({ 
-          error: 'API de pagamento em modo de desenvolvimento. PIX não funcionará em apps bancários.',
-          details: 'Configure o Abacate Pay para produção',
-          devMode: true
-        }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
     // Acessar os dados da resposta
     const responseData = pixData.data || pixData;
 
