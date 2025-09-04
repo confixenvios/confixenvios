@@ -82,7 +82,7 @@ const PixPayment = () => {
   };
 
   const copyPixCode = () => {
-    const pixCode = paymentIntent?.clientSecret || '';
+    const pixCode = paymentIntent?.pixCode || '';
     navigator.clipboard.writeText(pixCode);
     toast({
       title: "Código PIX copiado!",
@@ -167,13 +167,21 @@ const PixPayment = () => {
           </CardHeader>
           <CardContent>
             <div className="text-center space-y-4">
-              {/* Placeholder QR Code */}
-              <div className="mx-auto w-48 h-48 bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-border">
-                <div className="text-center">
-                  <QrCode className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">QR Code PIX</p>
+              {/* QR Code */}
+              {paymentIntent?.qrCodeImage ? (
+                <img 
+                  src={paymentIntent.qrCodeImage} 
+                  alt="QR Code PIX"
+                  className="mx-auto w-48 h-48 border-2 border-border rounded-lg"
+                />
+              ) : (
+                <div className="mx-auto w-48 h-48 bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-border">
+                  <div className="text-center">
+                    <QrCode className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Carregando QR Code...</p>
+                  </div>
                 </div>
-              </div>
+              )}
               
               <p className="text-sm text-muted-foreground">
                 Abra o app do seu banco e escaneie o código
@@ -190,7 +198,7 @@ const PixPayment = () => {
           <CardContent className="space-y-4">
             <div className="p-3 bg-muted rounded-lg">
               <p className="text-sm font-mono break-all text-muted-foreground">
-                {paymentIntent?.clientSecret}
+                {paymentIntent?.pixCode}
               </p>
             </div>
             
