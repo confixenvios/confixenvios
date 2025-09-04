@@ -143,21 +143,23 @@ const PixPayment = () => {
     
     try {
       setIsCheckingPayment(true);
-      console.log('Verificando status do PIX:', paymentIntent.paymentId);
+      console.log('🔍 Verificando status do PIX:', paymentIntent.paymentId);
       
       const { data, error } = await supabase.functions.invoke('check-pix-status', {
         body: { paymentId: paymentIntent.paymentId }
       });
 
+      console.log('📊 Status PIX response (raw):', { data, error });
+
       if (error) {
-        console.error('Erro ao verificar status PIX:', error);
+        console.error('❌ Erro ao verificar status PIX:', error);
         return;
       }
 
-      console.log('Status PIX response:', data);
+      console.log('📊 Status response:', data);
       
       if (data?.success && data?.isPaid) {
-        console.log('PIX foi pago! Redirecionando...');
+        console.log('🎉 PIX foi pago! Redirecionando para sucesso...');
         setPaymentStatus('PAID');
         
         // Redirecionar para tela de sucesso
@@ -168,24 +170,82 @@ const PixPayment = () => {
             shipmentData
           }
         });
+      } else if (data?.success) {
+        console.log(`⏳ PIX ainda não pago. Status: ${data.status}, isPaid: ${data.isPaid}`);
+      } else {
+        console.error('❌ Resposta inválida da verificação PIX:', data);
       }
       
     } catch (error) {
-      console.error('Erro ao verificar status:', error);
+      console.error('💥 Erro ao verificar status:', error);
     } finally {
       setIsCheckingPayment(false);
     }
   };
 
   const handleManualCheck = async () => {
-    await checkPaymentStatus();
+    if (!paymentIntent?.paymentId || isCheckingPayment) return;
     
-    if (paymentStatus !== 'PAID') {
+    try {
+      setIsCheckingPayment(true);
+      console.log('🔍 Verificação manual do PIX iniciada:', paymentIntent.paymentId);
+      
       toast({
-        title: "Aguardando Pagamento",
-        description: "PIX ainda não foi confirmado. Aguarde alguns instantes após o pagamento.",
-        variant: "default"
+        title: "Verificando pagamento...",
+        description: "Aguarde enquanto verificamos o status do PIX."
       });
+      
+      const { data, error } = await supabase.functions.invoke('check-pix-status', {
+        body: { paymentId: paymentIntent.paymentId }
+      });
+
+      console.log('📊 Verificação manual - response:', { data, error });
+
+      if (error) {
+        console.error('❌ Erro na verificação manual:', error);
+        toast({
+          title: "Erro ao verificar",
+          description: "Não foi possível verificar o status do pagamento.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data?.success && data?.isPaid) {
+        console.log('🎉 PIX confirmado manualmente! Redirecionando...');
+        setPaymentStatus('PAID');
+        
+        toast({
+          title: "Pagamento confirmado!",
+          description: "PIX processado com sucesso. Redirecionando..."
+        });
+        
+        // Redirecionar para tela de sucesso
+        navigate('/pix-sucesso', {
+          state: {
+            paymentId: paymentIntent.paymentId,
+            amount,
+            shipmentData
+          }
+        });
+      } else {
+        console.log(`⏳ Verificação manual - PIX não pago. Status: ${data?.status}`);
+        toast({
+          title: "PIX ainda não processado",
+          description: "O pagamento ainda não foi confirmado. Tente novamente em alguns segundos.",
+          variant: "default"
+        });
+      }
+      
+    } catch (error) {
+      console.error('💥 Erro na verificação manual:', error);
+      toast({
+        title: "Erro interno",
+        description: "Erro ao processar verificação manual.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCheckingPayment(false);
     }
   };
 

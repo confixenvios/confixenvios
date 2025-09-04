@@ -33,17 +33,95 @@ const PixPaymentSuccess = () => {
   const processPixPaymentSuccess = async () => {
     try {
       setIsProcessing(true);
-      console.log('PixPaymentSuccess - Processando sucesso do PIX:', paymentId);
+      console.log('🎉 PixPaymentSuccess - Processando sucesso do PIX:', paymentId);
+      console.log('📋 Dados do shipment:', shipmentData);
+
+      // Validar dados obrigatórios
+      if (!user?.id) {
+        console.error('❌ PixPaymentSuccess - user.id não encontrado:', user);
+        throw new Error('Usuário não autenticado');
+      }
+
+      if (!shipmentData?.senderData || !shipmentData?.recipientData) {
+        console.error('❌ PixPaymentSuccess - Dados de endereço faltando:', {
+          senderData: !!shipmentData?.senderData,
+          recipientData: !!shipmentData?.recipientData
+        });
+        throw new Error('Dados de endereço não encontrados');
+      }
+
+      // Primeiro, criar os endereços se necessário
+      console.log('📍 Criando endereços...');
+      
+      // Criar endereço do remetente
+      const senderAddress = {
+        user_id: user.id,
+        address_type: 'sender',
+        name: shipmentData.senderData.name,
+        cep: shipmentData.senderData.cep,
+        street: shipmentData.senderData.street,
+        number: shipmentData.senderData.number,
+        complement: shipmentData.senderData.complement || '',
+        neighborhood: shipmentData.senderData.neighborhood,
+        city: shipmentData.senderData.city,
+        state: shipmentData.senderData.state,
+        reference: shipmentData.senderData.reference || ''
+      };
+
+      console.log('📤 Criando endereço do remetente:', senderAddress);
+      
+      const { data: senderAddressData, error: senderError } = await supabase
+        .from('addresses')
+        .insert(senderAddress)
+        .select()
+        .single();
+
+      if (senderError) {
+        console.error('❌ Erro ao criar endereço do remetente:', senderError);
+        throw senderError;
+      }
+
+      console.log('✅ Endereço do remetente criado:', senderAddressData.id);
+
+      // Criar endereço do destinatário
+      const recipientAddress = {
+        user_id: user.id,
+        address_type: 'recipient',
+        name: shipmentData.recipientData.name,
+        cep: shipmentData.recipientData.cep,
+        street: shipmentData.recipientData.street,
+        number: shipmentData.recipientData.number,
+        complement: shipmentData.recipientData.complement || '',
+        neighborhood: shipmentData.recipientData.neighborhood,
+        city: shipmentData.recipientData.city,
+        state: shipmentData.recipientData.state,
+        reference: shipmentData.recipientData.reference || ''
+      };
+
+      console.log('📥 Criando endereço do destinatário:', recipientAddress);
+
+      const { data: recipientAddressData, error: recipientError } = await supabase
+        .from('addresses')
+        .insert(recipientAddress)
+        .select()
+        .single();
+
+      if (recipientError) {
+        console.error('❌ Erro ao criar endereço do destinatário:', recipientError);
+        throw recipientError;
+      }
+
+      console.log('✅ Endereço do destinatário criado:', recipientAddressData.id);
 
       // Criar a remessa no banco de dados
       const shipmentToCreate = {
-        user_id: user?.id || null,
-        sender_address_id: shipmentData.senderAddressId,
-        recipient_address_id: shipmentData.recipientAddressId,
+        user_id: user.id,
+        sender_address_id: senderAddressData.id,
+        recipient_address_id: recipientAddressData.id,
         weight: shipmentData.weight,
-        length: shipmentData.dimensions?.length || 20,
-        width: shipmentData.dimensions?.width || 15,
-        height: shipmentData.dimensions?.height || 10,
+        length: shipmentData.dimensions?.length || shipmentData.length || 20,
+        width: shipmentData.dimensions?.width || shipmentData.width || 15,
+        height: shipmentData.dimensions?.height || shipmentData.height || 10,
         format: shipmentData.format || 'package',
         pickup_option: shipmentData.pickupOption || 'collection',
         selected_option: shipmentData.selectedOption,
@@ -60,7 +138,7 @@ const PixPaymentSuccess = () => {
         status: 'PAYMENT_CONFIRMED'
       };
 
-      console.log('PixPaymentSuccess - Criando shipment:', shipmentToCreate);
+      console.log('📦 Criando shipment:', shipmentToCreate);
 
       const { data: newShipment, error: shipmentError } = await supabase
         .from('shipments')
@@ -69,11 +147,11 @@ const PixPaymentSuccess = () => {
         .single();
 
       if (shipmentError) {
-        console.error('PixPaymentSuccess - Erro ao criar shipment:', shipmentError);
+        console.error('❌ PixPaymentSuccess - Erro ao criar shipment:', shipmentError);
         throw shipmentError;
       }
 
-      console.log('PixPaymentSuccess - Shipment criado com sucesso:', newShipment.id);
+      console.log('✅ PixPaymentSuccess - Shipment criado com sucesso:', newShipment.id);
       setShipmentId(newShipment.id);
       setTrackingCode(newShipment.tracking_code || '');
 
@@ -96,21 +174,21 @@ const PixPaymentSuccess = () => {
       };
 
       // Disparar webhook para o sistema externo
-      console.log('PixPaymentSuccess - Disparando webhook...');
+      console.log('🔗 Disparando webhook...');
       const { data: webhookResult, error: webhookError } = await supabase.functions
         .invoke('webhook-dispatch', {
           body: webhookPayload
         });
 
       if (webhookError) {
-        console.error('PixPaymentSuccess - Erro no webhook:', webhookError);
+        console.error('❌ PixPaymentSuccess - Erro no webhook:', webhookError);
         toast({
           title: "Atenção",
           description: "Pagamento confirmado, mas houve problema na comunicação com o sistema de etiquetas.",
           variant: "destructive"
         });
       } else {
-        console.log('PixPaymentSuccess - Webhook enviado com sucesso:', webhookResult);
+        console.log('✅ PixPaymentSuccess - Webhook enviado com sucesso:', webhookResult);
         toast({
           title: "Sucesso!",
           description: "Pagamento confirmado e remessa criada com sucesso!",
@@ -120,10 +198,10 @@ const PixPaymentSuccess = () => {
       setShipmentStatus('PAGO_AGUARDANDO_ETIQUETA');
       
     } catch (error) {
-      console.error('PixPaymentSuccess - Erro ao processar:', error);
+      console.error('💥 PixPaymentSuccess - Erro ao processar:', error);
       toast({
         title: "Erro",
-        description: "Houve um problema ao processar sua remessa. Entre em contato conosco.",
+        description: `Houve um problema ao processar sua remessa: ${error.message}`,
         variant: "destructive"
       });
     } finally {
