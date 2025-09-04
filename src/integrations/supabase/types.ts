@@ -755,6 +755,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_security_logs: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       create_anonymous_session: {
         Args: { client_fingerprint?: string }
         Returns: {
@@ -826,6 +830,10 @@ export type Database = {
         Args: { password: string }
         Returns: string
       }
+      is_ip_blocked: {
+        Args: { client_ip: string }
+        Returns: boolean
+      }
       list_security_definer_functions: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -844,6 +852,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      monitor_security_events: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          event_count: number
+          event_type: string
+          last_occurrence: string
+          unique_ips: number
+        }[]
+      }
       promote_to_admin: {
         Args: { user_email: string }
         Returns: undefined
@@ -854,6 +871,10 @@ export type Database = {
       }
       validate_input_security: {
         Args: { input_text: string }
+        Returns: boolean
+      }
+      validate_secure_tracking_request: {
+        Args: { client_ip?: string; tracking_code: string }
         Returns: boolean
       }
       validate_session_with_rate_limiting: {
