@@ -81,12 +81,10 @@ serve(async (req) => {
       customer: {
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        cellphone: cleanPhone, // Usar telefone sem formatação
-        taxId: cleanCpf // Usar CPF sem formatação
-      },
-      metadata: {
-        externalId: `pix_${Date.now()}`,
-        userId: userId || null
+        cellphone: cleanPhone.length === 11 
+          ? `+55${cleanPhone}`
+          : `+55${cleanPhone}`, // Adicionar código do país
+        taxId: cleanCpf
       }
     };
 
