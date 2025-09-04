@@ -66,11 +66,14 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
           if (profile) {
             console.log('Dados do perfil carregados:', profile);
             
+            // Formatar o documento (CPF ou CNPJ) se existir
+            const formattedDocument = profile.document ? formatDocument(profile.document) : '';
+            
             setFormData({
               name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || '',
               phone: profile.phone || '',
               email: profile.email || user.email || '',
-              cpf: profile.document || ''
+              cpf: formattedDocument
             });
             
             toast.success('Dados carregados do seu perfil!');
@@ -86,9 +89,15 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     loadUserData();
   }, [open, user?.id, user?.email]);
 
-  const formatCPF = (value: string) => {
+  const formatDocument = (value: string) => {
     const numbers = value.replace(/\D/g, '');
-    return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    if (numbers.length <= 11) {
+      // CPF: 000.000.000-00
+      return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    } else {
+      // CNPJ: 00.000.000/0000-00
+      return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    }
   };
 
   const formatPhone = (value: string) => {
@@ -100,7 +109,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     let formattedValue = value;
     
     if (field === 'cpf') {
-      formattedValue = formatCPF(value);
+      formattedValue = formatDocument(value);
     } else if (field === 'phone') {
       formattedValue = formatPhone(value);
     }
@@ -129,8 +138,9 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
       return false;
     }
     
-    if (!cpf.trim() || cpf.replace(/\D/g, '').length !== 11) {
-      toast.error('CPF válido é obrigatório');
+    const docNumbers = cpf.replace(/\D/g, '');
+    if (!cpf.trim() || (docNumbers.length !== 11 && docNumbers.length !== 14)) {
+      toast.error('CPF ou CNPJ válido é obrigatório');
       return false;
     }
     
@@ -298,13 +308,13 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
       </div>
 
       <div>
-        <Label htmlFor="cpf">CPF</Label>
+        <Label htmlFor="cpf">CPF/CNPJ</Label>
         <Input
           id="cpf"
           value={formData.cpf}
           onChange={(e) => handleInputChange('cpf', e.target.value)}
-          placeholder="000.000.000-00"
-          maxLength={14}
+          placeholder="000.000.000-00 ou 00.000.000/0000-00"
+          maxLength={18}
           disabled={loadingUserData}
         />
       </div>
