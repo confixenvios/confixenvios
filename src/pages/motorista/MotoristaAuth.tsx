@@ -8,15 +8,6 @@ import { Truck, Mail, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Interface para a resposta da autenticação
-interface AuthResponse {
-  success: boolean;
-  motorista_id?: string;
-  nome?: string;
-  status?: string;
-  error?: string;
-}
-
 const MotoristaAuth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -30,26 +21,24 @@ const MotoristaAuth = () => {
     setLoading(true);
 
     try {
-      console.log('Tentando login com:', formData.email);
-      
       // Usar nossa função customizada de autenticação de motorista
-      const { data: authResult, error: motoristaError } = await supabase
+      const { data: motoristaResult, error: motoristaError } = await supabase
         .rpc('authenticate_motorista', {
           input_email: formData.email,
           input_password: formData.senha
         });
 
-      console.log('Resultado da autenticação:', authResult);
+      console.log('Resultado da autenticação:', motoristaResult);
 
       if (motoristaError) {
-        console.error('Erro na chamada RPC:', motoristaError);
-        throw new Error('Erro na comunicação com o servidor');
+        console.error('Erro na RPC:', motoristaError);
+        throw new Error('Erro interno do servidor');
       }
 
-      // Fazer cast para o tipo correto (through unknown for safety)
-      const result = authResult as unknown as AuthResponse;
+      // Cast para o tipo correto
+      const result = motoristaResult as any;
 
-      if (!result || !result.success) {
+      if (!result?.success) {
         throw new Error(result?.error || 'E-mail ou senha incorretos');
       }
 
