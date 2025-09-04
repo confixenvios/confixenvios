@@ -67,10 +67,18 @@ const AdminRemessas = () => {
       const { data, error } = await supabase
         .from('shipments')
         .select(`
-          *,
-          sender_address:addresses!shipments_sender_address_id_fkey(*),
-          recipient_address:addresses!shipments_recipient_address_id_fkey(*),
-          profiles(first_name, last_name, email),
+          id,
+          tracking_code,
+          weight,
+          quote_data,
+          payment_data,
+          status,
+          created_at,
+          label_pdf_url,
+          user_id,
+          motorista_id,
+          sender_address:addresses!shipments_sender_address_id_fkey(cep, city, state),
+          recipient_address:addresses!shipments_recipient_address_id_fkey(cep, city, state),
           motoristas(nome, telefone, email)
         `)
         .order('created_at', { ascending: false });
@@ -78,38 +86,37 @@ const AdminRemessas = () => {
       if (error) throw error;
 
       // Transform data to match expected format
-      const shipmentsWithDetails = (data || []).map((shipment) => ({
-        id: shipment.id,
-        tracking_code: shipment.tracking_code,
-        client_name: (() => {
-          const profile = shipment.profiles;
-          if (profile && typeof profile === 'object') {
-            const firstName = (profile as any).first_name || '';
-            const lastName = (profile as any).last_name || '';
-            const email = (profile as any).email || '';
-            const fullName = `${firstName} ${lastName}`.trim();
-            return fullName || email || 'Cliente Anônimo';
+      const shipmentsWithDetails = await Promise.all(
+        (data || []).map(async (shipment) => {
+          // Get client profile if user_id exists
+          let clientProfile = null;
+          if (shipment.user_id) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('first_name, last_name, email')
+              .eq('id', shipment.user_id)
+              .maybeSingle();
+            clientProfile = profile;
           }
-          return 'Cliente Anônimo';
-        })(),
-        sender_address: shipment.sender_address ? {
-          cep: shipment.sender_address.cep,
-          city: shipment.sender_address.city,
-          state: shipment.sender_address.state
-        } : null,
-        recipient_address: shipment.recipient_address ? {
-          cep: shipment.recipient_address.cep,
-          city: shipment.recipient_address.city,
-          state: shipment.recipient_address.state
-        } : null,
-        weight: shipment.weight,
-        quote_data: shipment.quote_data,
-        payment_data: shipment.payment_data,
-        status: shipment.status,
-        created_at: shipment.created_at,
-        label_pdf_url: shipment.label_pdf_url,
-        motoristas: shipment.motoristas
-      }));
+
+          return {
+            id: shipment.id,
+            tracking_code: shipment.tracking_code,
+            client_name: clientProfile 
+              ? `${clientProfile.first_name || ''} ${clientProfile.last_name || ''}`.trim() || clientProfile.email || 'Cliente Anônimo'
+              : 'Cliente Anônimo',
+            sender_address: shipment.sender_address,
+            recipient_address: shipment.recipient_address,
+            weight: shipment.weight,
+            quote_data: shipment.quote_data,
+            payment_data: shipment.payment_data,
+            status: shipment.status,
+            created_at: shipment.created_at,
+            label_pdf_url: shipment.label_pdf_url,
+            motoristas: shipment.motoristas
+          };
+        })
+      );
 
       setShipments(shipmentsWithDetails);
     } catch (error) {
