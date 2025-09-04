@@ -803,6 +803,15 @@ export type Database = {
         Args: { password: string }
         Returns: string
       }
+      list_security_definer_functions: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          comment: string
+          function_name: string
+          schema_name: string
+          security_mode: string
+        }[]
+      }
       log_sensitive_access: {
         Args: {
           action_type: string
