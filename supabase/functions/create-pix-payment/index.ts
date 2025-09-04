@@ -91,15 +91,25 @@ serve(async (req) => {
       );
     }
 
-    // Payload simplificado para Abacate Pay
+    // Formatar telefone corretamente para Abacate Pay (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+    const formattedPhone = cleanPhone.length === 11 
+      ? cleanPhone.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3')  // (11) 99999-9999
+      : cleanPhone.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');  // (11) 9999-9999
+
+    // Payload conforme documentação oficial do Abacate Pay
     const pixPayload = {
       amount: Math.round(amount * 100), // Centavos
+      expiresIn: 1800, // 30 minutos (obrigatório)
       description: description || 'Pagamento PIX',
       customer: {
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        cellphone: `+55${cleanPhone}`,
-        taxId: cleanCpf
+        cellphone: formattedPhone, // Formato brasileiro: (XX) XXXXX-XXXX
+        taxId: cleanCpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') // XXX.XXX.XXX-XX
+      },
+      metadata: {
+        externalId: `shipment_${Date.now()}`,
+        userId: userId || 'anonymous'
       }
     };
 
