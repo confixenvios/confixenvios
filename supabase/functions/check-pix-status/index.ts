@@ -29,7 +29,7 @@ serve(async (req) => {
     }
 
     // Consultar status na API da Abacate Pay
-    const abacateResponse = await fetch(`https://api.abacatepay.com/v1/pixQrCode/${paymentId}`, {
+    const abacateResponse = await fetch(`https://api.abacatepay.com/v1/pixQrCode/check?id=${paymentId}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${abacateApiKey}`,
@@ -52,15 +52,14 @@ serve(async (req) => {
     const pixData = await abacateResponse.json();
     const responseData = pixData.data || pixData;
 
-    console.log('Status PIX:', responseData);
+    console.log('Status PIX retornado:', responseData);
 
     return new Response(
       JSON.stringify({
         success: true,
         status: responseData.status,
-        paymentId: responseData.id,
-        amount: responseData.amount,
-        paidAt: responseData.paidAt || null,
+        paymentId: paymentId,
+        expiresAt: responseData.expiresAt,
         isPaid: responseData.status === 'PAID'
       }),
       { 
