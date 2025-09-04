@@ -678,12 +678,47 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      safe_tracking_view: {
+        Row: {
+          delivered_date: string | null
+          estimated_delivery: string | null
+          shipped_date: string | null
+          status: string | null
+          status_description: string | null
+          tracking_code: string | null
+        }
+        Insert: {
+          delivered_date?: never
+          estimated_delivery?: never
+          shipped_date?: never
+          status?: string | null
+          status_description?: never
+          tracking_code?: string | null
+        }
+        Update: {
+          delivered_date?: never
+          estimated_delivery?: never
+          shipped_date?: never
+          status?: string | null
+          status_description?: never
+          tracking_code?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       authenticate_motorista: {
         Args: { input_email: string; input_password: string }
         Returns: Json
+      }
+      check_rate_limit: {
+        Args: {
+          action_type: string
+          client_ip: string
+          max_attempts?: number
+          time_window_minutes?: number
+        }
+        Returns: boolean
       }
       cleanup_anonymous_addresses: {
         Args: Record<PropertyKey, never>
@@ -767,6 +802,15 @@ export type Database = {
       hash_password: {
         Args: { password: string }
         Returns: string
+      }
+      log_sensitive_access: {
+        Args: {
+          action_type: string
+          record_id: string
+          table_name: string
+          user_id?: string
+        }
+        Returns: undefined
       }
       promote_to_admin: {
         Args: { user_email: string }

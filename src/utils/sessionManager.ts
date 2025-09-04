@@ -2,6 +2,7 @@
 // Uses server-side validation to prevent session enumeration attacks
 
 import { supabase } from '@/integrations/supabase/client';
+import { SecurityUtils } from './securityUtils';
 
 export class SessionManager {
   private static readonly SESSION_KEY = 'confix_secure_session';
@@ -11,23 +12,28 @@ export class SessionManager {
    * Get or create a secure session ID for anonymous users
    */
   static async getSessionId(): Promise<string> {
-    const existingSession = localStorage.getItem(this.SESSION_KEY);
+    // Security: Check client-side rate limiting first
+    if (!SecurityUtils.checkClientRateLimit('session_creation', 3, 10)) {
+      throw new Error('Muitas tentativas de criação de sessão. Aguarde alguns minutos.');
+    }
+
+    const existingSession = SecurityUtils.secureStorage.get('confix_secure_session');
     
     if (existingSession) {
       try {
-        const sessionData = JSON.parse(existingSession);
         const now = Date.now();
         
         // Check if session is still valid (within 24 hours)
-        if (now - sessionData.created < this.SESSION_DURATION) {
+        if (now - existingSession.created < this.SESSION_DURATION) {
           // Validate session with server
-          const isValid = await this.validateSession(sessionData.token);
+          const isValid = await this.validateSession(existingSession.token);
           if (isValid) {
-            return sessionData.id;
+            return existingSession.id;
           }
         }
       } catch (error) {
         console.error('Error parsing session data:', error);
+        SecurityUtils.secureStorage.remove('confix_secure_session');
       }
     }
 
@@ -123,6 +129,9 @@ export class SessionManager {
       };
 
       localStorage.setItem(this.SESSION_KEY, JSON.stringify(sessionData));
+      
+      // Also store in secure storage
+      SecurityUtils.secureStorage.set('confix_secure_session', sessionData, 24 * 60);
       return sessionResult.session_id;
     } catch (error) {
       console.error('Failed to create secure session:', error);
@@ -198,6 +207,7 @@ export class SessionManager {
    */
   static clearSession(): void {
     localStorage.removeItem(this.SESSION_KEY);
+    SecurityUtils.secureStorage.remove('confix_secure_session');
   }
 
   /**

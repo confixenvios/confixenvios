@@ -139,11 +139,46 @@ const QuoteForm = () => {
   };
 
   const handleAddressChange = (type: 'sender' | 'recipient', field: keyof AddressData, value: string) => {
-    // For name and street fields, preserve spaces. For other fields, sanitize normally
+    // Security: Enhanced input validation and sanitization
     const shouldPreserveSpaces = field === 'name' || field === 'street' || field === 'neighborhood' || field === 'city';
-    const sanitizedValue = shouldPreserveSpaces 
-      ? value.replace(/[<>\"'&]/g, '').substring(0, 500) // Remove dangerous chars but keep spaces
-      : sanitizeTextInput(value);
+    
+    // Check for suspicious patterns first
+    const suspiciousPatterns = [
+      /<script/i, /javascript:/i, /on\w+=/i, /eval\(/i, 
+      /<iframe/i, /<object/i, /<embed/i, /vbscript:/i
+    ];
+    
+    if (suspiciousPatterns.some(pattern => pattern.test(value))) {
+      toast({
+        title: "Entrada inválida",
+        description: "Caracteres não permitidos detectados",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Enhanced sanitization based on field type
+    let sanitizedValue: string;
+    
+    if (field === 'document') {
+      // Only allow numbers, dots, dashes, slashes for documents
+      sanitizedValue = value.replace(/[^0-9.\-\/]/g, '').substring(0, 18);
+    } else if (field === 'phone') {
+      // Only allow numbers, spaces, parentheses, dashes for phone
+      sanitizedValue = value.replace(/[^0-9()\-\s]/g, '').substring(0, 20);
+    } else if (field === 'email') {
+      // Basic email character allowlist
+      sanitizedValue = value.replace(/[^a-zA-Z0-9@._\-]/g, '').substring(0, 100);
+    } else if (field === 'cep') {
+      // Only numbers and dash for CEP
+      sanitizedValue = value.replace(/[^0-9\-]/g, '').substring(0, 9);
+    } else if (shouldPreserveSpaces) {
+      // Remove dangerous chars but keep spaces for names/addresses
+      sanitizedValue = value.replace(/[<>\"'&\x00-\x1f\x7f-\x9f]/g, '').substring(0, 100);
+    } else {
+      // Standard sanitization for other fields
+      sanitizedValue = sanitizeTextInput(value);
+    }
     
     if (type === 'sender') {
       setSenderData(prev => ({ ...prev, [field]: sanitizedValue }));
@@ -169,6 +204,27 @@ const QuoteForm = () => {
     const height = parseFloat(formData.height);
     const dimensionsError = validateDimensions(length, width, height);
     if (dimensionsError) return dimensionsError;
+
+    // Additional security validations
+    const quantity = parseInt(formData.quantity);
+    if (quantity < 1 || quantity > 100) {
+      return "Quantidade deve ser entre 1 e 100 itens";
+    }
+
+    // Validate CEP format more strictly
+    if (!validateCep(formData.destinyCep)) {
+      return "CEP de destino deve ter exatamente 8 dígitos";
+    }
+
+    // Check for suspicious patterns in string inputs
+    const suspiciousPatterns = [/<script/i, /javascript:/i, /on\w+=/i, /eval\(/i];
+    const stringFields = [formData.format];
+    
+    for (const field of stringFields) {
+      if (field && suspiciousPatterns.some(pattern => pattern.test(field))) {
+        return "Dados inválidos detectados. Por favor, revise suas informações.";
+      }
+    }
 
     return null;
   };

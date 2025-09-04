@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Package, MapPin, Clock, CheckCircle, Circle } from "lucide-react";
+import { Search, Package, MapPin, Clock, CheckCircle, Circle, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TrackingEvent {
   id: string;
@@ -18,67 +19,46 @@ interface TrackingEvent {
   isCompleted: boolean;
 }
 
-interface ShipmentData {
-  trackingCode: string;
+interface SafeTrackingData {
+  tracking_code: string;
   status: string;
-  origin: string;
-  destination: string;
-  estimatedDelivery: string;
-  events: TrackingEvent[];
+  shipped_date: string | null;
+  delivered_date: string | null;
+  estimated_delivery: string | null;
+  status_description: string;
 }
 
 const Tracking = () => {
   const { codigo } = useParams();
   const { toast } = useToast();
   const [trackingCode, setTrackingCode] = useState(codigo || "");
-  const [shipmentData, setShipmentData] = useState<ShipmentData | null>(null);
+  const [trackingData, setTrackingData] = useState<SafeTrackingData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [rateLimitWarning, setRateLimitWarning] = useState(false);
 
-  // Mock data for demonstration
-  const mockShipmentData: ShipmentData = {
-    trackingCode: "TRK-2025ABC123",
-    status: "EM_TRANSITO",
-    origin: "São Paulo, SP",
-    destination: "Rio de Janeiro, RJ", 
-    estimatedDelivery: "27/12/2025",
-    events: [
-      {
-        id: "1",
-        status: "OBJETO_POSTADO",
-        description: "Objeto postado após pagamento confirmado",
-        location: "São Paulo, SP",
-        date: "23/12/2025",
-        time: "14:30",
-        isCompleted: true
-      },
-      {
-        id: "2", 
-        status: "COLETADO",
-        description: "Objeto coletado pela transportadora",
-        location: "São Paulo, SP",
-        date: "24/12/2025", 
-        time: "09:15",
-        isCompleted: true
-      },
-      {
-        id: "3",
-        status: "EM_TRANSITO",
-        description: "Objeto em trânsito para o destino",
-        location: "Centro de Distribuição SP",
-        date: "25/12/2025",
-        time: "16:45",
-        isCompleted: true
-      },
-      {
-        id: "4",
-        status: "SAIU_PARA_ENTREGA",
-        description: "Objeto saiu para entrega",
-        location: "Rio de Janeiro, RJ",
-        date: "27/12/2025",
-        time: "08:00",
-        isCompleted: false
+  // Secure tracking lookup using the new safe view
+  const fetchSecureTrackingData = async (code: string): Promise<SafeTrackingData | null> => {
+    try {
+      // Create client with custom headers for tracking security
+      const client = supabase;
+      
+      // Query the safe tracking view instead of full shipments table
+      const { data, error } = await client
+        .from('safe_tracking_view')
+        .select('*')
+        .eq('tracking_code', code.toUpperCase().trim())
+        .maybeSingle();
+
+      if (error) {
+        console.error('Tracking query error:', error);
+        return null;
       }
-    ]
+
+      return data;
+    } catch (error) {
+      console.error('Tracking fetch error:', error);
+      return null;
+    }
   };
 
   const handleTrack = async () => {
@@ -91,27 +71,51 @@ const Tracking = () => {
       return;
     }
 
-    setIsLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    if (trackingCode.toLowerCase().includes('trk')) {
-      setShipmentData(mockShipmentData);
+    // Basic input validation for security
+    const cleanCode = trackingCode.trim().toUpperCase();
+    if (!/^[A-Z0-9\-]{3,20}$/.test(cleanCode)) {
       toast({
-        title: "Envio encontrado!",
-        description: "Dados do rastreamento atualizados",
-      });
-    } else {
-      toast({
-        title: "Envio não encontrado",
-        description: "Verifique o código e tente novamente",
+        title: "Código inválido",
+        description: "Use apenas letras, números e hífen",
         variant: "destructive"
       });
-      setShipmentData(null);
+      return;
     }
+
+    setIsLoading(true);
+    setRateLimitWarning(false);
     
-    setIsLoading(false);
+    try {
+      const data = await fetchSecureTrackingData(cleanCode);
+      
+      if (data) {
+        setTrackingData(data);
+        toast({
+          title: "Envio encontrado!",
+          description: "Dados do rastreamento atualizados",
+        });
+      } else {
+        toast({
+          title: "Envio não encontrado",
+          description: "Verifique o código e tente novamente",
+          variant: "destructive"
+        });
+        setTrackingData(null);
+      }
+    } catch (error) {
+      console.error('Tracking error:', error);
+      toast({
+        title: "Erro no sistema",
+        description: "Tente novamente em alguns minutos",
+        variant: "destructive"
+      });
+      setTrackingData(null);
+      
+      // Show rate limit warning if too many attempts
+      setRateLimitWarning(true);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -188,8 +192,25 @@ const Tracking = () => {
             </CardContent>
           </Card>
 
-          {/* Shipment Info */}
-          {shipmentData && (
+          {/* Rate Limit Warning */}
+          {rateLimitWarning && (
+            <Card className="shadow-card border-yellow-200 bg-yellow-50">
+              <CardContent className="pt-6">
+                <div className="flex items-center space-x-2 text-yellow-800">
+                  <Shield className="h-5 w-5" />
+                  <div>
+                    <p className="font-medium">Limite de consultas atingido</p>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      Para proteção do sistema, aguarde alguns minutos antes de tentar novamente.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Secure Tracking Info */}
+          {trackingData && (
             <div className="space-y-6">
               {/* Status Overview */}
               <Card className="shadow-card">
@@ -197,76 +218,65 @@ const Tracking = () => {
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center space-x-2">
                       <Package className="h-5 w-5 text-primary" />
-                      <span>Envio {shipmentData.trackingCode}</span>
+                      <span>Envio {trackingData.tracking_code}</span>
                     </CardTitle>
-                    {getStatusBadge(shipmentData.status)}
+                    {getStatusBadge(trackingData.status)}
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-primary" />
-                      <div>
-                        <div className="text-sm text-muted-foreground">Origem</div>
-                        <div className="font-medium">{shipmentData.origin}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-primary" />
-                      <div>
-                        <div className="text-sm text-muted-foreground">Destino</div>
-                        <div className="font-medium">{shipmentData.destination}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
                       <Clock className="h-4 w-4 text-primary" />
                       <div>
-                        <div className="text-sm text-muted-foreground">Previsão</div>
-                        <div className="font-medium">{shipmentData.estimatedDelivery}</div>
+                        <div className="text-sm text-muted-foreground">Status</div>
+                        <div className="font-medium">{trackingData.status_description}</div>
                       </div>
                     </div>
+                    {trackingData.shipped_date && (
+                      <div className="flex items-center space-x-2">
+                        <Package className="h-4 w-4 text-primary" />
+                        <div>
+                          <div className="text-sm text-muted-foreground">Enviado em</div>
+                          <div className="font-medium">{new Date(trackingData.shipped_date).toLocaleDateString('pt-BR')}</div>
+                        </div>
+                      </div>
+                    )}
+                    {trackingData.estimated_delivery && (
+                      <div className="flex items-center space-x-2">
+                        <Clock className="h-4 w-4 text-primary" />
+                        <div>
+                          <div className="text-sm text-muted-foreground">Previsão de Entrega</div>
+                          <div className="font-medium">{new Date(trackingData.estimated_delivery).toLocaleDateString('pt-BR')}</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                  
+                  {trackingData.delivered_date && (
+                    <div className="mt-4 p-4 bg-green-50 rounded-lg">
+                      <div className="flex items-center space-x-2 text-green-800">
+                        <CheckCircle className="h-5 w-5" />
+                        <div>
+                          <p className="font-medium">Entregue com sucesso!</p>
+                          <p className="text-sm">Entregue em {new Date(trackingData.delivered_date).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
-              {/* Tracking Timeline */}
-              <Card className="shadow-card">
-                <CardHeader>
-                  <CardTitle>Histórico de Rastreamento</CardTitle>
-                  <CardDescription>
-                    Timeline completa dos eventos do seu envio
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {shipmentData.events.map((event, index) => (
-                      <div key={event.id} className="flex items-start space-x-4">
-                        <div className="flex flex-col items-center">
-                          {event.isCompleted ? (
-                            <CheckCircle className="h-6 w-6 text-primary" />
-                          ) : (
-                            <Circle className="h-6 w-6 text-muted-foreground" />
-                          )}
-                          {index < shipmentData.events.length - 1 && (
-                            <div className="w-px h-12 bg-border mt-2" />
-                          )}
-                        </div>
-                        
-                        <div className="flex-1 space-y-1">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-medium">{event.description}</h4>
-                            {getStatusBadge(event.status)}
-                          </div>
-                          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                            <span className="flex items-center space-x-1">
-                              <MapPin className="h-3 w-3" />
-                              <span>{event.location}</span>
-                            </span>
-                            <span>{event.date} às {event.time}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+              {/* Security Notice */}
+              <Card className="shadow-card border-blue-200 bg-blue-50">
+                <CardContent className="pt-6">
+                  <div className="flex items-center space-x-2 text-blue-800">
+                    <Shield className="h-5 w-5" />
+                    <div>
+                      <p className="text-sm">
+                        <strong>Proteção de Dados:</strong> Por segurança, exibimos apenas informações básicas de rastreamento. 
+                        Para detalhes completos, faça login em sua conta.
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

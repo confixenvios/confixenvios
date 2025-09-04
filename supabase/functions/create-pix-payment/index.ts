@@ -6,6 +6,55 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Security: Rate limiting and input validation
+const validatePixInput = (requestBody: any): { isValid: boolean; error?: string } => {
+  const { name, phone, email, cpf, amount } = requestBody;
+
+  // Required fields validation
+  if (!name || !phone || !email || !cpf || !amount) {
+    return { isValid: false, error: 'Todos os campos são obrigatórios: nome, telefone, email, CPF e valor' };
+  }
+
+  // Input sanitization checks
+  if (typeof name !== 'string' || name.length > 100) {
+    return { isValid: false, error: 'Nome inválido' };
+  }
+
+  if (typeof email !== 'string' || !email.includes('@') || email.length > 100) {
+    return { isValid: false, error: 'Email inválido' };
+  }
+
+  // CPF/CNPJ validation
+  const cleanCpf = cpf.replace(/\D/g, '');
+  if (cleanCpf.length !== 11 && cleanCpf.length !== 14) {
+    return { isValid: false, error: 'CPF/CNPJ deve ter 11 ou 14 dígitos' };
+  }
+
+  // Amount validation with strict limits
+  if (typeof amount !== 'number' || amount <= 0 || amount > 50000) {
+    return { isValid: false, error: 'Valor deve ser entre R$ 0,01 e R$ 50.000,00' };
+  }
+
+  return { isValid: true };
+};
+
+// Security: Check rate limits
+const checkRateLimit = async (supabase: any, clientIp: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.rpc('check_rate_limit', {
+      client_ip: clientIp,
+      action_type: 'pix_payment_creation',
+      max_attempts: 5,
+      time_window_minutes: 15
+    });
+
+    return !error && data === true;
+  } catch (error) {
+    console.error('Rate limit check error:', error);
+    return false; // Block on error for security
+  }
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -16,39 +65,50 @@ serve(async (req) => {
     console.log('🔵 PIX Payment request started');
     
     const requestBody = await req.json();
-    console.log('📋 Request body:', JSON.stringify(requestBody, null, 2));
+    console.log('📋 Request body received (sanitized logging)');
+    
+    // Security: Get client IP for rate limiting
+    const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    
+    // Security: Validate input before processing
+    const validation = validatePixInput(requestBody);
+    if (!validation.isValid) {
+      console.error('❌ Input validation failed:', validation.error);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: validation.error 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Security: Check rate limits
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
+
+    const rateLimitOk = await checkRateLimit(supabase, clientIp);
+    if (!rateLimitOk) {
+      console.error('❌ Rate limit exceeded for IP:', clientIp);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.' 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 429 
+        }
+      );
+    }
     
     const { name, phone, email, cpf, amount, description, userId } = requestBody;
-
-    // Validação básica
-    if (!name || !phone || !email || !cpf || !amount) {
-      console.error('❌ Missing required fields');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Todos os campos são obrigatórios: nome, telefone, email, CPF e valor' 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-
-    // Validação de valor
-    if (typeof amount !== 'number' || amount <= 0 || amount > 50000) {
-      console.error('❌ Invalid amount:', amount);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Valor deve ser entre R$ 0,01 e R$ 50.000,00' 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
 
     // Get API key
     const abacateApiKey = Deno.env.get('ABACATE_PAY_API_KEY');
@@ -167,14 +227,8 @@ serve(async (req) => {
     console.log('- brCodeBase64:', pixData.brCodeBase64 ? 'OK' : 'MISSING');
     console.log('- id:', pixData.id ? 'OK' : 'MISSING');
 
-    // Log successful creation
+    // Log successful creation with security audit
     try {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-        { auth: { persistSession: false } }
-      );
-
       await supabase.from('webhook_logs').insert({
         event_type: 'pix_payment_created',
         shipment_id: userId || 'anonymous',
@@ -182,7 +236,13 @@ serve(async (req) => {
           payment_id: pixData.id,
           amount: amount,
           success: true,
-          source: 'create-pix-payment'
+          source: 'create-pix-payment',
+          client_ip: clientIp,
+          security_audit: {
+            rate_limit_checked: true,
+            input_validated: true,
+            timestamp: new Date().toISOString()
+          }
         },
         response_status: 200,
         response_body: { status: 'pix_created' }
@@ -229,6 +289,29 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('💥 PIX payment error:', error);
+    
+    // Security: Log failed attempts for monitoring
+    try {
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+        { auth: { persistSession: false } }
+      );
+      
+      await supabase.from('webhook_logs').insert({
+        event_type: 'pix_payment_error',
+        shipment_id: 'error',
+        payload: {
+          error: error.message,
+          client_ip: req.headers.get('x-forwarded-for') || 'unknown',
+          timestamp: new Date().toISOString()
+        },
+        response_status: 500,
+        response_body: { status: 'error' }
+      });
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
     
     return new Response(
       JSON.stringify({ 
