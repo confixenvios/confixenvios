@@ -30,6 +30,7 @@ serve(async (req) => {
     // Obter chave da API do Abacate Pay
     const abacateApiKey = Deno.env.get('ABACATE_PAY_API_KEY');
     if (!abacateApiKey) {
+      console.error('API Key não encontrada');
       return new Response(
         JSON.stringify({ error: 'Chave da API não configurada' }),
         { 
@@ -38,6 +39,8 @@ serve(async (req) => {
         }
       );
     }
+    
+    console.log('API Key configurada:', abacateApiKey.substring(0, 8) + '...');
 
     // Criar pagamento PIX via Abacate Pay
     const pixPayload = {
@@ -69,9 +72,24 @@ serve(async (req) => {
 
     if (!abacateResponse.ok) {
       const errorText = await abacateResponse.text();
-      console.error('Erro da API Abacate Pay:', errorText);
+      console.error('Erro da API Abacate Pay - Status:', abacateResponse.status);
+      console.error('Erro da API Abacate Pay - Response:', errorText);
+      console.error('Erro da API Abacate Pay - Headers:', Object.fromEntries(abacateResponse.headers.entries()));
+      
+      let errorMessage = 'Erro ao processar pagamento PIX';
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch (e) {
+        // Se não conseguir fazer parse do JSON, usar mensagem padrão
+      }
+      
       return new Response(
-        JSON.stringify({ error: 'Erro ao processar pagamento PIX' }),
+        JSON.stringify({ 
+          error: errorMessage,
+          details: errorText,
+          status: abacateResponse.status 
+        }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

@@ -119,7 +119,9 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
         setStep('qrcode');
         toast.success('QR Code PIX gerado com sucesso!');
       } else {
-        toast.error(data.error || 'Erro ao gerar PIX');
+        console.error('Erro da API:', data);
+        const errorMessage = data.error || data.details || 'Erro ao gerar PIX';
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error('Erro:', error);
