@@ -7,6 +7,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import SavedCardsSelector from "@/components/SavedCardsSelector";
+import PixPaymentModal from "@/components/PixPaymentModal";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -18,6 +19,7 @@ const Payment = () => {
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [pixModalOpen, setPixModalOpen] = useState(false);
   
   // Get shipment data from location state or sessionStorage
   const shipmentData = location.state?.shipmentData || JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
@@ -91,9 +93,8 @@ const Payment = () => {
       console.log('Processing payment with method:', selectedMethod);
       
       if (selectedMethod === 'pix') {
-        navigate('/pix-pagamento', { 
-          state: { amount: totalAmount, shipmentData } 
-        });
+        setPixModalOpen(true);
+        setProcessing(false);
         return;
       }
 
@@ -304,6 +305,14 @@ const Payment = () => {
           </Button>
         </div>
       </div>
+      
+      {/* PIX Payment Modal */}
+      <PixPaymentModal
+        open={pixModalOpen}
+        onClose={() => setPixModalOpen(false)}
+        amount={totalAmount}
+        description={`Frete - Envio de ${shipmentData.weight || 1}kg`}
+      />
     </div>
   );
 };

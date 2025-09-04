@@ -5,13 +5,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Generate a fake PIX code for demonstration
-function generatePixCode(amount: number, description: string): string {
-  const timestamp = Date.now().toString();
-  const randomString = Math.random().toString(36).substring(2, 15);
-  return `00020126330014BR.GOV.BCB.PIX0114${randomString}520400005303986540${amount.toFixed(2).replace('.', '')}5802BR5925CONFIANCE LOGISTICA LTDA6009Goiania62070503***6304${timestamp.slice(-4)}`;
-}
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -19,31 +12,96 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, shipmentData } = await req.json();
-    
-    console.log('Create PIX payment - Starting with amount:', amount);
-    console.log('Create PIX payment - Shipment data:', shipmentData);
+    const { name, phone, email, cpf, amount, description } = await req.json();
 
-    // Generate a simulated PIX code
-    const pixCode = generatePixCode(amount, `Frete - Envio de ${shipmentData?.weight || 0}kg`);
-    const paymentId = `pix_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    console.log('Creating PIX payment:', { name, phone, email, cpf, amount, description });
 
-    console.log('Create PIX payment - PIX code generated:', paymentId);
+    // Validar campos obrigatórios
+    if (!name || !phone || !email || !cpf || !amount) {
+      return new Response(
+        JSON.stringify({ error: 'Todos os campos são obrigatórios' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
 
-    return new Response(JSON.stringify({ 
-      paymentIntentId: paymentId,
-      clientSecret: pixCode,
-      amount: amount,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes from now
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
+    // Obter chave da API do Abacate Pay
+    const abacateApiKey = Deno.env.get('ABACATE_PAY_API_KEY');
+    if (!abacateApiKey) {
+      return new Response(
+        JSON.stringify({ error: 'Chave da API não configurada' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Criar pagamento PIX via Abacate Pay
+    const pixPayload = {
+      amount: amount, // Valor em reais
+      description: description || 'Pagamento via PIX',
+      external_id: `pix_${Date.now()}`, // ID único
+      payer: {
+        name: name,
+        email: email,
+        phone: phone,
+        document: cpf.replace(/\D/g, '') // Remove formatação do CPF
+      }
+    };
+
+    console.log('PIX payload:', pixPayload);
+
+    // Chamar API do Abacate Pay
+    const abacateResponse = await fetch('https://api.abacatepay.com/v1/billing/pix', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${abacateApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(pixPayload)
     });
+
+    if (!abacateResponse.ok) {
+      const errorText = await abacateResponse.text();
+      console.error('Erro da API Abacate Pay:', errorText);
+      return new Response(
+        JSON.stringify({ error: 'Erro ao processar pagamento PIX' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const pixData = await abacateResponse.json();
+    console.log('PIX response:', pixData);
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        pixCode: pixData.pix_code || pixData.qr_code,
+        pixKey: pixData.pix_key,
+        qrCodeImage: pixData.qr_code_image_url,
+        paymentId: pixData.id,
+        amount: amount,
+        expiresAt: pixData.expires_at
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+
   } catch (error) {
-    console.error('Create PIX payment - Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    console.error('Erro interno:', error);
+    return new Response(
+      JSON.stringify({ error: 'Erro interno do servidor' }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
   }
 });
