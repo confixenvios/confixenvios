@@ -458,6 +458,7 @@ export type Database = {
           recipient_address_id: string
           selected_option: string
           sender_address_id: string
+          session_id: string | null
           status: string
           tracking_code: string | null
           updated_at: string
@@ -480,6 +481,7 @@ export type Database = {
           recipient_address_id: string
           selected_option: string
           sender_address_id: string
+          session_id?: string | null
           status?: string
           tracking_code?: string | null
           updated_at?: string
@@ -502,6 +504,7 @@ export type Database = {
           recipient_address_id?: string
           selected_option?: string
           sender_address_id?: string
+          session_id?: string | null
           status?: string
           tracking_code?: string | null
           updated_at?: string
@@ -687,6 +690,10 @@ export type Database = {
         Returns: undefined
       }
       cleanup_expired_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      cleanup_orphaned_anonymous_shipments: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }

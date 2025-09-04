@@ -397,6 +397,14 @@ const QuoteForm = () => {
     setIsLoading(true);
 
     try {
+      // Get or create session ID for anonymous users (security fix)
+      let sessionId = null;
+      if (!user) {
+        console.log('QuoteForm - Getting session ID for anonymous user');
+        sessionId = await SessionManager.getSessionId();
+        console.log('QuoteForm - Anonymous session ID:', sessionId);
+      }
+
       // Preparar dados completos para as próximas etapas (sem salvar no banco ainda)
       const completeShipmentData = {
         // Dados da cotação original
@@ -423,6 +431,10 @@ const QuoteForm = () => {
         width: parseFloat(formData.width),
         height: parseFloat(formData.height),
         format: formData.format,
+        
+        // SECURITY FIX: Add session_id for anonymous users
+        user_id: user?.id || null,
+        session_id: sessionId,
         
         // Status do fluxo
         status: 'PENDING_DOCUMENT',

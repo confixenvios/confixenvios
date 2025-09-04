@@ -10,6 +10,7 @@ import SavedCardsSelector from "@/components/SavedCardsSelector";
 import PixPaymentModal from "@/components/PixPaymentModal";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { SessionManager } from "@/utils/sessionManager";
 
 const Payment = () => {
   const navigate = useNavigate();
@@ -92,6 +93,18 @@ const Payment = () => {
     try {
       console.log('Processing payment with method:', selectedMethod);
       
+      // SECURITY FIX: Get session token for anonymous users
+      let sessionHeaders = {};
+      if (!user) {
+        const sessionToken = SessionManager.getSessionToken();
+        if (sessionToken) {
+          sessionHeaders = {
+            'x-session-token': sessionToken
+          };
+          console.log('Payment - Adding session token for anonymous user');
+        }
+      }
+      
       if (selectedMethod === 'pix') {
         setPixModalOpen(true);
         setProcessing(false);
@@ -118,7 +131,8 @@ const Payment = () => {
               weight: shipmentData.weight || 1,
               senderEmail: shipmentData.senderAddress?.email || user?.email || 'guest@example.com'
             }
-          }
+          },
+          headers: sessionHeaders
         });
 
         if (error) {
@@ -151,7 +165,8 @@ const Payment = () => {
               weight: shipmentData.weight || 1,
               senderEmail: shipmentData.senderAddress?.email || user?.email || 'guest@example.com'
             }
-          }
+          },
+          headers: sessionHeaders
         });
 
         if (error) {
