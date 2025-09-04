@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calculator } from "lucide-react";
 
 const ClientCotacoes = () => {
+  console.log('ClientCotacoes component loaded - no tabs version');
   return (
     <div className="px-2 py-4 md:px-6 md:py-8 min-h-screen bg-background">
       <div className="w-full max-w-7xl mx-auto">
