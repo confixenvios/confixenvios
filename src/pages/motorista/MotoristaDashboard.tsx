@@ -121,7 +121,7 @@ const MotoristaDashboard = () => {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      // Só limpar localStorage, não precisamos do Supabase auth
       localStorage.removeItem('motorista_session');
       navigate('/motorista/auth');
       toast.success('Logout realizado com sucesso');

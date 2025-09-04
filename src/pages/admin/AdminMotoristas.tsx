@@ -71,7 +71,7 @@ const AdminMotoristas = () => {
         };
 
         if (formData.senha) {
-          updateData.senha = formData.senha; // Hash should be handled by trigger or function
+          updateData.senha = formData.senha; // Será hasheada automaticamente pelo trigger
         }
 
         const { error } = await supabase
@@ -90,7 +90,7 @@ const AdminMotoristas = () => {
             cpf: formData.cpf,
             telefone: formData.telefone,
             email: formData.email,
-            senha: formData.senha, // Hash should be handled by trigger or function
+            senha: formData.senha, // Será hasheada automaticamente pelo trigger
             status: formData.status
           }]);
 

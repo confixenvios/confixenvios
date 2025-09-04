@@ -679,7 +679,7 @@ export type Database = {
     }
     Functions: {
       authenticate_motorista: {
-        Args: { input_email: string; input_senha: string }
+        Args: { input_email: string; input_password: string }
         Returns: {
           motorista_id: string
           nome: string
@@ -760,6 +760,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      hash_password: {
+        Args: { password: string }
+        Returns: string
       }
       promote_to_admin: {
         Args: { user_email: string }

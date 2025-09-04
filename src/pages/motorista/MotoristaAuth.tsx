@@ -21,59 +21,28 @@ const MotoristaAuth = () => {
     setLoading(true);
 
     try {
-      // First authenticate with Supabase Auth using email/password
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.senha,
-      });
+      // Usar nossa função customizada de autenticação de motorista
+      const { data: motoristaData, error: motoristaError } = await supabase
+        .rpc('authenticate_motorista', {
+          input_email: formData.email,
+          input_password: formData.senha
+        });
 
-      if (authError) {
-        // If auth fails, try with our custom motorista authentication
-        const { data: motoristaData, error: motoristaError } = await supabase
-          .rpc('authenticate_motorista', {
-            input_email: formData.email,
-            input_senha: formData.senha
-          });
-
-        if (motoristaError || !motoristaData || motoristaData.length === 0) {
-          throw new Error('E-mail ou senha incorretos');
-        }
-
-        // Store motorista session in localStorage
-        localStorage.setItem('motorista_session', JSON.stringify({
-          id: motoristaData[0].motorista_id,
-          nome: motoristaData[0].nome,
-          email: formData.email,
-          status: motoristaData[0].status
-        }));
-
-        toast.success(`Bem-vindo, ${motoristaData[0].nome}!`);
-        navigate('/motorista/dashboard');
-      } else {
-        // Check if authenticated user is a motorista
-        const { data: motoristaData, error: motoristaError } = await supabase
-          .from('motoristas')
-          .select('*')
-          .eq('email', formData.email)
-          .eq('status', 'ativo')
-          .single();
-
-        if (motoristaError || !motoristaData) {
-          await supabase.auth.signOut();
-          throw new Error('Usuário não é um motorista autorizado');
-        }
-
-        // Store motorista session
-        localStorage.setItem('motorista_session', JSON.stringify({
-          id: motoristaData.id,
-          nome: motoristaData.nome,
-          email: motoristaData.email,
-          status: motoristaData.status
-        }));
-
-        toast.success(`Bem-vindo, ${motoristaData.nome}!`);
-        navigate('/motorista/dashboard');
+      if (motoristaError || !motoristaData || motoristaData.length === 0) {
+        throw new Error('E-mail ou senha incorretos');
       }
+
+      // Store motorista session in localStorage
+      localStorage.setItem('motorista_session', JSON.stringify({
+        id: motoristaData[0].motorista_id,
+        nome: motoristaData[0].nome,
+        email: formData.email,
+        status: motoristaData[0].status
+      }));
+
+      toast.success(`Bem-vindo, ${motoristaData[0].nome}!`);
+      navigate('/motorista/dashboard');
+
     } catch (error: any) {
       console.error('Erro no login:', error);
       toast.error(error.message || 'Erro ao fazer login');
