@@ -41,16 +41,22 @@ const AdminMotoristas = () => {
 
   const loadMotoristas = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('motoristas')
-        .select('*')
+        .select('id, nome, cpf, telefone, email, status, created_at, updated_at')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro na consulta de motoristas:', error);
+        throw error;
+      }
+      
+      console.log('Motoristas carregados:', data);
       setMotoristas((data || []) as Motorista[]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao carregar motoristas:', error);
-      toast.error('Erro ao carregar motoristas');
+      toast.error(`Erro ao carregar motoristas: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }
@@ -71,30 +77,43 @@ const AdminMotoristas = () => {
         };
 
         if (formData.senha) {
-          updateData.senha = formData.senha; // Será hasheada automaticamente pelo trigger
+          updateData.senha = formData.senha;
         }
 
+        console.log('Atualizando motorista:', updateData);
         const { error } = await supabase
           .from('motoristas')
           .update(updateData)
           .eq('id', editingMotorista.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao atualizar motorista:', error);
+          throw error;
+        }
         toast.success('Motorista atualizado com sucesso!');
       } else {
         // Create new motorista
-        const { error } = await supabase
-          .from('motoristas')
-          .insert([{
-            nome: formData.nome,
-            cpf: formData.cpf,
-            telefone: formData.telefone,
-            email: formData.email,
-            senha: formData.senha, // Será hasheada automaticamente pelo trigger
-            status: formData.status
-          }]);
+        const insertData = {
+          nome: formData.nome,
+          cpf: formData.cpf,
+          telefone: formData.telefone,
+          email: formData.email,
+          senha: formData.senha,
+          status: formData.status
+        };
 
-        if (error) throw error;
+        console.log('Criando novo motorista:', { ...insertData, senha: '[HIDDEN]' });
+        const { data, error } = await supabase
+          .from('motoristas')
+          .insert([insertData])
+          .select();
+
+        if (error) {
+          console.error('Erro ao criar motorista:', error);
+          throw error;
+        }
+        
+        console.log('Motorista criado com sucesso:', data);
         toast.success('Motorista cadastrado com sucesso!');
       }
 
@@ -102,9 +121,9 @@ const AdminMotoristas = () => {
       setEditingMotorista(null);
       setFormData({ nome: '', cpf: '', telefone: '', email: '', senha: '', status: 'ativo' });
       loadMotoristas();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar motorista:', error);
-      toast.error('Erro ao salvar motorista');
+      toast.error(`Erro ao salvar motorista: ${error.message || error.details || 'Erro desconhecido'}`);
     }
   };
 
