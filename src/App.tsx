@@ -47,6 +47,7 @@ import AdminTestarTabela from "./pages/admin/AdminTestarTabela";
 import AdminDocsIntegracao from "./pages/admin/AdminDocsIntegracao";
 import MotoristaAuth from "./pages/motorista/MotoristaAuth";
 import MotoristaDashboard from "./pages/motorista/MotoristaDashboard";
+import MotoristaRelatorios from "./pages/motorista/MotoristaRelatorios";
 
 const queryClient = new QueryClient();
 
@@ -127,6 +128,7 @@ const App = () => (
             <Route path="/motorista/auth" element={<MotoristaAuth />} />
             <Route path="/motorista" element={<MotoristaDashboard />} />
             <Route path="/motorista/dashboard" element={<MotoristaDashboard />} />
+            <Route path="/motorista/relatorios" element={<MotoristaRelatorios />} />
 
             {/* Legacy redirects */}
             <Route path="/dashboard/*" element={<Navigate to="/cliente" replace />} />

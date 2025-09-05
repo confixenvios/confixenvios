@@ -354,7 +354,7 @@ const MotoristaDashboard = () => {
               <div className="w-8 h-8 mx-auto mb-2 flex items-center justify-center rounded-full bg-orange-500 text-white">
                 <Clock className="h-4 w-4" />
               </div>
-              <p className="text-lg font-bold text-orange-700 dark:text-orange-300">
+              <p className="text-lg text-orange-700 dark:text-orange-300">
                 {remessas.filter(r => ['PENDING_LABEL', 'LABEL_GENERATED', 'PAYMENT_CONFIRMED', 'PAID'].includes(r.status)).length}
               </p>
               <p className="text-xs text-orange-600 dark:text-orange-400">Pendentes</p>
@@ -366,19 +366,19 @@ const MotoristaDashboard = () => {
               <div className="w-8 h-8 mx-auto mb-2 flex items-center justify-center rounded-full bg-blue-500 text-white">
                 <Truck className="h-4 w-4" />
               </div>
-              <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
+              <p className="text-lg text-blue-700 dark:text-blue-300">
                 {remessas.filter(r => ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO'].includes(r.status)).length}
               </p>
               <p className="text-xs text-blue-600 dark:text-blue-400">Em Rota</p>
             </CardContent>
           </Card>
 
-          <Card className="border-green-200 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
+          <Card className="border-green-200 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/motorista/relatorios')}>
             <CardContent className="p-3 text-center">
               <div className="w-8 h-8 mx-auto mb-2 flex items-center justify-center rounded-full bg-green-500 text-white">
                 <CheckCircle className="h-4 w-4" />
               </div>
-              <p className="text-lg font-bold text-green-700 dark:text-green-300">
+              <p className="text-lg text-green-700 dark:text-green-300">
                 {remessas.filter(r => r.status === 'ENTREGA_FINALIZADA').length}
               </p>
               <p className="text-xs text-green-600 dark:text-green-400">Entregues</p>
@@ -388,17 +388,28 @@ const MotoristaDashboard = () => {
 
         {/* Remessas List - Mobile Optimized */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold">Minhas Remessas</h2>
-              <p className="text-sm text-muted-foreground">
-                {remessas.length} {remessas.length === 1 ? 'remessa' : 'remessas'} atribuída{remessas.length === 1 ? '' : 's'}
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold">Minhas Remessas</h2>
+                <p className="text-sm text-muted-foreground">
+                  {remessas.filter(r => r.status !== 'ENTREGA_FINALIZADA').length} {remessas.filter(r => r.status !== 'ENTREGA_FINALIZADA').length === 1 ? 'remessa ativa' : 'remessas ativas'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/motorista/relatorios')}
+                  className="text-xs"
+                >
+                  <FileText className="h-4 w-4 mr-1" />
+                  Relatórios
+                </Button>
+                {refreshing && (
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent"></div>
+                )}
+              </div>
             </div>
-            {refreshing && (
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent"></div>
-            )}
-          </div>
 
           {loading ? (
             <div className="space-y-3">
@@ -414,21 +425,21 @@ const MotoristaDashboard = () => {
                 </Card>
               ))}
             </div>
-          ) : remessas.length === 0 ? (
+          ) : remessas.filter(r => r.status !== 'ENTREGA_FINALIZADA').length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
                 <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-muted">
                   <Package className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="font-medium mb-2">Nenhuma remessa atribuída</h3>
+                <h3 className="font-medium mb-2">Nenhuma remessa ativa</h3>
                 <p className="text-sm text-muted-foreground">
-                  Aguarde novas remessas serem designadas para você.
+                  Aguarde novas remessas serem designadas para você. Para ver suas entregas realizadas, acesse os relatórios.
                 </p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-3">
-              {remessas.map((remessa) => {
+              {remessas.filter(remessa => remessa.status !== 'ENTREGA_FINALIZADA').map((remessa) => {
                 const canAccept = canAcceptPickup(remessa.status);
                 
                 return (
