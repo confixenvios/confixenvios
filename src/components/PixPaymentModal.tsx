@@ -265,8 +265,39 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
         )
         .subscribe();
 
+      // Também verificar periodicamente se o pagamento foi processado
+      const checkPayment = async () => {
+        try {
+          const { data: shipments } = await supabase
+            .from('shipments')
+            .select('*')
+            .contains('payment_data', { pixPaymentId: pixData.paymentId })
+            .limit(1);
+          
+          if (shipments && shipments.length > 0) {
+            console.log('🎉 Pagamento encontrado via polling!', shipments[0]);
+            setPaymentStatus('paid');
+            
+            handleClose();
+            toast.success('Pagamento confirmado! Redirecionando...', {
+              duration: 1500
+            });
+            
+            setTimeout(() => {
+              window.location.href = '/pix-sucesso';
+            }, 500);
+          }
+        } catch (error) {
+          console.error('Erro ao verificar pagamento:', error);
+        }
+      };
+
+      // Verificar a cada 5 segundos
+      const interval = setInterval(checkPayment, 5000);
+
       return () => {
         supabase.removeChannel(channel);
+        clearInterval(interval);
       };
     }
   }, [step, pixData?.paymentId, paymentStatus]);
@@ -491,16 +522,8 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader className="relative">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            className="absolute -top-2 -right-2 h-8 w-8 rounded-full"
-            onClick={handleClose}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-          <DialogTitle className="flex items-center gap-2 pr-8">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
             {step === 'paid' ? (
               <>
                 <CheckCircle className="h-5 w-5 text-green-500" />
