@@ -34,9 +34,52 @@ const AdminDashboard = () => {
     pendingLabels: 0
   });
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   useEffect(() => {
     loadDashboardData();
+    
+    // Set up real-time subscriptions for dashboard updates
+    const shipmentChannel = supabase
+      .channel('dashboard-shipments')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'shipments'
+        },
+        (payload) => {
+          console.log('Shipment change detected:', payload);
+          // Reload dashboard data when shipments change
+          loadDashboardData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public', 
+          table: 'profiles'
+        },
+        (payload) => {
+          console.log('Profile change detected:', payload);
+          // Reload dashboard data when profiles change
+          loadDashboardData();
+        }
+      )
+      .subscribe();
+
+    // Auto-refresh every 5 minutes as fallback
+    const autoRefreshInterval = setInterval(() => {
+      loadDashboardData();
+    }, 5 * 60 * 1000);
+
+    // Cleanup subscriptions and interval on unmount
+    return () => {
+      supabase.removeChannel(shipmentChannel);
+      clearInterval(autoRefreshInterval);
+    };
   }, []);
 
   const loadDashboardData = async () => {
@@ -124,6 +167,7 @@ const AdminDashboard = () => {
         recentShipments: enrichedShipments || [],
         pendingLabels: pendingCount || 0
       });
+      setLastUpdated(new Date());
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -149,11 +193,31 @@ const AdminDashboard = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold text-foreground">Dashboard Administrativo</h1>
-        <p className="text-muted-foreground">
-          Visão geral do sistema Confix Envios
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Dashboard Administrativo</h1>
+          <p className="text-muted-foreground">
+            Visão geral do sistema Confix Envios
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Badge variant="outline" className="text-xs">
+            Atualizado: {lastUpdated.toLocaleTimeString('pt-BR')}
+          </Badge>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={loadDashboardData}
+            disabled={loading}
+          >
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
+            ) : (
+              <TrendingUp className="w-4 h-4 mr-2" />
+            )}
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
