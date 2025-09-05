@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Loader2, LogIn, UserPlus, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { formatDocument, validateDocument } from "@/utils/documentValidation";
+import { FileText } from "lucide-react";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -44,7 +46,8 @@ const AuthModal = ({
     confirmPassword: '',
     firstName: '',
     lastName: '',
-    phone: ''
+    phone: '',
+    document: ''
   });
 
   // Close modal and call success callback when user is authenticated
@@ -65,7 +68,7 @@ const AuthModal = ({
       setError('');
       setIsLoading(false);
       setLoginData({ email: '', password: '' });
-      setSignupData({ email: '', password: '', confirmPassword: '', firstName: '', lastName: '', phone: '' });
+      setSignupData({ email: '', password: '', confirmPassword: '', firstName: '', lastName: '', phone: '', document: '' });
       setActiveTab('login');
     }
   }, [isOpen]);
@@ -106,8 +109,16 @@ const AuthModal = ({
     setIsLoading(true);
     setError('');
 
-    if (!signupData.email || !signupData.password || !signupData.confirmPassword || !signupData.phone) {
+    if (!signupData.email || !signupData.password || !signupData.confirmPassword || !signupData.phone || !signupData.document) {
       setError('Preencha todos os campos obrigatórios');
+      setIsLoading(false);
+      return;
+    }
+
+    // Validate document (CPF/CNPJ)
+    const documentValidation = validateDocument(signupData.document);
+    if (!documentValidation.isValid) {
+      setError('CPF ou CNPJ inválido');
       setIsLoading(false);
       return;
     }
@@ -130,7 +141,8 @@ const AuthModal = ({
         signupData.password,
         signupData.firstName,
         signupData.lastName,
-        signupData.phone
+        signupData.phone,
+        signupData.document
       );
       
       if (result.error) {
@@ -157,7 +169,8 @@ const AuthModal = ({
           confirmPassword: '',
           firstName: '',
           lastName: '',
-          phone: ''
+          phone: '',
+          document: ''
         });
         setError('');
       }
@@ -291,6 +304,28 @@ const AuthModal = ({
                       phone: e.target.value
                     }))}
                     disabled={isLoading}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="modal-signup-document" className="flex items-center">
+                    <FileText className="h-4 w-4 mr-2" />
+                    CPF ou CNPJ *
+                  </Label>
+                  <Input
+                    id="modal-signup-document"
+                    type="text"
+                    placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                    value={signupData.document}
+                    onChange={(e) => {
+                      const formattedValue = formatDocument(e.target.value);
+                      setSignupData(prev => ({
+                        ...prev,
+                        document: formattedValue
+                      }));
+                    }}
+                    disabled={isLoading}
+                    maxLength={18}
                   />
                 </div>
                 
