@@ -422,89 +422,132 @@ const AdminRemessas = () => {
           ) : (
             <div className="space-y-4">
               {filteredShipments.map((shipment) => (
-                <Card key={shipment.id} className="border-border/30 hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <h3 className="font-semibold text-lg">
+                <Card key={shipment.id} className="border-border/50 hover:shadow-lg hover:border-primary/20 transition-all duration-300">
+                  <CardContent className="p-0">
+                    {/* Header com código e ações */}
+                    <div className="flex items-center justify-between p-4 pb-2 border-b border-border/30">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <Package className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-base">
                             {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
                           </h3>
-                          {getStatusBadge(shipment.status)}
-                        </div>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Clock className="w-4 h-4 mr-2" />
-                          <span className="font-medium">Criado em:</span>
-                          <span className="ml-1">{format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
+                          <div className="flex items-center text-xs text-muted-foreground mt-1">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            {format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewShipment(shipment)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleDownloadLabel(shipment as any)}
-                          disabled={!shipment.label_pdf_url}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedShipment(shipment.id);
-                            setShowAssignDialog(true);
-                          }}
-                        >
-                          <UserPlus className="h-4 w-4" />
-                        </Button>
+                      <div className="flex items-center space-x-2">
+                        {getStatusBadge(shipment.status)}
+                        <div className="flex space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewShipment(shipment)}
+                            className="h-8 w-8 p-0 hover:bg-primary/10"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDownloadLabel(shipment as any)}
+                            disabled={!shipment.label_pdf_url}
+                            className="h-8 w-8 p-0 hover:bg-primary/10"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedShipment(shipment.id);
+                              setShowAssignDialog(true);
+                            }}
+                            className="h-8 w-8 p-0 hover:bg-primary/10"
+                          >
+                            <UserPlus className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                      <div className="space-y-1">
-                        <p className="font-medium text-muted-foreground">Cliente</p>
-                        <p className="font-medium">{shipment.client_name}</p>
-                        <div className="flex items-center text-muted-foreground">
-                          <MapPin className="w-3 h-3 mr-1" />
-                          {(() => {
-                            const senderCep = shipment.sender_address?.cep;
-                            const recipientCep = shipment.recipient_address?.cep;
-                            if (senderCep && recipientCep && senderCep !== 'N/A' && recipientCep !== 'N/A') {
-                              return `${senderCep} → ${recipientCep}`;
-                            }
-                            return 'Rota não informada';
-                          })()}
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="font-medium text-muted-foreground">Motorista</p>
-                        {shipment.motoristas ? (
-                          <div>
-                            <p className="font-medium">{shipment.motoristas.nome}</p>
-                            <p className="text-xs text-muted-foreground">{shipment.motoristas.telefone}</p>
+                    {/* Conteúdo principal em grid */}
+                    <div className="p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        {/* Cliente */}
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Cliente</span>
                           </div>
-                        ) : (
-                          <Badge variant="outline">Não designado</Badge>
-                        )}
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="font-medium text-muted-foreground">Informações</p>
-                        <div className="flex items-center text-muted-foreground mb-1">
-                          <Package className="w-3 h-3 mr-1" />
-                          Peso: {shipment.weight}kg
+                          <div>
+                            <p className="font-semibold text-sm">{shipment.client_name}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {shipment.user_id ? 'Cadastrado' : 'Anônimo'}
+                            </p>
+                          </div>
                         </div>
-                        <p className="font-medium text-success">
-                          R$ {getQuoteValue(shipment.quote_data).toFixed(2)}
-                        </p>
+
+                        {/* Origem → Destino */}
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Rota</span>
+                          </div>
+                          <div>
+                            <div className="flex items-center space-x-2 text-xs">
+                              <span className="font-medium">
+                                {shipment.sender_address?.city || 'Goiânia'} - {shipment.sender_address?.state || 'GO'}
+                              </span>
+                              <MapPin className="w-3 h-3 text-muted-foreground" />
+                              <span className="font-medium">
+                                {shipment.recipient_address?.city || 'N/A'} - {shipment.recipient_address?.state || 'N/A'}
+                              </span>
+                            </div>
+                            <div className="flex items-center text-xs text-muted-foreground mt-1">
+                              <span>{shipment.sender_address?.cep || 'N/A'} → {shipment.recipient_address?.cep || 'N/A'}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Motorista */}
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Motorista</span>
+                          </div>
+                          <div>
+                            {shipment.motoristas ? (
+                              <div>
+                                <p className="font-semibold text-sm">{shipment.motoristas.nome}</p>
+                                <p className="text-xs text-muted-foreground">{shipment.motoristas.telefone}</p>
+                              </div>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">Não designado</Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Valor e Informações */}
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Valor</span>
+                          </div>
+                          <div>
+                            <p className="font-bold text-lg text-primary">
+                              R$ {getQuoteValue(shipment.quote_data).toFixed(2).replace('.', ',')}
+                            </p>
+                            <div className="flex items-center text-xs text-muted-foreground mt-1">
+                              <Package className="w-3 h-3 mr-1" />
+                              {shipment.weight}kg • {shipment.format}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
