@@ -216,53 +216,43 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     }
   };
 
-  // Polling para verificar status do pagamento
+  // Escutar pagamentos aprovados via webhook usando realtime
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-
     if (step === 'qrcode' && pixData?.paymentId && paymentStatus === 'pending') {
-      console.log('🔄 Iniciando polling de status do PIX');
+      console.log('🔄 Aguardando confirmação de pagamento via webhook...');
       setPaymentStatus('checking');
       
-      const checkPaymentStatus = async () => {
-        try {
-          console.log('🔍 Verificando status do pagamento:', pixData.paymentId);
-          
-          const { data, error } = await supabase.functions.invoke('check-pix-status', {
-            body: { paymentId: pixData.paymentId }
-          });
-
-          console.log('📊 Status response:', { data, error });
-
-          if (error) {
-            console.error('❌ Erro ao verificar status:', error);
-            return;
-          }
-
-          if (data && data.success && data.isPaid) {
-            console.log('🎉 Pagamento confirmado!');
+      const channel = supabase
+        .channel('payment-updates')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'shipments',
+            filter: `payment_data->>pixPaymentId=eq.${pixData.paymentId}`
+          },
+          (payload) => {
+            console.log('🎉 Pagamento confirmado via webhook!', payload);
             setPaymentStatus('paid');
             setStep('paid');
-            toast.success('Pagamento recebido com sucesso! 🎉');
-            clearInterval(intervalId);
+            toast.success('Pagamento confirmado! Redirecionando...', {
+              duration: 2000
+            });
+            
+            // Redirecionar após 2 segundos para mostrar sucesso
+            setTimeout(() => {
+              handleClose();
+              window.location.href = '/pix-sucesso';
+            }, 2000);
           }
-        } catch (error) {
-          console.error('💥 Erro ao verificar pagamento:', error);
-        }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
       };
-
-      // Verificar imediatamente
-      checkPaymentStatus();
-      
-      // Verificar a cada 5 segundos
-      intervalId = setInterval(checkPaymentStatus, 5000);
     }
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
   }, [step, pixData?.paymentId, paymentStatus]);
 
   const handleClose = () => {
