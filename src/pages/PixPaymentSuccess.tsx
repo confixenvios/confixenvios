@@ -16,61 +16,70 @@ const PixPaymentSuccess = () => {
   const [shipmentId, setShipmentId] = useState(null);
   
   // Get payment data from location state
-  const { paymentId, amount, shipmentData } = location.state || {};
+  const { paymentId, amount } = location.state || {};
   
   useEffect(() => {
-    if (!paymentId || !amount || !shipmentData) {
+    console.log('PixPaymentSuccess - Verificando dados:', { paymentId, amount });
+    
+    if (!paymentId || !amount) {
+      console.log('PixPaymentSuccess - Dados insuficientes, redirecionando...');
       navigate('/');
       return;
     }
     
     // Automaticamente criar a remessa quando chegar na página de sucesso
     createShipment();
-  }, [paymentId, amount, shipmentData]);
+  }, [paymentId, amount]);
 
   const createShipment = async () => {
-    if (!user || !shipmentData) {
-      console.error('Dados insuficientes para criar remessa');
-      return;
-    }
-
     try {
       setIsCreatingShipment(true);
-      console.log('🚚 Criando remessa após pagamento confirmado...');
+      console.log('🚚 Criando remessa após pagamento PIX confirmado...');
+
+      // Recuperar TODOS os dados completos do sessionStorage
+      const completeShipmentData = JSON.parse(sessionStorage.getItem('completeShipmentData') || '{}');
+      const documentData = JSON.parse(sessionStorage.getItem('documentData') || '{}');
+      
+      console.log('Dados completos recuperados:', completeShipmentData);
+      console.log('Dados do documento:', documentData);
+
+      // Verificar se temos todos os dados necessários
+      if (!completeShipmentData.addressData) {
+        throw new Error('Dados de endereços não encontrados');
+      }
 
       // 1. Criar endereços com os dados corretos do formulário
+      const senderData = completeShipmentData.addressData.sender;
+      const recipientData = completeShipmentData.addressData.recipient;
+
       const senderAddressData = {
-        user_id: user.id,
+        user_id: user?.id || null,
         address_type: 'sender',
-        name: shipmentData.senderData?.name || '',
-        document: shipmentData.senderData?.document || '',
-        phone: shipmentData.senderData?.phone || '',
-        email: shipmentData.senderData?.email || '',
-        cep: shipmentData.senderData?.cep || '',
-        street: shipmentData.senderData?.street || '',
-        number: shipmentData.senderData?.number || '',
-        complement: shipmentData.senderData?.complement || '',
-        neighborhood: shipmentData.senderData?.neighborhood || '',
-        city: shipmentData.senderData?.city || '',
-        state: shipmentData.senderData?.state || '',
-        reference: shipmentData.senderData?.reference || ''
+        name: senderData.name,
+        cep: senderData.cep,
+        street: senderData.street,
+        number: senderData.number,
+        complement: senderData.complement || null,
+        neighborhood: senderData.neighborhood,
+        city: senderData.city,
+        state: senderData.state,
+        reference: senderData.reference || null,
+        session_id: user ? null : completeShipmentData.metadata?.session_id
       };
 
       const recipientAddressData = {
-        user_id: user.id,
+        user_id: user?.id || null,
         address_type: 'recipient',
-        name: shipmentData.recipientData?.name || '',
-        document: shipmentData.recipientData?.document || '',
-        phone: shipmentData.recipientData?.phone || '',
-        email: shipmentData.recipientData?.email || '',
-        cep: shipmentData.recipientData?.cep || '',
-        street: shipmentData.recipientData?.street || '',
-        number: shipmentData.recipientData?.number || '',
-        complement: shipmentData.recipientData?.complement || '',
-        neighborhood: shipmentData.recipientData?.neighborhood || '',
-        city: shipmentData.recipientData?.city || '',
-        state: shipmentData.recipientData?.state || '',
-        reference: shipmentData.recipientData?.reference || ''
+        name: recipientData.name,
+        cep: recipientData.cep,
+        street: recipientData.street,
+        number: recipientData.number,
+        complement: recipientData.complement || null,
+        neighborhood: recipientData.neighborhood,
+        city: recipientData.city,
+        state: recipientData.state,
+        reference: recipientData.reference || null,
+        session_id: user ? null : completeShipmentData.metadata?.session_id
       };
 
       console.log('Criando endereço do remetente...', senderAddressData);
@@ -97,35 +106,44 @@ const PixPaymentSuccess = () => {
         throw recipientError;
       }
 
-      // 2. Criar remessa
+      if (recipientError) {
+        console.error('Erro ao criar endereço destinatário:', recipientError);
+        throw recipientError;
+      }
+
+      // 2. Criar remessa com TODOS os dados do formulário
+      const trackingCode = `ID${new Date().getFullYear()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      
       const newShipmentData = {
-        user_id: user.id,
+        tracking_code: trackingCode,
+        user_id: user?.id || null,
+        session_id: user ? null : completeShipmentData.metadata?.session_id,
         sender_address_id: senderAddress.id,
         recipient_address_id: recipientAddress.id,
-        weight: shipmentData.weight || 1,
-        length: shipmentData.dimensions?.length || 20,
-        width: shipmentData.dimensions?.width || 15,
-        height: shipmentData.dimensions?.height || 10,
-        format: shipmentData.format || 'package',
-        pickup_option: shipmentData.pickupOption || 'collection',
-        selected_option: shipmentData.selectedOption || 'standard',
-        quote_data: {
-          totalPrice: amount,
-          economicPrice: shipmentData.quote?.economicPrice || amount,
-          expressPrice: shipmentData.quote?.expressPrice || amount * 1.6,
-          deliveryDays: shipmentData.quote?.deliveryDays || 5,
-          expressDeliveryDays: shipmentData.quote?.expressDeliveryDays || 3
-        },
+        weight: completeShipmentData.technicalData?.weight || 1,
+        length: completeShipmentData.technicalData?.length || 20,
+        width: completeShipmentData.technicalData?.width || 15,
+        height: completeShipmentData.technicalData?.height || 10,
+        format: completeShipmentData.technicalData?.format || 'pacote',
+        pickup_option: completeShipmentData.deliveryDetails?.pickupOption || 'dropoff',
+        selected_option: completeShipmentData.deliveryDetails?.selectedOption || 'standard',
+        document_type: documentData.fiscalData?.type || 'declaracao_conteudo',
+        // Salvar TODOS os dados completos no quote_data
+        quote_data: completeShipmentData,
         payment_data: {
           method: 'pix',
           payment_id: paymentId,
           amount: amount,
-          confirmed_at: new Date().toISOString()
+          confirmed_at: new Date().toISOString(),
+          pix_details: {
+            payment_id: paymentId,
+            amount: amount
+          }
         },
         status: 'PAYMENT_CONFIRMED'
       };
 
-      console.log('Criando remessa:', newShipmentData);
+      console.log('Criando remessa com dados completos:', newShipmentData);
       const { data: newShipment, error: shipmentError } = await supabase
         .from('shipments')
         .insert(newShipmentData)
@@ -140,9 +158,15 @@ const PixPaymentSuccess = () => {
       console.log('✅ Remessa criada com sucesso:', newShipment);
       setShipmentId(newShipment.id);
       
+      // Limpar dados do sessionStorage após criar a remessa
+      sessionStorage.removeItem('completeShipmentData');
+      sessionStorage.removeItem('documentData');
+      sessionStorage.removeItem('currentShipment');
+      sessionStorage.removeItem('shipmentForPayment');
+      
       toast({
         title: "🎉 Remessa criada com sucesso!",
-        description: `Sua remessa foi criada. ID: ${newShipment.id}`
+        description: `Código de rastreio: ${trackingCode}`
       });
 
     } catch (error) {

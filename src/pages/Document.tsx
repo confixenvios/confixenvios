@@ -74,100 +74,6 @@ const Document = () => {
 
     try {
       console.log('Document - Dados do currentShipment:', currentShipment);
-      
-      let shipmentId = currentShipment.id;
-      
-      // Se não tem ID, significa que ainda não foi criado no banco
-      if (!shipmentId) {
-        console.log('Document - Criando shipment no banco primeiro...');
-        
-        // Extrair dados dos endereços
-        const senderData = currentShipment.addressData?.sender;
-        const recipientData = currentShipment.addressData?.recipient;
-        
-        if (!senderData || !recipientData) {
-          throw new Error('Dados de endereços não encontrados');
-        }
-        
-        // Criar endereços primeiro
-        const { data: senderAddress, error: senderError } = await supabase
-          .from('addresses')
-          .insert({
-            name: senderData.name,
-            street: senderData.street,
-            number: senderData.number,
-            complement: senderData.complement || null,
-            neighborhood: senderData.neighborhood,
-            city: senderData.city,
-            state: senderData.state,
-            cep: senderData.cep,
-            reference: senderData.reference || null,
-            address_type: 'sender',
-            user_id: user?.id || null,
-            session_id: user ? null : SessionManager.getSessionToken()
-          })
-          .select()
-          .single();
-
-        if (senderError) throw senderError;
-
-        const { data: recipientAddress, error: recipientError } = await supabase
-          .from('addresses')
-          .insert({
-            name: recipientData.name,
-            street: recipientData.street,
-            number: recipientData.number,
-            complement: recipientData.complement || null,
-            neighborhood: recipientData.neighborhood,
-            city: recipientData.city,
-            state: recipientData.state,
-            cep: recipientData.cep,
-            reference: recipientData.reference || null,
-            address_type: 'recipient',
-            user_id: user?.id || null,
-            session_id: user ? null : SessionManager.getSessionToken()
-          })
-          .select()
-          .single();
-
-        if (recipientError) throw recipientError;
-        
-        // Gerar código de rastreamento
-        const trackingCode = `ID${new Date().getFullYear()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-        
-        // Criar shipment
-        const { data: newShipment, error: shipmentError } = await supabase
-          .from('shipments')
-          .insert({
-            tracking_code: trackingCode,
-            sender_address_id: senderAddress.id,
-            recipient_address_id: recipientAddress.id,
-            quote_data: currentShipment,
-            selected_option: currentShipment.deliveryDetails?.selectedOption || 'standard',
-            pickup_option: currentShipment.deliveryDetails?.pickupOption || 'dropoff',
-            weight: currentShipment.technicalData?.weight || 0,
-            length: currentShipment.technicalData?.length || 0,
-            width: currentShipment.technicalData?.width || 0,
-            height: currentShipment.technicalData?.height || 0,
-            format: currentShipment.technicalData?.format || 'pacote',
-            document_type: 'declaracao_conteudo',
-            status: 'PENDING_DOCUMENT',
-            user_id: user?.id || null,
-            session_id: user ? null : SessionManager.getSessionToken()
-          })
-          .select()
-          .single();
-
-        if (shipmentError) throw shipmentError;
-        
-        shipmentId = newShipment.id;
-        console.log('Document - Shipment criado com ID:', shipmentId);
-        
-        // Atualizar currentShipment com o ID
-        currentShipment.id = shipmentId;
-        currentShipment.tracking_code = trackingCode;
-      }
-      
       const completeShipmentData = JSON.parse(sessionStorage.getItem('completeShipmentData') || '{}');
       
       // Dados COMPLETOS do documento fiscal
@@ -203,36 +109,17 @@ const Document = () => {
 
       console.log('Document - Salvando dados COMPLETOS do documento:', updatedCompleteData);
       
-      // Atualizar o shipment com TODOS os dados completos
-      const { error: updateError } = await supabase
-        .from('shipments')
-        .update({
-          document_type: documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo',
-          status: 'PENDING_PAYMENT',
-          // Salvar todos os dados completos no quote_data
-          quote_data: {
-            ...currentShipment.quote_data,
-            completeFormData: updatedCompleteData,
-            fiscalData: documentData.fiscalData
-          }
-        })
-        .eq('id', currentShipment.id);
-
-      if (updateError) {
-        console.error('Error updating shipment with document data:', updateError);
-        throw updateError;
-      }
-
-      // Salvar dados completos no sessionStorage
+      // Salvar dados completos no sessionStorage para pagamento (SEM criar no banco ainda)
       sessionStorage.setItem('completeShipmentData', JSON.stringify(updatedCompleteData));
       sessionStorage.setItem('documentData', JSON.stringify(documentData));
       
-      // Atualizar currentShipment para pagamento
+      // Atualizar currentShipment para pagamento (SEM criar no banco ainda)
       const updatedShipment = {
         ...currentShipment,
         document_type: documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo',
         status: 'PENDING_PAYMENT',
-        completeData: updatedCompleteData
+        completeData: updatedCompleteData,
+        fiscalData: documentData.fiscalData
       };
       
       sessionStorage.setItem('currentShipment', JSON.stringify(updatedShipment));
@@ -240,10 +127,10 @@ const Document = () => {
 
       toast({
         title: "Documento configurado!",
-        description: "Todos os dados salvos. Redirecionando para pagamento...",
+        description: "Dados salvos. Redirecionando para pagamento...",
       });
 
-      console.log('Document - Navegando para pagamento com dados completos');
+      console.log('Document - Navegando para pagamento (remessa será criada após pagamento)');
       navigate("/pagamento");
 
     } catch (error: any) {
