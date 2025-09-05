@@ -539,13 +539,14 @@ const QuoteForm = () => {
         }
       };
 
-      console.log('QuoteForm - Salvando dados completos no sessionStorage:', completeShipmentData);
+      console.log('QuoteForm - Salvando dados COMPLETOS no sessionStorage:', completeShipmentData);
       
-      // Salvar todos os dados coletados no sessionStorage E localStorage para as próximas etapas
+      // Salvar TODOS os dados coletados no sessionStorage para as próximas etapas
+      sessionStorage.setItem('completeShipmentData', JSON.stringify(completeShipmentData));
       sessionStorage.setItem('currentShipment', JSON.stringify(completeShipmentData));
-      localStorage.setItem('currentShipment_backup', JSON.stringify(completeShipmentData));
+      localStorage.setItem('completeShipmentData_backup', JSON.stringify(completeShipmentData));
       
-      console.log('QuoteForm - Dados salvos no sessionStorage e localStorage como backup');
+      console.log('QuoteForm - Dados completos salvos no sessionStorage com todos os detalhes do formulário');
 
       toast({
         title: "Dados coletados!",

@@ -58,6 +58,8 @@ const Document = () => {
     setIsLoading(true);
 
     try {
+      const completeShipmentData = JSON.parse(sessionStorage.getItem('completeShipmentData') || '{}');
+      
       // Dados COMPLETOS do documento fiscal
       const documentData = {
         documentType,
@@ -70,28 +72,38 @@ const Document = () => {
           nfeAccessKey: documentType === 'nfe' ? nfeKey : null,
           contentDescription: documentType === 'declaration' ? merchandiseDescription : null,
           processedAt: new Date().toISOString()
-        },
-        
-        // Referência ao shipment
-        shipment: currentShipment
+        }
       };
 
-      console.log('Document - Salvando dados COMPLETOS do documento:', documentData);
+      // Atualizar dados completos com informações fiscais
+      const updatedCompleteData = {
+        ...completeShipmentData,
+        
+        // === DADOS DO DOCUMENTO FISCAL ===
+        documentData: documentData,
+        
+        // Atualizar status
+        statusControl: {
+          ...completeShipmentData.statusControl,
+          currentStatus: 'PENDING_PAYMENT',
+          currentStep: 'payment_processing',
+          lastUpdated: new Date().toISOString()
+        }
+      };
+
+      console.log('Document - Salvando dados COMPLETOS do documento:', updatedCompleteData);
       
-      // Atualizar o shipment com o tipo de documento escolhido
+      // Atualizar o shipment com TODOS os dados completos
       const { error: updateError } = await supabase
         .from('shipments')
         .update({
           document_type: documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo',
-          // Expandir quote_data com informações fiscais
+          status: 'PENDING_PAYMENT',
+          // Salvar todos os dados completos no quote_data
           quote_data: {
             ...currentShipment.quote_data,
-            fiscalData: {
-              type: documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo',
-              nfeAccessKey: documentType === 'nfe' ? nfeKey : null,
-              contentDescription: documentType === 'declaration' ? merchandiseDescription : null,
-              processedAt: new Date().toISOString()
-            }
+            completeFormData: updatedCompleteData,
+            fiscalData: documentData.fiscalData
           }
         })
         .eq('id', currentShipment.id);
@@ -102,14 +114,26 @@ const Document = () => {
       }
 
       // Salvar dados completos no sessionStorage
+      sessionStorage.setItem('completeShipmentData', JSON.stringify(updatedCompleteData));
       sessionStorage.setItem('documentData', JSON.stringify(documentData));
+      
+      // Atualizar currentShipment para pagamento
+      const updatedShipment = {
+        ...currentShipment,
+        document_type: documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo',
+        status: 'PENDING_PAYMENT',
+        completeData: updatedCompleteData
+      };
+      
+      sessionStorage.setItem('currentShipment', JSON.stringify(updatedShipment));
+      sessionStorage.setItem('shipmentForPayment', JSON.stringify(updatedShipment));
 
       toast({
         title: "Documento configurado!",
-        description: "Redirecionando para pagamento...",
+        description: "Todos os dados salvos. Redirecionando para pagamento...",
       });
 
-      console.log('Document - Navegando para pagamento');
+      console.log('Document - Navegando para pagamento com dados completos');
       navigate("/pagamento");
 
     } catch (error: any) {
