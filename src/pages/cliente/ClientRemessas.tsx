@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Plus, Download, Eye, Calendar, MapPin, Truck } from "lucide-react";
+import { Package, Plus, Calendar, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -89,29 +89,14 @@ const ClientRemessas = () => {
       'PAGO_AGUARDANDO_ETIQUETA': { variant: 'default', label: 'Aguardando Etiqueta' },
       'LABEL_AVAILABLE': { variant: 'success', label: 'Etiqueta Disponível' },
       'IN_TRANSIT': { variant: 'default', label: 'Em Trânsito' },
-      'DELIVERED': { variant: 'success', label: 'Entregue' }
+      'DELIVERED': { variant: 'success', label: 'Entregue' },
+      'PAID': { variant: 'success', label: 'PAGO' }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', label: status };
     return <Badge variant={config.variant as any}>{config.label}</Badge>;
   };
 
-  const handleDownloadLabel = (shipment: Shipment) => {
-    if (!shipment.label_pdf_url) {
-      toast({
-        title: "Etiqueta não disponível",
-        description: "A etiqueta ainda não foi gerada para esta remessa.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    window.open(shipment.label_pdf_url, '_blank');
-    toast({
-      title: "Download iniciado",
-      description: "A etiqueta está sendo baixada."
-    });
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
@@ -207,17 +192,6 @@ const ClientRemessas = () => {
                           <Calendar className="w-4 h-4 mr-1" />
                           {formatDate(shipment.created_at)}
                         </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={!shipment.label_pdf_url}
-                          onClick={() => handleDownloadLabel(shipment)}
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Baixar Etiqueta
-                        </Button>
                       </div>
                     </div>
 
