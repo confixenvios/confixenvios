@@ -134,30 +134,30 @@ export const RemessaDetalhes = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-lg w-full mx-4 max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Package className="h-5 w-5" />
+        <DialogContent className="max-w-lg w-[95vw] sm:w-full mx-2 sm:mx-4 max-h-[95vh] p-3 sm:p-6">
+          <DialogHeader className="pb-3">
+            <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Package className="h-4 w-4 sm:h-5 sm:w-5" />
               Detalhes da Remessa
             </DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[70vh]">
-            <div className="space-y-4 px-1">
+          <ScrollArea className="max-h-[75vh] pr-2">
+            <div className="space-y-3 sm:space-y-4">
               {/* Status e Ações Principais */}
               <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">
+                <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <CardTitle className="text-base sm:text-lg break-all">
                       {remessa.tracking_code || `ID${remessa.id.slice(0, 8).toUpperCase()}`}
                     </CardTitle>
                     {getStatusBadge(remessa.status)}
                   </div>
                 </CardHeader>
-                <CardContent className="pt-0 space-y-3">
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Criado em: {format(new Date(remessa.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                <CardContent className="pt-0 space-y-2 sm:space-y-3 px-3 sm:px-6 pb-3 sm:pb-6">
+                  <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
+                    <span className="break-words">Criado em: {format(new Date(remessa.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
                   </div>
 
                   {/* Ações Rápidas */}
@@ -189,20 +189,20 @@ export const RemessaDetalhes = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full"
+                      className="w-full text-xs sm:text-sm h-8 sm:h-9"
                       onClick={() => setShowPhotoUpload(true)}
                     >
-                      <Camera className="h-4 w-4 mr-2" />
-                      Adicionar Foto
+                      <Camera className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Adicionar </span>Foto
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full"
+                      className="w-full text-xs sm:text-sm h-8 sm:h-9"
                       onClick={() => setShowSignaturePad(true)}
                     >
-                      <PenTool className="h-4 w-4 mr-2" />
-                      Capturar Assinatura
+                      <PenTool className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Capturar </span>Assinatura
                     </Button>
                   </div>
 
@@ -226,11 +226,11 @@ export const RemessaDetalhes = ({
 
               {/* Informações da Remessa */}
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Informações da Remessa</CardTitle>
+                <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                  <CardTitle className="text-sm sm:text-base">Informações da Remessa</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                <CardContent className="space-y-2 sm:space-y-3 px-3 sm:px-6 pb-3 sm:pb-6">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
                     <div>
                       <p className="text-muted-foreground text-xs">Peso</p>
                       <p className="font-medium">{remessa.weight}kg</p>
@@ -257,36 +257,36 @@ export const RemessaDetalhes = ({
 
               {/* Remetente */}
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <User className="h-4 w-4" />
+                <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                  <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                    <User className="h-3 w-3 sm:h-4 sm:w-4" />
                     Remetente
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm">
+                <CardContent className="space-y-2 text-xs sm:text-sm px-3 sm:px-6 pb-3 sm:pb-6">
                   <div>
-                    <p className="font-medium">{remessa.sender_address?.name}</p>
+                    <p className="font-medium break-words">{remessa.sender_address?.name}</p>
                     {remessa.sender_address?.phone && (
                       <div className="flex items-center text-muted-foreground mt-1">
-                        <Phone className="w-3 h-3 mr-1" />
-                        <a href={`tel:${remessa.sender_address.phone}`} className="hover:underline">
+                        <Phone className="w-3 h-3 mr-1 flex-shrink-0" />
+                        <a href={`tel:${remessa.sender_address.phone}`} className="hover:underline break-words">
                           {remessa.sender_address.phone}
                         </a>
                       </div>
                     )}
                   </div>
                   <div className="flex items-start gap-2">
-                    <MapPin className="w-3 h-3 mt-1 text-muted-foreground flex-shrink-0" />
-                    <div className="text-muted-foreground text-xs">
-                      <p>{remessa.sender_address?.street}, {remessa.sender_address?.number}</p>
-                      <p>{remessa.sender_address?.neighborhood}</p>
-                      <p>{remessa.sender_address?.city} - {remessa.sender_address?.state}</p>
+                    <MapPin className="w-3 h-3 mt-0.5 text-muted-foreground flex-shrink-0" />
+                    <div className="text-muted-foreground text-xs leading-relaxed">
+                      <p className="break-words">{remessa.sender_address?.street}, {remessa.sender_address?.number}</p>
+                      <p className="break-words">{remessa.sender_address?.neighborhood}</p>
+                      <p className="break-words">{remessa.sender_address?.city} - {remessa.sender_address?.state}</p>
                       <p>CEP: {remessa.sender_address?.cep}</p>
                       {remessa.sender_address?.complement && (
-                        <p>Complemento: {remessa.sender_address.complement}</p>
+                        <p className="break-words">Complemento: {remessa.sender_address.complement}</p>
                       )}
                       {remessa.sender_address?.reference && (
-                        <p>Referência: {remessa.sender_address.reference}</p>
+                        <p className="break-words">Referência: {remessa.sender_address.reference}</p>
                       )}
                     </div>
                   </div>
@@ -295,36 +295,36 @@ export const RemessaDetalhes = ({
 
               {/* Destinatário */}
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
+                <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                  <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
                     Destinatário
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm">
+                <CardContent className="space-y-2 text-xs sm:text-sm px-3 sm:px-6 pb-3 sm:pb-6">
                   <div>
-                    <p className="font-medium">{remessa.recipient_address?.name}</p>
+                    <p className="font-medium break-words">{remessa.recipient_address?.name}</p>
                     {remessa.recipient_address?.phone && (
                       <div className="flex items-center text-muted-foreground mt-1">
-                        <Phone className="w-3 h-3 mr-1" />
-                        <a href={`tel:${remessa.recipient_address.phone}`} className="hover:underline">
+                        <Phone className="w-3 h-3 mr-1 flex-shrink-0" />
+                        <a href={`tel:${remessa.recipient_address.phone}`} className="hover:underline break-words">
                           {remessa.recipient_address.phone}
                         </a>
                       </div>
                     )}
                   </div>
                   <div className="flex items-start gap-2">
-                    <MapPin className="w-3 h-3 mt-1 text-muted-foreground flex-shrink-0" />
-                    <div className="text-muted-foreground text-xs">
-                      <p>{remessa.recipient_address?.street}, {remessa.recipient_address?.number}</p>
-                      <p>{remessa.recipient_address?.neighborhood}</p>
-                      <p>{remessa.recipient_address?.city} - {remessa.recipient_address?.state}</p>
+                    <MapPin className="w-3 h-3 mt-0.5 text-muted-foreground flex-shrink-0" />
+                    <div className="text-muted-foreground text-xs leading-relaxed">
+                      <p className="break-words">{remessa.recipient_address?.street}, {remessa.recipient_address?.number}</p>
+                      <p className="break-words">{remessa.recipient_address?.neighborhood}</p>
+                      <p className="break-words">{remessa.recipient_address?.city} - {remessa.recipient_address?.state}</p>
                       <p>CEP: {remessa.recipient_address?.cep}</p>
                       {remessa.recipient_address?.complement && (
-                        <p>Complemento: {remessa.recipient_address.complement}</p>
+                        <p className="break-words">Complemento: {remessa.recipient_address.complement}</p>
                       )}
                       {remessa.recipient_address?.reference && (
-                        <p>Referência: {remessa.recipient_address.reference}</p>
+                        <p className="break-words">Referência: {remessa.recipient_address.reference}</p>
                       )}
                     </div>
                   </div>
@@ -333,13 +333,13 @@ export const RemessaDetalhes = ({
             </div>
           </ScrollArea>
 
-          <div className="flex gap-2 pt-2 border-t">
+          <div className="flex gap-2 pt-2 border-t mt-3 mx-1">
             <Button
               variant="outline"
-              className="flex-1"
+              className="flex-1 h-9"
               onClick={onClose}
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
+              <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               Voltar
             </Button>
           </div>
