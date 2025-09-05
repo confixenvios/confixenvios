@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Plus, Calendar, MapPin } from "lucide-react";
+import { Package, Plus, Calendar, MapPin, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -9,25 +9,48 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import TestAbacateWebhook from "@/components/TestAbacateWebhook";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 
 interface Shipment {
   id: string;
   tracking_code: string;
   status: string;
   weight: number;
+  length: number;
+  width: number;
+  height: number;
+  format: string;
+  selected_option: string;
+  pickup_option: string;
   created_at: string;
   label_pdf_url: string | null;
+  cte_key: string | null;
+  quote_data: any;
+  payment_data: any;
   sender_address: {
     name: string;
+    street: string;
+    number: string;
+    neighborhood: string;
     city: string;
     state: string;
+    cep: string;
+    complement?: string;
+    reference?: string;
   };
   recipient_address: {
     name: string;
+    street: string;
+    number: string;
+    neighborhood: string;
     city: string;
     state: string;
+    cep: string;
+    complement?: string;
+    reference?: string;
   };
-  payment_data?: any;
 }
 
 const ClientRemessas = () => {
@@ -35,6 +58,8 @@ const ClientRemessas = () => {
   const { toast } = useToast();
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -51,19 +76,39 @@ const ClientRemessas = () => {
           tracking_code,
           status,
           weight,
+          length,
+          width,
+          height,
+          format,
+          selected_option,
+          pickup_option,
           created_at,
           label_pdf_url,
+          cte_key,
+          quote_data,
+          payment_data,
           sender_address:addresses!sender_address_id (
             name,
+            street,
+            number,
+            neighborhood,
             city,
-            state
+            state,
+            cep,
+            complement,
+            reference
           ),
           recipient_address:addresses!recipient_address_id (
             name,
+            street,
+            number,
+            neighborhood,
             city,
-            state
-          ),
-          payment_data
+            state,
+            cep,
+            complement,
+            reference
+          )
         `)
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
@@ -97,6 +142,10 @@ const ClientRemessas = () => {
     return <Badge variant={config.variant as any}>{config.label}</Badge>;
   };
 
+  const handleViewDetails = (shipment: Shipment) => {
+    setSelectedShipment(shipment);
+    setDetailsModalOpen(true);
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
@@ -193,6 +242,16 @@ const ClientRemessas = () => {
                           {formatDate(shipment.created_at)}
                         </div>
                       </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(shipment)}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Ver Detalhes
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
@@ -231,6 +290,233 @@ const ClientRemessas = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Detalhes */}
+      <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Detalhes da Remessa - {selectedShipment?.tracking_code || `REF-${selectedShipment?.id.slice(0, 8)}`}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[60vh] pr-4">
+            {selectedShipment && (
+              <div className="space-y-6">
+                {/* Informações Gerais */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Informações Gerais</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Código de Rastreamento</p>
+                      <p className="font-medium">{selectedShipment.tracking_code || `REF-${selectedShipment.id.slice(0, 8)}`}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Status</p>
+                      <div className="mt-1">{getStatusBadge(selectedShipment.status)}</div>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Data de Criação</p>
+                      <p className="font-medium">{formatDate(selectedShipment.created_at)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Tipo de Serviço</p>
+                      <p className="font-medium">{selectedShipment.selected_option === 'standard' ? 'Econômico' : 'Expresso'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Opção de Coleta</p>
+                      <p className="font-medium">{selectedShipment.pickup_option === 'dropoff' ? 'Entrega no Hub' : 'Coleta no Local'}</p>
+                    </div>
+                    {selectedShipment.cte_key && (
+                      <div>
+                        <p className="text-muted-foreground">Chave CTE</p>
+                        <p className="font-medium font-mono text-xs">{selectedShipment.cte_key}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Dados do Remetente */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Dados do Remetente</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Nome</p>
+                      <p className="font-medium">{selectedShipment.sender_address?.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">CEP</p>
+                      <p className="font-medium">{selectedShipment.sender_address?.cep}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground">Endereço</p>
+                      <p className="font-medium">
+                        {selectedShipment.sender_address?.street}, {selectedShipment.sender_address?.number}
+                        {selectedShipment.sender_address?.complement && `, ${selectedShipment.sender_address.complement}`}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Bairro</p>
+                      <p className="font-medium">{selectedShipment.sender_address?.neighborhood}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Cidade/Estado</p>
+                      <p className="font-medium">{selectedShipment.sender_address?.city} - {selectedShipment.sender_address?.state}</p>
+                    </div>
+                    {selectedShipment.sender_address?.reference && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Referência</p>
+                        <p className="font-medium">{selectedShipment.sender_address.reference}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Dados do Destinatário */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Dados do Destinatário</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Nome</p>
+                      <p className="font-medium">{selectedShipment.recipient_address?.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">CEP</p>
+                      <p className="font-medium">{selectedShipment.recipient_address?.cep}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground">Endereço</p>
+                      <p className="font-medium">
+                        {selectedShipment.recipient_address?.street}, {selectedShipment.recipient_address?.number}
+                        {selectedShipment.recipient_address?.complement && `, ${selectedShipment.recipient_address.complement}`}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Bairro</p>
+                      <p className="font-medium">{selectedShipment.recipient_address?.neighborhood}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Cidade/Estado</p>
+                      <p className="font-medium">{selectedShipment.recipient_address?.city} - {selectedShipment.recipient_address?.state}</p>
+                    </div>
+                    {selectedShipment.recipient_address?.reference && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Referência</p>
+                        <p className="font-medium">{selectedShipment.recipient_address.reference}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Dados do Pacote */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Dados do Pacote</h3>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Peso</p>
+                      <p className="font-medium">{selectedShipment.weight}kg</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Comprimento</p>
+                      <p className="font-medium">{selectedShipment.length}cm</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Largura</p>
+                      <p className="font-medium">{selectedShipment.width}cm</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Altura</p>
+                      <p className="font-medium">{selectedShipment.height}cm</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Formato</p>
+                      <p className="font-medium capitalize">{selectedShipment.format}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Dados de Pagamento */}
+                {selectedShipment.payment_data && (
+                  <>
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Dados de Pagamento</h3>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Método de Pagamento</p>
+                          <p className="font-medium">{selectedShipment.payment_data.method?.toUpperCase()}</p>
+                        </div>
+                        {selectedShipment.payment_data.amount && (
+                          <div>
+                            <p className="text-muted-foreground">Valor Pago</p>
+                            <p className="font-medium">{formatCurrency(selectedShipment.payment_data.amount)}</p>
+                          </div>
+                        )}
+                        {selectedShipment.payment_data.paidAt && (
+                          <div>
+                            <p className="text-muted-foreground">Data do Pagamento</p>
+                            <p className="font-medium">{formatDate(selectedShipment.payment_data.paidAt)}</p>
+                          </div>
+                        )}
+                        {selectedShipment.payment_data.status && (
+                          <div>
+                            <p className="text-muted-foreground">Status do Pagamento</p>
+                            <p className="font-medium">{selectedShipment.payment_data.status === 'paid' ? 'PAGO' : selectedShipment.payment_data.status}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Separator />
+                  </>
+                )}
+
+                {/* Dados da Cotação */}
+                {selectedShipment.quote_data && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Dados da Cotação</h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      {selectedShipment.quote_data.shippingQuote && (
+                        <>
+                          <div>
+                            <p className="text-muted-foreground">Zona de Entrega</p>
+                            <p className="font-medium">{selectedShipment.quote_data.shippingQuote.zoneName} ({selectedShipment.quote_data.shippingQuote.zone})</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Prazo Econômico</p>
+                            <p className="font-medium">{selectedShipment.quote_data.shippingQuote.economicDays} dias</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Prazo Expresso</p>
+                            <p className="font-medium">{selectedShipment.quote_data.shippingQuote.expressDays} dias</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Preço Original</p>
+                            <p className="font-medium">R$ {selectedShipment.quote_data.shippingQuote.economicPrice.toFixed(2).replace('.', ',')}</p>
+                          </div>
+                        </>
+                      )}
+                      {selectedShipment.quote_data.totalMerchandiseValue && (
+                        <div>
+                          <p className="text-muted-foreground">Valor da Mercadoria</p>
+                          <p className="font-medium">R$ {selectedShipment.quote_data.totalMerchandiseValue.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
