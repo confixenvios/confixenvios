@@ -121,16 +121,20 @@ const ClientHistorico = () => {
         });
 
         // Payment related events
-        if (shipment.payment_data) {
+        if (shipment.payment_data || shipment.status === 'PAID') {
+          const paymentValue = shipment.payment_data?.pixData?.amount ? 
+            (shipment.payment_data.pixData.amount / 100) : 
+            (shipment.quote_data?.amount || shipment.quote_data?.price || 0);
+          
           items.push({
             id: `${shipment.id}-payment`,
             type: 'payment',
             title: 'Pagamento processado',
-            description: `Pagamento de R$ ${shipment.quote_data?.price?.toFixed(2) || '0,00'} processado`,
-            status: shipment.status.includes('PAYMENT') ? 'CONFIRMED' : 'PENDING',
+            description: `Pagamento de R$ ${paymentValue.toFixed(2)} processado`,
+            status: 'CONFIRMED',
             date: shipment.created_at,
             tracking_code: shipment.tracking_code,
-            value: shipment.quote_data?.price
+            value: paymentValue
           });
         }
 
@@ -204,7 +208,7 @@ const ClientHistorico = () => {
   const getStatusBadge = (type: string, status: string) => {
     if (type === 'payment') {
       return status === 'CONFIRMED' 
-        ? <Badge className="bg-success text-success-foreground">Confirmado</Badge>
+        ? <Badge className="bg-success text-success-foreground">Pago</Badge>
         : <Badge variant="destructive">Pendente</Badge>;
     }
     
