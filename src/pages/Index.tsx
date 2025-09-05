@@ -30,11 +30,64 @@ const Index = () => {
       setIsTestingShipment(true);
       console.log('🧪 TESTE: Iniciando criação de remessa simulada');
 
-      // Dados simulados para teste
+      // 1. Criar endereço do remetente
+      console.log('🧪 TESTE: Criando endereço do remetente...');
+      const { data: senderAddress, error: senderError } = await supabase
+        .from('addresses')
+        .insert({
+          user_id: user.id,
+          address_type: 'sender',
+          name: 'Remetente Teste',
+          document: '12345678901',
+          phone: '11999999999',
+          email: 'remetente@teste.com',
+          cep: '01310-100',
+          street: 'Av. Paulista',
+          number: '1000',
+          neighborhood: 'Bela Vista',
+          city: 'São Paulo',
+          state: 'SP'
+        })
+        .select()
+        .single();
+
+      if (senderError) {
+        console.error('🧪 TESTE: Erro ao criar endereço remetente:', senderError);
+        throw senderError;
+      }
+
+      // 2. Criar endereço do destinatário
+      console.log('🧪 TESTE: Criando endereço do destinatário...');
+      const { data: recipientAddress, error: recipientError } = await supabase
+        .from('addresses')
+        .insert({
+          user_id: user.id,
+          address_type: 'recipient',
+          name: 'Destinatário Teste',
+          document: '98765432100',
+          phone: '21888888888',
+          email: 'destinatario@teste.com',
+          cep: '20040-020',
+          street: 'Av. Rio Branco',
+          number: '500',
+          neighborhood: 'Centro',
+          city: 'Rio de Janeiro',
+          state: 'RJ'
+        })
+        .select()
+        .single();
+
+      if (recipientError) {
+        console.error('🧪 TESTE: Erro ao criar endereço destinatário:', recipientError);
+        throw recipientError;
+      }
+
+      // 3. Criar remessa com os endereços
+      console.log('🧪 TESTE: Criando remessa com endereços...');
       const testShipmentData = {
         user_id: user.id,
-        sender_address_id: null,
-        recipient_address_id: null,
+        sender_address_id: senderAddress.id,
+        recipient_address_id: recipientAddress.id,
         weight: 1,
         length: 20,
         width: 15,
