@@ -530,45 +530,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
         </ol>
       </div>
 
-      {/* Botão verificação manual se estiver aguardando muito tempo */}
-      {paymentStatus === 'checking' && (
-        <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
-          <p className="text-sm text-orange-800 dark:text-orange-200 mb-3">
-            Já fez o pagamento? Clique para verificar manualmente:
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              try {
-                const { data: response } = await supabase.functions.invoke('check-pix-status', {
-                  body: { paymentId: pixData.paymentId }
-                });
-                
-                if (response?.success && (response?.data?.status === 'PAID' || response?.isPaid === true)) {
-                  processPaymentSuccess();
-                } else {
-                  toast({
-                    title: "Pagamento ainda não confirmado",
-                    description: "Aguarde alguns instantes e tente novamente",
-                    variant: "destructive"
-                  });
-                }
-              } catch (error) {
-                console.error('Erro verificação manual:', error);
-                toast({
-                  title: "Erro na verificação",
-                  description: "Erro ao verificar pagamento",
-                  variant: "destructive"
-                });
-              }
-            }}
-            className="w-full"
-          >
-            Verificar Pagamento
-          </Button>
-        </div>
-      )}
+      {/* Verificação automática - sem botão manual */}
     </div>
   );
 
