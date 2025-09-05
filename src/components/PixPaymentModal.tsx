@@ -265,61 +265,68 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     }, 500);
   };
 
-  // Sistema de verificação PIX via API APENAS (sem webhook)
+  // Sistema de verificação PIX APRIMORADO - mais frequente + fallback manual
   useEffect(() => {
     if (step !== 'qrcode' || !pixData?.paymentId || paymentStatus !== 'pending') return;
 
-    console.log('🎯 Iniciando verificação PIX APENAS via API para:', pixData.paymentId);
+    console.log('🎯 Iniciando verificação PIX APRIMORADA para:', pixData.paymentId);
     setPaymentStatus('checking');
 
     let isMounted = true;
     let pollInterval: NodeJS.Timeout;
 
-    // Polling APENAS da API Abacate Pay (conforme documentação)
+    // Verificação mais agressiva inicialmente
     let attempts = 0;
-    const maxAttempts = 240; // 20 minutos (5 segundos * 240)
+    const maxAttempts = 600; // 20 minutos total
     
     const checkPaymentViaAPI = async () => {
       if (!isMounted || attempts >= maxAttempts) {
         if (attempts >= maxAttempts) {
+          console.log('⏰ Tempo limite atingido para verificação automática');
           toast({
-            title: "Tempo esgotado",
-            description: "Tempo limite excedido. Verifique se o pagamento foi processado.",
-            variant: "destructive"
+            title: "Verificação pausada",
+            description: "Use o botão 'Verificar Pagamento' se já fez o PIX.",
+            variant: "default"
           });
         }
         return;
       }
       
       attempts++;
-      const minutes = Math.floor((attempts * 5) / 60);
-      const seconds = (attempts * 5) % 60;
-      console.log(`🔍 Verificação ${attempts}/${maxAttempts} (${minutes}m${seconds}s) - API Abacate Pay`);
+      
+      // Intervalo dinâmico: 2s nos primeiros 2 minutos, depois 5s
+      const interval = attempts < 60 ? 2000 : 5000;
+      const totalSeconds = (attempts < 60 ? attempts * 2 : 120 + (attempts - 60) * 5);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      
+      console.log(`🔍 Verificação ${attempts}/${maxAttempts} (${minutes}m${seconds}s) - Intervalo: ${interval/1000}s`);
 
       try {
         const { data: response, error } = await supabase.functions.invoke('check-pix-status', {
           body: { paymentId: pixData.paymentId }
         });
 
-        console.log('📊 Resposta da API:', response);
-        console.log('📊 Status atual:', response?.data?.status);
+        console.log('📊 Resposta completa da API:', response);
+        console.log('📊 Status PIX atual:', response?.data?.status);
         console.log('📊 isPaid:', response?.isPaid);
+        console.log('📊 Sucesso da resposta:', response?.success);
 
         if (!error && response?.success && (response?.data?.status === 'PAID' || response?.isPaid === true)) {
-          console.log('✅ PIX PAGO confirmado pela API Abacate Pay!');
+          console.log('✅ 🎉 PIX CONFIRMADO PELA API! Processando sucesso...');
           processPaymentSuccess();
           return;
         }
 
-        // Continuar verificação se não foi pago ainda
+        // Continuar verificação se ainda montado
         if (isMounted && attempts < maxAttempts) {
-          pollInterval = setTimeout(checkPaymentViaAPI, 5000); // Verificar a cada 5 segundos
+          pollInterval = setTimeout(checkPaymentViaAPI, interval);
         }
 
       } catch (error) {
         console.error('❌ Erro na verificação PIX:', error);
         if (isMounted && attempts < maxAttempts) {
-          pollInterval = setTimeout(checkPaymentViaAPI, 5000);
+          pollInterval = setTimeout(checkPaymentViaAPI, interval);
         }
       }
     };
@@ -328,7 +335,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     checkPaymentViaAPI();
 
     return () => {
-      console.log('🧹 Limpando verificação PIX...');
+      console.log('🧹 Limpando verificação PIX aprimorada...');
       isMounted = false;
       if (pollInterval) clearTimeout(pollInterval);
     };
@@ -530,7 +537,71 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
         </ol>
       </div>
 
-      {/* Verificação automática - sem botão manual */}
+      {/* Botão de verificação manual como fallback */}
+      {paymentStatus === 'checking' && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+          <p className="text-sm text-blue-800 dark:text-blue-200 mb-3 flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Já fez o pagamento? Verifique manualmente:
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              try {
+                console.log('🔍 🚀 VERIFICAÇÃO MANUAL APRIMORADA para:', pixData.paymentId);
+                console.log('🕐 Timestamp:', new Date().toISOString());
+                
+                toast({
+                  title: "Verificando PIX...",
+                  description: "Consultando API do Abacate Pay em tempo real..."
+                });
+                
+                const { data: response, error } = await supabase.functions.invoke('check-pix-status', {
+                  body: { paymentId: pixData.paymentId }
+                });
+                
+                console.log('📋 RESPOSTA COMPLETA da verificação manual:', response);
+                console.log('📊 Status detalhado:', response?.data?.status);
+                console.log('📊 isPaid detalhado:', response?.isPaid);
+                console.log('📊 Success flag:', response?.success);
+                console.log('📊 Error:', error);
+                console.log('📊 Data object:', response?.data);
+                
+                if (!error && response?.success && (response?.data?.status === 'PAID' || response?.isPaid === true)) {
+                  console.log('✅ 🎉 PIX CONFIRMADO na verificação manual! Processando sucesso...');
+                  processPaymentSuccess();
+                } else {
+                  console.log('⏳ PIX ainda pendente na verificação manual');
+                  console.log('📝 Motivo: Status =', response?.data?.status, '| isPaid =', response?.isPaid);
+                  const statusMsg = response?.data?.status || 'Pendente';
+                  toast({
+                    title: "PIX ainda não confirmado",
+                    description: `Status: ${statusMsg}. A verificação automática continua.`,
+                    variant: "default"
+                  });
+                }
+              } catch (error) {
+                console.error('❌ ERRO CRÍTICO na verificação manual:', error);
+                toast({
+                  title: "Erro na verificação",
+                  description: "Falha ao consultar API. Tente em alguns segundos.",
+                  variant: "destructive"
+                });
+              }
+            }}
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 border-0 shadow-md transition-all duration-200"
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Verificar Pagamento Agora
+          </Button>
+          
+          <div className="flex items-center justify-center gap-1 text-xs text-blue-500 dark:text-blue-400">
+            <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></div>
+            <span>Verificação automática ativa (a cada 2 segundos)</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 
