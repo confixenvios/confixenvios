@@ -89,7 +89,7 @@ const App = () => (
                       <Route path="remessas" element={<ClientRemessas />} />
                       <Route path="etiquetas" element={<ClientEtiquetas />} />
                       <Route path="rastreamento" element={<ClientRastreio />} />
-                      <Route path="historico" element={<ClientHistorico />} />
+                      <Route path="relatorio" element={<ClientHistorico />} />
                       <Route path="minha-conta" element={<ClientConta />} />
                     </Routes>
                   </ClientLayout>
