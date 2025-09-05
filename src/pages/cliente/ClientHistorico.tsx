@@ -30,16 +30,45 @@ import { ptBR } from "date-fns/locale";
 import * as XLSX from 'xlsx';
 import { cn } from "@/lib/utils";
 
-interface HistoryItem {
+interface ShipmentReport {
   id: string;
-  type: 'shipment' | 'payment' | 'label' | 'tracking';
-  title: string;
-  description: string;
+  tracking_code: string;
   status: string;
-  date: string;
-  value?: number;
-  tracking_code?: string;
-  metadata?: any;
+  created_at: string;
+  weight: number;
+  height: number;
+  width: number;
+  length: number;
+  format: string;
+  pickup_option: string;
+  selected_option: string;
+  quote_data: any;
+  payment_data: any;
+  label_pdf_url: string | null;
+  sender_address: {
+    name: string;
+    cep: string;
+    street: string;
+    number: string;
+    complement?: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    reference?: string;
+  } | null;
+  recipient_address: {
+    name: string;
+    cep: string;
+    street: string;
+    number: string;
+    complement?: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    reference?: string;
+  } | null;
+  price: number;
+  delivery_days: number;
 }
 
 interface ShipmentData {
@@ -67,10 +96,10 @@ const ClientHistorico = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+  const [shipmentReports, setShipmentReports] = useState<ShipmentReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [dateFrom, setDateFrom] = useState<Date | undefined>(subDays(new Date(), 30));
   const [dateTo, setDateTo] = useState<Date | undefined>(new Date());
@@ -78,11 +107,11 @@ const ClientHistorico = () => {
 
   useEffect(() => {
     if (user) {
-      loadHistory();
+      loadShipmentReports();
     }
   }, [user, dateFrom, dateTo]);
 
-  const loadHistory = async () => {
+  const loadShipmentReports = async () => {
     if (!user) return;
     
     setLoading(true);
@@ -95,11 +124,17 @@ const ClientHistorico = () => {
           status,
           created_at,
           weight,
+          height,
+          width,
+          length,
+          format,
+          pickup_option,
+          selected_option,
           quote_data,
           payment_data,
           label_pdf_url,
-          sender_address:addresses!sender_address_id(name, city, state),
-          recipient_address:addresses!recipient_address_id(name, city, state)
+          sender_address:addresses!sender_address_id(name, cep, street, number, complement, neighborhood, city, state, reference),
+          recipient_address:addresses!recipient_address_id(name, cep, street, number, complement, neighborhood, city, state, reference)
         `)
         .eq('user_id', user.id);
 
@@ -114,205 +149,188 @@ const ClientHistorico = () => {
       const { data: shipmentsData, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error loading history:', error);
+        console.error('Error loading shipments:', error);
         toast({
-          title: "Erro ao carregar histórico",
-          description: "Não foi possível carregar o histórico.",
+          title: "Erro ao carregar relatórios",
+          description: "Não foi possível carregar os dados das remessas.",
           variant: "destructive"
         });
         return;
       }
 
-      // Transform shipments data into history items
-      const items: HistoryItem[] = [];
+      // Transform shipments data into report format
+      const reports: ShipmentReport[] = shipmentsData?.map((shipment: any) => ({
+        id: shipment.id,
+        tracking_code: shipment.tracking_code,
+        status: shipment.status,
+        created_at: shipment.created_at,
+        weight: shipment.weight,
+        height: shipment.height,
+        width: shipment.width,
+        length: shipment.length,
+        format: shipment.format,
+        pickup_option: shipment.pickup_option,
+        selected_option: shipment.selected_option,
+        quote_data: shipment.quote_data,
+        payment_data: shipment.payment_data,
+        label_pdf_url: shipment.label_pdf_url,
+        sender_address: shipment.sender_address,
+        recipient_address: shipment.recipient_address,
+        price: shipment.quote_data?.price || shipment.quote_data?.amount || 0,
+        delivery_days: shipment.quote_data?.delivery_days || 0
+      })) || [];
       
-      shipmentsData?.forEach((shipment: ShipmentData) => {
-        // Shipment creation
-        items.push({
-          id: `${shipment.id}-created`,
-          type: 'shipment',
-          title: 'Remessa criada',
-          description: `Remessa para ${shipment.recipient_address?.name || 'destinatário'} em ${shipment.recipient_address?.city || 'cidade não informada'}`,
-          status: 'CREATED',
-          date: shipment.created_at,
-          tracking_code: shipment.tracking_code,
-          value: shipment.quote_data?.price,
-          metadata: { weight: shipment.weight }
-        });
-
-        // Payment related events
-        if (shipment.payment_data || shipment.status === 'PAID') {
-          const paymentValue = shipment.payment_data?.pixData?.amount ? 
-            (shipment.payment_data.pixData.amount / 100) : 
-            (shipment.quote_data?.amount || shipment.quote_data?.price || 0);
-          
-          items.push({
-            id: `${shipment.id}-payment`,
-            type: 'payment',
-            title: 'Pagamento processado',
-            description: `Pagamento de R$ ${paymentValue.toFixed(2)} processado`,
-            status: 'CONFIRMED',
-            date: shipment.created_at,
-            tracking_code: shipment.tracking_code,
-            value: paymentValue
-          });
-        }
-
-        // Label generation
-        if (shipment.label_pdf_url) {
-          items.push({
-            id: `${shipment.id}-label`,
-            type: 'label',
-            title: 'Etiqueta gerada',
-            description: `Etiqueta disponível para impressão`,
-            status: 'AVAILABLE',
-            date: shipment.created_at,
-            tracking_code: shipment.tracking_code,
-            metadata: { pdf_url: shipment.label_pdf_url }
-          });
-        }
-
-        // Status updates (simulated based on current status)
-        if (['DELIVERED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY'].includes(shipment.status)) {
-          items.push({
-            id: `${shipment.id}-tracking`,
-            type: 'tracking',
-            title: getTrackingTitle(shipment.status),
-            description: getTrackingDescription(shipment.status),
-            status: shipment.status,
-            date: shipment.created_at,
-            tracking_code: shipment.tracking_code
-          });
-        }
-      });
-
-      // Sort items by date
-      items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      
-      setHistoryItems(items);
+      setShipmentReports(reports);
     } catch (error) {
-      console.error('Error loading history:', error);
+      console.error('Error loading shipment reports:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const getTrackingTitle = (status: string) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'DELIVERED': return 'Remessa entregue';
-      case 'IN_TRANSIT': return 'Remessa em trânsito';
-      case 'OUT_FOR_DELIVERY': return 'Saiu para entrega';
-      default: return 'Atualização de status';
-    }
-  };
-
-  const getTrackingDescription = (status: string) => {
-    switch (status) {
-      case 'DELIVERED': return 'Remessa foi entregue com sucesso';
-      case 'IN_TRANSIT': return 'Remessa está em trânsito para o destino';
-      case 'OUT_FOR_DELIVERY': return 'Remessa saiu para entrega';
-      default: return 'Status da remessa foi atualizado';
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'shipment': return <Package className="w-4 h-4" />;
-      case 'payment': return <CreditCard className="w-4 h-4" />;
-      case 'label': return <FileText className="w-4 h-4" />;
-      case 'tracking': return <Truck className="w-4 h-4" />;
+      case 'DELIVERED': return <Truck className="w-4 h-4" />;
+      case 'IN_TRANSIT': return <Package className="w-4 h-4" />;
+      case 'OUT_FOR_DELIVERY': return <FileText className="w-4 h-4" />;
+      case 'PAID': return <CreditCard className="w-4 h-4" />;
       default: return <Clock className="w-4 h-4" />;
     }
   };
 
-  const getStatusBadge = (type: string, status: string) => {
-    if (type === 'payment') {
-      return status === 'CONFIRMED' 
-        ? <Badge className="bg-success text-success-foreground">Pago</Badge>
-        : <Badge variant="destructive">Pendente</Badge>;
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'DELIVERED':
+        return <Badge className="bg-success text-success-foreground">Entregue</Badge>;
+      case 'IN_TRANSIT':
+        return <Badge className="bg-info text-info-foreground">Em Trânsito</Badge>;
+      case 'OUT_FOR_DELIVERY':
+        return <Badge className="bg-warning text-warning-foreground">Saiu para Entrega</Badge>;
+      case 'PAID':
+        return <Badge className="bg-success text-success-foreground">Pago</Badge>;
+      case 'PENDING_PAYMENT':
+        return <Badge variant="destructive">Pendente Pagamento</Badge>;
+      case 'PENDING_LABEL':
+        return <Badge className="bg-warning text-warning-foreground">Aguardando Etiqueta</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
     }
-    
-    if (type === 'tracking') {
-      switch (status) {
-        case 'DELIVERED':
-          return <Badge className="bg-success text-success-foreground">Entregue</Badge>;
-        case 'IN_TRANSIT':
-          return <Badge className="bg-info text-info-foreground">Em Trânsito</Badge>;
-        case 'OUT_FOR_DELIVERY':
-          return <Badge className="bg-warning text-warning-foreground">Saiu para Entrega</Badge>;
-        default:
-          return <Badge variant="secondary">{status}</Badge>;
-      }
-    }
-    
-    if (type === 'label') {
-      return <Badge className="bg-success text-success-foreground">Disponível</Badge>;
-    }
-    
-    return <Badge variant="secondary">Criado</Badge>;
   };
 
-  const filteredItems = historyItems.filter(item => {
+  const filteredItems = shipmentReports.filter(item => {
     const matchesSearch = !searchTerm || 
-      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.tracking_code?.toLowerCase().includes(searchTerm.toLowerCase());
+      item.tracking_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.sender_address?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.recipient_address?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.recipient_address?.city?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesType = typeFilter === 'all' || item.type === typeFilter;
+    const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
     
-    return matchesSearch && matchesType;
+    return matchesSearch && matchesStatus;
   }).sort((a, b) => {
-    const dateA = new Date(a.date).getTime();
-    const dateB = new Date(b.date).getTime();
+    const dateA = new Date(a.created_at).getTime();
+    const dateB = new Date(b.created_at).getTime();
     return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
   });
 
   const exportToExcel = async () => {
     setIsExporting(true);
     try {
-      // Prepare data for Excel
+      // Prepare comprehensive data for Excel
       const excelData = filteredItems.map(item => ({
-        'Data/Hora': format(new Date(item.date), "dd/MM/yyyy HH:mm", { locale: ptBR }),
-        'Tipo': item.type === 'shipment' ? 'Remessa' : 
-               item.type === 'payment' ? 'Pagamento' :
-               item.type === 'label' ? 'Etiqueta' : 'Rastreamento',
-        'Título': item.title,
-        'Descrição': item.description,
-        'Status': item.status,
+        'Data/Hora Criação': format(new Date(item.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR }),
         'Código de Rastreamento': item.tracking_code || '-',
-        'Valor (R$)': item.value ? item.value.toFixed(2) : '-'
+        'Status': item.status,
+        'Valor (R$)': item.price.toFixed(2),
+        'Prazo de Entrega (dias)': item.delivery_days,
+        'Peso (kg)': item.weight,
+        'Altura (cm)': item.height,
+        'Largura (cm)': item.width,
+        'Comprimento (cm)': item.length,
+        'Formato': item.format,
+        'Opção de Coleta': item.pickup_option,
+        'Serviço Selecionado': item.selected_option,
+        
+        // Dados do Remetente
+        'Remetente - Nome': item.sender_address?.name || '-',
+        'Remetente - CEP': item.sender_address?.cep || '-',
+        'Remetente - Endereço': item.sender_address ? 
+          `${item.sender_address.street}, ${item.sender_address.number}${item.sender_address.complement ? `, ${item.sender_address.complement}` : ''}` : '-',
+        'Remetente - Bairro': item.sender_address?.neighborhood || '-',
+        'Remetente - Cidade': item.sender_address?.city || '-',
+        'Remetente - Estado': item.sender_address?.state || '-',
+        'Remetente - Referência': item.sender_address?.reference || '-',
+        
+        // Dados do Destinatário
+        'Destinatário - Nome': item.recipient_address?.name || '-',
+        'Destinatário - CEP': item.recipient_address?.cep || '-',
+        'Destinatário - Endereço': item.recipient_address ? 
+          `${item.recipient_address.street}, ${item.recipient_address.number}${item.recipient_address.complement ? `, ${item.recipient_address.complement}` : ''}` : '-',
+        'Destinatário - Bairro': item.recipient_address?.neighborhood || '-',
+        'Destinatário - Cidade': item.recipient_address?.city || '-',
+        'Destinatário - Estado': item.recipient_address?.state || '-',
+        'Destinatário - Referência': item.recipient_address?.reference || '-',
+        
+        // Dados de Pagamento
+        'Método de Pagamento': item.payment_data?.method || '-',
+        'Status Pagamento': item.payment_data?.status || '-',
+        
+        // Etiqueta
+        'Etiqueta Gerada': item.label_pdf_url ? 'Sim' : 'Não'
       }));
 
       // Create workbook and worksheet
       const workbook = XLSX.utils.book_new();
       const worksheet = XLSX.utils.json_to_sheet(excelData);
       
-      // Set column widths
+      // Set column widths for better readability
       const colWidths = [
-        { wch: 16 }, // Data/Hora
-        { wch: 12 }, // Tipo
-        { wch: 20 }, // Título
-        { wch: 40 }, // Descrição
-        { wch: 15 }, // Status
+        { wch: 18 }, // Data/Hora
         { wch: 20 }, // Código
-        { wch: 12 }  // Valor
+        { wch: 15 }, // Status
+        { wch: 12 }, // Valor
+        { wch: 12 }, // Prazo
+        { wch: 10 }, // Peso
+        { wch: 10 }, // Altura
+        { wch: 10 }, // Largura
+        { wch: 15 }, // Comprimento
+        { wch: 12 }, // Formato
+        { wch: 15 }, // Coleta
+        { wch: 20 }, // Serviço
+        { wch: 25 }, // Nome Remetente
+        { wch: 12 }, // CEP Remetente
+        { wch: 40 }, // Endereço Remetente
+        { wch: 20 }, // Bairro Remetente
+        { wch: 20 }, // Cidade Remetente
+        { wch: 8 },  // Estado Remetente
+        { wch: 25 }, // Referência Remetente
+        { wch: 25 }, // Nome Destinatário
+        { wch: 12 }, // CEP Destinatário
+        { wch: 40 }, // Endereço Destinatário
+        { wch: 20 }, // Bairro Destinatário
+        { wch: 20 }, // Cidade Destinatário
+        { wch: 8 },  // Estado Destinatário
+        { wch: 25 }, // Referência Destinatário
+        { wch: 15 }, // Método Pagamento
+        { wch: 15 }, // Status Pagamento
+        { wch: 12 }  // Etiqueta
       ];
       worksheet['!cols'] = colWidths;
 
       // Add worksheet to workbook
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Relatório');
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Relatório de Remessas');
 
       // Generate filename
       const fromDate = dateFrom ? format(dateFrom, "dd-MM-yyyy") : '';
       const toDate = dateTo ? format(dateTo, "dd-MM-yyyy") : '';
-      const filename = `relatorio-${fromDate}-a-${toDate}.xlsx`;
+      const filename = `relatorio-remessas-${fromDate}-a-${toDate}.xlsx`;
 
       // Save file
       XLSX.writeFile(workbook, filename);
 
       toast({
-        title: "Excel exportado com sucesso",
-        description: `Arquivo ${filename} foi baixado`
+        title: "Relatório exportado com sucesso",
+        description: `Arquivo ${filename} foi baixado com todos os dados das remessas`
       });
 
     } catch (error) {
@@ -327,11 +345,11 @@ const ClientHistorico = () => {
     }
   };
 
-  const typeStats = {
-    shipment: historyItems.filter(i => i.type === 'shipment').length,
-    payment: historyItems.filter(i => i.type === 'payment').length,
-    label: historyItems.filter(i => i.type === 'label').length,
-    tracking: historyItems.filter(i => i.type === 'tracking').length,
+  const statusStats = {
+    total: shipmentReports.length,
+    paid: shipmentReports.filter(i => i.status === 'PAID').length,
+    delivered: shipmentReports.filter(i => i.status === 'DELIVERED').length,
+    in_transit: shipmentReports.filter(i => i.status === 'IN_TRANSIT').length,
   };
 
   return (
@@ -373,12 +391,12 @@ const ClientHistorico = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Remessas</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Total Remessas</p>
                   <p className="text-2xl lg:text-3xl font-bold text-foreground">
                     {loading ? (
                       <div className="w-8 h-8 bg-muted animate-pulse rounded" />
                     ) : (
-                      typeStats.shipment
+                      statusStats.total
                     )}
                   </p>
                 </div>
@@ -393,12 +411,12 @@ const ClientHistorico = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Pagamentos</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Pagas</p>
                   <p className="text-2xl lg:text-3xl font-bold text-foreground">
                     {loading ? (
                       <div className="w-8 h-8 bg-muted animate-pulse rounded" />
                     ) : (
-                      typeStats.payment
+                      statusStats.paid
                     )}
                   </p>
                 </div>
@@ -413,12 +431,12 @@ const ClientHistorico = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Etiquetas</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Entregues</p>
                   <p className="text-2xl lg:text-3xl font-bold text-foreground">
                     {loading ? (
                       <div className="w-8 h-8 bg-muted animate-pulse rounded" />
                     ) : (
-                      typeStats.label
+                      statusStats.delivered
                     )}
                   </p>
                 </div>
@@ -433,12 +451,12 @@ const ClientHistorico = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Rastreamentos</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Em Trânsito</p>
                   <p className="text-2xl lg:text-3xl font-bold text-foreground">
                     {loading ? (
                       <div className="w-8 h-8 bg-muted animate-pulse rounded" />
                     ) : (
-                      typeStats.tracking
+                      statusStats.in_transit
                     )}
                   </p>
                 </div>
@@ -569,17 +587,17 @@ const ClientHistorico = () => {
               </div>
               
               <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">Tipo</label>
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <label className="text-sm font-medium text-foreground mb-2 block">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Tipo de atividade" />
+                    <SelectValue placeholder="Status da remessa" />
                   </SelectTrigger>
                   <SelectContent className="z-50 bg-popover border border-border shadow-xl">
-                    <SelectItem value="all">Todas</SelectItem>
-                    <SelectItem value="shipment">Remessas</SelectItem>
-                    <SelectItem value="payment">Pagamentos</SelectItem>
-                    <SelectItem value="label">Etiquetas</SelectItem>
-                    <SelectItem value="tracking">Rastreamento</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="PENDING_PAYMENT">Pendente Pagamento</SelectItem>
+                    <SelectItem value="PAID">Pago</SelectItem>
+                    <SelectItem value="IN_TRANSIT">Em Trânsito</SelectItem>
+                    <SelectItem value="DELIVERED">Entregue</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -645,9 +663,9 @@ const ClientHistorico = () => {
                 </div>
                 <h3 className="text-xl font-semibold mb-2">Nenhum resultado encontrado</h3>
                 <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  {searchTerm || typeFilter !== 'all' 
+                  {searchTerm || statusFilter !== 'all' 
                     ? "Tente ajustar os filtros de pesquisa ou o período selecionado"
-                    : `Não há atividades no período selecionado ${dateFrom ? `(${format(dateFrom, "dd/MM/yyyy")} - ${dateTo ? format(dateTo, "dd/MM/yyyy") : 'hoje'})` : ''}`
+                    : `Não há remessas no período selecionado ${dateFrom ? `(${format(dateFrom, "dd/MM/yyyy")} - ${dateTo ? format(dateTo, "dd/MM/yyyy") : 'hoje'})` : ''}`
                   }
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -657,7 +675,7 @@ const ClientHistorico = () => {
                       setDateFrom(subDays(new Date(), 90));
                       setDateTo(new Date());
                       setSearchTerm('');
-                      setTypeFilter('all');
+                      setStatusFilter('all');
                     }}
                   >
                     Expandir para 90 dias
@@ -676,18 +694,18 @@ const ClientHistorico = () => {
                   <div key={item.id} className="p-4 bg-muted/20 hover:bg-muted/30 rounded-lg border border-border/50 transition-colors">
                     <div className="flex items-start gap-4">
                       <div className="flex-shrink-0 w-12 h-12 bg-accent/50 rounded-full flex items-center justify-center">
-                        {getTypeIcon(item.type)}
+                        {getStatusIcon(item.status)}
                       </div>
                       
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
                           <div className="flex items-center gap-3">
-                            <h4 className="font-semibold text-foreground">{item.title}</h4>
-                            {getStatusBadge(item.type, item.status)}
+                            <h4 className="font-semibold text-foreground">Remessa #{item.tracking_code || 'Pendente'}</h4>
+                            {getStatusBadge(item.status)}
                           </div>
                           <div className="flex items-center text-sm text-muted-foreground">
                             <CalendarIcon className="w-4 h-4 mr-2" />
-                            {new Date(item.date).toLocaleDateString('pt-BR', {
+                            {new Date(item.created_at).toLocaleDateString('pt-BR', {
                               day: '2-digit',
                               month: '2-digit',
                               year: 'numeric',
@@ -698,22 +716,43 @@ const ClientHistorico = () => {
                         </div>
                         
                         <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-                          {item.description}
+                          Remessa para {item.recipient_address?.name || 'destinatário'} em {item.recipient_address?.city || 'cidade não informada'}, {item.recipient_address?.state || 'estado'}
                         </p>
                         
-                        <div className="flex flex-wrap items-center gap-4 text-sm">
-                          {item.tracking_code && (
-                            <div className="flex items-center gap-2">
-                              <Package className="w-4 h-4 text-muted-foreground" />
-                              <span className="font-mono text-foreground">#{item.tracking_code}</span>
-                            </div>
-                          )}
-                          {item.value && (
-                            <div className="flex items-center gap-2">
-                              <CreditCard className="w-4 h-4 text-success" />
-                              <span className="font-semibold text-success">R$ {item.value.toFixed(2)}</span>
-                            </div>
-                          )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm mb-3">
+                          <div className="flex items-center gap-2">
+                            <Package className="w-4 h-4 text-muted-foreground" />
+                            <span>Peso: {item.weight}kg</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-4 h-4 text-success" />
+                            <span className="font-semibold text-success">R$ {item.price.toFixed(2)}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-info" />
+                            <span>{item.delivery_days} dias úteis</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <Truck className="w-4 h-4 text-warning" />
+                            <span>{item.selected_option}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-border/50">
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-1">Remetente</p>
+                            <p className="text-sm">{item.sender_address?.name}</p>
+                            <p className="text-xs text-muted-foreground">{item.sender_address?.city}, {item.sender_address?.state}</p>
+                          </div>
+                          
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-1">Destinatário</p>
+                            <p className="text-sm">{item.recipient_address?.name}</p>
+                            <p className="text-xs text-muted-foreground">{item.recipient_address?.city}, {item.recipient_address?.state}</p>
+                          </div>
                         </div>
                       </div>
                     </div>
