@@ -122,8 +122,8 @@ serve(async (req) => {
         throw recipientError;
       }
 
-      // Gerar código de rastreamento
-      const trackingCode = `TRK-${new Date().getFullYear()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      // Gerar código de rastreamento no formato ID2025XXXXXX
+      const trackingCode = `ID${new Date().getFullYear()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
       // Criar remessa usando dados completos da cotação
       const shipmentData = {

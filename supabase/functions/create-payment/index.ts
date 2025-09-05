@@ -162,7 +162,7 @@ serve(async (req) => {
         selected_option: 'standard',
         status: 'PENDING_PAYMENT',
         quote_data: shipmentData.quoteData || {},
-        tracking_code: `TRK-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`
+        tracking_code: `ID${new Date().getFullYear()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`
       };
 
       const { data: newShipment, error: shipmentError } = await supabaseService
