@@ -68,7 +68,16 @@ const ClientDashboard = () => {
       // Recent shipments
       const { data: recentShipments } = await supabase
         .from('shipments')
-        .select('*')
+        .select(`
+          id,
+          tracking_code,
+          status,
+          created_at,
+          quote_data,
+          payment_data,
+          selected_option,
+          recipient_address:addresses!recipient_address_id(name, city, state)
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(3);
@@ -270,18 +279,47 @@ const ClientDashboard = () => {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium">
-                        R$ {(() => {
-                          // Try to get the payment amount from different sources
+                        {(() => {
+                          // Tentar obter o valor do frete de várias fontes
+                          let amount = null;
+                          
+                          // 1. Tentar payment_data.pixData.amount (PIX - já vem em centavos)
                           if (shipment.payment_data?.pixData?.amount) {
-                            return (shipment.payment_data.pixData.amount / 100).toFixed(2);
+                            amount = shipment.payment_data.pixData.amount / 100; // converter centavos para reais
                           }
-                          if (shipment.quote_data?.amount) {
-                            return shipment.quote_data.amount.toFixed(2);
+                          // 2. Tentar payment_data.amount (PIX novo formato - vem em reais)
+                          else if (shipment.payment_data?.amount && shipment.payment_data?.method === 'pix') {
+                            amount = shipment.payment_data.amount;
                           }
-                          if (shipment.quote_data?.price) {
-                            return shipment.quote_data.price.toFixed(2);
+                          // 3. Tentar payment_data.amount (Stripe/Cartão - já em centavos)
+                          else if (shipment.payment_data?.amount) {
+                            amount = shipment.payment_data.amount / 100; // converter centavos para reais
                           }
-                          return '0,00';
+                          // 4. Tentar quote_data.amount (valor já pago)
+                          else if (shipment.quote_data?.amount) {
+                            amount = shipment.quote_data.amount;
+                          }
+                          // 5. Tentar quote_data.shippingQuote.economicPrice ou expressPrice
+                          else if (shipment.quote_data?.shippingQuote) {
+                            const price = shipment.selected_option === 'express' 
+                              ? shipment.quote_data.shippingQuote.expressPrice 
+                              : shipment.quote_data.shippingQuote.economicPrice;
+                            amount = price;
+                          }
+                          // 6. Tentar quote_data.totalPrice
+                          else if (shipment.quote_data?.totalPrice) {
+                            amount = shipment.quote_data.totalPrice;
+                          }
+                          // 7. Tentar deliveryDetails.totalPrice
+                          else if (shipment.quote_data?.deliveryDetails?.totalPrice) {
+                            amount = shipment.quote_data.deliveryDetails.totalPrice;
+                          }
+                          // 8. Tentar quote_data.price
+                          else if (shipment.quote_data?.price) {
+                            amount = shipment.quote_data.price;
+                          }
+
+                          return amount ? `R$ ${amount.toFixed(2)}` : 'R$ 0,00';
                         })()}
                       </p>
                     </div>
