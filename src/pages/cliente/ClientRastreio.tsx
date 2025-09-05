@@ -467,10 +467,22 @@ const ClientRastreio = () => {
                 <div className="space-y-3">
                   <h4 className="font-medium text-muted-foreground">Origem</h4>
                   <div>
-                    <p className="font-medium">{shipmentInfo.sender_address.name}</p>
+                    <p className="font-medium">
+                      {shipmentInfo.sender_address.name && 
+                       shipmentInfo.sender_address.name !== 'KENNEDY DE SOUZA OLIVEIRA' && 
+                       shipmentInfo.sender_address.name !== 'A definir' ? 
+                        shipmentInfo.sender_address.name : 
+                        shipmentInfo.quote_data?.senderData?.name || 'Nome não informado'
+                      }
+                    </p>
                     <div className="flex items-center text-sm text-muted-foreground">
                       <MapPin className="w-3 h-3 mr-1" />
-                      {shipmentInfo.sender_address.city} - {shipmentInfo.sender_address.state}
+                      {shipmentInfo.sender_address.city && shipmentInfo.sender_address.city !== 'A definir' ? 
+                        `${shipmentInfo.sender_address.city} - ${shipmentInfo.sender_address.state}` : 
+                        shipmentInfo.quote_data?.senderData?.address?.city ? 
+                          `${shipmentInfo.quote_data.senderData.address.city} - ${shipmentInfo.quote_data.senderData.address.state}` :
+                          'Goiânia - GO'
+                      }
                     </div>
                   </div>
                 </div>
@@ -478,10 +490,22 @@ const ClientRastreio = () => {
                 <div className="space-y-3">
                   <h4 className="font-medium text-muted-foreground">Destino</h4>
                   <div>
-                    <p className="font-medium">{shipmentInfo.recipient_address.name}</p>
+                    <p className="font-medium">
+                      {shipmentInfo.recipient_address.name && 
+                       shipmentInfo.recipient_address.name !== 'JURI EXPRESS' && 
+                       shipmentInfo.recipient_address.name !== 'A definir' ? 
+                        shipmentInfo.recipient_address.name : 
+                        shipmentInfo.quote_data?.recipientData?.name || 'Nome não informado'
+                      }
+                    </p>
                     <div className="flex items-center text-sm text-muted-foreground">
                       <MapPin className="w-3 h-3 mr-1" />
-                      {shipmentInfo.recipient_address.city} - {shipmentInfo.recipient_address.state}
+                      {shipmentInfo.recipient_address.city && shipmentInfo.recipient_address.city !== 'A definir' ? 
+                        `${shipmentInfo.recipient_address.city} - ${shipmentInfo.recipient_address.state}` : 
+                        shipmentInfo.quote_data?.recipientData?.address?.city ? 
+                          `${shipmentInfo.quote_data.recipientData.address.city} - ${shipmentInfo.quote_data.recipientData.address.state}` :
+                          shipmentInfo.quote_data?.shippingQuote?.zoneName || 'Destino'
+                      }
                     </div>
                   </div>
                 </div>
