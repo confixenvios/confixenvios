@@ -166,9 +166,11 @@ const MotoristaDashboard = () => {
     const statusConfig: Record<string, { label: string; variant: any; color?: string }> = {
       'PENDING_LABEL': { label: 'Aguardando', variant: 'secondary' },
       'LABEL_GENERATED': { label: 'Pronto p/ Coleta', variant: 'default' },
-      'COLETA_ACEITA': { label: 'Aceita', variant: 'default', color: 'bg-blue-100 text-blue-800' },
+      'PAYMENT_CONFIRMED': { label: 'Pronto p/ Coleta', variant: 'default', color: 'bg-blue-100 text-blue-800' },
+      'PAID': { label: 'Pronto p/ Coleta', variant: 'default', color: 'bg-blue-100 text-blue-800' },
+      'COLETA_ACEITA': { label: 'Aceita', variant: 'default', color: 'bg-orange-100 text-orange-800' },
       'COLETA_FINALIZADA': { label: 'Coletado', variant: 'success', color: 'bg-green-100 text-green-800' },
-      'EM_TRANSITO': { label: 'Em Trânsito', variant: 'default', color: 'bg-yellow-100 text-yellow-800' },
+      'EM_TRANSITO': { label: 'Em Rota', variant: 'default', color: 'bg-blue-100 text-blue-800' },
       'TENTATIVA_ENTREGA': { label: 'Tentativa', variant: 'destructive', color: 'bg-red-100 text-red-800' },
       'ENTREGA_FINALIZADA': { label: 'Entregue', variant: 'success', color: 'bg-green-100 text-green-800' },
       'AGUARDANDO_DESTINATARIO': { label: 'Aguard. Dest.', variant: 'secondary' },
@@ -178,14 +180,23 @@ const MotoristaDashboard = () => {
     const config = statusConfig[status] || { label: status, variant: 'outline' };
 
     return (
-      <Badge variant={config.variant} className={config.color}>
-        {config.label}
-      </Badge>
+      <div className="flex items-center gap-2">
+        <div className={`w-3 h-3 rounded-full ${
+          config.variant === 'success' ? 'bg-green-500 animate-pulse' :
+          config.variant === 'destructive' ? 'bg-red-500 animate-pulse' :
+          config.color?.includes('orange') ? 'bg-orange-500 animate-pulse' :
+          config.color?.includes('blue') ? 'bg-blue-500' :
+          'bg-gray-400'
+        }`} />
+        <Badge variant={config.variant} className={config.color}>
+          {config.label}
+        </Badge>
+      </div>
     );
   };
 
   const canAcceptPickup = (status: string) => {
-    return ['PENDING_LABEL', 'LABEL_GENERATED'].includes(status);
+    return ['PENDING_LABEL', 'LABEL_GENERATED', 'PAYMENT_CONFIRMED', 'PAID'].includes(status);
   };
 
   const handleViewDetails = (remessa: Remessa) => {
@@ -287,7 +298,7 @@ const MotoristaDashboard = () => {
                 <Clock className="h-4 w-4" />
               </div>
               <p className="text-lg font-bold text-orange-700 dark:text-orange-300">
-                {remessas.filter(r => ['PENDING_LABEL', 'LABEL_GENERATED'].includes(r.status)).length}
+                {remessas.filter(r => ['PENDING_LABEL', 'LABEL_GENERATED', 'PAYMENT_CONFIRMED', 'PAID'].includes(r.status)).length}
               </p>
               <p className="text-xs text-orange-600 dark:text-orange-400">Pendentes</p>
             </CardContent>
