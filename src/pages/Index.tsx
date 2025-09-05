@@ -1,147 +1,10 @@
 import Header from "@/components/Header";
 import QuoteForm from "@/components/QuoteForm";
-import { Truck, Clock, Shield, Zap, Package, ArrowRight } from "lucide-react";
+import { Truck, Zap, Package } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   const { user, loading } = useAuth();
-  const [isTestingShipment, setIsTestingShipment] = useState(false);
-  const { toast } = useToast();
-  const navigate = useNavigate();
-
-  // Função de teste para simular criação de remessa
-  const testShipmentCreation = async () => {
-    if (!user) {
-      toast({
-        title: "Erro",
-        description: "Você precisa estar logado para testar.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      setIsTestingShipment(true);
-      console.log('🧪 TESTE: Iniciando criação de remessa simulada');
-
-      // 1. Criar endereço do remetente
-      console.log('🧪 TESTE: Criando endereço do remetente...');
-      const { data: senderAddress, error: senderError } = await supabase
-        .from('addresses')
-        .insert({
-          user_id: user.id,
-          address_type: 'sender',
-          name: 'Remetente Teste',
-          document: '12345678901',
-          phone: '11999999999',
-          email: 'remetente@teste.com',
-          cep: '01310-100',
-          street: 'Av. Paulista',
-          number: '1000',
-          neighborhood: 'Bela Vista',
-          city: 'São Paulo',
-          state: 'SP'
-        })
-        .select()
-        .single();
-
-      if (senderError) {
-        console.error('🧪 TESTE: Erro ao criar endereço remetente:', senderError);
-        throw senderError;
-      }
-
-      // 2. Criar endereço do destinatário
-      console.log('🧪 TESTE: Criando endereço do destinatário...');
-      const { data: recipientAddress, error: recipientError } = await supabase
-        .from('addresses')
-        .insert({
-          user_id: user.id,
-          address_type: 'recipient',
-          name: 'Destinatário Teste',
-          document: '98765432100',
-          phone: '21888888888',
-          email: 'destinatario@teste.com',
-          cep: '20040-020',
-          street: 'Av. Rio Branco',
-          number: '500',
-          neighborhood: 'Centro',
-          city: 'Rio de Janeiro',
-          state: 'RJ'
-        })
-        .select()
-        .single();
-
-      if (recipientError) {
-        console.error('🧪 TESTE: Erro ao criar endereço destinatário:', recipientError);
-        throw recipientError;
-      }
-
-      // 3. Criar remessa com os endereços
-      console.log('🧪 TESTE: Criando remessa com endereços...');
-      const testShipmentData = {
-        user_id: user.id,
-        sender_address_id: senderAddress.id,
-        recipient_address_id: recipientAddress.id,
-        weight: 1,
-        length: 20,
-        width: 15,
-        height: 10,
-        format: 'package',
-        pickup_option: 'collection',
-        selected_option: 'standard',
-        quote_data: {
-          totalPrice: 10,
-          test: true
-        },
-        payment_data: {
-          method: 'pix',
-          payment_id: 'test_' + Date.now(),
-          amount: 10,
-          confirmed_at: new Date().toISOString()
-        },
-        status: 'PAYMENT_CONFIRMED'
-      };
-
-      console.log('🧪 TESTE: Dados da remessa:', testShipmentData);
-
-      const { data: newShipment, error: shipmentError } = await supabase
-        .from('shipments')
-        .insert(testShipmentData)
-        .select()
-        .single();
-
-      if (shipmentError) {
-        console.error('🧪 TESTE: Erro ao criar remessa:', shipmentError);
-        throw shipmentError;
-      }
-
-      console.log('🧪 TESTE: Remessa criada com sucesso:', newShipment);
-      
-      toast({
-        title: "✅ Teste Concluído!",
-        description: `Remessa de teste criada: ID ${newShipment.id}`,
-      });
-
-      // Redirecionar para remessas
-      navigate('/cliente/remessas');
-
-    } catch (error) {
-      console.error('🧪 TESTE: Erro:', error);
-      toast({
-        title: "❌ Teste Falhou",
-        description: "Erro ao criar remessa de teste: " + error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setIsTestingShipment(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -169,29 +32,6 @@ const Index = () => {
               rapidez e economia
             </span>
           </h1>
-          
-          {/* Botão de Teste para DEBUG */}
-          {user && (
-            <div className="mb-6">
-              <Button
-                onClick={testShipmentCreation}
-                disabled={isTestingShipment}
-                className="bg-green-600 hover:bg-green-700 text-white px-6 py-3"
-              >
-                {isTestingShipment ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                    Testando...
-                  </>
-                ) : (
-                  '🧪 TESTE: Criar Remessa Simulada'
-                )}
-              </Button>
-              <p className="text-xs text-muted-foreground mt-2">
-                Botão de teste para verificar se o fluxo de criação de remessa funciona
-              </p>
-            </div>
-          )}
           
           <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-8 sm:mb-12 md:mb-16 max-w-3xl mx-auto px-2">
             O melhor preço, o menor prazo e a máxima segurança para suas entregas.
