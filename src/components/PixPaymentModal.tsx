@@ -233,88 +233,199 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     }
   };
 
-  // Escutar pagamentos aprovados via webhook usando realtime
+  // Sistema MELHORADO de detecção de pagamento PIX
   useEffect(() => {
-    if (step === 'qrcode' && pixData?.paymentId && paymentStatus === 'pending') {
-      console.log('🔄 Aguardando confirmação de pagamento via webhook...');
-      setPaymentStatus('checking');
-      
-      const channel = supabase
-        .channel('payment-updates')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'shipments',
-            filter: `payment_data->>pixPaymentId=eq.${pixData.paymentId}`
-          },
-          (payload) => {
-            console.log('🎉 Pagamento confirmado via webhook!', payload);
-            setPaymentStatus('paid');
-            
-            // Fechar modal e redirecionar imediatamente
-            handleClose();
-            toast.success('Pagamento confirmado! Redirecionando...', {
-              duration: 1500
-            });
-            
-            // Redirecionar usando React Router com dados necessários
-            setTimeout(() => {
-              const currentShipment = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
-              navigate('/pix-sucesso', {
-                state: {
-                  paymentId: pixData.paymentId,
-                  amount: amount,
-                  shipmentData: currentShipment
+    if (step !== 'qrcode' || !pixData?.paymentId || paymentStatus !== 'pending') return;
+
+    console.log('🎯 Iniciando sistema MELHORADO de detecção PIX');
+    console.log('📊 Dados:', { pixId: pixData.paymentId, amount, externalId: pixData.externalId });
+    
+    let isMounted = true;
+    let supabaseChannel: any;
+    let pollInterval: NodeJS.Timeout;
+
+    setPaymentStatus('checking');
+
+    const setupEnhancedDetection = async () => {
+      try {
+        // 1. Canal real-time melhorado
+        console.log('📡 Configurando detecção real-time...');
+        supabaseChannel = supabase
+          .channel(`pix-detection-${pixData.paymentId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'shipments'
+            },
+            (payload) => {
+              console.log('🚛 Nova remessa detectada:', payload);
+              
+              if (!isMounted) return;
+
+              const shipment = payload.new;
+              const paymentData = shipment.payment_data;
+
+              // Verificar se é o nosso pagamento PIX
+              if (paymentData?.method === 'PIX') {
+                const matches = 
+                  paymentData?.pixData?.externalId === pixData.paymentId ||
+                  paymentData?.pixData?.orderId === pixData.paymentId ||
+                  paymentData?.externalId === pixData.paymentId ||
+                  paymentData?.pixPaymentId === pixData.paymentId;
+
+                if (matches) {
+                  console.log('✅ PAGAMENTO DETECTADO via real-time!');
+                  handleDetectedPayment(shipment);
                 }
-              });
-            }, 500);
-          }
-        )
-        .subscribe();
+              }
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'temp_quotes'
+            },
+            (payload) => {
+              console.log('📋 Update em temp_quotes:', payload);
+              
+              if (!isMounted) return;
 
-      // Verificar periodicamente o status do pagamento via API e banco de dados
-      const checkPayment = async () => {
-        try {
-          // 1. Verificar diretamente com a API do Abacate Pay
-          console.log('🔍 Verificando status do PIX via API...', pixData.paymentId);
-          const { data: pixStatus, error: statusError } = await supabase.functions.invoke('check-pix-status', {
-            body: { paymentId: pixData.paymentId }
-          });
+              const quote = payload.new;
+              if (quote.status === 'processed' && quote.external_id === pixData.paymentId) {
+                console.log('✅ Quote processada! Buscando remessa...');
+                setTimeout(checkForExistingShipment, 2000);
+              }
+            }
+          )
+          .subscribe();
 
-          if (!statusError && pixStatus?.isPaid) {
-            console.log('🎉 PIX confirmado via API do Abacate Pay!');
-            setPaymentStatus('paid');
-            
-            handleClose();
-            toast.success('Pagamento confirmado! Redirecionando...', {
-              duration: 1500
-            });
-            
-            setTimeout(() => {
-              const currentShipment = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
-              navigate('/pix-sucesso', {
-                state: {
-                  paymentId: pixData.paymentId,
-                  amount: amount,
-                  shipmentData: currentShipment
-                }
-              });
-            }, 500);
-            return;
-          }
-
-          // 2. Verificar se a remessa já foi criada no banco
-          const { data: shipments } = await supabase
-            .from('shipments')
-            .select('*')
-            .contains('payment_data', { pixPaymentId: pixData.paymentId })
-            .limit(1);
+        // 2. Polling agressivo da API
+        let attempts = 0;
+        const maxAttempts = 360; // 30 minutos
+        
+        const aggressivePolling = async () => {
+          if (!isMounted || attempts >= maxAttempts) return;
           
-          if (shipments && shipments.length > 0) {
-            console.log('🎉 Pagamento encontrado via polling no banco!', shipments[0]);
-            setPaymentStatus('paid');
+          attempts++;
+          const mins = Math.floor((attempts * 5) / 60);
+          const secs = (attempts * 5) % 60;
+          
+          console.log(`🔄 Tentativa ${attempts}/${maxAttempts} (${mins}m${secs}s)`);
+
+          try {
+            // Verificar API do Abacate Pay
+            const { data: status, error } = await supabase.functions.invoke('check-pix-status', {
+              body: { paymentId: pixData.paymentId }
+            });
+
+            console.log('📊 Status API:', status);
+
+            if (!error && status?.isPaid) {
+              console.log('🎉 PAGO confirmado pela API!');
+              if (isMounted) {
+                handleDetectedPayment();
+              }
+              return;
+            }
+
+            // Verificar banco de dados
+            await checkForExistingShipment();
+
+            // Continuar polling
+            if (isMounted && attempts < maxAttempts) {
+              pollInterval = setTimeout(aggressivePolling, 5000);
+            }
+
+          } catch (error) {
+            console.error('❌ Erro no polling:', error);
+            if (isMounted && attempts < maxAttempts) {
+              pollInterval = setTimeout(aggressivePolling, 5000);
+            }
+          }
+        };
+
+        // 3. Verificar remessas existentes
+        const checkForExistingShipment = async () => {
+          try {
+            console.log('🔍 Verificando remessas existentes...');
+
+            const { data: shipments } = await supabase
+              .from('shipments')
+              .select('*')
+              .not('payment_data', 'is', null)
+              .or(`payment_data->pixData->>externalId.eq.${pixData.paymentId},payment_data->pixData->>orderId.eq.${pixData.paymentId},payment_data->>pixPaymentId.eq.${pixData.paymentId}`)
+              .order('created_at', { ascending: false })
+              .limit(3);
+
+            if (shipments && shipments.length > 0) {
+              const paidShipment = shipments.find(s => 
+                s.payment_data?.status === 'PAID' || 
+                s.status === 'PENDING_PICKUP'
+              ) || shipments[0];
+              
+              console.log('✅ Remessa encontrada no banco!', paidShipment);
+              if (isMounted) {
+                handleDetectedPayment(paidShipment);
+              }
+              return true;
+            }
+            return false;
+          } catch (error) {
+            console.error('❌ Erro ao buscar remessas:', error);
+            return false;
+          }
+        };
+
+        // Iniciar sistema
+        aggressivePolling();
+        setTimeout(checkForExistingShipment, 1000);
+
+      } catch (error) {
+        console.error('❌ Erro na configuração:', error);
+      }
+    };
+
+    const handleDetectedPayment = (shipmentData?: any) => {
+      console.log('🎉 PROCESSANDO PAGAMENTO DETECTADO!', shipmentData);
+      
+      if (!isMounted) return;
+
+      setPaymentStatus('paid');
+      handleClose();
+      
+      toast.success('🎉 Pagamento PIX confirmado! Remessa criada com sucesso!', {
+        duration: 3000
+      });
+
+      setTimeout(() => {
+        const shipment = shipmentData || JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
+        
+        navigate('/pix-sucesso', {
+          state: {
+            paymentId: pixData.paymentId,
+            amount: amount,
+            shipmentData: shipment,
+            trackingCode: shipment?.tracking_code || 'Processando...',
+            success: true
+          }
+        });
+      }, 1000);
+    };
+
+    setupEnhancedDetection();
+
+    // Cleanup
+    return () => {
+      console.log('🧹 Limpeza do sistema de detecção...');
+      isMounted = false;
+      if (pollInterval) clearTimeout(pollInterval);
+      if (supabaseChannel) supabase.removeChannel(supabaseChannel);
+    };
+  }, [step, pixData, paymentStatus, handleClose, navigate, toast]);
             
             handleClose();
             toast.success('Pagamento confirmado! Redirecionando...', {

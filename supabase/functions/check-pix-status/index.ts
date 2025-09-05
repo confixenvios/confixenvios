@@ -1,4 +1,125 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { paymentId } = await req.json();
+    
+    if (!paymentId) {
+      console.error('❌ PaymentId não fornecido');
+      return new Response(JSON.stringify({ 
+        error: 'PaymentId é obrigatório',
+        isPaid: false 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log('🔍 Verificando status do PIX para paymentId:', paymentId);
+
+    // Buscar a API key do Abacate Pay
+    const abacateApiKey = Deno.env.get('ABACATE_PAY_API_KEY');
+    if (!abacateApiKey) {
+      console.error('❌ ABACATE_PAY_API_KEY não configurada');
+      return new Response(JSON.stringify({ 
+        error: 'Configuração da API não encontrada',
+        isPaid: false 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Fazer requisição melhorada para API do Abacate Pay
+    console.log('🌐 Fazendo requisição para Abacate Pay API...');
+    const response = await fetch(`https://api.abacatepay.com/v1/pixQrCode/check?id=${paymentId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${abacateApiKey}`,
+        'Content-Type': 'application/json',
+        'User-Agent': 'Confix-Envios/2.0'
+      }
+    });
+
+    if (!response.ok) {
+      console.error('❌ Erro na API do Abacate Pay:', response.status, response.statusText);
+      const errorText = await response.text();
+      console.error('Detalhes do erro:', errorText);
+      
+      return new Response(JSON.stringify({ 
+        error: 'Erro ao verificar status do pagamento',
+        isPaid: false,
+        details: errorText,
+        status: response.status
+      }), {
+        status: response.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const pixStatus = await response.json();
+    console.log('📋 Status COMPLETO retornado pela API:', JSON.stringify(pixStatus, null, 2));
+
+    // Análise mais robusta do status
+    const paymentData = pixStatus.data || pixStatus;
+    
+    // Verificar múltiplos indicadores de pagamento
+    const isPaid = 
+      paymentData.status === 'PAID' || 
+      paymentData.status === 'paid' ||
+      paymentData.status === 'COMPLETED' || 
+      paymentData.status === 'APPROVED' ||
+      paymentData.status === 'SUCCESS' ||
+      paymentData.status === 'CONFIRMED' ||
+      paymentData.paid === true ||
+      paymentData.completed === true ||
+      paymentData.confirmed === true;
+
+    console.log(`💰 ANÁLISE DETALHADA DO PAGAMENTO:`);
+    console.log(`- Status: "${paymentData.status}"`);
+    console.log(`- Campo 'paid': ${paymentData.paid}`);
+    console.log(`- Campo 'completed': ${paymentData.completed}`);
+    console.log(`- Campo 'confirmed': ${paymentData.confirmed}`);
+    console.log(`- RESULTADO FINAL isPaid: ${isPaid}`);
+
+    return new Response(JSON.stringify({
+      isPaid: isPaid,
+      status: paymentData.status,
+      paymentId: paymentId,
+      fullResponse: paymentData,
+      paid: paymentData.paid,
+      completed: paymentData.completed,
+      confirmed: paymentData.confirmed,
+      checkedAt: new Date().toISOString(),
+      success: true
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+
+  } catch (error) {
+    console.error('❌ Erro geral ao verificar status PIX:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Erro interno do servidor',
+      message: error.message,
+      isPaid: false,
+      success: false
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+});
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
