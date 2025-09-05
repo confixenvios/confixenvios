@@ -54,10 +54,23 @@ const Document = () => {
       });
       return;
     }
+    
+    // Verificar se temos um shipment válido
+    if (!currentShipment || !currentShipment.id) {
+      console.error('Document - Shipment inválido ou sem ID:', currentShipment);
+      toast({
+        title: "Erro",
+        description: "Dados da remessa não encontrados. Reinicie o processo.",
+        variant: "destructive"
+      });
+      navigate('/');
+      return;
+    }
 
     setIsLoading(true);
 
     try {
+      console.log('Document - ID do shipment:', currentShipment.id);
       const completeShipmentData = JSON.parse(sessionStorage.getItem('completeShipmentData') || '{}');
       
       // Dados COMPLETOS do documento fiscal
