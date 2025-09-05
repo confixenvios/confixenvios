@@ -24,6 +24,7 @@ interface TrackingEvent {
   location: string;
   timestamp: string;
   isActive?: boolean;
+  observacoes?: string;
 }
 
 interface ShipmentInfo {
@@ -52,6 +53,7 @@ const ClientRastreio = () => {
   const [shipmentInfo, setShipmentInfo] = useState<ShipmentInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [userShipments, setUserShipments] = useState<ShipmentInfo[]>([]);
+  const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -230,6 +232,10 @@ const ClientRastreio = () => {
       }
 
       setShipmentInfo(enrichedShipment);
+      
+      // Load tracking events from shipment_status_history
+      await loadTrackingEvents(data.id);
+      
       toast({
         title: "Remessa encontrada!",
         description: "Informações da remessa carregadas com sucesso"
@@ -274,74 +280,77 @@ const ClientRastreio = () => {
     );
   };
 
-  const generateTrackingEvents = (shipment: ShipmentInfo): TrackingEvent[] => {
-    const events: TrackingEvent[] = [
-      {
-        id: '1',
-        status: 'CREATED',
-        description: 'Remessa criada no sistema',
-        location: `${shipment.sender_address.city} - ${shipment.sender_address.state}`,
-        timestamp: shipment.created_at,
-      }
-    ];
+  const loadTrackingEvents = async (shipmentId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('shipment_status_history')
+        .select(`
+          id,
+          status,
+          created_at,
+          observacoes,
+          occurrence_data
+        `)
+        .eq('shipment_id', shipmentId)
+        .order('created_at', { ascending: false });
 
-    // Add events based on current status
-    if (['PAYMENT_CONFIRMED', 'PAID', 'PAGO_AGUARDANDO_ETIQUETA', 'LABEL_AVAILABLE', 'IN_TRANSIT', 'DELIVERED'].includes(shipment.status)) {
-      events.push({
-        id: '2',
-        status: 'PAYMENT_CONFIRMED',
-        description: 'Pagamento confirmado',
-        location: 'Sistema Confix Envios',
-        timestamp: shipment.created_at,
-      });
+      if (error) throw error;
+
+      const events: TrackingEvent[] = data?.map((event, index) => ({
+        id: event.id,
+        status: event.status,
+        description: getStatusDescription(event.status),
+        location: getLocationFromStatus(event.status, event.occurrence_data),
+        timestamp: event.created_at,
+        observacoes: event.observacoes || undefined,
+        isActive: index === 0 // Mark the most recent event as active
+      })) || [];
+
+      setTrackingEvents(events);
+    } catch (error) {
+      console.error('Error loading tracking events:', error);
+      setTrackingEvents([]);
     }
+  };
 
-    if (['PAID', 'PAGO_AGUARDANDO_ETIQUETA', 'LABEL_AVAILABLE', 'IN_TRANSIT', 'DELIVERED'].includes(shipment.status)) {
-      events.push({
-        id: '3',
-        status: 'PROCESSING',
-        description: 'Remessa em processamento',
-        location: 'Centro de Distribuição',
-        timestamp: shipment.created_at,
-      });
+  const getStatusDescription = (status: string): string => {
+    const descriptions = {
+      'PENDING_DOCUMENT': 'Aguardando documentação',
+      'PENDING_PAYMENT': 'Aguardando pagamento',
+      'PAYMENT_CONFIRMED': 'Pagamento confirmado',
+      'PAID': 'Pagamento processado',
+      'PAGO_AGUARDANDO_ETIQUETA': 'Aguardando geração de etiqueta',
+      'LABEL_AVAILABLE': 'Etiqueta disponível - Pronta para coleta',
+      'IN_TRANSIT': 'Objeto em trânsito',
+      'OUT_FOR_DELIVERY': 'Objeto saiu para entrega',
+      'DELIVERED': 'Objeto entregue ao destinatário',
+      'RETURNED': 'Objeto retornado',
+      'EXCEPTION': 'Ocorrência registrada'
+    };
+    
+    return descriptions[status as keyof typeof descriptions] || status;
+  };
+
+  const getLocationFromStatus = (status: string, occurrenceData?: any): string => {
+    if (occurrenceData && occurrenceData.location) {
+      return occurrenceData.location;
     }
-
-    if (['LABEL_AVAILABLE', 'IN_TRANSIT', 'DELIVERED'].includes(shipment.status)) {
-      events.push({
-        id: '4',
-        status: 'LABEL_AVAILABLE',
-        description: 'Etiqueta disponível - Pronta para coleta',
-        location: `${shipment.sender_address.city} - ${shipment.sender_address.state}`,
-        timestamp: shipment.created_at,
-      });
-    }
-
-    if (['IN_TRANSIT', 'DELIVERED'].includes(shipment.status)) {
-      events.push({
-        id: '5',
-        status: 'IN_TRANSIT',
-        description: 'Objeto em trânsito',
-        location: 'Em rota de entrega',
-        timestamp: shipment.created_at,
-      });
-    }
-
-    if (shipment.status === 'DELIVERED') {
-      events.push({
-        id: '6',
-        status: 'DELIVERED',
-        description: 'Objeto entregue ao destinatário',
-        location: `${shipment.recipient_address.city} - ${shipment.recipient_address.state}`,
-        timestamp: shipment.created_at,
-      });
-    }
-
-    // Mark the last event as active
-    if (events.length > 0) {
-      events[events.length - 1].isActive = true;
-    }
-
-    return events.reverse(); // Show most recent first
+    
+    const locations = {
+      'PENDING_DOCUMENT': 'Sistema Confix Envios',
+      'PENDING_PAYMENT': 'Sistema Confix Envios',
+      'PAYMENT_CONFIRMED': 'Sistema Confix Envios',
+      'PAID': 'Sistema Confix Envios',
+      'PAGO_AGUARDANDO_ETIQUETA': 'Centro de Processamento',
+      'LABEL_AVAILABLE': 'Centro de Distribuição',
+      'IN_TRANSIT': 'Em rota de entrega',
+      'OUT_FOR_DELIVERY': 'Veículo de entrega',
+      'DELIVERED': 'Local de destino',
+      'RETURNED': 'Centro de Distribuição',
+      'EXCEPTION': 'Local da ocorrência'
+    };
+    
+    return locations[status as keyof typeof locations] || 'Sistema Confix Envios';
   };
 
   return (
@@ -550,30 +559,56 @@ const ClientRastreio = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {generateTrackingEvents(shipmentInfo).map((event, index) => (
-                  <div key={event.id} className="flex items-start space-x-4">
-                    <div className={`flex-shrink-0 w-3 h-3 rounded-full mt-2 ${
-                      event.isActive ? 'bg-primary' : 'bg-muted-foreground'
-                    }`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className={`text-sm font-medium ${
-                          event.isActive ? 'text-primary' : 'text-foreground'
-                        }`}>
-                          {event.description}
-                        </p>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(event.timestamp).toLocaleString('pt-BR')}
-                        </span>
+              <div className="relative">
+                {trackingEvents.length > 0 ? (
+                  trackingEvents.map((event, index) => (
+                    <div key={event.id} className="relative flex items-start space-x-3 pb-8">
+                      {/* Timeline line */}
+                      {index < trackingEvents.length - 1 && (
+                        <div className="absolute left-4 top-8 w-0.5 h-full bg-border" />
+                      )}
+                      
+                      {/* Timeline dot */}
+                      <div className={`relative z-10 flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                        event.isActive 
+                          ? 'bg-primary border-primary text-primary-foreground' 
+                          : 'bg-muted border-border text-muted-foreground'
+                      }`}>
+                        {event.status === 'DELIVERED' ? (
+                          <CheckCircle className="w-4 h-4" />
+                        ) : event.status === 'IN_TRANSIT' || event.status === 'OUT_FOR_DELIVERY' ? (
+                          <Truck className="w-4 h-4" />
+                        ) : (
+                          <Package className="w-4 h-4" />
+                        )}
                       </div>
-                      <div className="flex items-center text-xs text-muted-foreground mt-1">
-                        <MapPin className="w-3 h-3 mr-1" />
-                        {event.location}
+                      
+                      {/* Event details */}
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-sm">{event.description}</h4>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(event.timestamp).toLocaleString('pt-BR')}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground flex items-center">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          {event.location}
+                        </p>
+                        {event.observacoes && (
+                          <p className="text-xs text-muted-foreground mt-1 pl-4 italic">
+                            Observações: {event.observacoes}
+                          </p>
+                        )}
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Nenhum histórico de movimentação disponível</p>
                   </div>
-                ))}
+                )}
               </div>
             </CardContent>
           </Card>
