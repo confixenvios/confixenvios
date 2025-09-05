@@ -107,7 +107,7 @@ const ClientEtiquetas = () => {
       case 'PENDING_PAYMENT':
         return <Badge variant="destructive">Aguardando Pagamento</Badge>;
       case 'PAYMENT_CONFIRMED':
-        return <Badge className="bg-info text-info-foreground">Pagamento Confirmado</Badge>;
+        return <Badge className="bg-success text-success-foreground">Pagamento Confirmado</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }

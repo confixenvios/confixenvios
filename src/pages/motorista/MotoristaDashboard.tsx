@@ -250,7 +250,7 @@ const MotoristaDashboard = () => {
       'PENDING_LABEL': { variant: 'secondary', label: 'Pendente' },
       'PENDING_DOCUMENT': { variant: 'destructive', label: 'Aguardando Documento' },
       'PENDING_PAYMENT': { variant: 'destructive', label: 'Aguardando Pagamento' },
-      'PAYMENT_CONFIRMED': { variant: 'default', label: 'Pagamento Confirmado' },
+      'PAYMENT_CONFIRMED': { variant: 'success', label: 'Pagamento Confirmado' },
       'PAGO_AGUARDANDO_ETIQUETA': { variant: 'secondary', label: 'Aguardando Etiqueta' },
       'LABEL_AVAILABLE': { variant: 'success', label: 'Etiqueta Disponível' },
       'IN_TRANSIT': { variant: 'default', label: 'Em Trânsito' },

@@ -250,7 +250,7 @@ const ClientRastreio = () => {
     const statusConfig = {
       'PENDING_DOCUMENT': { variant: 'destructive', label: 'Aguardando Documento', icon: AlertCircle },
       'PENDING_PAYMENT': { variant: 'destructive', label: 'Aguardando Pagamento', icon: AlertCircle },
-      'PAYMENT_CONFIRMED': { variant: 'default', label: 'Pagamento Confirmado', icon: CheckCircle },
+      'PAYMENT_CONFIRMED': { variant: 'success', label: 'Pagamento Confirmado', icon: CheckCircle },
       'PAID': { variant: 'success', label: 'Pago', icon: CheckCircle },
       'PAGO_AGUARDANDO_ETIQUETA': { variant: 'secondary', label: 'Aguardando Etiqueta', icon: Clock },
       'LABEL_AVAILABLE': { variant: 'success', label: 'Etiqueta Disponível', icon: CheckCircle },
