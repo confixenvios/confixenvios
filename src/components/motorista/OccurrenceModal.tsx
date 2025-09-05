@@ -112,7 +112,7 @@ export const OccurrenceModal = ({ isOpen, onClose, onSave, shipmentId }: Occurre
                       <Button
                         key={type.id}
                         variant="outline"
-                        className="w-full justify-start h-auto p-4"
+                        className="w-full justify-start h-auto p-4 hover:bg-muted/50"
                         onClick={() => setSelectedType(type)}
                       >
                         <div className="flex items-center gap-3 w-full">
