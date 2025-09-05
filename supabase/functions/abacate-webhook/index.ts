@@ -44,7 +44,7 @@ serve(async (req) => {
 
       // Criar endereços temporários para a remessa usando dados do cliente
       const customerData = pixData.customer?.metadata || {};
-      const tempAddress = {
+      const baseAddress = {
         name: customerData.name || 'Cliente',
         street: 'Endereço a ser definido',
         number: '0',
@@ -52,14 +52,13 @@ serve(async (req) => {
         city: 'A definir',
         state: 'GO',
         cep: '00000000',
-        address_type: 'residential',
         user_id: userId
       };
 
       // Criar endereço de origem (remetente)
       const { data: senderAddress, error: senderError } = await supabase
         .from('addresses')
-        .insert([{ ...tempAddress, address_type: 'commercial' }])
+        .insert([{ ...baseAddress, address_type: 'sender' }])
         .select()
         .single();
 
@@ -71,7 +70,7 @@ serve(async (req) => {
       // Criar endereço de destino (destinatário)
       const { data: recipientAddress, error: recipientError } = await supabase
         .from('addresses')
-        .insert([tempAddress])
+        .insert([{ ...baseAddress, address_type: 'recipient' }])
         .select()
         .single();
 
