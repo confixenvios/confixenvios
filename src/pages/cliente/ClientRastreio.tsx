@@ -184,7 +184,7 @@ const ClientRastreio = () => {
           )
         `)
         .eq('tracking_code', trackingCode.toUpperCase())
-        .single();
+        .maybeSingle();
 
       if (error || !data) {
         toast({
@@ -416,9 +416,10 @@ const ClientRastreio = () => {
                 <div
                   key={shipment.id}
                   className="flex items-center justify-between p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => {
+                  onClick={async () => {
                     setTrackingCode(shipment.tracking_code);
                     setShipmentInfo(shipment);
+                    await loadTrackingEvents(shipment.id);
                   }}
                 >
                   <div className="flex-1">
