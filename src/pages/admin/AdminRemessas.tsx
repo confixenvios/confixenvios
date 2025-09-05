@@ -211,9 +211,13 @@ const AdminRemessas = () => {
     const statusConfig = {
       'PENDING_LABEL': { label: 'Aguardando Etiqueta', variant: 'destructive' as const },
       'PENDING_DOCUMENT': { label: 'Aguardando Documento', variant: 'destructive' as const },
+      'PENDING_PAYMENT': { label: 'Aguardando Pagamento', variant: 'destructive' as const },
+      'PAYMENT_CONFIRMED': { label: 'Pagamento Confirmado', variant: 'default' as const },
       'PAID': { label: 'Pago', variant: 'default' as const },
+      'PAGO_AGUARDANDO_ETIQUETA': { label: 'Aguardando Etiqueta', variant: 'secondary' as const },
       'COLETA_ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
       'COLETA_FINALIZADA': { label: 'Coleta Finalizada', variant: 'default' as const },
+      'LABEL_AVAILABLE': { label: 'Etiqueta Disponível', variant: 'default' as const },
       'IN_TRANSIT': { label: 'Em Trânsito', variant: 'default' as const },
       'ENTREGA_FINALIZADA': { label: 'Entrega Finalizada', variant: 'secondary' as const },
       'DELIVERED': { label: 'Entregue', variant: 'secondary' as const }
@@ -250,12 +254,17 @@ const AdminRemessas = () => {
   const getStatusBadgeForDetails = (status: string) => {
     const statusConfig = {
       'PENDING_LABEL': { variant: 'secondary', label: 'Pendente' },
+      'PENDING_DOCUMENT': { variant: 'destructive', label: 'Aguardando Documento' },
+      'PENDING_PAYMENT': { variant: 'destructive', label: 'Aguardando Pagamento' },
       'PAYMENT_CONFIRMED': { variant: 'default', label: 'Pagamento Confirmado' },
       'PAGO_AGUARDANDO_ETIQUETA': { variant: 'default', label: 'Aguardando Etiqueta' },
-      'LABEL_AVAILABLE': { variant: 'success', label: 'Etiqueta Disponível' },
+      'LABEL_AVAILABLE': { variant: 'default', label: 'Etiqueta Disponível' },
       'IN_TRANSIT': { variant: 'default', label: 'Em Trânsito' },
-      'DELIVERED': { variant: 'success', label: 'Entregue' },
-      'PAID': { variant: 'success', label: 'PAGO' }
+      'DELIVERED': { variant: 'secondary', label: 'Entregue' },
+      'PAID': { variant: 'default', label: 'Pago' },
+      'COLETA_ACEITA': { variant: 'default', label: 'Coleta Aceita' },
+      'COLETA_FINALIZADA': { variant: 'default', label: 'Coleta Finalizada' },
+      'ENTREGA_FINALIZADA': { variant: 'secondary', label: 'Entrega Finalizada' }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', label: status };

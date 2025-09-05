@@ -248,15 +248,17 @@ const MotoristaDashboard = () => {
   const getStatusBadgeForDetails = (status: string) => {
     const statusConfig = {
       'PENDING_LABEL': { variant: 'secondary', label: 'Pendente' },
+      'PENDING_DOCUMENT': { variant: 'destructive', label: 'Aguardando Documento' },
+      'PENDING_PAYMENT': { variant: 'destructive', label: 'Aguardando Pagamento' },
       'PAYMENT_CONFIRMED': { variant: 'default', label: 'Pagamento Confirmado' },
       'PAGO_AGUARDANDO_ETIQUETA': { variant: 'default', label: 'Aguardando Etiqueta' },
-      'LABEL_AVAILABLE': { variant: 'success', label: 'Etiqueta Disponível' },
+      'LABEL_AVAILABLE': { variant: 'default', label: 'Etiqueta Disponível' },
       'IN_TRANSIT': { variant: 'default', label: 'Em Trânsito' },
-      'DELIVERED': { variant: 'success', label: 'Entregue' },
-      'PAID': { variant: 'success', label: 'PAGO' },
+      'DELIVERED': { variant: 'secondary', label: 'Entregue' },
+      'PAID': { variant: 'default', label: 'Pago' },
       'COLETA_ACEITA': { variant: 'default', label: 'Coleta Aceita' },
       'COLETA_FINALIZADA': { variant: 'default', label: 'Coleta Finalizada' },
-      'ENTREGA_FINALIZADA': { variant: 'success', label: 'Entrega Finalizada' }
+      'ENTREGA_FINALIZADA': { variant: 'secondary', label: 'Entrega Finalizada' }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', label: status };
