@@ -375,11 +375,21 @@ const ClientRemessas = () => {
                     </div>
                     <div>
                       <p className="text-muted-foreground">CEP de Origem</p>
-                      <p className="font-medium">{selectedShipment.quote_data?.originCep || '74900-000'}</p>
+                      <p className="font-medium">
+                        {selectedShipment.quote_data?.originCep || 
+                         selectedShipment.quote_data?.originalFormData?.originCep || 
+                         selectedShipment.quote_data?.quoteData?.originCep ||
+                         '74900-000'}
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">CEP de Destino</p>
-                      <p className="font-medium">{selectedShipment.quote_data?.destinyCep || 'N/A'}</p>
+                      <p className="font-medium">
+                        {selectedShipment.quote_data?.destinyCep || 
+                         selectedShipment.quote_data?.originalFormData?.destinyCep || 
+                         selectedShipment.quote_data?.quoteData?.destinyCep ||
+                         'N/A'}
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Opção de Coleta</p>
@@ -580,7 +590,11 @@ const ClientRemessas = () => {
                     </div>
                     <div>
                       <p className="text-muted-foreground">Quantidade</p>
-                      <p className="font-medium">{selectedShipment.quote_data?.quantity || '1'} volumes</p>
+                      <p className="font-medium">
+                        {selectedShipment.quote_data?.quantity || 
+                         selectedShipment.quote_data?.originalFormData?.quantity || 
+                         selectedShipment.quote_data?.merchandiseDetails?.quantity || '1'} volumes
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Formato</p>
@@ -598,10 +612,41 @@ const ClientRemessas = () => {
                       <p className="text-muted-foreground">Altura</p>
                       <p className="font-medium">{selectedShipment.height}cm</p>
                     </div>
-                    {selectedShipment.quote_data?.unitValue && (
+                    {/* Valor Unitário */}
+                    {(selectedShipment.quote_data?.unitValue || 
+                      selectedShipment.quote_data?.originalFormData?.unitValue ||
+                      selectedShipment.quote_data?.merchandiseDetails?.unitValue) && (
                       <div>
                         <p className="text-muted-foreground">Valor Unitário</p>
-                        <p className="font-medium">R$ {parseFloat(selectedShipment.quote_data.unitValue).toFixed(2).replace('.', ',')}</p>
+                        <p className="font-medium">
+                          R$ {parseFloat(
+                            selectedShipment.quote_data?.unitValue || 
+                            selectedShipment.quote_data?.originalFormData?.unitValue ||
+                            selectedShipment.quote_data?.merchandiseDetails?.unitValue || '0'
+                          ).toFixed(2).replace('.', ',')}
+                        </p>
+                      </div>
+                    )}
+                    {/* Valor Total da Mercadoria */}
+                    {(selectedShipment.quote_data?.totalMerchandiseValue || 
+                      selectedShipment.quote_data?.originalFormData?.totalMerchandiseValue ||
+                      selectedShipment.quote_data?.merchandiseDetails?.totalValue) && (
+                      <div>
+                        <p className="text-muted-foreground">Valor Total</p>
+                        <p className="font-medium">
+                          R$ {parseFloat(
+                            selectedShipment.quote_data?.totalMerchandiseValue || 
+                            selectedShipment.quote_data?.originalFormData?.totalMerchandiseValue ||
+                            selectedShipment.quote_data?.merchandiseDetails?.totalValue || '0'
+                          ).toFixed(2).replace('.', ',')}
+                        </p>
+                      </div>
+                    )}
+                    {/* Peso Cúbico se disponível */}
+                    {selectedShipment.quote_data?.technicalData?.cubicWeight && (
+                      <div>
+                        <p className="text-muted-foreground">Peso Cúbico</p>
+                        <p className="font-medium">{selectedShipment.quote_data.technicalData.cubicWeight.toFixed(3)}kg</p>
                       </div>
                     )}
                   </div>
@@ -768,9 +813,61 @@ const ClientRemessas = () => {
                           <p className="font-medium">R$ {selectedShipment.quote_data.totalMerchandiseValue.toFixed(2).replace('.', ',')}</p>
                         </div>
                       )}
-                    </div>
-                  </div>
-                )}
+                     </div>
+                   </div>
+                 )}
+
+                 {/* Dados da Cotação Original */}
+                 {selectedShipment.quote_data?.originalFormData && (
+                   <>
+                     <Separator />
+                     <div>
+                       <h3 className="text-lg font-semibold mb-3">Dados da Cotação Original</h3>
+                       <div className="grid grid-cols-2 gap-4 text-sm">
+                         <div>
+                           <p className="text-muted-foreground">CEP de Origem</p>
+                           <p className="font-medium">{selectedShipment.quote_data.originalFormData.originCep}</p>
+                         </div>
+                         <div>
+                           <p className="text-muted-foreground">CEP de Destino</p>
+                           <p className="font-medium">{selectedShipment.quote_data.originalFormData.destinyCep}</p>
+                         </div>
+                         <div>
+                           <p className="text-muted-foreground">Peso Informado</p>
+                           <p className="font-medium">{selectedShipment.quote_data.originalFormData.weight}kg</p>
+                         </div>
+                         <div>
+                           <p className="text-muted-foreground">Quantidade</p>
+                           <p className="font-medium">{selectedShipment.quote_data.originalFormData.quantity} volumes</p>
+                         </div>
+                         <div>
+                           <p className="text-muted-foreground">Dimensões (CxLxA)</p>
+                           <p className="font-medium">
+                             {selectedShipment.quote_data.originalFormData.length} x{' '}
+                             {selectedShipment.quote_data.originalFormData.width} x{' '}
+                             {selectedShipment.quote_data.originalFormData.height} cm
+                           </p>
+                         </div>
+                         <div>
+                           <p className="text-muted-foreground">Formato</p>
+                           <p className="font-medium capitalize">{selectedShipment.quote_data.originalFormData.format}</p>
+                         </div>
+                         <div>
+                           <p className="text-muted-foreground">Valor Unitário</p>
+                           <p className="font-medium">
+                             R$ {parseFloat(selectedShipment.quote_data.originalFormData.unitValue).toFixed(2).replace('.', ',')}
+                           </p>
+                         </div>
+                         <div>
+                           <p className="text-muted-foreground">Valor Total da Mercadoria</p>
+                           <p className="font-medium">
+                             R$ {selectedShipment.quote_data.originalFormData.totalMerchandiseValue.toFixed(2).replace('.', ',')}
+                           </p>
+                         </div>
+                       </div>
+                     </div>
+                   </>
+                 )}
               </div>
             )}
           </ScrollArea>
