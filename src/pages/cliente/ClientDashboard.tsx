@@ -104,7 +104,7 @@ const ClientDashboard = () => {
       case 'PENDING_PAYMENT':
         return <Badge variant="destructive">Aguardando Pagamento</Badge>;
       case 'PAYMENT_CONFIRMED':
-        return <Badge className="bg-info text-info-foreground">Pagamento Confirmado</Badge>;
+        return <Badge className="bg-success text-success-foreground">Pagamento Confirmado</Badge>;
       case 'AWAITING_LABEL':
         return <Badge variant="secondary">Aguardando Etiqueta</Badge>;
       case 'LABEL_AVAILABLE':
