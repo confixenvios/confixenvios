@@ -10,10 +10,13 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Package, FileText, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { SessionManager } from "@/utils/sessionManager";
 
 const Document = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [currentShipment, setCurrentShipment] = useState<any>(null);
   const [documentType, setDocumentType] = useState<string>("");
   const [nfeKey, setNfeKey] = useState<string>("");
@@ -56,8 +59,8 @@ const Document = () => {
     }
     
     // Verificar se temos um shipment válido
-    if (!currentShipment || !currentShipment.id) {
-      console.error('Document - Shipment inválido ou sem ID:', currentShipment);
+    if (!currentShipment) {
+      console.error('Document - Shipment não encontrado:', currentShipment);
       toast({
         title: "Erro",
         description: "Dados da remessa não encontrados. Reinicie o processo.",
@@ -70,7 +73,101 @@ const Document = () => {
     setIsLoading(true);
 
     try {
-      console.log('Document - ID do shipment:', currentShipment.id);
+      console.log('Document - Dados do currentShipment:', currentShipment);
+      
+      let shipmentId = currentShipment.id;
+      
+      // Se não tem ID, significa que ainda não foi criado no banco
+      if (!shipmentId) {
+        console.log('Document - Criando shipment no banco primeiro...');
+        
+        // Extrair dados dos endereços
+        const senderData = currentShipment.addressData?.sender;
+        const recipientData = currentShipment.addressData?.recipient;
+        
+        if (!senderData || !recipientData) {
+          throw new Error('Dados de endereços não encontrados');
+        }
+        
+        // Criar endereços primeiro
+        const { data: senderAddress, error: senderError } = await supabase
+          .from('addresses')
+          .insert({
+            name: senderData.name,
+            street: senderData.street,
+            number: senderData.number,
+            complement: senderData.complement || null,
+            neighborhood: senderData.neighborhood,
+            city: senderData.city,
+            state: senderData.state,
+            cep: senderData.cep,
+            reference: senderData.reference || null,
+            address_type: 'sender',
+            user_id: user?.id || null,
+            session_id: user ? null : SessionManager.getSessionToken()
+          })
+          .select()
+          .single();
+
+        if (senderError) throw senderError;
+
+        const { data: recipientAddress, error: recipientError } = await supabase
+          .from('addresses')
+          .insert({
+            name: recipientData.name,
+            street: recipientData.street,
+            number: recipientData.number,
+            complement: recipientData.complement || null,
+            neighborhood: recipientData.neighborhood,
+            city: recipientData.city,
+            state: recipientData.state,
+            cep: recipientData.cep,
+            reference: recipientData.reference || null,
+            address_type: 'recipient',
+            user_id: user?.id || null,
+            session_id: user ? null : SessionManager.getSessionToken()
+          })
+          .select()
+          .single();
+
+        if (recipientError) throw recipientError;
+        
+        // Gerar código de rastreamento
+        const trackingCode = `ID${new Date().getFullYear()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+        
+        // Criar shipment
+        const { data: newShipment, error: shipmentError } = await supabase
+          .from('shipments')
+          .insert({
+            tracking_code: trackingCode,
+            sender_address_id: senderAddress.id,
+            recipient_address_id: recipientAddress.id,
+            quote_data: currentShipment,
+            selected_option: currentShipment.deliveryDetails?.selectedOption || 'standard',
+            pickup_option: currentShipment.deliveryDetails?.pickupOption || 'dropoff',
+            weight: currentShipment.technicalData?.weight || 0,
+            length: currentShipment.technicalData?.length || 0,
+            width: currentShipment.technicalData?.width || 0,
+            height: currentShipment.technicalData?.height || 0,
+            format: currentShipment.technicalData?.format || 'pacote',
+            document_type: 'declaracao_conteudo',
+            status: 'PENDING_DOCUMENT',
+            user_id: user?.id || null,
+            session_id: user ? null : SessionManager.getSessionToken()
+          })
+          .select()
+          .single();
+
+        if (shipmentError) throw shipmentError;
+        
+        shipmentId = newShipment.id;
+        console.log('Document - Shipment criado com ID:', shipmentId);
+        
+        // Atualizar currentShipment com o ID
+        currentShipment.id = shipmentId;
+        currentShipment.tracking_code = trackingCode;
+      }
+      
       const completeShipmentData = JSON.parse(sessionStorage.getItem('completeShipmentData') || '{}');
       
       // Dados COMPLETOS do documento fiscal
