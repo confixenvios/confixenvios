@@ -284,40 +284,44 @@ const ClientRemessas = () => {
                          </div>
                        </div>
 
-                       <div className="space-y-1">
-                         <p className="font-medium text-muted-foreground">Valor do Frete</p>
-                         {(() => {
-                            // Tentar obter o valor do frete de várias fontes
-                            let amount = null;
-                            
-                            // 1. Tentar payment_data.pixData.amount (PIX)
-                            if (shipment.payment_data?.pixData?.amount) {
-                              amount = shipment.payment_data.pixData.amount * 100; // converter de reais para centavos
-                            }
-                            // 2. Tentar payment_data.amount (Stripe/Cartão)
-                            else if (shipment.payment_data?.amount) {
-                              amount = shipment.payment_data.amount;
-                            }
-                            // 3. Tentar quote_data.shippingQuote.economicPrice ou expressPrice
-                            else if (shipment.quote_data?.shippingQuote) {
-                              const price = shipment.selected_option === 'express' 
-                                ? shipment.quote_data.shippingQuote.expressPrice 
-                                : shipment.quote_data.shippingQuote.economicPrice;
-                              amount = price * 100; // converter de reais para centavos
-                            }
-                            // 4. Tentar quote_data.totalPrice
-                            else if (shipment.quote_data?.totalPrice) {
-                              amount = shipment.quote_data.totalPrice * 100; // converter de reais para centavos
-                            }
+                        <div className="space-y-1">
+                          <p className="font-medium text-muted-foreground">Valor do Frete</p>
+                          {(() => {
+                             // Tentar obter o valor do frete de várias fontes
+                             let amount = null;
+                             
+                             // 1. Tentar payment_data.pixData.amount (PIX - já vem em centavos)
+                             if (shipment.payment_data?.pixData?.amount) {
+                               amount = shipment.payment_data.pixData.amount; // já está em centavos
+                             }
+                             // 2. Tentar payment_data.amount (Stripe/Cartão)
+                             else if (shipment.payment_data?.amount) {
+                               amount = shipment.payment_data.amount;
+                             }
+                             // 3. Tentar quote_data.amount (valor já pago)
+                             else if (shipment.quote_data?.amount) {
+                               amount = shipment.quote_data.amount * 100; // converter de reais para centavos
+                             }
+                             // 4. Tentar quote_data.shippingQuote.economicPrice ou expressPrice
+                             else if (shipment.quote_data?.shippingQuote) {
+                               const price = shipment.selected_option === 'express' 
+                                 ? shipment.quote_data.shippingQuote.expressPrice 
+                                 : shipment.quote_data.shippingQuote.economicPrice;
+                               amount = price * 100; // converter de reais para centavos
+                             }
+                             // 5. Tentar quote_data.totalPrice
+                             else if (shipment.quote_data?.totalPrice) {
+                               amount = shipment.quote_data.totalPrice * 100; // converter de reais para centavos
+                             }
 
-                            return amount ? (
-                              <p className="font-medium">
-                                {formatCurrency(amount)}
-                              </p>
-                            ) : (
-                              <p className="font-medium text-muted-foreground">Valor não disponível</p>
-                            );
-                         })()}
+                             return amount ? (
+                               <p className="font-medium">
+                                 {formatCurrency(amount)}
+                               </p>
+                             ) : (
+                               <p className="font-medium text-muted-foreground">Valor não disponível</p>
+                             );
+                          })()}
                        </div>
                     </div>
                   </CardContent>
