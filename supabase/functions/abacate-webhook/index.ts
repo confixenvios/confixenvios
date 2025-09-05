@@ -148,7 +148,7 @@ serve(async (req) => {
         width: packageData.width || 20, 
         height: packageData.height || 20,
         format: packageData.format || 'caixa',
-        status: 'PAYMENT_RECEIVED',
+        status: 'PAID',
         payment_data: {
           method: 'pix',
           status: 'paid',
@@ -190,7 +190,7 @@ serve(async (req) => {
         .from('shipment_status_history')
         .insert([{
           shipment_id: newShipment.id,
-          status: 'PAYMENT_RECEIVED',
+          status: 'PAID',
           observacoes: `Pagamento PIX aprovado via webhook. Valor: R$ ${(pixData.amount / 100).toFixed(2)}. ExternalId: ${externalId}. Cotação: ${tempQuote.id}. ${userId ? `Cliente: ${userId}` : 'Cliente anônimo.'}`
         }]);
 
