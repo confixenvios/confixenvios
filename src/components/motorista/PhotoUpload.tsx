@@ -76,10 +76,10 @@ export const PhotoUpload = ({ isOpen, onClose, onSave, title = "Adicionar Foto" 
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg w-full mx-4">
+      <DialogContent className="w-[90vw] max-w-[400px] max-h-[85vh] p-4 mx-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Camera className="h-5 w-5" />
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Camera className="h-4 w-4" />
             {title}
           </DialogTitle>
         </DialogHeader>
