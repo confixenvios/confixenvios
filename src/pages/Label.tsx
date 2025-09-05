@@ -255,12 +255,52 @@ const Label = () => {
 
       if (trackingError) throw trackingError;
 
-      // Create shipment with total price included in quote_data
+      // Dados COMPLETOS da remessa para salvar no banco
       const shipmentQuoteData = {
+        // Dados originais da cotação
         ...selectedQuote.quoteData,
+        
+        // Preços e totais
         totalPrice: selectedQuote.totalPrice,
+        shippingPrice: selectedQuote.quoteData?.deliveryDetails?.shippingPrice || 0,
+        pickupCost: selectedQuote.quoteData?.deliveryDetails?.pickupCost || 0,
+        
+        // Dados completos da mercadoria
+        merchandiseDetails: selectedQuote.quoteData?.merchandiseDetails || {
+          quantity: 1,
+          unitValue: 0,
+          totalValue: 0,
+          description: "Mercadoria não especificada"
+        },
+        
+        // Detalhes de coleta e entrega
         pickupMode: selectedQuote.pickup === 'pickup' ? 'PICKUP_D1' : 'DROP_OFF',
-        coletaAlternativa: selectedQuote.pickup === 'pickup' && !samePickupAddress ? alternativePickupAddress : null
+        coletaAlternativa: selectedQuote.pickup === 'pickup' && !samePickupAddress ? alternativePickupAddress : null,
+        deliveryDetails: selectedQuote.quoteData?.deliveryDetails || {},
+        
+        // Dados técnicos completos
+        technicalData: selectedQuote.quoteData?.technicalData || {
+          weight: parseFloat(selectedQuote.quoteData?.weight) || 0,
+          dimensions: {
+            length: parseFloat(selectedQuote.quoteData?.length) || 0,
+            width: parseFloat(selectedQuote.quoteData?.width) || 0,
+            height: parseFloat(selectedQuote.quoteData?.height) || 0
+          }
+        },
+        
+        // Informações dos endereços (dados resumidos, detalhes estão nas tabelas)
+        addressSummary: {
+          senderName: senderData.name,
+          senderCity: senderData.city,
+          senderState: senderData.state,
+          recipientName: recipientData.name,
+          recipientCity: recipientData.city,
+          recipientState: recipientData.state
+        },
+        
+        // Metadados de controle
+        creationSource: 'label_form',
+        processedAt: new Date().toISOString()
       };
 
       const { data: shipment, error: shipmentError } = await supabase
@@ -272,11 +312,12 @@ const Label = () => {
           quote_data: shipmentQuoteData,
           selected_option: selectedQuote.option,
           pickup_option: selectedQuote.pickup,
-          weight: parseFloat(selectedQuote.quoteData.weight),
-          length: parseFloat(selectedQuote.quoteData.length),
-          width: parseFloat(selectedQuote.quoteData.width),
-          height: parseFloat(selectedQuote.quoteData.height),
-          format: selectedQuote.quoteData.format,
+          weight: parseFloat(selectedQuote.quoteData?.weight) || 0,
+          length: parseFloat(selectedQuote.quoteData?.length) || 0,
+          width: parseFloat(selectedQuote.quoteData?.width) || 0,
+          height: parseFloat(selectedQuote.quoteData?.height) || 0,
+          format: selectedQuote.quoteData?.format || 'caixa',
+          document_type: 'declaracao_conteudo', // Padrão, será atualizado na tela de documento
           status: 'PENDING_DOCUMENT',
           user_id: null
         })

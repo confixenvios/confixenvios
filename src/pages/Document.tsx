@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Package, FileText, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Document = () => {
   const navigate = useNavigate();
@@ -57,14 +58,50 @@ const Document = () => {
     setIsLoading(true);
 
     try {
+      // Dados COMPLETOS do documento fiscal
       const documentData = {
         documentType,
         nfeKey: documentType === 'nfe' ? nfeKey : null,
         merchandiseDescription: documentType === 'declaration' ? merchandiseDescription : null,
+        
+        // Dados fiscais estruturados
+        fiscalData: {
+          type: documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo',
+          nfeAccessKey: documentType === 'nfe' ? nfeKey : null,
+          contentDescription: documentType === 'declaration' ? merchandiseDescription : null,
+          processedAt: new Date().toISOString()
+        },
+        
+        // Referência ao shipment
         shipment: currentShipment
       };
 
-      console.log('Document - Salvando dados do documento:', documentData);
+      console.log('Document - Salvando dados COMPLETOS do documento:', documentData);
+      
+      // Atualizar o shipment com o tipo de documento escolhido
+      const { error: updateError } = await supabase
+        .from('shipments')
+        .update({
+          document_type: documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo',
+          // Expandir quote_data com informações fiscais
+          quote_data: {
+            ...currentShipment.quote_data,
+            fiscalData: {
+              type: documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo',
+              nfeAccessKey: documentType === 'nfe' ? nfeKey : null,
+              contentDescription: documentType === 'declaration' ? merchandiseDescription : null,
+              processedAt: new Date().toISOString()
+            }
+          }
+        })
+        .eq('id', currentShipment.id);
+
+      if (updateError) {
+        console.error('Error updating shipment with document data:', updateError);
+        throw updateError;
+      }
+
+      // Salvar dados completos no sessionStorage
       sessionStorage.setItem('documentData', JSON.stringify(documentData));
 
       toast({

@@ -446,6 +446,7 @@ export type Database = {
         Row: {
           created_at: string
           cte_key: string | null
+          document_type: string | null
           format: string
           height: number
           id: string
@@ -469,6 +470,7 @@ export type Database = {
         Insert: {
           created_at?: string
           cte_key?: string | null
+          document_type?: string | null
           format: string
           height: number
           id?: string
@@ -492,6 +494,7 @@ export type Database = {
         Update: {
           created_at?: string
           cte_key?: string | null
+          document_type?: string | null
           format?: string
           height?: number
           id?: string

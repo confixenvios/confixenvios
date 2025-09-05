@@ -460,40 +460,83 @@ const QuoteForm = () => {
         console.log('QuoteForm - Anonymous session ID:', sessionId);
       }
 
-      // Preparar dados completos para as próximas etapas (sem salvar no banco ainda)
+      // Preparar dados COMPLETOS para as próximas etapas (sem salvar no banco ainda)
       const completeShipmentData = {
-        // Dados da cotação original
+        // === DADOS DA COTAÇÃO ORIGINAL ===
         quoteData: quoteData,
-        formData: formData,
-        selectedOption: "standard",
-        totalPrice: getTotalPrice(),
-        
-        // Dados de coleta
-        pickupOption: pickupOption,
-        pickupDetails: {
-          option: pickupOption,
-          sameAsOrigin: samePickupAddress,
-          alternativeAddress: alternativePickupAddress
+        originalFormData: {
+          originCep: formData.originCep,
+          destinyCep: formData.destinyCep,
+          weight: formData.weight,
+          length: formData.length,
+          width: formData.width,
+          height: formData.height,
+          format: formData.format,
+          quantity: formData.quantity,
+          unitValue: formData.unitValue,
+          totalMerchandiseValue: getTotalMerchandiseValue()
         },
         
-        // Dados dos endereços
-        senderData: senderData,
-        recipientData: recipientData,
+        // === DETALHES DA MERCADORIA ===
+        merchandiseDetails: {
+          quantity: parseInt(formData.quantity),
+          unitValue: parseFloat(formData.unitValue),
+          totalValue: getTotalMerchandiseValue(),
+          description: `Mercadoria - Formato: ${formData.format}`,
+          weight: parseFloat(formData.weight),
+          dimensions: {
+            length: parseFloat(formData.length),
+            width: parseFloat(formData.width),
+            height: parseFloat(formData.height)
+          }
+        },
         
-        // Dados de dimensões e peso
-        weight: parseFloat(formData.weight),
-        length: parseFloat(formData.length),
-        width: parseFloat(formData.width),
-        height: parseFloat(formData.height),
-        format: formData.format,
+        // === DADOS DE ENTREGA E COLETA ===
+        deliveryDetails: {
+          selectedOption: "standard",
+          shippingPrice: quoteData?.shippingQuote?.economicPrice || 0,
+          pickupOption: pickupOption,
+          pickupCost: getPickupCost(pickupOption),
+          totalPrice: getTotalPrice(),
+          estimatedDays: quoteData?.shippingQuote?.estimatedDays || 5,
+          pickupDetails: {
+            option: pickupOption,
+            sameAsOrigin: samePickupAddress,
+            alternativeAddress: alternativePickupAddress
+          }
+        },
         
-        // SECURITY FIX: Add session_id for anonymous users
-        user_id: user?.id || null,
-        session_id: sessionId,
+        // === DADOS COMPLETOS DOS ENDEREÇOS ===
+        addressData: {
+          sender: {
+            ...senderData,
+            addressType: 'sender'
+          },
+          recipient: {
+            ...recipientData,
+            addressType: 'recipient'
+          }
+        },
         
-        // Status do fluxo
-        status: 'PENDING_DOCUMENT',
-        createdAt: new Date().toISOString()
+        // === DADOS TÉCNICOS ===
+        technicalData: {
+          weight: parseFloat(formData.weight),
+          length: parseFloat(formData.length),
+          width: parseFloat(formData.width),
+          height: parseFloat(formData.height),
+          format: formData.format,
+          cubicWeight: (parseFloat(formData.length) * parseFloat(formData.width) * parseFloat(formData.height)) / 5000
+        },
+        
+        // === METADADOS E CONTROLE ===
+        metadata: {
+          user_id: user?.id || null,
+          session_id: sessionId,
+          status: 'PENDING_DOCUMENT',
+          createdAt: new Date().toISOString(),
+          step: 'label_data_completed',
+          calculatedAt: quoteData?.calculatedAt || new Date().toISOString()
+        }
       };
 
       console.log('QuoteForm - Salvando dados completos no sessionStorage:', completeShipmentData);
