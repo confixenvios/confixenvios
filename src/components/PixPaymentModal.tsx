@@ -133,17 +133,37 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     try {
       console.log('💳 Criando pagamento PIX com dados:', formData);
 
-      // Preparar dados para PIX
+      // Recuperar dados completos da cotação do sessionStorage
+      const completeShipmentData = JSON.parse(sessionStorage.getItem('completeShipmentData') || '{}');
+      const documentData = JSON.parse(sessionStorage.getItem('documentData') || '{}');
+      
+      console.log('Dados completos recuperados:', completeShipmentData);
+      console.log('Dados do documento:', documentData);
+
+      // Preparar dados para PIX com TODOS os dados da cotação
       const pixPayload = {
         amount: amount * 100, // Converter para centavos
         name: formData.name,
         email: formData.email,
         phone: formData.phone.replace(/\D/g, ''),
         cpf: formData.cpf.replace(/\D/g, ''),
-        description: `Pagamento de frete - R$ ${amount.toFixed(2)}`
+        description: `Pagamento de frete - R$ ${amount.toFixed(2)}`,
+        userId: user?.id || null,
+        // Adicionar dados completos da cotação
+        quoteData: {
+          senderData: completeShipmentData.addressData?.sender || {},
+          recipientData: completeShipmentData.addressData?.recipient || {},
+          formData: completeShipmentData.originalFormData || {},
+          selectedOption: completeShipmentData.deliveryDetails?.selectedOption || 'standard',
+          pickupOption: completeShipmentData.deliveryDetails?.pickupOption || 'dropoff',
+          quoteData: completeShipmentData.quoteData || {},
+          totalMerchandiseValue: completeShipmentData.merchandiseDetails?.totalValue || amount,
+          pickupDetails: completeShipmentData.deliveryDetails?.pickupDetails || {}
+        },
+        documentData: documentData
       };
 
-      console.log('📋 Payload PIX:', pixPayload);
+      console.log('📋 Payload PIX completo:', pixPayload);
 
       const { data, error } = await supabase.functions.invoke('create-pix-payment', {
         body: pixPayload
