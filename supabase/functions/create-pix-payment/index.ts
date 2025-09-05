@@ -235,7 +235,9 @@ serve(async (req) => {
         externalId: externalId,
         userId: userId || 'anonymous',
         source: 'confix-envios'
-      }
+      },
+      // CRÍTICO: Configurar webhook do Abacate Pay
+      webhookUrl: `${Deno.env.get('SUPABASE_URL')}/functions/v1/abacate-webhook`
     };
 
     console.log('📤 Sending to Abacate Pay:', JSON.stringify(pixPayload, null, 2));

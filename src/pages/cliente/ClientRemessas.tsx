@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import TestAbacateWebhook from "@/components/TestAbacateWebhook";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Shipment {
@@ -157,6 +158,9 @@ const ClientRemessas = () => {
           Gerencie todas as suas remessas em um só lugar
         </p>
       </div>
+
+      {/* Componente de teste temporário */}
+      <TestAbacateWebhook />
 
       <Card className="border-border/50 shadow-card">
         <CardHeader>
