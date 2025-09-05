@@ -77,6 +77,14 @@ serve(async (req) => {
     // Verificar estrutura conforme documentação
     const paymentData = data.data;
     const isPaid = paymentData?.status === 'PAID';
+    
+    // Debug adicional para entender por que não está detectando o pagamento
+    console.log('🔍 Debug detalhado:');
+    console.log('- Estrutura completa:', JSON.stringify(data, null, 2));
+    console.log('- paymentData:', JSON.stringify(paymentData, null, 2));
+    console.log('- status encontrado:', paymentData?.status);
+    console.log('- comparação PAID:', paymentData?.status === 'PAID');
+    console.log('- isPaid calculado:', isPaid);
 
     console.log(`💰 Status do pagamento: ${paymentData?.status} - Pago: ${isPaid}`);
     console.log(`⏰ Expira em: ${paymentData?.expiresAt}`);

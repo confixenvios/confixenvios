@@ -240,6 +240,31 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     onClose();
   };
 
+  // Função para processar sucesso do pagamento (disponível globalmente)
+  const processPaymentSuccess = () => {
+    console.log('🎉 Pagamento PIX confirmado!');
+    
+    setPaymentStatus('paid');
+    
+    toast({
+      title: "Pagamento confirmado!",
+      description: "PIX confirmado! Redirecionando..."
+    });
+
+    // Fechar modal e redirecionar
+    setTimeout(() => {
+      handleClose();
+      navigate('/pix-sucesso', {
+        state: {
+          paymentId: pixData?.paymentId,
+          amount: amount,
+          trackingCode: 'Processando...',
+          success: true
+        }
+      });
+    }, 500);
+  };
+
   // Sistema de verificação PIX via API APENAS (sem webhook)
   useEffect(() => {
     if (step !== 'qrcode' || !pixData?.paymentId || paymentStatus !== 'pending') return;
@@ -249,32 +274,6 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
 
     let isMounted = true;
     let pollInterval: NodeJS.Timeout;
-
-    // Função para processar sucesso do pagamento
-    const handlePaymentSuccess = () => {
-      console.log('🎉 Pagamento PIX confirmado pela API!');
-      
-      if (!isMounted) return;
-
-      setPaymentStatus('paid');
-      handleClose();
-      
-      toast({
-        title: "Pagamento confirmado!",
-        description: "PIX confirmado! Redirecionando..."
-      });
-
-      setTimeout(() => {
-        navigate('/pix-sucesso', {
-          state: {
-            paymentId: pixData.paymentId,
-            amount: amount,
-            trackingCode: 'Processando...',
-            success: true
-          }
-        });
-      }, 1000);
-    };
 
     // Polling APENAS da API Abacate Pay (conforme documentação)
     let attempts = 0;
@@ -303,10 +302,12 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
         });
 
         console.log('📊 Resposta da API:', response);
+        console.log('📊 Status atual:', response?.data?.status);
+        console.log('📊 isPaid:', response?.isPaid);
 
-        if (!error && response?.success && response?.data?.status === 'PAID') {
+        if (!error && response?.success && (response?.data?.status === 'PAID' || response?.isPaid === true)) {
           console.log('✅ PIX PAGO confirmado pela API Abacate Pay!');
-          handlePaymentSuccess();
+          processPaymentSuccess();
           return;
         }
 
@@ -528,6 +529,46 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
           <li>4. O status será atualizado automaticamente</li>
         </ol>
       </div>
+
+      {/* Botão verificação manual se estiver aguardando muito tempo */}
+      {paymentStatus === 'checking' && (
+        <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
+          <p className="text-sm text-orange-800 dark:text-orange-200 mb-3">
+            Já fez o pagamento? Clique para verificar manualmente:
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              try {
+                const { data: response } = await supabase.functions.invoke('check-pix-status', {
+                  body: { paymentId: pixData.paymentId }
+                });
+                
+                if (response?.success && (response?.data?.status === 'PAID' || response?.isPaid === true)) {
+                  processPaymentSuccess();
+                } else {
+                  toast({
+                    title: "Pagamento ainda não confirmado",
+                    description: "Aguarde alguns instantes e tente novamente",
+                    variant: "destructive"
+                  });
+                }
+              } catch (error) {
+                console.error('Erro verificação manual:', error);
+                toast({
+                  title: "Erro na verificação",
+                  description: "Erro ao verificar pagamento",
+                  variant: "destructive"
+                });
+              }
+            }}
+            className="w-full"
+          >
+            Verificar Pagamento
+          </Button>
+        </div>
+      )}
     </div>
   );
 
