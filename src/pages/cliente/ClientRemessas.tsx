@@ -322,13 +322,27 @@ const ClientRemessas = () => {
                       <p className="font-medium">{selectedShipment.selected_option === 'standard' ? 'Econômico' : 'Expresso'}</p>
                     </div>
                     <div>
+                      <p className="text-muted-foreground">CEP de Origem</p>
+                      <p className="font-medium">{selectedShipment.quote_data?.originCep || '74900-000'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">CEP de Destino</p>
+                      <p className="font-medium">{selectedShipment.quote_data?.destinyCep || 'N/A'}</p>
+                    </div>
+                    <div>
                       <p className="text-muted-foreground">Opção de Coleta</p>
                       <p className="font-medium">{selectedShipment.pickup_option === 'dropoff' ? 'Entrega no Hub' : 'Coleta no Local'}</p>
                     </div>
-                    {selectedShipment.cte_key && (
+                    {selectedShipment.pickup_option === 'pickup' && (
                       <div>
+                        <p className="text-muted-foreground">Taxa de Coleta</p>
+                        <p className="font-medium">R$ 10,00</p>
+                      </div>
+                    )}
+                    {selectedShipment.cte_key && (
+                      <div className="col-span-2">
                         <p className="text-muted-foreground">Chave CTE</p>
-                        <p className="font-medium font-mono text-xs">{selectedShipment.cte_key}</p>
+                        <p className="font-medium font-mono text-xs break-all">{selectedShipment.cte_key}</p>
                       </div>
                     )}
                   </div>
@@ -348,6 +362,24 @@ const ClientRemessas = () => {
                       <p className="text-muted-foreground">CEP</p>
                       <p className="font-medium">{selectedShipment.sender_address?.cep}</p>
                     </div>
+                    {selectedShipment.quote_data?.senderData?.document && (
+                      <div>
+                        <p className="text-muted-foreground">Documento</p>
+                        <p className="font-medium">{selectedShipment.quote_data.senderData.document}</p>
+                      </div>
+                    )}
+                    {selectedShipment.quote_data?.senderData?.phone && (
+                      <div>
+                        <p className="text-muted-foreground">Telefone</p>
+                        <p className="font-medium">{selectedShipment.quote_data.senderData.phone}</p>
+                      </div>
+                    )}
+                    {selectedShipment.quote_data?.senderData?.email && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">E-mail</p>
+                        <p className="font-medium">{selectedShipment.quote_data.senderData.email}</p>
+                      </div>
+                    )}
                     <div className="col-span-2">
                       <p className="text-muted-foreground">Endereço</p>
                       <p className="font-medium">
@@ -386,6 +418,24 @@ const ClientRemessas = () => {
                       <p className="text-muted-foreground">CEP</p>
                       <p className="font-medium">{selectedShipment.recipient_address?.cep}</p>
                     </div>
+                    {selectedShipment.quote_data?.recipientData?.document && (
+                      <div>
+                        <p className="text-muted-foreground">Documento</p>
+                        <p className="font-medium">{selectedShipment.quote_data.recipientData.document}</p>
+                      </div>
+                    )}
+                    {selectedShipment.quote_data?.recipientData?.phone && (
+                      <div>
+                        <p className="text-muted-foreground">Telefone</p>
+                        <p className="font-medium">{selectedShipment.quote_data.recipientData.phone}</p>
+                      </div>
+                    )}
+                    {selectedShipment.quote_data?.recipientData?.email && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">E-mail</p>
+                        <p className="font-medium">{selectedShipment.quote_data.recipientData.email}</p>
+                      </div>
+                    )}
                     <div className="col-span-2">
                       <p className="text-muted-foreground">Endereço</p>
                       <p className="font-medium">
@@ -421,6 +471,14 @@ const ClientRemessas = () => {
                       <p className="font-medium">{selectedShipment.weight}kg</p>
                     </div>
                     <div>
+                      <p className="text-muted-foreground">Quantidade</p>
+                      <p className="font-medium">{selectedShipment.quote_data?.quantity || '1'} volumes</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Formato</p>
+                      <p className="font-medium capitalize">{selectedShipment.format}</p>
+                    </div>
+                    <div>
                       <p className="text-muted-foreground">Comprimento</p>
                       <p className="font-medium">{selectedShipment.length}cm</p>
                     </div>
@@ -432,10 +490,12 @@ const ClientRemessas = () => {
                       <p className="text-muted-foreground">Altura</p>
                       <p className="font-medium">{selectedShipment.height}cm</p>
                     </div>
-                    <div>
-                      <p className="text-muted-foreground">Formato</p>
-                      <p className="font-medium capitalize">{selectedShipment.format}</p>
-                    </div>
+                    {selectedShipment.quote_data?.unitValue && (
+                      <div>
+                        <p className="text-muted-foreground">Valor Unitário</p>
+                        <p className="font-medium">R$ {parseFloat(selectedShipment.quote_data.unitValue).toFixed(2).replace('.', ',')}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
