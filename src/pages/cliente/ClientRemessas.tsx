@@ -441,6 +441,53 @@ const ClientRemessas = () => {
 
                 <Separator />
 
+                {/* Dados do Documento */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Dados do Documento</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    {selectedShipment.quote_data?.documentType && (
+                      <div>
+                        <p className="text-muted-foreground">Tipo de Documento</p>
+                        <p className="font-medium">
+                          {selectedShipment.quote_data.documentType === 'declaration' ? 'Declaração de Conteúdo' : 'Nota Fiscal'}
+                        </p>
+                      </div>
+                    )}
+                    {selectedShipment.quote_data?.nfeKey && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Chave da Nota Fiscal</p>
+                        <p className="font-medium font-mono text-xs break-all">{selectedShipment.quote_data.nfeKey}</p>
+                      </div>
+                    )}
+                    {selectedShipment.quote_data?.merchandiseDescription && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Descrição da Mercadoria</p>
+                        <p className="font-medium">{selectedShipment.quote_data.merchandiseDescription}</p>
+                      </div>
+                    )}
+                    {selectedShipment.quote_data?.merchandiseValue && (
+                      <div>
+                        <p className="text-muted-foreground">Valor da Mercadoria</p>
+                        <p className="font-medium">R$ {selectedShipment.quote_data.merchandiseValue.toFixed(2).replace('.', ',')}</p>
+                      </div>
+                    )}
+                    {selectedShipment.quote_data?.totalMerchandiseValue && !selectedShipment.quote_data?.merchandiseValue && (
+                      <div>
+                        <p className="text-muted-foreground">Valor Total da Mercadoria</p>
+                        <p className="font-medium">R$ {selectedShipment.quote_data.totalMerchandiseValue.toFixed(2).replace('.', ',')}</p>
+                      </div>
+                    )}
+                    {selectedShipment.quote_data?.quantity && (
+                      <div>
+                        <p className="text-muted-foreground">Quantidade de Volumes</p>
+                        <p className="font-medium">{selectedShipment.quote_data.quantity}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Separator />
+
                 {/* Dados de Pagamento */}
                 {selectedShipment.payment_data && (
                   <>
