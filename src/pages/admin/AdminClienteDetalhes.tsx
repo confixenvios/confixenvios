@@ -20,7 +20,8 @@ import {
   Save,
   X,
   Crown,
-  FileText
+  FileText,
+  Clock
 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -535,37 +536,63 @@ const AdminClienteDetalhes = () => {
           ) : (
             <div className="space-y-4">
               {client.shipments.map((shipment) => (
-                <div key={shipment.id} className="p-4 border border-border/50 rounded-lg">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-mono text-sm font-medium">
-                          {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
-                        </span>
-                        <Badge 
-                          variant="secondary" 
-                          className={`text-xs ${getShipmentStatusColor(shipment.status)}`}
-                        >
-                          {shipment.status}
-                        </Badge>
+                <Card key={shipment.id} className="border-border/30 hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-semibold text-sm">
+                            {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
+                          </h4>
+                          <Badge 
+                            variant="secondary" 
+                            className={`text-xs ${getShipmentStatusColor(shipment.status)}`}
+                          >
+                            {shipment.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center text-xs text-muted-foreground">
+                          <Clock className="w-3 h-3 mr-1" />
+                          <span className="font-medium">Data:</span>
+                          <span className="ml-1">{formatDate(shipment.created_at)}</span>
+                        </div>
                       </div>
-                      
-                      <div className="text-sm text-muted-foreground">
-                        <p>Data: {formatDate(shipment.created_at)}</p>
-                        {shipment.quote_data?.selectedQuote?.price && (
-                          <p>Valor: {formatCurrency(parseFloat(shipment.quote_data.selectedQuote.price))}</p>
-                        )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                      <div className="space-y-1">
+                        <p className="font-medium text-muted-foreground">Origem</p>
+                        <p className="font-medium">
+                          {shipment.sender_address?.city && shipment.sender_address?.state ? 
+                            `${shipment.sender_address.city} - ${shipment.sender_address.state}` : 
+                            'Não informado'
+                          }
+                        </p>
                       </div>
 
-                      {shipment.sender_address && shipment.recipient_address && (
-                        <div className="text-xs text-muted-foreground">
-                          <p><strong>De:</strong> {shipment.sender_address.city} - {shipment.sender_address.state}</p>
-                          <p><strong>Para:</strong> {shipment.recipient_address.city} - {shipment.recipient_address.state}</p>
-                        </div>
-                      )}
+                      <div className="space-y-1">
+                        <p className="font-medium text-muted-foreground">Destino</p>
+                        <p className="font-medium">
+                          {shipment.recipient_address?.city && shipment.recipient_address?.state ? 
+                            `${shipment.recipient_address.city} - ${shipment.recipient_address.state}` : 
+                            'Não informado'
+                          }
+                        </p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <p className="font-medium text-muted-foreground">Valor</p>
+                        {shipment.quote_data?.selectedQuote?.price ? (
+                          <p className="font-medium text-success">
+                            {formatCurrency(parseFloat(shipment.quote_data.selectedQuote.price))}
+                          </p>
+                        ) : (
+                          <p className="font-medium text-muted-foreground">Valor não disponível</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}

@@ -359,7 +359,7 @@ const MotoristaDashboard = () => {
           </Card>
         </div>
 
-        {/* Remessas Table */}
+        {/* Remessas Cards */}
         <Card>
           <CardHeader>
             <CardTitle>Lista de Remessas</CardTitle>
@@ -374,92 +374,109 @@ const MotoristaDashboard = () => {
                 </p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Remetente</TableHead>
-                    <TableHead>Destinatário</TableHead>
-                    <TableHead>Endereços</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {remessas.map((remessa) => (
-                    <TableRow key={remessa.id}>
-                      <TableCell className="font-mono">
-                        {remessa.tracking_code || `ID${remessa.id.slice(0, 8).toUpperCase()}`}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{remessa.sender_address.name}</p>
-                          {remessa.sender_address.phone && (
-                            <p className="text-sm text-muted-foreground flex items-center">
-                              <Phone className="h-3 w-3 mr-1" />
-                              {remessa.sender_address.phone}
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{remessa.recipient_address.name}</p>
-                          {remessa.recipient_address.phone && (
-                            <p className="text-sm text-muted-foreground flex items-center">
-                              <Phone className="h-3 w-3 mr-1" />
-                              {remessa.recipient_address.phone}
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="text-sm">
-                            <p className="font-medium flex items-center">
-                              <MapPin className="h-3 w-3 mr-1" />
-                              Coleta
-                            </p>
-                            <p className="text-muted-foreground">
-                              {remessa.sender_address.street}, {remessa.sender_address.number}
-                            </p>
-                            <p className="text-muted-foreground">
-                              {remessa.sender_address.neighborhood}, {remessa.sender_address.city}
-                            </p>
+              <div className="space-y-4">
+                {remessas.map((remessa) => (
+                  <Card key={remessa.id} className="border-border/30 hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <h3 className="font-semibold text-lg">
+                              {remessa.tracking_code || `ID${remessa.id.slice(0, 8).toUpperCase()}`}
+                            </h3>
+                            {getStatusBadge(remessa.status)}
                           </div>
-                          <div className="text-sm">
-                            <p className="font-medium flex items-center">
-                              <MapPin className="h-3 w-3 mr-1" />
-                              Entrega
-                            </p>
-                            <p className="text-muted-foreground">
-                              {remessa.recipient_address.street}, {remessa.recipient_address.number}
-                            </p>
-                            <p className="text-muted-foreground">
-                              {remessa.recipient_address.neighborhood}, {remessa.recipient_address.city}
-                            </p>
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Calendar className="w-4 h-4 mr-2" />
+                            <span className="font-medium">Criado em:</span>
+                            <span className="ml-1">{format(new Date(remessa.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(remessa.status)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {format(new Date(remessa.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2 flex-wrap">
+                        <div className="flex space-x-2">
                           {getAvailableActions(remessa.status, remessa.id, remessa)}
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div className="space-y-1">
+                          <p className="font-medium text-muted-foreground">Remetente</p>
+                          <p className="font-medium">{remessa.sender_address?.name || 'Nome não informado'}</p>
+                          <div className="flex items-center text-muted-foreground">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {remessa.sender_address?.city ? 
+                              `${remessa.sender_address.city} - ${remessa.sender_address.state}` : 
+                              'Cidade não informada'
+                            }
+                          </div>
+                          {remessa.sender_address?.phone && (
+                            <div className="flex items-center text-muted-foreground">
+                              <Phone className="w-3 h-3 mr-1" />
+                              {remessa.sender_address.phone}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="font-medium text-muted-foreground">Destinatário</p>
+                          <p className="font-medium">{remessa.recipient_address?.name || 'Nome não informado'}</p>
+                          <div className="flex items-center text-muted-foreground">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {remessa.recipient_address?.city ? 
+                              `${remessa.recipient_address.city} - ${remessa.recipient_address.state}` : 
+                              'Cidade não informada'
+                            }
+                          </div>
+                          {remessa.recipient_address?.phone && (
+                            <div className="flex items-center text-muted-foreground">
+                              <Phone className="w-3 h-3 mr-1" />
+                              {remessa.recipient_address.phone}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="font-medium text-muted-foreground">Informações</p>
+                          <div className="flex items-center text-muted-foreground">
+                            <Package className="w-3 h-3 mr-1" />
+                            Peso: {remessa.weight}kg
+                          </div>
+                          <div className="flex items-center text-muted-foreground">
+                            <Truck className="w-3 h-3 mr-1" />
+                            {remessa.selected_option === 'express' ? 'Expresso' : 'Econômico'}
+                          </div>
+                          {(() => {
+                            // Tentar obter o valor do frete de várias fontes
+                            let amount = null;
+                            
+                            if (remessa.payment_data?.pixData?.amount) {
+                              amount = remessa.payment_data.pixData.amount;
+                            } else if (remessa.payment_data?.amount) {
+                              amount = remessa.payment_data.amount;
+                            } else if (remessa.quote_data?.amount) {
+                              amount = remessa.quote_data.amount * 100;
+                            } else if (remessa.quote_data?.shippingQuote) {
+                              const price = remessa.selected_option === 'express' 
+                                ? remessa.quote_data.shippingQuote.expressPrice 
+                                : remessa.quote_data.shippingQuote.economicPrice;
+                              amount = price * 100;
+                            } else if (remessa.quote_data?.totalPrice) {
+                              amount = remessa.quote_data.totalPrice * 100;
+                            }
+
+                            return amount ? (
+                              <p className="font-medium text-success">
+                                {formatCurrency(amount)}
+                              </p>
+                            ) : (
+                              <p className="font-medium text-muted-foreground">Valor não disponível</p>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>

@@ -206,27 +206,47 @@ const AdminDashboard = () => {
             ) : (
               <div className="space-y-4">
                 {stats.recentShipments.map((shipment) => (
-                  <div key={shipment.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="font-medium text-sm">
-                          {shipment.profiles?.first_name} {shipment.profiles?.last_name}
-                        </span>
-                        {getStatusBadge(shipment.status)}
+                  <Card key={shipment.id} className="border-border/30 hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <h4 className="font-semibold text-sm">
+                              {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
+                            </h4>
+                            {getStatusBadge(shipment.status)}
+                          </div>
+                          <div className="flex items-center text-xs text-muted-foreground">
+                            <Clock className="w-3 h-3 mr-1" />
+                            <span className="font-medium">Criado em:</span>
+                            <span className="ml-1">{new Date(shipment.created_at).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium">
-                        R$ {shipment.quote_data?.price || '0,00'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(shipment.created_at).toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
-                  </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                        <div className="space-y-1">
+                          <p className="font-medium text-muted-foreground">Cliente</p>
+                          <p className="font-medium">
+                            {shipment.profiles?.first_name} {shipment.profiles?.last_name}
+                          </p>
+                          <p className="text-muted-foreground">{shipment.profiles?.email}</p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="font-medium text-muted-foreground">Status</p>
+                          <p className="font-medium">{shipment.status}</p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="font-medium text-muted-foreground">Valor</p>
+                          <p className="font-medium text-success">
+                            R$ {shipment.quote_data?.price || '0,00'}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
