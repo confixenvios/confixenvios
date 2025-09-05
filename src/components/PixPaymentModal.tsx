@@ -274,17 +274,17 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
         )
         .subscribe();
 
-      // Também verificar periodicamente se o pagamento foi processado
+      // Verificar periodicamente o status do pagamento via API e banco de dados
       const checkPayment = async () => {
         try {
-          const { data: shipments } = await supabase
-            .from('shipments')
-            .select('*')
-            .contains('payment_data', { pixPaymentId: pixData.paymentId })
-            .limit(1);
-          
-          if (shipments && shipments.length > 0) {
-            console.log('🎉 Pagamento encontrado via polling!', shipments[0]);
+          // 1. Verificar diretamente com a API do Abacate Pay
+          console.log('🔍 Verificando status do PIX via API...', pixData.paymentId);
+          const { data: pixStatus, error: statusError } = await supabase.functions.invoke('check-pix-status', {
+            body: { paymentId: pixData.paymentId }
+          });
+
+          if (!statusError && pixStatus?.isPaid) {
+            console.log('🎉 PIX confirmado via API do Abacate Pay!');
             setPaymentStatus('paid');
             
             handleClose();
@@ -292,7 +292,35 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
               duration: 1500
             });
             
-            // Usar React Router com dados necessários
+            setTimeout(() => {
+              const currentShipment = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
+              navigate('/pix-sucesso', {
+                state: {
+                  paymentId: pixData.paymentId,
+                  amount: amount,
+                  shipmentData: currentShipment
+                }
+              });
+            }, 500);
+            return;
+          }
+
+          // 2. Verificar se a remessa já foi criada no banco
+          const { data: shipments } = await supabase
+            .from('shipments')
+            .select('*')
+            .contains('payment_data', { pixPaymentId: pixData.paymentId })
+            .limit(1);
+          
+          if (shipments && shipments.length > 0) {
+            console.log('🎉 Pagamento encontrado via polling no banco!', shipments[0]);
+            setPaymentStatus('paid');
+            
+            handleClose();
+            toast.success('Pagamento confirmado! Redirecionando...', {
+              duration: 1500
+            });
+            
             setTimeout(() => {
               const currentShipment = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
               navigate('/pix-sucesso', {
