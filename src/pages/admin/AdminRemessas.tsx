@@ -169,14 +169,14 @@ const AdminRemessas = () => {
   const handleViewShipment = (shipment: Shipment) => {
     toast({
       title: "Detalhes da Remessa",
-      description: `Visualizando remessa ${shipment.tracking_code || 'N/A'}`,
+      description: `Visualizando remessa ${shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}`,
     });
   };
 
   const handleDownloadLabel = (shipment: Shipment) => {
     toast({
       title: "Download iniciado",
-      description: `Baixando etiqueta para ${shipment.tracking_code || 'N/A'}`,
+      description: `Baixando etiqueta para ${shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}`,
     });
   };
 
@@ -346,7 +346,7 @@ const AdminRemessas = () => {
                     filteredShipments.map((shipment) => (
                       <TableRow key={shipment.id}>
                         <TableCell className="font-medium font-mono">
-                          {shipment.tracking_code || 'N/A'}
+                          {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
                         </TableCell>
                         <TableCell>{shipment.client_name}</TableCell>
                         <TableCell className="text-sm">

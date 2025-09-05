@@ -215,7 +215,7 @@ const AdminDashboard = () => {
                         {getStatusBadge(shipment.status)}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {shipment.tracking_code || 'Sem código de rastreio'}
+                        {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
                       </p>
                     </div>
                     <div className="text-right">

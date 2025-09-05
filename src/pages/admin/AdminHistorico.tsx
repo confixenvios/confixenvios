@@ -65,7 +65,7 @@ const AdminHistorico = () => {
             id: `shipment-${shipment.id}`,
             type: 'shipment',
             title: `Nova remessa criada`,
-            description: `Remessa ${shipment.tracking_code || 'sem código'} - Status: ${shipment.status}`,
+            description: `Remessa ${shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`} - Status: ${shipment.status}`,
             timestamp: shipment.created_at,
             client: clientName,
             status: shipment.status

@@ -334,7 +334,7 @@ const ClientEtiquetas = () => {
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
                         <h4 className="font-semibold text-foreground">
-                          {shipment.tracking_code || 'Código pendente'}
+                          {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
                         </h4>
                         {getStatusBadge(shipment.status)}
                       </div>

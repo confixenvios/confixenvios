@@ -322,7 +322,7 @@ const MotoristaDashboard = () => {
                   {remessas.map((remessa) => (
                     <TableRow key={remessa.id}>
                       <TableCell className="font-mono">
-                        {remessa.tracking_code || 'Pendente'}
+                        {remessa.tracking_code || `ID${remessa.id.slice(0, 8).toUpperCase()}`}
                       </TableCell>
                       <TableCell>
                         <div>

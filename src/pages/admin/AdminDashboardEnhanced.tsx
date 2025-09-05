@@ -585,7 +585,7 @@ const AdminDashboardEnhanced = () => {
                     <div key={shipment.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                       <div>
                         <p className="font-medium text-foreground">
-                          {shipment.tracking_code || 'N/A'}
+                          {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
                         </p>
                         <p className="text-sm text-muted-foreground">{clientName}</p>
                         <p className="text-xs text-muted-foreground">

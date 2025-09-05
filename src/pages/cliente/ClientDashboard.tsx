@@ -260,7 +260,7 @@ const ClientDashboard = () => {
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
                         <span className="font-medium text-sm">
-                          {shipment.tracking_code || 'Sem código'}
+                          {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
                         </span>
                         {getStatusBadge(shipment.status)}
                       </div>

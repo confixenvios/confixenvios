@@ -399,7 +399,7 @@ const AdminFaturamento = () => {
       ['ID', 'Código de Rastreamento', 'Cliente', 'Email', 'Valor', 'Status', 'Data', 'Origem', 'Destino'],
       ...billingData.shipmentDetails.map(shipment => [
         shipment.id,
-        shipment.tracking_code || 'N/A',
+        shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`,
         shipment.client_name,
         shipment.client_email,
         shipment.value.toFixed(2),
@@ -712,7 +712,7 @@ const AdminFaturamento = () => {
                     <div className="space-y-1 flex-1">
                       <div className="flex items-center space-x-2">
                         <span className="font-mono text-sm font-medium">
-                          {shipment.tracking_code || 'N/A'}
+                          {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
                         </span>
                         <Badge variant="secondary">
                           {shipment.status}

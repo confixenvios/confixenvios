@@ -540,7 +540,7 @@ const AdminClienteDetalhes = () => {
                     <div className="space-y-2 flex-1">
                       <div className="flex items-center space-x-2">
                         <span className="font-mono text-sm font-medium">
-                          {shipment.tracking_code || 'N/A'}
+                          {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
                         </span>
                         <Badge 
                           variant="secondary" 
