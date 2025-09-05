@@ -124,7 +124,8 @@ export const OccurrenceModal = ({ isOpen, onClose, onSave, shipmentId }: Occurre
                             </div>
                           </div>
                           <Badge variant={type.color} className="ml-2">
-                            {type.id.includes('entrega') ? 'Entrega' : 'Coleta'}
+                            {type.id === 'tentativa_entrega' ? 'Insucesso' : 
+                             type.id === 'entregue' ? 'Entrega' : 'Coleta'}
                           </Badge>
                         </div>
                       </Button>
