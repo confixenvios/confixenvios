@@ -42,6 +42,7 @@ interface ShipmentInfo {
     state: string;
   };
   weight: number;
+  quote_data?: any;
 }
 
 const ClientRastreio = () => {
@@ -419,7 +420,17 @@ const ClientRastreio = () => {
                       {getStatusBadge(shipment.status)}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {shipment.sender_address.city} → {shipment.recipient_address.city}
+                      {(() => {
+                        const senderCity = shipment.sender_address?.city && shipment.sender_address.city !== 'A definir' ? 
+                          shipment.sender_address.city : 
+                          shipment.quote_data?.senderData?.address?.city || 'Origem';
+                        
+                        const recipientCity = shipment.recipient_address?.city && shipment.recipient_address.city !== 'A definir' ? 
+                          shipment.recipient_address.city : 
+                          shipment.quote_data?.recipientData?.address?.city || 'Destino';
+                        
+                        return `${senderCity} → ${recipientCity}`;
+                      })()}
                     </p>
                   </div>
                   <div className="text-right text-xs text-muted-foreground">
