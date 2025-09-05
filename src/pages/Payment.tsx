@@ -323,10 +323,9 @@ const Payment = () => {
       
       {/* PIX Payment Modal */}
       <PixPaymentModal
-        open={pixModalOpen}
+        isOpen={pixModalOpen}
         onClose={() => setPixModalOpen(false)}
         amount={totalAmount}
-        description={`Frete - Envio de ${shipmentData.weight || 1}kg`}
       />
     </div>
   );

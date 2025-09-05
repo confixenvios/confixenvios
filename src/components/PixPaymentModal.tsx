@@ -1,220 +1,191 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { QrCode, Copy, Check, CheckCircle, Clock, X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-
-interface PixPaymentModalProps {
-  open: boolean;
-  onClose: () => void;
-  amount: number;
-  description?: string;
-}
+import InputMask from 'react-input-mask';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { 
+  CreditCard, 
+  QrCode, 
+  Copy, 
+  CheckCircle, 
+  Clock, 
+  Loader2, 
+  AlertCircle, 
+  User,
+  Mail,
+  Phone,
+  FileText
+} from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PixData {
   pixCode: string;
-  qrCodeImage?: string;
+  qrCodeImage: string;
   paymentId: string;
-  amount: number;
-  expiresAt: string;
-  webhookUrl?: string;
 }
 
-const PixPaymentModal: React.FC<PixPaymentModalProps> = ({ 
-  open, 
-  onClose, 
-  amount, 
-  description 
+interface FormData {
+  name: string;
+  phone: string;
+  email: string;
+  cpf: string;
+}
+
+interface PixPaymentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  amount: number;
+  onPaymentSuccess?: () => void;
+}
+
+const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
+  isOpen,
+  onClose,
+  amount,
+  onPaymentSuccess
 }) => {
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const [step, setStep] = useState<'form' | 'qrcode' | 'paid'>('form');
+  const { toast } = useToast();
+  const { user } = useAuth();
+  
+  const [step, setStep] = useState<'form' | 'qrcode'>('form');
   const [loading, setLoading] = useState(false);
   const [loadingUserData, setLoadingUserData] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [pixData, setPixData] = useState<PixData | null>(null);
+  const [copied, setCopied] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'checking' | 'paid'>('pending');
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     phone: '',
     email: '',
     cpf: ''
   });
 
-  // Carregar dados do usuário automaticamente quando o modal abrir
+  // Carregar dados do usuário quando logado
   useEffect(() => {
-    const loadUserData = async () => {
-      if (open && user?.id) {
-        setLoadingUserData(true);
+    if (user && isOpen && !formData.name) {
+      console.log('🔄 Carregando dados do usuário logado...');
+      setLoadingUserData(true);
+      
+      const loadUserData = async () => {
         try {
-          console.log('Carregando dados do usuário:', user.id);
-          
           const { data: profile, error } = await supabase
             .from('profiles')
-            .select('*')
+            .select('first_name, last_name, email, phone, document')
             .eq('id', user.id)
             .maybeSingle();
 
-          if (error) {
-            console.error('Erro ao carregar perfil:', error);
-            return;
-          }
-
-          if (profile) {
-            console.log('Dados do perfil carregados:', profile);
-            
-            // Formatar o documento (CPF ou CNPJ) se existir
-            const formattedDocument = profile.document ? formatDocument(profile.document) : '';
-            
+          if (profile && !error) {
+            console.log('✅ Dados do perfil carregados:', profile);
             setFormData({
-              name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || '',
+              name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
               phone: profile.phone || '',
               email: profile.email || user.email || '',
-              cpf: formattedDocument
+              cpf: profile.document || ''
             });
-            
-            toast.success('Dados carregados do seu perfil!');
+          } else {
+            console.log('ℹ️ Usando dados básicos do usuário');
+            setFormData(prev => ({
+              ...prev,
+              email: user.email || ''
+            }));
           }
         } catch (error) {
-          console.error('Erro ao buscar dados do usuário:', error);
+          console.error('❌ Erro ao carregar dados do usuário:', error);
         } finally {
           setLoadingUserData(false);
         }
-      }
-    };
+      };
 
-    loadUserData();
-  }, [open, user?.id, user?.email]);
-
-  const formatDocument = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    if (numbers.length <= 11) {
-      // CPF: 000.000.000-00
-      return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-    } else {
-      // CNPJ: 00.000.000/0000-00
-      return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+      loadUserData();
     }
+  }, [user, isOpen, formData.name]);
+
+  const handleInputChange = (field: keyof FormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const formatPhone = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  const isFormValid = () => {
+    return formData.name.trim() !== '' &&
+           formData.phone.trim() !== '' &&
+           formData.email.trim() !== '' &&
+           formData.cpf.trim() !== '';
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    let formattedValue = value;
-    
-    if (field === 'cpf') {
-      formattedValue = formatDocument(value);
-    } else if (field === 'phone') {
-      formattedValue = formatPhone(value);
+  const handleFormSubmit = async () => {
+    if (!isFormValid()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos obrigatórios",
+        variant: "destructive"
+      });
+      return;
     }
-    
-    setFormData(prev => ({
-      ...prev,
-      [field]: formattedValue
-    }));
-  };
-
-  const validateForm = () => {
-    const { name, phone, email, cpf } = formData;
-    
-    if (!name.trim()) {
-      toast.error('Nome é obrigatório');
-      return false;
-    }
-    
-    if (!email.trim() || !email.includes('@')) {
-      toast.error('E-mail válido é obrigatório');
-      return false;
-    }
-    
-    if (!phone.trim() || phone.replace(/\D/g, '').length < 10) {
-      toast.error('Telefone válido é obrigatório');
-      return false;
-    }
-    
-    const docNumbers = cpf.replace(/\D/g, '');
-    if (!cpf.trim() || (docNumbers.length !== 11 && docNumbers.length !== 14)) {
-      toast.error('CPF ou CNPJ válido é obrigatório');
-      return false;
-    }
-    
-    return true;
-  };
-
-  const handleCreateQRCode = async () => {
-    if (!validateForm()) return;
 
     setLoading(true);
-    
+
     try {
-      console.log('🔵 Iniciando criação do PIX...');
-      
-      // Buscar dados completos da cotação no sessionStorage
-      const currentShipment = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
-      const documentData = JSON.parse(sessionStorage.getItem('documentData') || '{}');
-      
-      console.log('📦 Dados da cotação encontrados:', currentShipment);
-      console.log('📄 Dados do documento encontrados:', documentData);
-      
-      if (!currentShipment.quoteData) {
-        toast.error('Dados da cotação não encontrados. Reinicie o processo.');
-        return;
-      }
-      
+      console.log('💳 Criando pagamento PIX com dados:', formData);
+
+      // Preparar dados para PIX
       const pixPayload = {
+        amount: amount * 100, // Converter para centavos
         name: formData.name,
-        phone: formData.phone,
         email: formData.email,
-        cpf: formData.cpf,
-        amount: amount,
-        description: description || 'Pagamento via PIX - Confix Envios',
-        userId: user?.id || null,
-        // Enviar dados completos da cotação para salvar na temp_quotes
-        quoteData: currentShipment,
-        documentData: documentData
+        phone: formData.phone.replace(/\D/g, ''),
+        cpf: formData.cpf.replace(/\D/g, ''),
+        description: `Pagamento de frete - R$ ${amount.toFixed(2)}`
       };
-      
-      console.log('📤 Enviando payload completo:', pixPayload);
+
+      console.log('📋 Payload PIX:', pixPayload);
 
       const { data, error } = await supabase.functions.invoke('create-pix-payment', {
         body: pixPayload
       });
 
-      console.log('📥 Resposta recebida:', { data, error });
+      console.log('🔍 Resposta create-pix-payment:', { data, error });
 
       if (error) {
-        console.error('❌ Erro da função:', error);
-        toast.error(error.message || 'Erro ao gerar código PIX');
+        console.error('❌ Erro na função PIX:', error);
+        toast({
+          title: "Erro no PIX",
+          description: error.message,
+          variant: "destructive"
+        });
         return;
       }
 
       if (data && data.success) {
         console.log('✅ PIX criado com sucesso:', data);
-        console.log('🔍 Debug QR Code:', {
-          hasQrCodeImage: !!data.qrCodeImage,
-          qrCodeImageLength: data.qrCodeImage?.length || 0,
-          qrCodeImagePrefix: data.qrCodeImage?.substring(0, 50) || 'N/A'
-        });
         setPixData(data);
         setStep('qrcode');
-        toast.success('QR Code PIX gerado com sucesso!');
+        toast({
+          title: "PIX gerado",
+          description: "QR Code PIX gerado com sucesso!"
+        });
       } else {
         console.error('❌ Resposta inválida:', data);
         const errorMessage = data?.error || 'Erro desconhecido ao gerar PIX';
-        toast.error(errorMessage);
+        toast({
+          title: "Erro",
+          description: errorMessage,
+          variant: "destructive"
+        });
       }
       
     } catch (error) {
       console.error('💥 Erro na criação do PIX:', error);
-      toast.error('Erro ao processar pagamento PIX');
+      toast({
+        title: "Erro",
+        description: "Erro ao processar pagamento PIX",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -225,238 +196,20 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
       try {
         await navigator.clipboard.writeText(pixData.pixCode);
         setCopied(true);
-        toast.success('Código PIX copiado!');
+        toast({
+          title: "Copiado",
+          description: "Código PIX copiado!"
+        });
         setTimeout(() => setCopied(false), 2000);
       } catch (error) {
-        toast.error('Erro ao copiar código');
+        toast({
+          title: "Erro",
+          description: "Erro ao copiar código",
+          variant: "destructive"
+        });
       }
     }
   };
-
-  // Sistema MELHORADO de detecção de pagamento PIX
-  useEffect(() => {
-    if (step !== 'qrcode' || !pixData?.paymentId || paymentStatus !== 'pending') return;
-
-    console.log('🎯 Iniciando sistema MELHORADO de detecção PIX');
-    console.log('📊 Dados:', { pixId: pixData.paymentId, amount, externalId: pixData.externalId });
-    
-    let isMounted = true;
-    let supabaseChannel: any;
-    let pollInterval: NodeJS.Timeout;
-
-    setPaymentStatus('checking');
-
-    const setupEnhancedDetection = async () => {
-      try {
-        // 1. Canal real-time melhorado
-        console.log('📡 Configurando detecção real-time...');
-        supabaseChannel = supabase
-          .channel(`pix-detection-${pixData.paymentId}`)
-          .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'shipments'
-            },
-            (payload) => {
-              console.log('🚛 Nova remessa detectada:', payload);
-              
-              if (!isMounted) return;
-
-              const shipment = payload.new;
-              const paymentData = shipment.payment_data;
-
-              // Verificar se é o nosso pagamento PIX
-              if (paymentData?.method === 'PIX') {
-                const matches = 
-                  paymentData?.pixData?.externalId === pixData.paymentId ||
-                  paymentData?.pixData?.orderId === pixData.paymentId ||
-                  paymentData?.externalId === pixData.paymentId ||
-                  paymentData?.pixPaymentId === pixData.paymentId;
-
-                if (matches) {
-                  console.log('✅ PAGAMENTO DETECTADO via real-time!');
-                  handleDetectedPayment(shipment);
-                }
-              }
-            }
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'temp_quotes'
-            },
-            (payload) => {
-              console.log('📋 Update em temp_quotes:', payload);
-              
-              if (!isMounted) return;
-
-              const quote = payload.new;
-              if (quote.status === 'processed' && quote.external_id === pixData.paymentId) {
-                console.log('✅ Quote processada! Buscando remessa...');
-                setTimeout(checkForExistingShipment, 2000);
-              }
-            }
-          )
-          .subscribe();
-
-        // 2. Polling agressivo da API
-        let attempts = 0;
-        const maxAttempts = 360; // 30 minutos
-        
-        const aggressivePolling = async () => {
-          if (!isMounted || attempts >= maxAttempts) return;
-          
-          attempts++;
-          const mins = Math.floor((attempts * 5) / 60);
-          const secs = (attempts * 5) % 60;
-          
-          console.log(`🔄 Tentativa ${attempts}/${maxAttempts} (${mins}m${secs}s)`);
-
-          try {
-            // Verificar API do Abacate Pay
-            const { data: status, error } = await supabase.functions.invoke('check-pix-status', {
-              body: { paymentId: pixData.paymentId }
-            });
-
-            console.log('📊 Status API:', status);
-
-            if (!error && status?.isPaid) {
-              console.log('🎉 PAGO confirmado pela API!');
-              if (isMounted) {
-                handleDetectedPayment();
-              }
-              return;
-            }
-
-            // Verificar banco de dados
-            await checkForExistingShipment();
-
-            // Continuar polling
-            if (isMounted && attempts < maxAttempts) {
-              pollInterval = setTimeout(aggressivePolling, 5000);
-            }
-
-          } catch (error) {
-            console.error('❌ Erro no polling:', error);
-            if (isMounted && attempts < maxAttempts) {
-              pollInterval = setTimeout(aggressivePolling, 5000);
-            }
-          }
-        };
-
-        // 3. Verificar remessas existentes
-        const checkForExistingShipment = async () => {
-          try {
-            console.log('🔍 Verificando remessas existentes...');
-
-            const { data: shipments } = await supabase
-              .from('shipments')
-              .select('*')
-              .not('payment_data', 'is', null)
-              .or(`payment_data->pixData->>externalId.eq.${pixData.paymentId},payment_data->pixData->>orderId.eq.${pixData.paymentId},payment_data->>pixPaymentId.eq.${pixData.paymentId}`)
-              .order('created_at', { ascending: false })
-              .limit(3);
-
-            if (shipments && shipments.length > 0) {
-              const paidShipment = shipments.find(s => 
-                s.payment_data?.status === 'PAID' || 
-                s.status === 'PENDING_PICKUP'
-              ) || shipments[0];
-              
-              console.log('✅ Remessa encontrada no banco!', paidShipment);
-              if (isMounted) {
-                handleDetectedPayment(paidShipment);
-              }
-              return true;
-            }
-            return false;
-          } catch (error) {
-            console.error('❌ Erro ao buscar remessas:', error);
-            return false;
-          }
-        };
-
-        // Iniciar sistema
-        aggressivePolling();
-        setTimeout(checkForExistingShipment, 1000);
-
-      } catch (error) {
-        console.error('❌ Erro na configuração:', error);
-      }
-    };
-
-    const handleDetectedPayment = (shipmentData?: any) => {
-      console.log('🎉 PROCESSANDO PAGAMENTO DETECTADO!', shipmentData);
-      
-      if (!isMounted) return;
-
-      setPaymentStatus('paid');
-      handleClose();
-      
-      toast.success('🎉 Pagamento PIX confirmado! Remessa criada com sucesso!', {
-        duration: 3000
-      });
-
-      setTimeout(() => {
-        const shipment = shipmentData || JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
-        
-        navigate('/pix-sucesso', {
-          state: {
-            paymentId: pixData.paymentId,
-            amount: amount,
-            shipmentData: shipment,
-            trackingCode: shipment?.tracking_code || 'Processando...',
-            success: true
-          }
-        });
-      }, 1000);
-    };
-
-    setupEnhancedDetection();
-
-    // Cleanup
-    return () => {
-      console.log('🧹 Limpeza do sistema de detecção...');
-      isMounted = false;
-      if (pollInterval) clearTimeout(pollInterval);
-      if (supabaseChannel) supabase.removeChannel(supabaseChannel);
-    };
-  }, [step, pixData, paymentStatus, handleClose, navigate, toast]);
-            
-            handleClose();
-            toast.success('Pagamento confirmado! Redirecionando...', {
-              duration: 1500
-            });
-            
-            setTimeout(() => {
-              const currentShipment = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
-              navigate('/pix-sucesso', {
-                state: {
-                  paymentId: pixData.paymentId,
-                  amount: amount,
-                  shipmentData: currentShipment
-                }
-              });
-            }, 500);
-          }
-        } catch (error) {
-          console.error('Erro ao verificar pagamento:', error);
-        }
-      };
-
-      // Verificar a cada 5 segundos
-      const interval = setInterval(checkPayment, 5000);
-
-      return () => {
-        supabase.removeChannel(channel);
-        clearInterval(interval);
-      };
-    }
-  }, [step, pixData?.paymentId, paymentStatus]);
 
   const handleClose = () => {
     setStep('form');
@@ -466,6 +219,99 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     setCopied(false);
     onClose();
   };
+
+  // Sistema de verificação PIX via API APENAS (sem webhook)
+  useEffect(() => {
+    if (step !== 'qrcode' || !pixData?.paymentId || paymentStatus !== 'pending') return;
+
+    console.log('🎯 Iniciando verificação PIX APENAS via API para:', pixData.paymentId);
+    setPaymentStatus('checking');
+
+    let isMounted = true;
+    let pollInterval: NodeJS.Timeout;
+
+    // Função para processar sucesso do pagamento
+    const handlePaymentSuccess = () => {
+      console.log('🎉 Pagamento PIX confirmado pela API!');
+      
+      if (!isMounted) return;
+
+      setPaymentStatus('paid');
+      handleClose();
+      
+      toast({
+        title: "Pagamento confirmado!",
+        description: "PIX confirmado! Redirecionando..."
+      });
+
+      setTimeout(() => {
+        navigate('/pix-sucesso', {
+          state: {
+            paymentId: pixData.paymentId,
+            amount: amount,
+            trackingCode: 'Processando...',
+            success: true
+          }
+        });
+      }, 1000);
+    };
+
+    // Polling APENAS da API Abacate Pay (conforme documentação)
+    let attempts = 0;
+    const maxAttempts = 240; // 20 minutos (5 segundos * 240)
+    
+    const checkPaymentViaAPI = async () => {
+      if (!isMounted || attempts >= maxAttempts) {
+        if (attempts >= maxAttempts) {
+          toast({
+            title: "Tempo esgotado",
+            description: "Tempo limite excedido. Verifique se o pagamento foi processado.",
+            variant: "destructive"
+          });
+        }
+        return;
+      }
+      
+      attempts++;
+      const minutes = Math.floor((attempts * 5) / 60);
+      const seconds = (attempts * 5) % 60;
+      console.log(`🔍 Verificação ${attempts}/${maxAttempts} (${minutes}m${seconds}s) - API Abacate Pay`);
+
+      try {
+        const { data: response, error } = await supabase.functions.invoke('check-pix-status', {
+          body: { paymentId: pixData.paymentId }
+        });
+
+        console.log('📊 Resposta da API:', response);
+
+        if (!error && response?.success && response?.data?.status === 'PAID') {
+          console.log('✅ PIX PAGO confirmado pela API Abacate Pay!');
+          handlePaymentSuccess();
+          return;
+        }
+
+        // Continuar verificação se não foi pago ainda
+        if (isMounted && attempts < maxAttempts) {
+          pollInterval = setTimeout(checkPaymentViaAPI, 5000); // Verificar a cada 5 segundos
+        }
+
+      } catch (error) {
+        console.error('❌ Erro na verificação PIX:', error);
+        if (isMounted && attempts < maxAttempts) {
+          pollInterval = setTimeout(checkPaymentViaAPI, 5000);
+        }
+      }
+    };
+
+    // Iniciar verificação imediata
+    checkPaymentViaAPI();
+
+    return () => {
+      console.log('🧹 Limpando verificação PIX...');
+      isMounted = false;
+      if (pollInterval) clearTimeout(pollInterval);
+    };
+  }, [step, pixData, paymentStatus, navigate, toast, amount]);
 
   const renderForm = () => (
     <div className="space-y-4">
@@ -512,191 +358,216 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
 
       <div>
         <Label htmlFor="phone">Telefone</Label>
-        <Input
-          id="phone"
+        <InputMask
+          mask="(99) 99999-9999"
           value={formData.phone}
           onChange={(e) => handleInputChange('phone', e.target.value)}
-          placeholder="(11) 99999-9999"
-          maxLength={15}
           disabled={loadingUserData}
-        />
+        >
+          {(inputProps: any) => (
+            <Input
+              {...inputProps}
+              id="phone"
+              type="tel"
+              placeholder="(00) 00000-0000"
+            />
+          )}
+        </InputMask>
       </div>
 
       <div>
         <Label htmlFor="cpf">CPF/CNPJ</Label>
-        <Input
-          id="cpf"
+        <InputMask
+          mask={formData.cpf.replace(/\D/g, "").length > 11 ? "99.999.999/9999-99" : "999.999.999-99"}
           value={formData.cpf}
           onChange={(e) => handleInputChange('cpf', e.target.value)}
-          placeholder="000.000.000-00 ou 00.000.000/0000-00"
-          maxLength={18}
           disabled={loadingUserData}
-        />
+        >
+          {(inputProps: any) => (
+            <Input
+              {...inputProps}
+              id="cpf"
+              placeholder="000.000.000-00"
+            />
+          )}
+        </InputMask>
       </div>
 
-      <div className="bg-muted p-4 rounded-lg">
-        <p className="text-sm font-medium">Valor do Pagamento:</p>
-        <p className="text-2xl font-bold text-primary">
-          R$ {amount.toFixed(2).replace('.', ',')}
-        </p>
-      </div>
+      <Separator />
 
-      <Button 
-        onClick={handleCreateQRCode} 
-        className="w-full"
-        disabled={loading || loadingUserData}
-      >
-        {loading ? 'Gerando QR Code...' : loadingUserData ? 'Carregando dados...' : 'Gerar QR Code PIX'}
-      </Button>
+      <div className="bg-accent/20 p-4 rounded-lg">
+        <div className="flex justify-between items-center">
+          <span className="font-medium">Total a pagar:</span>
+          <span className="text-2xl font-bold text-primary">
+            R$ {amount.toFixed(2).replace('.', ',')}
+          </span>
+        </div>
+      </div>
     </div>
   );
 
   const renderQRCode = () => (
-    <div className="space-y-4 text-center">
-      <div className="flex justify-center">
-        {pixData?.qrCodeImage ? (
-          <div className="relative">
-            <img 
-              src={pixData.qrCodeImage} 
-              alt="QR Code PIX" 
-              className="w-64 h-64 border rounded-lg object-contain bg-white"
-              onError={(e) => {
-                console.error('Erro ao carregar QR Code:', e);
-                e.currentTarget.style.display = 'none';
-              }}
-              onLoad={() => {
-                console.log('✅ QR Code carregado com sucesso');
-              }}
-            />
-            {/* Fallback se a imagem não carregar */}
-            <div 
-              className="absolute inset-0 flex items-center justify-center bg-muted border rounded-lg"
-              style={{ display: 'none' }}
-              id="qr-fallback"
-            >
-              <div className="text-center">
-                <QrCode className="h-16 w-16 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  QR Code temporariamente indisponível
-                </p>
-              </div>
+    <div className="space-y-6">
+      {/* Status do pagamento */}
+      <div className="text-center">
+        {paymentStatus === 'checking' && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+            <div className="flex items-center justify-center space-x-2 mb-2">
+              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+              <span className="text-blue-800 dark:text-blue-200 font-medium">
+                Aguardando pagamento...
+              </span>
             </div>
+            <p className="text-sm text-blue-600 dark:text-blue-400">
+              Verificando status do PIX automaticamente
+            </p>
           </div>
-        ) : (
-          <div className="w-64 h-64 bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-border">
-            <div className="text-center">
-              <QrCode className="h-16 w-16 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Carregando QR Code...</p>
+        )}
+
+        {paymentStatus === 'paid' && (
+          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+            <div className="flex items-center justify-center space-x-2 mb-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <span className="text-green-800 dark:text-green-200 font-medium">
+                Pagamento confirmado!
+              </span>
             </div>
+            <p className="text-sm text-green-600 dark:text-green-400">
+              Redirecionando...
+            </p>
           </div>
         )}
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm text-muted-foreground">
-          Escaneie o QR Code ou copie o código PIX:
-        </p>
-        
-        <div className="bg-muted p-3 rounded-lg break-all text-sm font-mono max-h-24 overflow-auto">
-          {pixData?.pixCode || 'Carregando código PIX...'}
+      {/* QR Code */}
+      {pixData?.qrCodeImage && (
+        <div className="flex flex-col items-center space-y-4">
+          <div className="bg-white p-4 rounded-lg shadow-lg">
+            <img 
+              src={pixData.qrCodeImage} 
+              alt="QR Code PIX"
+              className="w-64 h-64 object-contain"
+            />
+          </div>
+          
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground mb-2">
+              Escaneie o código ou copie o PIX Copia e Cola
+            </p>
+            <Badge variant="secondary" className="text-lg font-mono px-4 py-2">
+              R$ {amount.toFixed(2).replace('.', ',')}
+            </Badge>
+          </div>
         </div>
-        
-        <Button
-          variant="outline"
-          onClick={handleCopyPixCode}
-          className="w-full"
-          disabled={!pixData?.pixCode}
-        >
-          {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-          {copied ? 'Copiado!' : 'Copiar Código PIX'}
-        </Button>
-      </div>
+      )}
 
-      <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
-        <div className="flex items-center gap-2 mb-2">
-          {paymentStatus === 'checking' ? (
-            <Clock className="h-4 w-4 text-yellow-600 animate-spin" />
-          ) : (
-            <Clock className="h-4 w-4 text-yellow-600" />
-          )}
-          <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-            {paymentStatus === 'checking' 
-              ? 'Aguardando pagamento...' 
-              : 'Aguardando pagamento'
-            }
-          </p>
+      {/* PIX Copia e Cola */}
+      {pixData?.pixCode && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium">PIX Copia e Cola:</Label>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyPixCode}
+              className="text-xs"
+              disabled={copied}
+            >
+              {copied ? (
+                <>
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Copiado!
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3 w-3 mr-1" />
+                  Copiar
+                </>
+              )}
+            </Button>
+          </div>
+          
+          <div className="p-3 bg-muted rounded-lg">
+            <p className="text-xs font-mono break-all text-muted-foreground">
+              {pixData.pixCode}
+            </p>
+          </div>
         </div>
-        <p className="text-sm text-yellow-800 dark:text-yellow-200">
-          <strong>Importante:</strong> Este PIX expira em 30 minutos.
-          Após o pagamento, você será redirecionado automaticamente.
-        </p>
-      </div>
-    </div>
-  );
+      )}
 
-  const renderPaid = () => (
-    <div className="space-y-6 text-center">
-      <div className="flex justify-center">
-        <CheckCircle className="h-16 w-16 text-green-500" />
+      {/* Instruções */}
+      <div className="bg-accent/10 p-4 rounded-lg">
+        <h4 className="font-medium mb-2 flex items-center">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          Como pagar:
+        </h4>
+        <ol className="text-sm space-y-1 text-muted-foreground">
+          <li>1. Abra o app do seu banco</li>
+          <li>2. Escaneie o QR Code ou cole o código PIX</li>
+          <li>3. Confirme o pagamento</li>
+          <li>4. O status será atualizado automaticamente</li>
+        </ol>
       </div>
-
-      <div className="space-y-2">
-        <h3 className="text-xl font-bold text-green-700 dark:text-green-400">
-          Pagamento Recebido! 🎉
-        </h3>
-        <p className="text-muted-foreground">
-          Seu pagamento PIX foi processado com sucesso.
-        </p>
-      </div>
-
-      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-        <div className="space-y-2 text-sm">
-          <p className="font-medium text-green-800 dark:text-green-200">
-            Valor pago: R$ {amount.toFixed(2).replace('.', ',')}
-          </p>
-          <p className="text-green-700 dark:text-green-300">
-            Sua remessa foi criada automaticamente e você receberá as informações de rastreamento em breve.
-          </p>
-        </div>
-      </div>
-
-      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-        <p className="text-sm text-blue-800 dark:text-blue-200">
-          <strong>Próximos passos:</strong><br />
-          • Você receberá um e-mail com o código de rastreamento<br />
-          • Prepare sua embalagem para coleta<br />
-          • Acompanhe o status da sua remessa no painel
-        </p>
-      </div>
-
-      <Button onClick={handleClose} className="w-full">
-        Finalizar
-      </Button>
     </div>
   );
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {step === 'paid' ? (
-              <>
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                Pagamento Aprovado
-              </>
-            ) : (
-              <>
-                <QrCode className="h-5 w-5" />
-                {step === 'form' ? 'Pagamento PIX' : 'QR Code PIX'}
-              </>
-            )}
+          <DialogTitle className="flex items-center space-x-2">
+            <QrCode className="h-5 w-5" />
+            <span>Pagamento PIX</span>
           </DialogTitle>
         </DialogHeader>
-        
-        {step === 'form' && renderForm()}
-        {step === 'qrcode' && renderQRCode()}
-        {step === 'paid' && renderPaid()}
+
+        {step === 'form' && (
+          <div className="space-y-4">
+            {renderForm()}
+            
+            <div className="flex space-x-3">
+              <Button
+                variant="outline"
+                onClick={handleClose}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleFormSubmit}
+                disabled={!isFormValid() || loading || loadingUserData}
+                className="flex-1"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Gerando PIX...
+                  </>
+                ) : (
+                  <>
+                    <QrCode className="h-4 w-4 mr-2" />
+                    Gerar PIX
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === 'qrcode' && (
+          <div className="space-y-4">
+            {renderQRCode()}
+            
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              className="w-full"
+              disabled={paymentStatus === 'paid'}
+            >
+              {paymentStatus === 'paid' ? 'Redirecionando...' : 'Fechar'}
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
