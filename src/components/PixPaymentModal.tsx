@@ -537,69 +537,62 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
         </ol>
       </div>
 
-      {/* Botão de verificação manual como fallback */}
+      {/* Botão PAGUEI - Verificação manual */}
       {paymentStatus === 'checking' && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-          <p className="text-sm text-blue-800 dark:text-blue-200 mb-3 flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Já fez o pagamento? Verifique manualmente:
-          </p>
+        <div className="space-y-3">
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-center">
+            <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
+              Já fez o pagamento? Verifique manualmente:
+            </p>
+          </div>
+          
           <Button
-            variant="outline"
-            size="sm"
+            variant="default"
+            size="lg"
             onClick={async () => {
               try {
-                console.log('🔍 🚀 VERIFICAÇÃO MANUAL APRIMORADA para:', pixData.paymentId);
-                console.log('🕐 Timestamp:', new Date().toISOString());
+                console.log('🔍 🚀 VERIFICAÇÃO MANUAL via botão PAGUEI para:', pixData.paymentId);
                 
                 toast({
                   title: "Verificando PIX...",
-                  description: "Consultando API do Abacate Pay em tempo real..."
+                  description: "Consultando status do pagamento..."
                 });
                 
                 const { data: response, error } = await supabase.functions.invoke('check-pix-status', {
                   body: { paymentId: pixData.paymentId }
                 });
                 
-                console.log('📋 RESPOSTA COMPLETA da verificação manual:', response);
-                console.log('📊 Status detalhado:', response?.data?.status);
-                console.log('📊 isPaid detalhado:', response?.isPaid);
-                console.log('📊 Success flag:', response?.success);
-                console.log('📊 Error:', error);
-                console.log('📊 Data object:', response?.data);
+                console.log('📋 Resposta do botão PAGUEI:', response);
                 
                 if (!error && response?.success && (response?.data?.status === 'PAID' || response?.isPaid === true)) {
-                  console.log('✅ 🎉 PIX CONFIRMADO na verificação manual! Processando sucesso...');
+                  console.log('✅ 🎉 PIX CONFIRMADO via botão PAGUEI!');
                   processPaymentSuccess();
                 } else {
-                  console.log('⏳ PIX ainda pendente na verificação manual');
-                  console.log('📝 Motivo: Status =', response?.data?.status, '| isPaid =', response?.isPaid);
-                  const statusMsg = response?.data?.status || 'Pendente';
+                  console.log('⏳ PIX ainda pendente via botão PAGUEI');
                   toast({
-                    title: "PIX ainda não confirmado",
-                    description: `Status: ${statusMsg}. A verificação automática continua.`,
+                    title: "Pagamento não confirmado ainda",
+                    description: "Aguarde alguns instantes e tente novamente. A verificação automática continua ativa.",
                     variant: "default"
                   });
                 }
               } catch (error) {
-                console.error('❌ ERRO CRÍTICO na verificação manual:', error);
+                console.error('❌ Erro no botão PAGUEI:', error);
                 toast({
                   title: "Erro na verificação",
-                  description: "Falha ao consultar API. Tente em alguns segundos.",
+                  description: "Tente novamente em alguns segundos.",
                   variant: "destructive"
                 });
               }
             }}
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 border-0 shadow-md transition-all duration-200"
+            className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold text-base"
           >
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Verificar Pagamento Agora
+            <CheckCircle className="h-5 w-5 mr-2" />
+            PAGUEI
           </Button>
           
-          <div className="flex items-center justify-center gap-1 text-xs text-blue-500 dark:text-blue-400">
-            <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></div>
-            <span>Verificação automática ativa (a cada 2 segundos)</span>
-          </div>
+          <p className="text-center text-xs text-muted-foreground">
+            Verificação automática ativa a cada 2 segundos
+          </p>
         </div>
       )}
     </div>
@@ -648,18 +641,23 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
           </div>
         )}
 
-        {step === 'qrcode' && (
+        {step === 'qrcode' && paymentStatus !== 'paid' && (
           <div className="space-y-4">
             {renderQRCode()}
-            
-            <Button
-              variant="outline"
-              onClick={handleClose}
-              className="w-full"
-              disabled={paymentStatus === 'paid'}
-            >
-              {paymentStatus === 'paid' ? 'Redirecionando...' : 'Fechar'}
-            </Button>
+          </div>
+        )}
+
+        {step === 'qrcode' && paymentStatus === 'paid' && (
+          <div className="text-center space-y-4">
+            <div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-lg">
+              <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-green-800 dark:text-green-200 mb-2">
+                Pagamento Confirmado!
+              </h3>
+              <p className="text-sm text-green-600 dark:text-green-400">
+                Redirecionando para página de sucesso...
+              </p>
+            </div>
           </div>
         )}
       </DialogContent>
