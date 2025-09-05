@@ -19,24 +19,33 @@ serve(async (req) => {
     const webhookData = await req.json();
     console.log('Webhook recebido da Abacate Pay:', webhookData);
 
-    // Verificar se é um pagamento PIX aprovado
-    if (webhookData.event === 'pix_qr_code.paid' && webhookData.data?.status === 'PAID') {
-      const paymentData = webhookData.data;
-      const externalId = paymentData.metadata?.externalId;
+    // Verificar se é um pagamento PIX aprovado (evento correto do Abacate Pay)
+    if (webhookData.event === 'billing.paid' && webhookData.data?.pixQrCode?.status === 'PAID') {
+      const pixData = webhookData.data.pixQrCode;
+      const externalId = pixData.metadata?.externalId;
+      const userId = pixData.metadata?.userId;
       
-      console.log('Pagamento PIX aprovado:', { paymentData, externalId });
+      console.log('Pagamento PIX aprovado:', { pixData, externalId, userId });
+
+      // Validação de segurança: verificar se externalId tem formato esperado
+      if (!externalId || !externalId.startsWith('confix_')) {
+        console.error('ExternalId inválido ou ausente:', externalId);
+        return new Response(
+          JSON.stringify({ error: 'ExternalId inválido' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
       // Criar client do Supabase com service role
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-      // Extrair user_id do metadata se existir
-      const userId = paymentData.metadata?.userId || null;
       
       console.log('User ID extraído do pagamento:', userId);
+      console.log('External ID validado:', externalId);
 
-      // Criar endereços temporários para a remessa
+      // Criar endereços temporários para a remessa usando dados do cliente
+      const customerData = pixData.customer?.metadata || {};
       const tempAddress = {
-        name: paymentData.customer?.name || 'Cliente',
+        name: customerData.name || 'Cliente',
         street: 'Endereço a ser definido',
         number: '0',
         neighborhood: 'Centro',
@@ -82,10 +91,11 @@ serve(async (req) => {
         recipient_address_id: recipientAddress.id,
         quote_data: {
           paymentMethod: 'pix',
-          pixPaymentId: paymentData.id,
-          amount: paymentData.amount / 100, // Converter centavos para reais
+          pixPaymentId: pixData.id,
+          externalId: externalId,
+          amount: pixData.amount / 100, // Converter centavos para reais
           paidAt: new Date().toISOString(),
-          customer: paymentData.customer || {}
+          customer: customerData
         },
         selected_option: 'standard',
         pickup_option: 'dropoff',
@@ -98,7 +108,9 @@ serve(async (req) => {
         payment_data: {
           method: 'pix',
           status: 'paid',
-          pixData: paymentData,
+          pixData: pixData,
+          webhookData: webhookData.data,
+          externalId: externalId,
           paidAt: new Date().toISOString()
         }
       };
@@ -123,7 +135,7 @@ serve(async (req) => {
         .insert([{
           shipment_id: newShipment.id,
           status: 'PAYMENT_RECEIVED',
-          observacoes: `Pagamento PIX aprovado. Valor: R$ ${(paymentData.amount / 100).toFixed(2)}. ${userId ? 'Cliente logado.' : 'Cliente anônimo.'}`
+          observacoes: `Pagamento PIX aprovado via webhook. Valor: R$ ${(pixData.amount / 100).toFixed(2)}. ExternalId: ${externalId}. ${userId ? `Cliente: ${userId}` : 'Cliente anônimo.'}`
         }]);
 
       if (historyError) {
@@ -138,8 +150,10 @@ serve(async (req) => {
             shipment: newShipment,
             payment: {
               method: 'pix',
-              amount: paymentData.amount / 100,
-              pixPaymentId: paymentData.id,
+              amount: pixData.amount / 100,
+              pixPaymentId: pixData.id,
+              externalId: externalId,
+              userId: userId,
               status: 'paid',
               paidAt: new Date().toISOString()
             }
