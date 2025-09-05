@@ -157,6 +157,7 @@ const ClientRastreio = () => {
       'PENDING_DOCUMENT': { variant: 'destructive', label: 'Aguardando Documento', icon: AlertCircle },
       'PENDING_PAYMENT': { variant: 'destructive', label: 'Aguardando Pagamento', icon: AlertCircle },
       'PAYMENT_CONFIRMED': { variant: 'default', label: 'Pagamento Confirmado', icon: CheckCircle },
+      'PAID': { variant: 'success', label: 'Pago', icon: CheckCircle },
       'PAGO_AGUARDANDO_ETIQUETA': { variant: 'secondary', label: 'Aguardando Etiqueta', icon: Clock },
       'LABEL_AVAILABLE': { variant: 'success', label: 'Etiqueta Disponível', icon: CheckCircle },
       'IN_TRANSIT': { variant: 'default', label: 'Em Trânsito', icon: Truck },
@@ -191,7 +192,7 @@ const ClientRastreio = () => {
     ];
 
     // Add events based on current status
-    if (['PAYMENT_CONFIRMED', 'PAGO_AGUARDANDO_ETIQUETA', 'LABEL_AVAILABLE', 'IN_TRANSIT', 'DELIVERED'].includes(shipment.status)) {
+    if (['PAYMENT_CONFIRMED', 'PAID', 'PAGO_AGUARDANDO_ETIQUETA', 'LABEL_AVAILABLE', 'IN_TRANSIT', 'DELIVERED'].includes(shipment.status)) {
       events.push({
         id: '2',
         status: 'PAYMENT_CONFIRMED',
@@ -201,7 +202,7 @@ const ClientRastreio = () => {
       });
     }
 
-    if (['PAGO_AGUARDANDO_ETIQUETA', 'LABEL_AVAILABLE', 'IN_TRANSIT', 'DELIVERED'].includes(shipment.status)) {
+    if (['PAID', 'PAGO_AGUARDANDO_ETIQUETA', 'LABEL_AVAILABLE', 'IN_TRANSIT', 'DELIVERED'].includes(shipment.status)) {
       events.push({
         id: '3',
         status: 'PROCESSING',
