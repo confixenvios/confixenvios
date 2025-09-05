@@ -83,12 +83,12 @@ serve(async (req) => {
         .from('addresses')
         .insert([{
           name: senderData.name,
-          street: senderData.address?.street || 'Endereço a ser definido',
-          number: senderData.address?.number || '0',
-          neighborhood: senderData.address?.neighborhood || 'Centro',
-          city: senderData.address?.city || 'A definir',
-          state: senderData.address?.state || 'GO',
-          cep: senderData.address?.cep || '00000000',
+          street: senderData.address?.street,
+          number: senderData.address?.number,
+          neighborhood: senderData.address?.neighborhood,
+          city: senderData.address?.city,
+          state: senderData.address?.state,
+          cep: senderData.address?.cep,
           address_type: 'sender',
           user_id: userId
         }])
@@ -105,12 +105,12 @@ serve(async (req) => {
         .from('addresses')
         .insert([{
           name: recipientData.name,
-          street: recipientData.address?.street || 'Endereço a ser definido',
-          number: recipientData.address?.number || '0',
-          neighborhood: recipientData.address?.neighborhood || 'Centro',
-          city: recipientData.address?.city || 'A definir',
-          state: recipientData.address?.state || 'GO',
-          cep: recipientData.address?.cep || '00000000',
+          street: recipientData.address?.street,
+          number: recipientData.address?.number,
+          neighborhood: recipientData.address?.neighborhood,
+          city: recipientData.address?.city,
+          state: recipientData.address?.state,
+          cep: recipientData.address?.cep,
           address_type: 'recipient',
           user_id: userId
         }])

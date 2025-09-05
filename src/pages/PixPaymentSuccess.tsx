@@ -38,35 +38,39 @@ const PixPaymentSuccess = () => {
       setIsCreatingShipment(true);
       console.log('🚚 Criando remessa após pagamento confirmado...');
 
-      // 1. Criar endereços primeiro
+      // 1. Criar endereços com os dados corretos do formulário
       const senderAddressData = {
         user_id: user.id,
         address_type: 'sender',
-        name: shipmentData.senderData?.name || 'Remetente',
-        document: shipmentData.senderData?.document || '00000000000',
-        phone: shipmentData.senderData?.phone || '(00) 00000-0000',
-        email: shipmentData.senderData?.email || 'email@teste.com',
-        cep: shipmentData.senderData?.cep || '00000-000',
-        street: shipmentData.senderData?.street || 'Rua Teste',
-        number: shipmentData.senderData?.number || '1',
-        neighborhood: shipmentData.senderData?.neighborhood || 'Bairro',
-        city: shipmentData.senderData?.city || 'Cidade',
-        state: shipmentData.senderData?.state || 'SP'
+        name: shipmentData.senderData?.name || '',
+        document: shipmentData.senderData?.document || '',
+        phone: shipmentData.senderData?.phone || '',
+        email: shipmentData.senderData?.email || '',
+        cep: shipmentData.senderData?.cep || '',
+        street: shipmentData.senderData?.street || '',
+        number: shipmentData.senderData?.number || '',
+        complement: shipmentData.senderData?.complement || '',
+        neighborhood: shipmentData.senderData?.neighborhood || '',
+        city: shipmentData.senderData?.city || '',
+        state: shipmentData.senderData?.state || '',
+        reference: shipmentData.senderData?.reference || ''
       };
 
       const recipientAddressData = {
         user_id: user.id,
         address_type: 'recipient',
-        name: shipmentData.recipientData?.name || 'Destinatário',
-        document: shipmentData.recipientData?.document || '00000000000',
-        phone: shipmentData.recipientData?.phone || '(00) 00000-0000',
-        email: shipmentData.recipientData?.email || 'email@teste.com',
-        cep: shipmentData.recipientData?.cep || '00000-000',
-        street: shipmentData.recipientData?.street || 'Rua Teste',
-        number: shipmentData.recipientData?.number || '1',
-        neighborhood: shipmentData.recipientData?.neighborhood || 'Bairro',
-        city: shipmentData.recipientData?.city || 'Cidade',
-        state: shipmentData.recipientData?.state || 'RJ'
+        name: shipmentData.recipientData?.name || '',
+        document: shipmentData.recipientData?.document || '',
+        phone: shipmentData.recipientData?.phone || '',
+        email: shipmentData.recipientData?.email || '',
+        cep: shipmentData.recipientData?.cep || '',
+        street: shipmentData.recipientData?.street || '',
+        number: shipmentData.recipientData?.number || '',
+        complement: shipmentData.recipientData?.complement || '',
+        neighborhood: shipmentData.recipientData?.neighborhood || '',
+        city: shipmentData.recipientData?.city || '',
+        state: shipmentData.recipientData?.state || '',
+        reference: shipmentData.recipientData?.reference || ''
       };
 
       console.log('Criando endereço do remetente...', senderAddressData);
