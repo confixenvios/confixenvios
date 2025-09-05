@@ -63,7 +63,7 @@ const ClientDashboard = () => {
         .from('shipments')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
-        .eq('status', 'DELIVERED');
+        .eq('status', 'ENTREGA_FINALIZADA');
 
       // Recent shipments
       const { data: recentShipments } = await supabase
@@ -112,6 +112,8 @@ const ClientDashboard = () => {
       case 'PAID':
         return <Badge className="bg-success text-success-foreground">Pago</Badge>;
       case 'DELIVERED':
+        return <Badge className="bg-success text-success-foreground">Entregue</Badge>;
+      case 'ENTREGA_FINALIZADA':
         return <Badge className="bg-success text-success-foreground">Entregue</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
