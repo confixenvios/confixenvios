@@ -542,7 +542,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
         <div className="space-y-3">
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-center">
             <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
-              Já fez o pagamento? Verifique manualmente:
+              Já fez o pagamento? Clique abaixo:
             </p>
           </div>
           
@@ -589,10 +589,6 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
             <CheckCircle className="h-5 w-5 mr-2" />
             PAGUEI
           </Button>
-          
-          <p className="text-center text-xs text-muted-foreground">
-            Verificação automática ativa a cada 2 segundos
-          </p>
         </div>
       )}
     </div>
