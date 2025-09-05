@@ -128,11 +128,11 @@ const ClientRemessas = () => {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      'PENDING_LABEL': { variant: 'secondary', label: 'Pendente' },
+      'PENDING_LABEL': { variant: 'success', label: 'Pago' }, // Remessas criadas são consideradas pagas
       'PENDING_DOCUMENT': { variant: 'destructive', label: 'Aguardando Documento' },
       'PENDING_PAYMENT': { variant: 'destructive', label: 'Aguardando Pagamento' },
-      'PAYMENT_CONFIRMED': { variant: 'default', label: 'Pagamento Confirmado' },
-      'PAGO_AGUARDANDO_ETIQUETA': { variant: 'secondary', label: 'Aguardando Etiqueta' },
+      'PAYMENT_CONFIRMED': { variant: 'success', label: 'Pago' },
+      'PAGO_AGUARDANDO_ETIQUETA': { variant: 'success', label: 'Pago' },
       'LABEL_AVAILABLE': { variant: 'success', label: 'Etiqueta Disponível' },
       'IN_TRANSIT': { variant: 'default', label: 'Em Trânsito' },
       'DELIVERED': { variant: 'success', label: 'Entregue' },
@@ -287,33 +287,36 @@ const ClientRemessas = () => {
                        <div className="space-y-1">
                          <p className="font-medium text-muted-foreground">Valor do Frete</p>
                          {(() => {
-                           // Tentar obter o valor do frete de várias fontes
-                           let amount = null;
-                           
-                           // 1. Tentar payment_data.amount
-                           if (shipment.payment_data?.amount && shipment.payment_data.amount > 10) {
-                             amount = shipment.payment_data.amount;
-                           }
-                           // 2. Tentar payment_data.pixData.amount  
-                           else if (shipment.payment_data?.pixData?.amount && shipment.payment_data.pixData.amount > 10) {
-                             amount = shipment.payment_data.pixData.amount * 100; // converter de reais para centavos
-                           }
-                           // 3. Tentar quote_data.shippingQuote.economicPrice
-                           else if (shipment.quote_data?.shippingQuote?.economicPrice) {
-                             amount = shipment.quote_data.shippingQuote.economicPrice * 100; // converter de reais para centavos
-                           }
-                           // 4. Tentar quote_data.totalPrice
-                           else if (shipment.quote_data?.totalPrice) {
-                             amount = shipment.quote_data.totalPrice * 100; // converter de reais para centavos
-                           }
+                            // Tentar obter o valor do frete de várias fontes
+                            let amount = null;
+                            
+                            // 1. Tentar payment_data.pixData.amount (PIX)
+                            if (shipment.payment_data?.pixData?.amount) {
+                              amount = shipment.payment_data.pixData.amount * 100; // converter de reais para centavos
+                            }
+                            // 2. Tentar payment_data.amount (Stripe/Cartão)
+                            else if (shipment.payment_data?.amount) {
+                              amount = shipment.payment_data.amount;
+                            }
+                            // 3. Tentar quote_data.shippingQuote.economicPrice ou expressPrice
+                            else if (shipment.quote_data?.shippingQuote) {
+                              const price = shipment.selected_option === 'express' 
+                                ? shipment.quote_data.shippingQuote.expressPrice 
+                                : shipment.quote_data.shippingQuote.economicPrice;
+                              amount = price * 100; // converter de reais para centavos
+                            }
+                            // 4. Tentar quote_data.totalPrice
+                            else if (shipment.quote_data?.totalPrice) {
+                              amount = shipment.quote_data.totalPrice * 100; // converter de reais para centavos
+                            }
 
-                           return amount ? (
-                             <p className="font-medium">
-                               {formatCurrency(amount)}
-                             </p>
-                           ) : (
-                             <p className="font-medium text-muted-foreground">Valor não disponível</p>
-                           );
+                            return amount ? (
+                              <p className="font-medium">
+                                {formatCurrency(amount)}
+                              </p>
+                            ) : (
+                              <p className="font-medium text-muted-foreground">Valor não disponível</p>
+                            );
                          })()}
                        </div>
                     </div>
@@ -610,33 +613,36 @@ const ClientRemessas = () => {
                           <p className="font-medium">{selectedShipment.payment_data.method?.toUpperCase()}</p>
                         </div>
                          {(() => {
-                           // Tentar obter o valor do frete de várias fontes
-                           let amount = null;
-                           
-                           // 1. Tentar payment_data.amount
-                           if (selectedShipment.payment_data?.amount && selectedShipment.payment_data.amount > 10) {
-                             amount = selectedShipment.payment_data.amount;
-                           }
-                           // 2. Tentar payment_data.pixData.amount  
-                           else if (selectedShipment.payment_data?.pixData?.amount && selectedShipment.payment_data.pixData.amount > 10) {
-                             amount = selectedShipment.payment_data.pixData.amount * 100; // converter de reais para centavos
-                           }
-                           // 3. Tentar quote_data.shippingQuote.economicPrice
-                           else if (selectedShipment.quote_data?.shippingQuote?.economicPrice) {
-                             amount = selectedShipment.quote_data.shippingQuote.economicPrice * 100; // converter de reais para centavos
-                           }
-                           // 4. Tentar quote_data.totalPrice
-                           else if (selectedShipment.quote_data?.totalPrice) {
-                             amount = selectedShipment.quote_data.totalPrice * 100; // converter de reais para centavos
-                           }
+                            // Tentar obter o valor do frete de várias fontes
+                            let amount = null;
+                            
+                            // 1. Tentar payment_data.pixData.amount (PIX)
+                            if (selectedShipment.payment_data?.pixData?.amount) {
+                              amount = selectedShipment.payment_data.pixData.amount * 100; // converter de reais para centavos
+                            }
+                            // 2. Tentar payment_data.amount (Stripe/Cartão)
+                            else if (selectedShipment.payment_data?.amount) {
+                              amount = selectedShipment.payment_data.amount;
+                            }
+                            // 3. Tentar quote_data.shippingQuote.economicPrice ou expressPrice
+                            else if (selectedShipment.quote_data?.shippingQuote) {
+                              const price = selectedShipment.selected_option === 'express' 
+                                ? selectedShipment.quote_data.shippingQuote.expressPrice 
+                                : selectedShipment.quote_data.shippingQuote.economicPrice;
+                              amount = price * 100; // converter de reais para centavos
+                            }
+                            // 4. Tentar quote_data.totalPrice
+                            else if (selectedShipment.quote_data?.totalPrice) {
+                              amount = selectedShipment.quote_data.totalPrice * 100; // converter de reais para centavos
+                            }
 
-                           return amount ? (
-                             <div>
-                               <p className="text-muted-foreground">Valor Pago</p>
-                               <p className="font-medium">{formatCurrency(amount)}</p>
-                             </div>
-                           ) : null;
-                         })()}
+                            return amount ? (
+                              <div>
+                                <p className="text-muted-foreground">Valor Pago</p>
+                                <p className="font-medium">{formatCurrency(amount)}</p>
+                              </div>
+                            ) : null;
+                          })()}
                         {selectedShipment.payment_data.paidAt && (
                           <div>
                             <p className="text-muted-foreground">Data do Pagamento</p>
