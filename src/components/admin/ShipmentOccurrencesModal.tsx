@@ -159,12 +159,37 @@ export const ShipmentOccurrencesModal = ({
                           </span>
                         </div>
                         
+                        {/* Observações */}
                         {history.observacoes && (
                           <div className="bg-muted/50 rounded-lg p-3">
-                            <p className="text-sm font-medium mb-1">Observações:</p>
+                            <p className="text-sm font-medium mb-1 flex items-center gap-2">
+                              <FileText className="h-4 w-4" />
+                              Observações:
+                            </p>
                             <p className="text-sm text-muted-foreground">
                               {history.observacoes}
                             </p>
+                          </div>
+                        )}
+
+                        {/* Dados de ocorrência adicionais */}
+                        {history.occurrence_data && (
+                          <div className="bg-muted/50 rounded-lg p-3">
+                            <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                              <FileText className="h-4 w-4" />
+                              Detalhes da Ocorrência:
+                            </p>
+                            <div className="text-sm text-muted-foreground space-y-1">
+                              {typeof history.occurrence_data === 'object' ? (
+                                Object.entries(history.occurrence_data).map(([key, value]) => (
+                                  <div key={key}>
+                                    <span className="font-medium capitalize">{key.replace(/_/g, ' ')}:</span> {String(value)}
+                                  </div>
+                                ))
+                              ) : (
+                                <p>{String(history.occurrence_data)}</p>
+                              )}
+                            </div>
                           </div>
                         )}
 
@@ -173,19 +198,24 @@ export const ShipmentOccurrencesModal = ({
                           <div className="space-y-2">
                             <p className="text-sm font-medium flex items-center gap-2">
                               <Camera className="h-4 w-4" />
-                              Fotos ({history.photos_urls.length})
+                              Fotos Registradas ({history.photos_urls.length})
                             </p>
                             <div className="flex gap-2 flex-wrap">
                               {history.photos_urls.map((url, idx) => (
-                                <img
-                                  key={idx}
-                                  src={url}
-                                  alt={`Foto ${idx + 1}`}
-                                  className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-                                  onClick={() => window.open(url, '_blank')}
-                                />
+                                <div key={idx} className="relative group">
+                                  <img
+                                    src={url}
+                                    alt={`Foto ${idx + 1} - ${getStatusBadge(history.status).props.children}`}
+                                    className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border-2 border-border hover:border-primary"
+                                    onClick={() => window.open(url, '_blank')}
+                                  />
+                                  <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                    {idx + 1}
+                                  </div>
+                                </div>
                               ))}
                             </div>
+                            <p className="text-xs text-muted-foreground">Clique nas fotos para visualizar em tamanho completo</p>
                           </div>
                         )}
 
@@ -194,16 +224,24 @@ export const ShipmentOccurrencesModal = ({
                           <div className="space-y-2">
                             <p className="text-sm font-medium flex items-center gap-2">
                               <PenTool className="h-4 w-4" />
-                              Assinatura
+                              Assinatura do Recebedor
                             </p>
-                            <div className="bg-white border rounded-lg p-2 w-fit">
+                            <div className="bg-white border rounded-lg p-3 w-fit">
                               <img
                                 src={history.signature_url}
-                                alt="Assinatura"
+                                alt="Assinatura do recebedor"
                                 className="max-w-48 h-20 object-contain cursor-pointer hover:opacity-80 transition-opacity"
                                 onClick={() => window.open(history.signature_url!, '_blank')}
                               />
                             </div>
+                            <p className="text-xs text-muted-foreground">Clique na assinatura para visualizar em tamanho completo</p>
+                          </div>
+                        )}
+
+                        {/* Indicador se não há anexos */}
+                        {!history.observacoes && !history.photos_urls?.length && !history.signature_url && !history.occurrence_data && (
+                          <div className="text-xs text-muted-foreground italic bg-muted/30 rounded p-2">
+                            Nenhuma observação, foto ou assinatura registrada para esta ocorrência
                           </div>
                         )}
                       </div>
