@@ -18,8 +18,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/hooks/useAuth";
 import AuthModal from "@/components/AuthModal";
 import { SessionManager } from "@/utils/sessionManager";
-import SavedSendersManager from "@/components/SavedSendersManager";
-import SavedRecipientsManager from "@/components/SavedRecipientsManager";
+import SavedAddressManager from "@/components/SavedAddressManager";
 
 interface QuoteFormData {
   originCep: string;
@@ -923,21 +922,7 @@ const QuoteForm = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {/* Gerenciador de Remetentes Salvos */}
-                      <SavedSendersManager
-                        currentSenderData={senderData}
-                        onSenderSelect={(data) => setSenderData(data)}
-                        onSenderSave={(data) => {
-                          toast({
-                            title: "Remetente salvo!",
-                            description: "Dados salvos para futuras cotações"
-                          });
-                        }}
-                      />
-                      
-                      <Separator />
-                      
-                      <div className="grid grid-cols-1 gap-4">
+                       <div className="grid grid-cols-1 gap-4">
                         <div className="space-y-2">
                           <Label>Nome completo *</Label>
                           <Input
@@ -1134,22 +1119,8 @@ const QuoteForm = () => {
                         <span>Dados do Destinatário</span>
                       </CardTitle>
                      </CardHeader>
-                     <CardContent className="space-y-4">
-                       {/* Gerenciador de Destinatários Salvos */}
-                       <SavedRecipientsManager
-                         currentRecipientData={recipientData}
-                         onRecipientSelect={(data) => setRecipientData(data)}
-                         onRecipientSave={(data) => {
-                           toast({
-                             title: "Destinatário salvo!",
-                             description: "Dados salvos para futuras cotações"
-                           });
-                         }}
-                       />
-                       
-                       <Separator />
-                       
-                       <div className="grid grid-cols-1 gap-4">
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 gap-4">
                         <div className="space-y-2">
                           <Label>Nome completo *</Label>
                           <Input
@@ -1286,9 +1257,49 @@ const QuoteForm = () => {
                       </div>
                     </CardContent>
                   </Card>
-                </div>
+                 </div>
 
-                <div className="flex space-x-4">
+                 {/* Seção de Endereços Salvos - Posicionada no final para melhor visibilidade */}
+                 <div className="space-y-6">
+                   <div className="text-center">
+                     <h3 className="text-lg font-semibold text-muted-foreground">
+                       Gerenciar Endereços Salvos
+                     </h3>
+                     <p className="text-sm text-muted-foreground">
+                       Salve os dados preenchidos para reutilizar em futuras cotações
+                     </p>
+                   </div>
+
+                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                     <SavedAddressManager
+                       type="sender"
+                       title="Remetentes Salvos"
+                       currentAddressData={senderData}
+                       onAddressSelect={(data) => setSenderData(data)}
+                       onAddressSave={(data) => {
+                         toast({
+                           title: "Remetente salvo!",
+                           description: "Dados salvos para futuras cotações"
+                         });
+                       }}
+                     />
+
+                     <SavedAddressManager
+                       type="recipient"
+                       title="Destinatários Salvos"
+                       currentAddressData={recipientData}
+                       onAddressSelect={(data) => setRecipientData(data)}
+                       onAddressSave={(data) => {
+                         toast({
+                           title: "Destinatário salvo!",
+                           description: "Dados salvos para futuras cotações"
+                         });
+                       }}
+                     />
+                   </div>
+                 </div>
+
+                 <div className="flex space-x-4">
                   <Button
                     variant="outline"
                     onClick={() => setCurrentStep(2)}
