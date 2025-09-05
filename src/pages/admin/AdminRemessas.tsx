@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Search, Package, Eye, Download, Filter, UserPlus, Truck, Calendar, MapPin, Clock } from "lucide-react";
+import { Search, Package, Eye, Download, Filter, UserPlus, Truck, Calendar, MapPin, Clock, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -496,11 +496,11 @@ const AdminRemessas = () => {
                           <Button
                             variant="ghost" 
                             size="sm"
-                            onClick={() => handleDownloadLabel(shipment as any)}
-                            disabled={!shipment.label_pdf_url}
+                            onClick={() => handleViewShipment(shipment)}
                             className="h-8 w-8 p-0 hover:bg-primary/10"
+                            title="Ver ocorrências do motorista"
                           >
-                            <Download className="h-4 w-4" />
+                            <FileText className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
