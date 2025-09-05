@@ -209,18 +209,18 @@ const AdminRemessas = () => {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      'PENDING_LABEL': { label: 'Aguardando Etiqueta', variant: 'destructive' as const },
+      'PENDING_LABEL': { label: 'Pendente', variant: 'secondary' as const },
       'PENDING_DOCUMENT': { label: 'Aguardando Documento', variant: 'destructive' as const },
       'PENDING_PAYMENT': { label: 'Aguardando Pagamento', variant: 'destructive' as const },
       'PAYMENT_CONFIRMED': { label: 'Pagamento Confirmado', variant: 'default' as const },
-      'PAID': { label: 'Pago', variant: 'default' as const },
+      'PAID': { label: 'Pago', variant: 'success' as const },
       'PAGO_AGUARDANDO_ETIQUETA': { label: 'Aguardando Etiqueta', variant: 'secondary' as const },
       'COLETA_ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
       'COLETA_FINALIZADA': { label: 'Coleta Finalizada', variant: 'default' as const },
-      'LABEL_AVAILABLE': { label: 'Etiqueta Disponível', variant: 'default' as const },
+      'LABEL_AVAILABLE': { label: 'Etiqueta Disponível', variant: 'success' as const },
       'IN_TRANSIT': { label: 'Em Trânsito', variant: 'default' as const },
-      'ENTREGA_FINALIZADA': { label: 'Entrega Finalizada', variant: 'secondary' as const },
-      'DELIVERED': { label: 'Entregue', variant: 'secondary' as const }
+      'ENTREGA_FINALIZADA': { label: 'Entrega Finalizada', variant: 'success' as const },
+      'DELIVERED': { label: 'Entregue', variant: 'success' as const }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'outline' as const };
