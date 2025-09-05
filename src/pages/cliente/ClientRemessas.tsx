@@ -274,12 +274,13 @@ const ClientRemessas = () => {
                       </div>
 
                       <div className="space-y-1">
-                        <p className="font-medium text-muted-foreground">Detalhes</p>
-                        <p className="font-medium">{shipment.weight}kg</p>
-                        {shipment.payment_data?.amount && (
-                          <p className="text-muted-foreground">
+                        <p className="font-medium text-muted-foreground">Valor do Frete</p>
+                        {shipment.payment_data?.amount ? (
+                          <p className="font-medium">
                             {formatCurrency(shipment.payment_data.amount)}
                           </p>
+                        ) : (
+                          <p className="font-medium">N/A</p>
                         )}
                       </div>
                     </div>
