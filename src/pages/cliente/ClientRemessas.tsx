@@ -1,7 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Plus, Calendar, MapPin, Eye } from "lucide-react";
+import { Package, Plus, Calendar, MapPin, Eye, Search, Filter, ArrowUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,6 +61,9 @@ const ClientRemessas = () => {
   const [loading, setLoading] = useState(true);
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     if (user) {
@@ -159,6 +164,35 @@ const ClientRemessas = () => {
     });
   };
 
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Filter and sort shipments
+  const filteredShipments = shipments
+    .filter(shipment => {
+      const matchesSearch = !searchTerm || 
+        shipment.tracking_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        shipment.sender_address?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        shipment.recipient_address?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        shipment.recipient_address?.city?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'all' || shipment.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+    });
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -189,159 +223,244 @@ const ClientRemessas = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold text-foreground">Minhas Remessas</h1>
-        <p className="text-muted-foreground">
-          Gerencie todas as suas remessas em um só lugar
-        </p>
-      </div>
-
-      <Card className="border-border/50 shadow-card">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Package className="w-5 h-5" />
-            <span>Suas Remessas</span>
-          </CardTitle>
-          <CardDescription>
-            {shipments.length > 0 
-              ? `${shipments.length} remessa${shipments.length > 1 ? 's' : ''} encontrada${shipments.length > 1 ? 's' : ''}`
-              : "Nenhuma remessa encontrada"
-            }
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {shipments.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="w-16 h-16 mx-auto text-muted-foreground mb-6" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma remessa encontrada</h3>
-              <p className="text-muted-foreground mb-6">
-                Você ainda não criou nenhuma remessa. Comece fazendo uma cotação.
-              </p>
-              <Button asChild>
-                <Link to="/cliente/cotacoes">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nova Cotação
-                </Link>
-              </Button>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/95">
+      <div className="container mx-auto p-4 md:p-6 lg:p-8 max-w-7xl">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl lg:text-4xl font-bold text-foreground flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-xl">
+              <Package className="w-8 h-8 text-primary" />
             </div>
-          ) : (
-            <div className="space-y-4">
-              {shipments.map((shipment) => (
-                <Card key={shipment.id} className="border-border/30">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <h3 className="font-semibold text-lg">
-                            {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
-                          </h3>
-                          {getStatusBadge(shipment.status)}
+            Minhas Remessas
+          </h1>
+          <p className="text-muted-foreground mt-2 text-base lg:text-lg">
+            Gerencie todas as suas remessas em um só lugar
+          </p>
+        </div>
+
+        {/* Filters */}
+        <Card className="mb-8 border-border/50 shadow-lg bg-gradient-to-br from-card to-card/80">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Filter className="w-5 h-5 text-primary" />
+              Filtros e Busca
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="lg:col-span-2">
+                <label className="text-sm font-medium text-foreground mb-2 block">Buscar</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por código, remetente, destinatário..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 h-11"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder="Filtrar por status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Status</SelectItem>
+                    <SelectItem value="PENDING_PAYMENT">Aguardando Pagamento</SelectItem>
+                    <SelectItem value="PAID">Pago</SelectItem>
+                    <SelectItem value="IN_TRANSIT">Em Trânsito</SelectItem>
+                    <SelectItem value="DELIVERED">Entregue</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">Ordenar</label>
+                <Button
+                  variant="outline"
+                  onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                  className="w-full h-11 justify-start"
+                >
+                  <ArrowUpDown className="w-4 h-4 mr-2" />
+                  {sortOrder === 'desc' ? 'Mais recente' : 'Mais antigo'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Results */}
+        <Card className="border-border/50 shadow-lg bg-gradient-to-br from-card to-card/80">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Package className="w-5 h-5" />
+              <span>Suas Remessas</span>
+            </CardTitle>
+            <CardDescription>
+              {filteredShipments.length > 0 
+                ? `${filteredShipments.length} remessa${filteredShipments.length > 1 ? 's' : ''} encontrada${filteredShipments.length > 1 ? 's' : ''}`
+                : shipments.length === 0 
+                  ? "Nenhuma remessa encontrada"
+                  : "Nenhuma remessa corresponde aos filtros selecionados"
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {filteredShipments.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="w-20 h-20 mx-auto mb-6 bg-muted/30 rounded-full flex items-center justify-center">
+                  <Package className="w-10 h-10 text-muted-foreground" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">
+                  {shipments.length === 0 ? 'Nenhuma remessa encontrada' : 'Nenhum resultado para os filtros'}
+                </h3>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  {shipments.length === 0 
+                    ? 'Você ainda não criou nenhuma remessa. Comece fazendo uma cotação.'
+                    : 'Tente ajustar os filtros de busca para encontrar suas remessas.'
+                  }
+                </p>
+                <div className="flex gap-3 justify-center">
+                  {shipments.length > 0 && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        setSearchTerm('');
+                        setStatusFilter('all');
+                      }}
+                    >
+                      Limpar Filtros
+                    </Button>
+                  )}
+                  <Button asChild>
+                    <Link to="/cliente/cotacoes">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Nova Cotação
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredShipments.map((shipment) => (
+                  <Card key={shipment.id} className="border-border/30 hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <h3 className="font-semibold text-lg">
+                              {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
+                            </h3>
+                            {getStatusBadge(shipment.status)}
+                          </div>
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Calendar className="w-4 h-4 mr-2" />
+                            <span className="font-medium">Criado em:</span>
+                            <span className="ml-1">{formatDateTime(shipment.created_at)}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Calendar className="w-4 h-4 mr-1" />
-                          {formatDate(shipment.created_at)}
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDetails(shipment)}
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            Ver Detalhes
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewDetails(shipment)}
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          Ver Detalhes
-                        </Button>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                         <div className="space-y-1">
+                           <p className="font-medium text-muted-foreground">Remetente</p>
+                           <p className="font-medium">{shipment.sender_address?.name || 'N/A'}</p>
+                           <div className="flex items-center text-muted-foreground">
+                             <MapPin className="w-3 h-3 mr-1" />
+                             {shipment.sender_address?.city && shipment.sender_address?.city !== 'A definir' ? 
+                               `${shipment.sender_address.city} - ${shipment.sender_address.state}` : 
+                               shipment.quote_data?.senderData?.city ? 
+                                 `${shipment.quote_data.senderData.city} - ${shipment.quote_data.senderData.state}` :
+                                 'Goiânia - GO'
+                             }
+                           </div>
+                         </div>
+
+                         <div className="space-y-1">
+                           <p className="font-medium text-muted-foreground">Destinatário</p>
+                           <p className="font-medium">{shipment.recipient_address?.name || 'N/A'}</p>
+                           <div className="flex items-center text-muted-foreground">
+                             <MapPin className="w-3 h-3 mr-1" />
+                             {shipment.recipient_address?.city && shipment.recipient_address?.city !== 'A definir' ? 
+                               `${shipment.recipient_address.city} - ${shipment.recipient_address.state}` : 
+                               shipment.quote_data?.recipientData?.city ? 
+                                 `${shipment.quote_data.recipientData.city} - ${shipment.quote_data.recipientData.state}` :
+                                 shipment.quote_data?.shippingQuote?.zoneName || 'N/A'
+                             }
+                           </div>
+                         </div>
+
+                          <div className="space-y-1">
+                            <p className="font-medium text-muted-foreground">Valor do Frete</p>
+                            {(() => {
+                               // Tentar obter o valor do frete de várias fontes
+                               let amount = null;
+                               
+                               // 1. Tentar payment_data.pixData.amount (PIX - já vem em centavos)
+                               if (shipment.payment_data?.pixData?.amount) {
+                                 amount = shipment.payment_data.pixData.amount; // já está em centavos
+                               }
+                               // 2. Tentar payment_data.amount (PIX novo formato - vem em reais, precisa converter)
+                               else if (shipment.payment_data?.amount && shipment.payment_data?.method === 'pix') {
+                                 amount = shipment.payment_data.amount * 100; // converter de reais para centavos
+                               }
+                               // 3. Tentar payment_data.amount (Stripe/Cartão - já em centavos)
+                               else if (shipment.payment_data?.amount) {
+                                 amount = shipment.payment_data.amount;
+                               }
+                               // 4. Tentar quote_data.amount (valor já pago)
+                               else if (shipment.quote_data?.amount) {
+                                 amount = shipment.quote_data.amount * 100; // converter de reais para centavos
+                               }
+                               // 5. Tentar quote_data.shippingQuote.economicPrice ou expressPrice
+                               else if (shipment.quote_data?.shippingQuote) {
+                                 const price = shipment.selected_option === 'express' 
+                                   ? shipment.quote_data.shippingQuote.expressPrice 
+                                   : shipment.quote_data.shippingQuote.economicPrice;
+                                 amount = price * 100; // converter de reais para centavos
+                               }
+                               // 6. Tentar quote_data.totalPrice
+                               else if (shipment.quote_data?.totalPrice) {
+                                 amount = shipment.quote_data.totalPrice * 100; // converter de reais para centavos
+                               }
+                               // 7. Tentar deliveryDetails.totalPrice
+                               else if (shipment.quote_data?.deliveryDetails?.totalPrice) {
+                                 amount = shipment.quote_data.deliveryDetails.totalPrice * 100;
+                               }
+
+                               return amount ? (
+                                 <p className="font-medium text-success">
+                                   {formatCurrency(amount)}
+                                 </p>
+                               ) : (
+                                 <p className="font-medium text-muted-foreground">Valor não disponível</p>
+                               );
+                            })()}
+                         </div>
                       </div>
-                    </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                       <div className="space-y-1">
-                         <p className="font-medium text-muted-foreground">Remetente</p>
-                         <p className="font-medium">{shipment.sender_address?.name || 'N/A'}</p>
-                         <div className="flex items-center text-muted-foreground">
-                           <MapPin className="w-3 h-3 mr-1" />
-                           {shipment.sender_address?.city && shipment.sender_address?.city !== 'A definir' ? 
-                             `${shipment.sender_address.city} - ${shipment.sender_address.state}` : 
-                             shipment.quote_data?.senderData?.city ? 
-                               `${shipment.quote_data.senderData.city} - ${shipment.quote_data.senderData.state}` :
-                               'Goiânia - GO'
-                           }
-                         </div>
-                       </div>
-
-                       <div className="space-y-1">
-                         <p className="font-medium text-muted-foreground">Destinatário</p>
-                         <p className="font-medium">{shipment.recipient_address?.name || 'N/A'}</p>
-                         <div className="flex items-center text-muted-foreground">
-                           <MapPin className="w-3 h-3 mr-1" />
-                           {shipment.recipient_address?.city && shipment.recipient_address?.city !== 'A definir' ? 
-                             `${shipment.recipient_address.city} - ${shipment.recipient_address.state}` : 
-                             shipment.quote_data?.recipientData?.city ? 
-                               `${shipment.quote_data.recipientData.city} - ${shipment.quote_data.recipientData.state}` :
-                               shipment.quote_data?.shippingQuote?.zoneName || 'N/A'
-                           }
-                         </div>
-                       </div>
-
-                        <div className="space-y-1">
-                          <p className="font-medium text-muted-foreground">Valor do Frete</p>
-                          {(() => {
-                             // Tentar obter o valor do frete de várias fontes
-                             let amount = null;
-                             
-                             // 1. Tentar payment_data.pixData.amount (PIX - já vem em centavos)
-                             if (shipment.payment_data?.pixData?.amount) {
-                               amount = shipment.payment_data.pixData.amount; // já está em centavos
-                             }
-                             // 2. Tentar payment_data.amount (PIX novo formato - vem em reais, precisa converter)
-                             else if (shipment.payment_data?.amount && shipment.payment_data?.method === 'pix') {
-                               amount = shipment.payment_data.amount * 100; // converter de reais para centavos
-                             }
-                             // 3. Tentar payment_data.amount (Stripe/Cartão - já em centavos)
-                             else if (shipment.payment_data?.amount) {
-                               amount = shipment.payment_data.amount;
-                             }
-                             // 4. Tentar quote_data.amount (valor já pago)
-                             else if (shipment.quote_data?.amount) {
-                               amount = shipment.quote_data.amount * 100; // converter de reais para centavos
-                             }
-                             // 5. Tentar quote_data.shippingQuote.economicPrice ou expressPrice
-                             else if (shipment.quote_data?.shippingQuote) {
-                               const price = shipment.selected_option === 'express' 
-                                 ? shipment.quote_data.shippingQuote.expressPrice 
-                                 : shipment.quote_data.shippingQuote.economicPrice;
-                               amount = price * 100; // converter de reais para centavos
-                             }
-                             // 6. Tentar quote_data.totalPrice
-                             else if (shipment.quote_data?.totalPrice) {
-                               amount = shipment.quote_data.totalPrice * 100; // converter de reais para centavos
-                             }
-                             // 7. Tentar deliveryDetails.totalPrice
-                             else if (shipment.quote_data?.deliveryDetails?.totalPrice) {
-                               amount = shipment.quote_data.deliveryDetails.totalPrice * 100;
-                             }
-
-                             return amount ? (
-                               <p className="font-medium">
-                                 {formatCurrency(amount)}
-                               </p>
-                             ) : (
-                               <p className="font-medium text-muted-foreground">Valor não disponível</p>
-                             );
-                          })()}
-                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Modal de Detalhes */}
-      <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
+        {/* Modal de Detalhes */}
+        <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -366,8 +485,8 @@ const ClientRemessas = () => {
                       <div className="mt-1">{getStatusBadge(selectedShipment.status)}</div>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Data de Criação</p>
-                      <p className="font-medium">{formatDate(selectedShipment.created_at)}</p>
+                      <p className="text-muted-foreground">Data e Hora de Criação</p>
+                      <p className="font-medium">{formatDateTime(selectedShipment.created_at)}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Tipo de Serviço</p>
@@ -862,7 +981,8 @@ const ClientRemessas = () => {
             )}
           </ScrollArea>
         </DialogContent>
-      </Dialog>
+        </Dialog>
+      </div>
     </div>
   );
 };
