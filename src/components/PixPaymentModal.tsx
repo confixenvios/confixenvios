@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { QrCode, Copy, Check, CheckCircle, Clock, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 interface PixPaymentModalProps {
@@ -31,6 +32,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
   description 
 }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState<'form' | 'qrcode' | 'paid'>('form');
   const [loading, setLoading] = useState(false);
   const [loadingUserData, setLoadingUserData] = useState(false);
@@ -257,9 +259,16 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
               duration: 1500
             });
             
-            // Redirecionar imediatamente
+            // Redirecionar usando React Router com dados necessários
             setTimeout(() => {
-              window.location.href = '/pix-sucesso';
+              const currentShipment = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
+              navigate('/pix-sucesso', {
+                state: {
+                  paymentId: pixData.paymentId,
+                  amount: amount,
+                  shipmentData: currentShipment
+                }
+              });
             }, 500);
           }
         )
@@ -283,8 +292,16 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
               duration: 1500
             });
             
+            // Usar React Router com dados necessários
             setTimeout(() => {
-              window.location.href = '/pix-sucesso';
+              const currentShipment = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
+              navigate('/pix-sucesso', {
+                state: {
+                  paymentId: pixData.paymentId,
+                  amount: amount,
+                  shipmentData: currentShipment
+                }
+              });
             }, 500);
           }
         } catch (error) {
