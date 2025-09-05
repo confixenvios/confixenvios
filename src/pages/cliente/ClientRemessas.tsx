@@ -400,11 +400,21 @@ const ClientRemessas = () => {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Nome</p>
-                      <p className="font-medium">{selectedShipment.sender_address?.name}</p>
+                      <p className="font-medium">
+                        {selectedShipment.sender_address?.name && selectedShipment.sender_address?.name !== 'KENNEDY DE SOUZA OLIVEIRA' && selectedShipment.sender_address?.name !== 'A definir' ? 
+                          selectedShipment.sender_address.name : 
+                          selectedShipment.quote_data?.senderData?.name || 'Nome não informado'
+                        }
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">CEP</p>
-                      <p className="font-medium">{selectedShipment.sender_address?.cep}</p>
+                      <p className="font-medium">
+                        {selectedShipment.sender_address?.cep && selectedShipment.sender_address?.cep !== '00000000' ? 
+                          selectedShipment.sender_address.cep : 
+                          selectedShipment.quote_data?.senderData?.address?.cep || 'N/A'
+                        }
+                      </p>
                     </div>
                     {selectedShipment.quote_data?.senderData?.document && (
                       <div>
@@ -427,29 +437,40 @@ const ClientRemessas = () => {
                     <div className="col-span-2">
                       <p className="text-muted-foreground">Endereço</p>
                       <p className="font-medium">
-                        {selectedShipment.sender_address?.street}, {selectedShipment.sender_address?.number}
-                        {selectedShipment.sender_address?.complement && `, ${selectedShipment.sender_address.complement}`}
+                        {selectedShipment.sender_address?.street && selectedShipment.sender_address?.street !== 'Endereço a ser definido' ? 
+                          `${selectedShipment.sender_address.street}, ${selectedShipment.sender_address.number}${selectedShipment.sender_address?.complement ? `, ${selectedShipment.sender_address.complement}` : ''}` :
+                          selectedShipment.quote_data?.senderData?.address ? 
+                            `${selectedShipment.quote_data.senderData.address.street}, ${selectedShipment.quote_data.senderData.address.number}${selectedShipment.quote_data.senderData.address?.complement ? `, ${selectedShipment.quote_data.senderData.address.complement}` : ''}` :
+                            'Endereço não informado'
+                        }
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Bairro</p>
-                      <p className="font-medium">{selectedShipment.sender_address?.neighborhood}</p>
+                      <p className="font-medium">
+                        {selectedShipment.sender_address?.neighborhood && selectedShipment.sender_address?.neighborhood !== 'Centro' ? 
+                          selectedShipment.sender_address.neighborhood : 
+                          selectedShipment.quote_data?.senderData?.address?.neighborhood || 'N/A'
+                        }
+                      </p>
                     </div>
                      <div>
                        <p className="text-muted-foreground">Cidade/Estado</p>
                        <p className="font-medium">
                          {selectedShipment.sender_address?.city && selectedShipment.sender_address?.city !== 'A definir' ? 
                            `${selectedShipment.sender_address.city} - ${selectedShipment.sender_address.state}` : 
-                           selectedShipment.quote_data?.senderData?.city ? 
-                             `${selectedShipment.quote_data.senderData.city} - ${selectedShipment.quote_data.senderData.state}` :
+                           selectedShipment.quote_data?.senderData?.address?.city ? 
+                             `${selectedShipment.quote_data.senderData.address.city} - ${selectedShipment.quote_data.senderData.address.state}` :
                              'Goiânia - GO'
                          }
                        </p>
                      </div>
-                    {selectedShipment.sender_address?.reference && (
+                    {(selectedShipment.sender_address?.reference || selectedShipment.quote_data?.senderData?.address?.reference) && (
                       <div className="col-span-2">
                         <p className="text-muted-foreground">Referência</p>
-                        <p className="font-medium">{selectedShipment.sender_address.reference}</p>
+                        <p className="font-medium">
+                          {selectedShipment.sender_address?.reference || selectedShipment.quote_data?.senderData?.address?.reference}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -463,11 +484,21 @@ const ClientRemessas = () => {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Nome</p>
-                      <p className="font-medium">{selectedShipment.recipient_address?.name}</p>
+                      <p className="font-medium">
+                        {selectedShipment.recipient_address?.name && selectedShipment.recipient_address?.name !== 'JURI EXPRESS' && selectedShipment.recipient_address?.name !== 'A definir' ? 
+                          selectedShipment.recipient_address.name : 
+                          selectedShipment.quote_data?.recipientData?.name || 'Nome não informado'
+                        }
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">CEP</p>
-                      <p className="font-medium">{selectedShipment.recipient_address?.cep}</p>
+                      <p className="font-medium">
+                        {selectedShipment.recipient_address?.cep && selectedShipment.recipient_address?.cep !== '00000000' ? 
+                          selectedShipment.recipient_address.cep : 
+                          selectedShipment.quote_data?.recipientData?.address?.cep || 'N/A'
+                        }
+                      </p>
                     </div>
                     {selectedShipment.quote_data?.recipientData?.document && (
                       <div>
@@ -490,29 +521,40 @@ const ClientRemessas = () => {
                     <div className="col-span-2">
                       <p className="text-muted-foreground">Endereço</p>
                       <p className="font-medium">
-                        {selectedShipment.recipient_address?.street}, {selectedShipment.recipient_address?.number}
-                        {selectedShipment.recipient_address?.complement && `, ${selectedShipment.recipient_address.complement}`}
+                        {selectedShipment.recipient_address?.street && selectedShipment.recipient_address?.street !== 'Endereço a ser definido' ? 
+                          `${selectedShipment.recipient_address.street}, ${selectedShipment.recipient_address.number}${selectedShipment.recipient_address?.complement ? `, ${selectedShipment.recipient_address.complement}` : ''}` :
+                          selectedShipment.quote_data?.recipientData?.address ? 
+                            `${selectedShipment.quote_data.recipientData.address.street}, ${selectedShipment.quote_data.recipientData.address.number}${selectedShipment.quote_data.recipientData.address?.complement ? `, ${selectedShipment.quote_data.recipientData.address.complement}` : ''}` :
+                            'Endereço não informado'
+                        }
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Bairro</p>
-                      <p className="font-medium">{selectedShipment.recipient_address?.neighborhood}</p>
+                      <p className="font-medium">
+                        {selectedShipment.recipient_address?.neighborhood && selectedShipment.recipient_address?.neighborhood !== 'Centro' ? 
+                          selectedShipment.recipient_address.neighborhood : 
+                          selectedShipment.quote_data?.recipientData?.address?.neighborhood || 'N/A'
+                        }
+                      </p>
                     </div>
                      <div>
                        <p className="text-muted-foreground">Cidade/Estado</p>
                        <p className="font-medium">
                          {selectedShipment.recipient_address?.city && selectedShipment.recipient_address?.city !== 'A definir' ? 
                            `${selectedShipment.recipient_address.city} - ${selectedShipment.recipient_address.state}` : 
-                           selectedShipment.quote_data?.recipientData?.city ? 
-                             `${selectedShipment.quote_data.recipientData.city} - ${selectedShipment.quote_data.recipientData.state}` :
+                           selectedShipment.quote_data?.recipientData?.address?.city ? 
+                             `${selectedShipment.quote_data.recipientData.address.city} - ${selectedShipment.quote_data.recipientData.address.state}` :
                              selectedShipment.quote_data?.shippingQuote?.zoneName || 'N/A'
                          }
                        </p>
                      </div>
-                    {selectedShipment.recipient_address?.reference && (
+                    {(selectedShipment.recipient_address?.reference || selectedShipment.quote_data?.recipientData?.address?.reference) && (
                       <div className="col-span-2">
                         <p className="text-muted-foreground">Referência</p>
-                        <p className="font-medium">{selectedShipment.recipient_address.reference}</p>
+                        <p className="font-medium">
+                          {selectedShipment.recipient_address?.reference || selectedShipment.quote_data?.recipientData?.address?.reference}
+                        </p>
                       </div>
                     )}
                   </div>
