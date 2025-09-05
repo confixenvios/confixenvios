@@ -134,34 +134,36 @@ export const RemessaDetalhes = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-lg w-[95vw] sm:w-full mx-2 sm:mx-4 max-h-[95vh] p-3 sm:p-6">
-          <DialogHeader className="pb-3">
-            <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
-              <Package className="h-4 w-4 sm:h-5 sm:w-5" />
+        <DialogContent className="max-w-sm w-[90vw] mx-auto max-h-[90vh] p-4 m-4 rounded-lg">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Package className="h-4 w-4" />
               Detalhes da Remessa
             </DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[75vh] pr-2">
-            <div className="space-y-3 sm:space-y-4">
+          <ScrollArea className="max-h-[70vh] pr-2">
+            <div className="space-y-3">
               {/* Status e Ações Principais */}
-              <Card>
-                <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <CardTitle className="text-base sm:text-lg break-all">
+              <Card className="border-0 shadow-none bg-muted/30">
+                <CardHeader className="pb-2 px-4 pt-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="text-base leading-tight break-words flex-1 min-w-0">
                       {remessa.tracking_code || `ID${remessa.id.slice(0, 8).toUpperCase()}`}
                     </CardTitle>
-                    {getStatusBadge(remessa.status)}
+                    <div className="flex-shrink-0">
+                      {getStatusBadge(remessa.status)}
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent className="pt-0 space-y-2 sm:space-y-3 px-3 sm:px-6 pb-3 sm:pb-6">
-                  <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
-                    <span className="break-words">Criado em: {format(new Date(remessa.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
+                <CardContent className="pt-0 space-y-3 px-4 pb-4">
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Calendar className="w-4 h-4 mr-2 flex-shrink-0" />
+                    <span>Criado em: {format(new Date(remessa.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
                   </div>
 
                   {/* Ações Rápidas */}
-                  <div className="grid grid-cols-1 gap-2">
+                  <div className="space-y-2">
                     {canAcceptPickup() && (
                       <Button
                         className="w-full"
@@ -189,20 +191,20 @@ export const RemessaDetalhes = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full text-xs sm:text-sm h-8 sm:h-9"
+                      className="w-full text-sm"
                       onClick={() => setShowPhotoUpload(true)}
                     >
-                      <Camera className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      <span className="hidden sm:inline">Adicionar </span>Foto
+                      <Camera className="h-4 w-4 mr-1" />
+                      Foto
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full text-xs sm:text-sm h-8 sm:h-9"
+                      className="w-full text-sm"
                       onClick={() => setShowSignaturePad(true)}
                     >
-                      <PenTool className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      <span className="hidden sm:inline">Capturar </span>Assinatura
+                      <PenTool className="h-4 w-4 mr-1" />
+                      Assinatura
                     </Button>
                   </div>
 
@@ -225,12 +227,12 @@ export const RemessaDetalhes = ({
               </Card>
 
               {/* Informações da Remessa */}
-              <Card>
-                <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                  <CardTitle className="text-sm sm:text-base">Informações da Remessa</CardTitle>
+              <Card className="border-0 shadow-none bg-muted/30">
+                <CardHeader className="pb-2 px-4 pt-4">
+                  <CardTitle className="text-base">Informações da Remessa</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 sm:space-y-3 px-3 sm:px-6 pb-3 sm:pb-6">
-                  <div className="grid grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
+                <CardContent className="space-y-3 px-4 pb-4">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-muted-foreground text-xs">Peso</p>
                       <p className="font-medium">{remessa.weight}kg</p>
@@ -256,14 +258,14 @@ export const RemessaDetalhes = ({
               </Card>
 
               {/* Remetente */}
-              <Card>
-                <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                  <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                    <User className="h-3 w-3 sm:h-4 sm:w-4" />
+              <Card className="border-0 shadow-none bg-muted/30">
+                <CardHeader className="pb-2 px-4 pt-4">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <User className="h-4 w-4" />
                     Remetente
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-xs sm:text-sm px-3 sm:px-6 pb-3 sm:pb-6">
+                <CardContent className="space-y-2 text-sm px-4 pb-4">
                   <div>
                     <p className="font-medium break-words">{remessa.sender_address?.name}</p>
                     {remessa.sender_address?.phone && (
@@ -294,14 +296,14 @@ export const RemessaDetalhes = ({
               </Card>
 
               {/* Destinatário */}
-              <Card>
-                <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                  <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
+              <Card className="border-0 shadow-none bg-muted/30">
+                <CardHeader className="pb-2 px-4 pt-4">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
                     Destinatário
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-xs sm:text-sm px-3 sm:px-6 pb-3 sm:pb-6">
+                <CardContent className="space-y-2 text-sm px-4 pb-4">
                   <div>
                     <p className="font-medium break-words">{remessa.recipient_address?.name}</p>
                     {remessa.recipient_address?.phone && (
@@ -333,13 +335,13 @@ export const RemessaDetalhes = ({
             </div>
           </ScrollArea>
 
-          <div className="flex gap-2 pt-2 border-t mt-3 mx-1">
+          <div className="flex pt-3 border-t">
             <Button
               variant="outline"
-              className="flex-1 h-9"
+              className="w-full"
               onClick={onClose}
             >
-              <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar
             </Button>
           </div>
