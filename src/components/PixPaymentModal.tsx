@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { QrCode, Copy, Check, CheckCircle, Clock } from 'lucide-react';
+import { QrCode, Copy, Check, CheckCircle, Clock, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -250,16 +250,17 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
           (payload) => {
             console.log('🎉 Pagamento confirmado via webhook!', payload);
             setPaymentStatus('paid');
-            setStep('paid');
+            
+            // Fechar modal e redirecionar imediatamente
+            handleClose();
             toast.success('Pagamento confirmado! Redirecionando...', {
-              duration: 2000
+              duration: 1500
             });
             
-            // Redirecionar após 2 segundos para mostrar sucesso
+            // Redirecionar imediatamente
             setTimeout(() => {
-              handleClose();
               window.location.href = '/pix-sucesso';
-            }, 2000);
+            }, 500);
           }
         )
         .subscribe();
@@ -440,17 +441,8 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
         </div>
         <p className="text-sm text-yellow-800 dark:text-yellow-200">
           <strong>Importante:</strong> Este PIX expira em 30 minutos.
-          Após o pagamento, sua compra será processada automaticamente.
+          Após o pagamento, você será redirecionado automaticamente.
         </p>
-      </div>
-
-      <div className="flex gap-2">
-        <Button variant="outline" onClick={() => setStep('form')} className="flex-1">
-          Voltar
-        </Button>
-        <Button onClick={handleClose} className="flex-1">
-          Concluir
-        </Button>
       </div>
     </div>
   );
@@ -499,8 +491,16 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+        <DialogHeader className="relative">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            className="absolute -top-2 -right-2 h-8 w-8 rounded-full"
+            onClick={handleClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          <DialogTitle className="flex items-center gap-2 pr-8">
             {step === 'paid' ? (
               <>
                 <CheckCircle className="h-5 w-5 text-green-500" />
