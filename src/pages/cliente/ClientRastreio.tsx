@@ -468,21 +468,35 @@ const ClientRastreio = () => {
                   <h4 className="font-medium text-muted-foreground">Origem</h4>
                   <div>
                     <p className="font-medium">
-                      {shipmentInfo.sender_address.name && 
-                       shipmentInfo.sender_address.name !== 'KENNEDY DE SOUZA OLIVEIRA' && 
-                       shipmentInfo.sender_address.name !== 'A definir' ? 
-                        shipmentInfo.sender_address.name : 
-                        shipmentInfo.quote_data?.senderData?.name || 'Nome não informado'
-                      }
+                      {(() => {
+                        // Primeiro tenta o quote_data
+                        if (shipmentInfo.quote_data?.senderData?.name) {
+                          return shipmentInfo.quote_data.senderData.name;
+                        }
+                        // Depois tenta o address, mas verifica se não é um valor placeholder
+                        if (shipmentInfo.sender_address?.name && 
+                            shipmentInfo.sender_address.name !== 'A definir' && 
+                            shipmentInfo.sender_address.name.trim() !== '') {
+                          return shipmentInfo.sender_address.name;
+                        }
+                        return 'Nome não informado';
+                      })()}
                     </p>
                     <div className="flex items-center text-sm text-muted-foreground">
                       <MapPin className="w-3 h-3 mr-1" />
-                      {shipmentInfo.sender_address.city && shipmentInfo.sender_address.city !== 'A definir' ? 
-                        `${shipmentInfo.sender_address.city} - ${shipmentInfo.sender_address.state}` : 
-                        shipmentInfo.quote_data?.senderData?.address?.city ? 
-                          `${shipmentInfo.quote_data.senderData.address.city} - ${shipmentInfo.quote_data.senderData.address.state}` :
-                          'Goiânia - GO'
-                      }
+                      {(() => {
+                        // Primeiro tenta o quote_data
+                        if (shipmentInfo.quote_data?.senderData?.address?.city) {
+                          return `${shipmentInfo.quote_data.senderData.address.city} - ${shipmentInfo.quote_data.senderData.address.state}`;
+                        }
+                        // Depois tenta o address, mas verifica se não é um valor placeholder
+                        if (shipmentInfo.sender_address?.city && 
+                            shipmentInfo.sender_address.city !== 'A definir' && 
+                            shipmentInfo.sender_address.city.trim() !== '') {
+                          return `${shipmentInfo.sender_address.city} - ${shipmentInfo.sender_address.state}`;
+                        }
+                        return 'Cidade não informada';
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -491,21 +505,35 @@ const ClientRastreio = () => {
                   <h4 className="font-medium text-muted-foreground">Destino</h4>
                   <div>
                     <p className="font-medium">
-                      {shipmentInfo.recipient_address.name && 
-                       shipmentInfo.recipient_address.name !== 'JURI EXPRESS' && 
-                       shipmentInfo.recipient_address.name !== 'A definir' ? 
-                        shipmentInfo.recipient_address.name : 
-                        shipmentInfo.quote_data?.recipientData?.name || 'Nome não informado'
-                      }
+                      {(() => {
+                        // Primeiro tenta o quote_data
+                        if (shipmentInfo.quote_data?.recipientData?.name) {
+                          return shipmentInfo.quote_data.recipientData.name;
+                        }
+                        // Depois tenta o address, mas verifica se não é um valor placeholder
+                        if (shipmentInfo.recipient_address?.name && 
+                            shipmentInfo.recipient_address.name !== 'A definir' && 
+                            shipmentInfo.recipient_address.name.trim() !== '') {
+                          return shipmentInfo.recipient_address.name;
+                        }
+                        return 'Nome não informado';
+                      })()}
                     </p>
                     <div className="flex items-center text-sm text-muted-foreground">
                       <MapPin className="w-3 h-3 mr-1" />
-                      {shipmentInfo.recipient_address.city && shipmentInfo.recipient_address.city !== 'A definir' ? 
-                        `${shipmentInfo.recipient_address.city} - ${shipmentInfo.recipient_address.state}` : 
-                        shipmentInfo.quote_data?.recipientData?.address?.city ? 
-                          `${shipmentInfo.quote_data.recipientData.address.city} - ${shipmentInfo.quote_data.recipientData.address.state}` :
-                          shipmentInfo.quote_data?.shippingQuote?.zoneName || 'Destino'
-                      }
+                      {(() => {
+                        // Primeiro tenta o quote_data
+                        if (shipmentInfo.quote_data?.recipientData?.address?.city) {
+                          return `${shipmentInfo.quote_data.recipientData.address.city} - ${shipmentInfo.quote_data.recipientData.address.state}`;
+                        }
+                        // Depois tenta o address, mas verifica se não é um valor placeholder
+                        if (shipmentInfo.recipient_address?.city && 
+                            shipmentInfo.recipient_address.city !== 'A definir' && 
+                            shipmentInfo.recipient_address.city.trim() !== '') {
+                          return `${shipmentInfo.recipient_address.city} - ${shipmentInfo.recipient_address.state}`;
+                        }
+                        return 'Cidade não informada';
+                      })()}
                     </div>
                   </div>
                 </div>
