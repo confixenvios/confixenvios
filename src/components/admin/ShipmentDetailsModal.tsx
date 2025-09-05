@@ -113,6 +113,15 @@ export const ShipmentDetailsModal = ({
     }
   };
 
+  const formatDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return 'Data não informada';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Data inválida';
+    
+    return format(date, 'dd/MM/yyyy HH:mm', { locale: ptBR });
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -166,11 +175,11 @@ export const ShipmentDetailsModal = ({
                 <CardContent className="pt-0 space-y-3">
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Calendar className="w-4 h-4 mr-2" />
-                    Criado em: {format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                    Criado em: {formatDate(shipment.created_at)}
                   </div>
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Calendar className="w-4 h-4 mr-2" />
-                    Atualizado: {format(new Date(shipment.updated_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                    Atualizado: {formatDate(shipment.updated_at)}
                   </div>
                 </CardContent>
               </Card>
@@ -303,7 +312,7 @@ export const ShipmentDetailsModal = ({
                               <div className="flex items-center gap-2 mb-1">
                                 {getStatusBadge(history.status)}
                                 <span className="text-xs text-muted-foreground">
-                                  {format(new Date(history.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                                  {formatDate(history.created_at)}
                                 </span>
                               </div>
                               
