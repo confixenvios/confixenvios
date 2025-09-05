@@ -112,13 +112,13 @@ export const OccurrenceModal = ({ isOpen, onClose, onSave, shipmentId }: Occurre
                       <Button
                         key={type.id}
                         variant="outline"
-                        className="w-full justify-start h-auto p-4 hover:bg-muted/50"
+                        className="w-full justify-start h-auto p-4 hover:bg-muted/30 hover:border-muted-foreground/30"
                         onClick={() => setSelectedType(type)}
                       >
                         <div className="flex items-center gap-3 w-full">
-                          <Icon className="h-5 w-5 flex-shrink-0" />
+                          <Icon className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
                           <div className="flex-1 text-left">
-                            <div className="font-medium">{type.label}</div>
+                            <div className="font-medium text-foreground">{type.label}</div>
                             <div className="text-xs text-muted-foreground">
                               {type.description}
                             </div>
@@ -126,9 +126,9 @@ export const OccurrenceModal = ({ isOpen, onClose, onSave, shipmentId }: Occurre
                           <Badge 
                             variant="outline"
                             className={`ml-2 border ${
-                              type.id === 'coleta_realizada' ? 'border-blue-500 text-blue-700 bg-blue-50 hover:bg-blue-100' :
-                              type.id === 'tentativa_entrega' ? 'border-yellow-500 text-yellow-700 bg-yellow-50 hover:bg-yellow-100' :
-                              type.id === 'entregue' ? 'border-green-500 text-green-700 bg-green-50 hover:bg-green-100' : ''
+                              type.id === 'coleta_realizada' ? 'border-blue-500 text-blue-700 bg-blue-50' :
+                              type.id === 'tentativa_entrega' ? 'border-yellow-500 text-yellow-700 bg-yellow-50' :
+                              type.id === 'entregue' ? 'border-green-500 text-green-700 bg-green-50' : ''
                             }`}
                           >
                             {type.id === 'tentativa_entrega' ? 'Insucesso' : 
