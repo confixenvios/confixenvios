@@ -140,7 +140,7 @@ const PixPaymentSuccess = () => {
             amount: amount
           }
         },
-        status: 'PAID'
+        status: 'PAYMENT_CONFIRMED'
       };
 
       console.log('Criando remessa com dados completos:', newShipmentData);
