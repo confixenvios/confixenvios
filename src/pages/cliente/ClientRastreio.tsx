@@ -272,7 +272,7 @@ const ClientRastreio = () => {
         <CardContent className="space-y-4">
           <div className="flex gap-4">
             <Input
-              placeholder="Ex: TRK-2025ABC123"
+              placeholder="Ex: ID2025ABC123"
               value={trackingCode}
               onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
               className="flex-1"

@@ -171,7 +171,7 @@ const Tracking = () => {
             <CardContent>
               <div className="flex space-x-4">
                 <Input
-                  placeholder="TRK-2025ABC123"
+                  placeholder="ID2025ABC123"
                   value={trackingCode}
                   onChange={(e) => setTrackingCode(e.target.value)}
                   className="border-input-border focus:border-primary focus:ring-primary"

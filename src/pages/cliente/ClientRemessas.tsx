@@ -233,7 +233,7 @@ const ClientRemessas = () => {
                       <div className="space-y-1">
                         <div className="flex items-center space-x-2">
                           <h3 className="font-semibold text-lg">
-                            {shipment.tracking_code || `REF-${shipment.id.slice(0, 8)}`}
+                            {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
                           </h3>
                           {getStatusBadge(shipment.status)}
                         </div>
@@ -298,7 +298,7 @@ const ClientRemessas = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="w-5 h-5" />
-              Detalhes da Remessa - {selectedShipment?.tracking_code || `REF-${selectedShipment?.id.slice(0, 8)}`}
+              Detalhes da Remessa - {selectedShipment?.tracking_code || `ID${selectedShipment?.id.slice(0, 8).toUpperCase()}`}
             </DialogTitle>
           </DialogHeader>
           
@@ -311,7 +311,7 @@ const ClientRemessas = () => {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Código de Rastreamento</p>
-                      <p className="font-medium">{selectedShipment.tracking_code || `REF-${selectedShipment.id.slice(0, 8)}`}</p>
+                      <p className="font-medium">{selectedShipment.tracking_code || `ID${selectedShipment.id.slice(0, 8).toUpperCase()}`}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Status</p>
