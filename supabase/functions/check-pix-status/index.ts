@@ -40,9 +40,9 @@ serve(async (req) => {
       });
     }
 
-    // Fazer requisição usando a documentação fornecida
-    console.log('🌐 Consultando API: https://api.abacatepay.com/v1/pixQrCode/check');
-    const url = 'https://api.abacatepay.com/v1/pixQrCode/check';
+    // Fazer requisição usando a documentação fornecida - incluindo paymentId como query parameter
+    const url = `https://api.abacatepay.com/v1/pixQrCode/check?id=${paymentId}`;
+    console.log('🌐 Consultando API:', url);
     const options = {
       method: 'GET',
       headers: {
