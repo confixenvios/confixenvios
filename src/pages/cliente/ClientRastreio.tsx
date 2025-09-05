@@ -68,15 +68,24 @@ const ClientRastreio = () => {
           status,
           created_at,
           weight,
+          quote_data,
           sender_address:addresses!sender_address_id (
             name,
             city,
-            state
+            state,
+            street,
+            number,
+            neighborhood,
+            cep
           ),
           recipient_address:addresses!recipient_address_id (
             name,
             city,
-            state
+            state,
+            street,
+            number,
+            neighborhood,
+            cep
           )
         `)
         .eq('user_id', user?.id)
@@ -85,7 +94,47 @@ const ClientRastreio = () => {
         .limit(5);
 
       if (error) throw error;
-      setUserShipments(data || []);
+      
+      // Enrich with quote_data if address info is missing
+      const enrichedData = data?.map(shipment => {
+        const enrichedShipment = { ...shipment };
+        
+        if ((!shipment.sender_address?.name || shipment.sender_address.name === "A definir") && 
+            shipment.quote_data) {
+          const quoteData = shipment.quote_data as any;
+          if (quoteData.senderData) {
+            enrichedShipment.sender_address = {
+              name: quoteData.senderData.name || "Nome não informado",
+              city: quoteData.senderData.address?.city || "Cidade não informada",
+              state: quoteData.senderData.address?.state || "Estado não informado",
+              street: quoteData.senderData.address?.street || "",
+              number: quoteData.senderData.address?.number || "",
+              neighborhood: quoteData.senderData.address?.neighborhood || "",
+              cep: quoteData.senderData.address?.cep || ""
+            };
+          }
+        }
+        
+        if ((!shipment.recipient_address?.name || shipment.recipient_address.name === "A definir") && 
+            shipment.quote_data) {
+          const quoteData = shipment.quote_data as any;
+          if (quoteData.recipientData) {
+            enrichedShipment.recipient_address = {
+              name: quoteData.recipientData.name || "Nome não informado",
+              city: quoteData.recipientData.address?.city || "Cidade não informada",
+              state: quoteData.recipientData.address?.state || "Estado não informado",
+              street: quoteData.recipientData.address?.street || "",
+              number: quoteData.recipientData.address?.number || "",
+              neighborhood: quoteData.recipientData.address?.neighborhood || "",
+              cep: quoteData.recipientData.address?.cep || ""
+            };
+          }
+        }
+        
+        return enrichedShipment;
+      });
+      
+      setUserShipments(enrichedData || []);
     } catch (error) {
       console.error('Error loading user shipments:', error);
     }
@@ -111,15 +160,24 @@ const ClientRastreio = () => {
           status,
           created_at,
           weight,
+          quote_data,
           sender_address:addresses!sender_address_id (
             name,
             city,
-            state
+            state,
+            street,
+            number,
+            neighborhood,
+            cep
           ),
           recipient_address:addresses!recipient_address_id (
             name,
             city,
-            state
+            state,
+            street,
+            number,
+            neighborhood,
+            cep
           )
         `)
         .eq('tracking_code', trackingCode.toUpperCase())
@@ -135,7 +193,42 @@ const ClientRastreio = () => {
         return;
       }
 
-      setShipmentInfo(data);
+      // Enrich with quote_data if address info is missing
+      let enrichedShipment = { ...data };
+      
+      if ((!data.sender_address?.name || data.sender_address.name === "A definir") && 
+          data.quote_data) {
+        const quoteData = data.quote_data as any;
+        if (quoteData.senderData) {
+          enrichedShipment.sender_address = {
+            name: quoteData.senderData.name || "Nome não informado",
+            city: quoteData.senderData.address?.city || "Cidade não informada",
+            state: quoteData.senderData.address?.state || "Estado não informado",
+            street: quoteData.senderData.address?.street || "",
+            number: quoteData.senderData.address?.number || "",
+            neighborhood: quoteData.senderData.address?.neighborhood || "",
+            cep: quoteData.senderData.address?.cep || ""
+          };
+        }
+      }
+      
+      if ((!data.recipient_address?.name || data.recipient_address.name === "A definir") && 
+          data.quote_data) {
+        const quoteData = data.quote_data as any;
+        if (quoteData.recipientData) {
+          enrichedShipment.recipient_address = {
+            name: quoteData.recipientData.name || "Nome não informado",
+            city: quoteData.recipientData.address?.city || "Cidade não informada",
+            state: quoteData.recipientData.address?.state || "Estado não informado",
+            street: quoteData.recipientData.address?.street || "",
+            number: quoteData.recipientData.address?.number || "",
+            neighborhood: quoteData.recipientData.address?.neighborhood || "",
+            cep: quoteData.recipientData.address?.cep || ""
+          };
+        }
+      }
+
+      setShipmentInfo(enrichedShipment);
       toast({
         title: "Remessa encontrada!",
         description: "Informações da remessa carregadas com sucesso"
