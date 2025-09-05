@@ -387,7 +387,7 @@ const ClientEtiquetas = () => {
                       ) : (
                         <Alert className="max-w-sm">
                           <AlertDescription className="text-xs">
-                            Etiqueta será gerada após confirmação do pagamento
+                            Aguardando aprovação da etiqueta
                           </AlertDescription>
                         </Alert>
                       )}
