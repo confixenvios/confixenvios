@@ -265,79 +265,73 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     }, 500);
   };
 
-  // Sistema de verificação PIX APRIMORADO - mais frequente + fallback manual
+  // Sistema de verificação PIX MELHORADO - mais robusto e confiável
   useEffect(() => {
-    if (step !== 'qrcode' || !pixData?.paymentId || paymentStatus !== 'pending') return;
+    if (step !== 'qrcode' || !pixData?.paymentId) return;
+    if (paymentStatus === 'paid') return; // Não verificar se já foi pago
 
-    console.log('🎯 Iniciando verificação PIX APRIMORADA para:', pixData.paymentId);
+    console.log('🎯 Iniciando verificação automática MELHORADA para:', pixData.paymentId);
     setPaymentStatus('checking');
 
     let isMounted = true;
     let pollInterval: NodeJS.Timeout;
-
-    // Verificação mais agressiva inicialmente
     let attempts = 0;
-    const maxAttempts = 600; // 20 minutos total
+    const maxAttempts = 300; // 10 minutos de verificação (300 * 2s = 600s)
     
-    const checkPaymentViaAPI = async () => {
+    const checkPaymentStatus = async () => {
       if (!isMounted || attempts >= maxAttempts) {
-        if (attempts >= maxAttempts) {
-          console.log('⏰ Tempo limite atingido para verificação automática');
-          toast({
-            title: "Verificação pausada",
-            description: "Use o botão 'Verificar Pagamento' se já fez o PIX.",
-            variant: "default"
-          });
-        }
+        console.log('🛑 Parando verificação automática:', { isMounted, attempts, maxAttempts });
         return;
       }
       
       attempts++;
+      console.log(`🔍 Verificação automática ${attempts}/${maxAttempts} para PIX:`, pixData.paymentId);
       
-      // Intervalo dinâmico: 2s nos primeiros 2 minutos, depois 5s
-      const interval = attempts < 60 ? 2000 : 5000;
-      const totalSeconds = (attempts < 60 ? attempts * 2 : 120 + (attempts - 60) * 5);
-      const minutes = Math.floor(totalSeconds / 60);
-      const seconds = totalSeconds % 60;
-      
-      console.log(`🔍 Verificação ${attempts}/${maxAttempts} (${minutes}m${seconds}s) - Intervalo: ${interval/1000}s`);
-
       try {
         const { data: response, error } = await supabase.functions.invoke('check-pix-status', {
           body: { paymentId: pixData.paymentId }
         });
 
-        console.log('📊 Resposta completa da API:', response);
-        console.log('📊 Status PIX atual:', response?.data?.status);
-        console.log('📊 isPaid:', response?.isPaid);
-        console.log('📊 Sucesso da resposta:', response?.success);
+        console.log('📊 Resposta automática completa:', response);
+        console.log('📊 Status:', response?.data?.status, '| isPaid:', response?.isPaid);
 
-        if (!error && response?.success && (response?.data?.status === 'PAID' || response?.isPaid === true)) {
-          console.log('✅ 🎉 PIX CONFIRMADO PELA API! Processando sucesso...');
-          processPaymentSuccess();
-          return;
+        if (!error && response?.success) {
+          const isPaid = response?.data?.status === 'PAID' || response?.isPaid === true;
+          
+          if (isPaid) {
+            console.log('✅ 🎉 PIX CONFIRMADO automaticamente! Processando sucesso...');
+            if (isMounted) {
+              processPaymentSuccess();
+            }
+            return; // Para a verificação
+          }
         }
 
-        // Continuar verificação se ainda montado
+        // Continuar verificação se ainda montado e não excedeu tentativas
         if (isMounted && attempts < maxAttempts) {
-          pollInterval = setTimeout(checkPaymentViaAPI, interval);
+          // Intervalo progressivo: 2s por 2 minutos, depois 5s
+          const interval = attempts <= 60 ? 2000 : 5000;
+          pollInterval = setTimeout(checkPaymentStatus, interval);
         }
 
       } catch (error) {
-        console.error('❌ Erro na verificação PIX:', error);
+        console.error('❌ Erro na verificação automática:', error);
+        
+        // Continuar tentando mesmo com erro (pode ser temporário)
         if (isMounted && attempts < maxAttempts) {
-          pollInterval = setTimeout(checkPaymentViaAPI, interval);
+          pollInterval = setTimeout(checkPaymentStatus, 3000); // 3s em caso de erro
         }
       }
     };
 
-    // Iniciar verificação imediata
-    checkPaymentViaAPI();
+    // Iniciar primeira verificação após 2 segundos
+    const initialDelay = setTimeout(checkPaymentStatus, 2000);
 
     return () => {
-      console.log('🧹 Limpando verificação PIX aprimorada...');
+      console.log('🧹 Limpando verificação automática melhorada...');
       isMounted = false;
       if (pollInterval) clearTimeout(pollInterval);
+      if (initialDelay) clearTimeout(initialDelay);
     };
   }, [step, pixData, paymentStatus, navigate, toast, amount]);
 
@@ -446,8 +440,8 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
                 Aguardando pagamento...
               </span>
             </div>
-            <p className="text-sm text-blue-600 dark:text-blue-400">
-              Verificando status do PIX automaticamente
+            <p className="text-sm text-blue-600 dark:text-blue-400 text-center">
+              Verificação automática ativa (a cada 2 segundos)
             </p>
           </div>
         )}
