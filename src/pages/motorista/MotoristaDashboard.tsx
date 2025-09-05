@@ -68,17 +68,20 @@ const MotoristaDashboard = () => {
   const loadMinhasRemessas = async (motoristaId: string) => {
     try {
       const { data, error } = await supabase
-        .from('shipments')
-        .select(`
-          *,
-          sender_address:addresses!shipments_sender_address_id_fkey(*),
-          recipient_address:addresses!shipments_recipient_address_id_fkey(*)
-        `)
-        .eq('motorista_id', motoristaId)
-        .order('created_at', { ascending: false });
+        .rpc('get_motorista_shipments', { 
+          motorista_uuid: motoristaId 
+        });
 
       if (error) throw error;
-      setRemessas(data || []);
+      
+      // Transformar os dados para o formato esperado pelo componente
+      const transformedData = (data || []).map((item: any) => ({
+        ...item,
+        sender_address: item.sender_address || {},
+        recipient_address: item.recipient_address || {}
+      }));
+      
+      setRemessas(transformedData);
     } catch (error) {
       console.error('Erro ao carregar remessas:', error);
       toast.error('Erro ao carregar suas coletas');

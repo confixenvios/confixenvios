@@ -856,6 +856,29 @@ export type Database = {
           masked_phone: string
         }[]
       }
+      get_motorista_shipments: {
+        Args: { motorista_uuid: string }
+        Returns: {
+          created_at: string
+          format: string
+          height: number
+          id: string
+          length: number
+          payment_data: Json
+          pickup_option: string
+          quote_data: Json
+          recipient_address: Json
+          recipient_address_id: string
+          selected_option: string
+          sender_address: Json
+          sender_address_id: string
+          status: string
+          tracking_code: string
+          updated_at: string
+          weight: number
+          width: number
+        }[]
+      }
       get_secure_integrations: {
         Args: Record<PropertyKey, never>
         Returns: {
