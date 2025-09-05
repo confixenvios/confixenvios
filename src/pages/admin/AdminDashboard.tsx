@@ -55,24 +55,73 @@ const AdminDashboard = () => {
       const { count: pendingCount } = await supabase
         .from('shipments')
         .select('*', { count: 'exact', head: true })
-        .in('status', ['PENDING_DOCUMENT', 'PENDING_LABEL']);
+        .in('status', ['PENDING_DOCUMENT', 'PENDING_LABEL', 'PENDING_PAYMENT']);
 
-      // Recent shipments
+      // Recent shipments with payment data
       const { data: recentShipments } = await supabase
         .from('shipments')
         .select(`
-          *,
-          profiles:user_id (first_name, last_name, email)
+          id,
+          tracking_code,
+          status,
+          created_at,
+          user_id,
+          quote_data,
+          payment_data,
+          weight,
+          sender_address:addresses!sender_address_id(city, state, name),
+          recipient_address:addresses!recipient_address_id(city, state, name)
         `)
+        .not('user_id', 'is', null)
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(10);
+
+      // Get user profiles for recent shipments
+      let enrichedShipments = [];
+      if (recentShipments && recentShipments.length > 0) {
+        const userIds = recentShipments.map(s => s.user_id).filter(Boolean);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email')
+          .in('id', userIds);
+
+        enrichedShipments = recentShipments.map(shipment => {
+          const profile = profiles?.find(p => p.id === shipment.user_id);
+          return {
+            ...shipment,
+            profile: profile || { first_name: 'N/A', last_name: '', email: 'N/A' }
+          };
+        });
+      }
+
+      // Calculate total revenue from shipments with valid payment data
+      let totalRevenue = 0;
+      recentShipments?.forEach(shipment => {
+        const paymentData = shipment.payment_data as any;
+        const quoteData = shipment.quote_data as any;
+        
+        if (paymentData?.pixData?.amount) {
+          totalRevenue += paymentData.pixData.amount / 100;
+        } else if (paymentData?.amount) {
+          totalRevenue += paymentData.amount / 100;
+        } else if (quoteData?.amount) {
+          totalRevenue += quoteData.amount;
+        } else if (quoteData?.deliveryDetails?.totalPrice) {
+          totalRevenue += quoteData.deliveryDetails.totalPrice;
+        } else if (quoteData?.shippingQuote) {
+          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+            ? quoteData.shippingQuote.expressPrice 
+            : quoteData.shippingQuote.economicPrice;
+          totalRevenue += price || 0;
+        }
+      });
 
       setStats({
         totalClients: clientsCount || 0,
         totalShipments: shipmentsCount || 0,
         pendingShipments: pendingCount || 0,
-        totalRevenue: 0, // Will be calculated from quote_data later
-        recentShipments: recentShipments || [],
+        totalRevenue: totalRevenue,
+        recentShipments: enrichedShipments || [],
         pendingLabels: pendingCount || 0
       });
     } catch (error) {
@@ -161,13 +210,13 @@ const AdminDashboard = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Etiquetas Pendentes</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Faturamento Total</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {loading ? '...' : stats.pendingLabels}
+                  {loading ? '...' : `R$ ${stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center">
-                <FileText className="w-6 h-6 text-warning" />
+              <div className="w-12 h-12 bg-success/10 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-success" />
               </div>
             </div>
           </CardContent>
@@ -228,21 +277,52 @@ const AdminDashboard = () => {
                         <div className="space-y-1">
                           <p className="font-medium text-muted-foreground">Cliente</p>
                           <p className="font-medium">
-                            {shipment.profiles?.first_name} {shipment.profiles?.last_name}
+                            {shipment.profile?.first_name} {shipment.profile?.last_name}
                           </p>
-                          <p className="text-muted-foreground">{shipment.profiles?.email}</p>
+                          <p className="text-muted-foreground">{shipment.profile?.email}</p>
                         </div>
 
                         <div className="space-y-1">
-                          <p className="font-medium text-muted-foreground">Status</p>
-                          <p className="font-medium">{shipment.status}</p>
+                          <p className="font-medium text-muted-foreground">Rota</p>
+                          <p className="font-medium">
+                            {shipment.sender_address?.city && shipment.recipient_address?.city
+                              ? `${shipment.sender_address.city} → ${shipment.recipient_address.city}`
+                              : 'Rota não informada'
+                            }
+                          </p>
+                          <p className="text-muted-foreground">Peso: {shipment.weight}kg</p>
                         </div>
 
                         <div className="space-y-1">
                           <p className="font-medium text-muted-foreground">Valor</p>
-                          <p className="font-medium text-success">
-                            R$ {shipment.quote_data?.price || '0,00'}
-                          </p>
+                          {(() => {
+                            const paymentData = shipment.payment_data as any;
+                            const quoteData = shipment.quote_data as any;
+                            let amount = null;
+                            
+                            if (paymentData?.pixData?.amount) {
+                              amount = paymentData.pixData.amount / 100;
+                            } else if (paymentData?.amount) {
+                              amount = paymentData.amount / 100;
+                            } else if (quoteData?.amount) {
+                              amount = quoteData.amount;
+                            } else if (quoteData?.deliveryDetails?.totalPrice) {
+                              amount = quoteData.deliveryDetails.totalPrice;
+                            } else if (quoteData?.shippingQuote) {
+                              const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+                                ? quoteData.shippingQuote.expressPrice 
+                                : quoteData.shippingQuote.economicPrice;
+                              amount = price;
+                            }
+
+                            return amount ? (
+                              <p className="font-medium text-success">
+                                R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </p>
+                            ) : (
+                              <p className="font-medium text-muted-foreground">R$ 0,00</p>
+                            );
+                          })()}
                         </div>
                       </div>
                     </CardContent>

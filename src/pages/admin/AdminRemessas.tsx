@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Search, Package, Eye, Download, Filter, UserPlus, Truck, Calendar, MapPin } from "lucide-react";
+import { Search, Package, Eye, Download, Filter, UserPlus, Truck, Calendar, MapPin, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -413,101 +413,103 @@ const AdminRemessas = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
               <p className="text-muted-foreground mt-2">Carregando remessas...</p>
             </div>
+          ) : filteredShipments.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium mb-2">Nenhuma remessa encontrada</p>
+              <p className="text-sm text-muted-foreground">Tente ajustar os filtros</p>
+            </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Origem → Destino</TableHead>
-                    <TableHead>Peso</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Motorista</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredShipments.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8">
-                        <div className="text-muted-foreground">
-                          <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p>Nenhuma remessa encontrada</p>
-                          <p className="text-sm">Tente ajustar os filtros</p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredShipments.map((shipment) => (
-                      <TableRow key={shipment.id}>
-                        <TableCell className="font-medium font-mono">
-                          {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
-                        </TableCell>
-                        <TableCell>{shipment.client_name}</TableCell>
-                        <TableCell className="text-sm">
-                          <div className="space-y-1">
-                            <div>{shipment.sender_address?.cep || 'N/A'}</div>
-                            <div className="text-muted-foreground">↓</div>
-                            <div>{shipment.recipient_address?.cep || 'N/A'}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{shipment.weight}kg</TableCell>
-                        <TableCell className="font-medium">
-                          R$ {getQuoteValue(shipment.quote_data).toFixed(2)}
-                        </TableCell>
-                        <TableCell>
+            <div className="space-y-4">
+              {filteredShipments.map((shipment) => (
+                <Card key={shipment.id} className="border-border/30 hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <h3 className="font-semibold text-lg">
+                            {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
+                          </h3>
                           {getStatusBadge(shipment.status)}
-                        </TableCell>
-                        <TableCell>
-                          {shipment.motoristas ? (
-                            <div>
-                              <p className="font-medium text-sm">{shipment.motoristas.nome}</p>
-                              <p className="text-xs text-muted-foreground">{shipment.motoristas.telefone}</p>
-                            </div>
-                          ) : (
-                            <Badge variant="outline">Não designado</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleViewShipment(shipment)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleDownloadLabel(shipment as any)}
-                              disabled={!shipment.label_pdf_url}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedShipment(shipment.id);
-                                setShowAssignDialog(true);
-                              }}
-                            >
-                              <UserPlus className="h-4 w-4" />
-                            </Button>
+                        </div>
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Clock className="w-4 h-4 mr-2" />
+                          <span className="font-medium">Criado em:</span>
+                          <span className="ml-1">{format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewShipment(shipment)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleDownloadLabel(shipment as any)}
+                          disabled={!shipment.label_pdf_url}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedShipment(shipment.id);
+                            setShowAssignDialog(true);
+                          }}
+                        >
+                          <UserPlus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      <div className="space-y-1">
+                        <p className="font-medium text-muted-foreground">Cliente</p>
+                        <p className="font-medium">{shipment.client_name}</p>
+                        <div className="flex items-center text-muted-foreground">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          {(() => {
+                            const senderCep = shipment.sender_address?.cep;
+                            const recipientCep = shipment.recipient_address?.cep;
+                            if (senderCep && recipientCep && senderCep !== 'N/A' && recipientCep !== 'N/A') {
+                              return `${senderCep} → ${recipientCep}`;
+                            }
+                            return 'Rota não informada';
+                          })()}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <p className="font-medium text-muted-foreground">Motorista</p>
+                        {shipment.motoristas ? (
+                          <div>
+                            <p className="font-medium">{shipment.motoristas.nome}</p>
+                            <p className="text-xs text-muted-foreground">{shipment.motoristas.telefone}</p>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                        ) : (
+                          <Badge variant="outline">Não designado</Badge>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <p className="font-medium text-muted-foreground">Informações</p>
+                        <div className="flex items-center text-muted-foreground mb-1">
+                          <Package className="w-3 h-3 mr-1" />
+                          Peso: {shipment.weight}kg
+                        </div>
+                        <p className="font-medium text-success">
+                          R$ {getQuoteValue(shipment.quote_data).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </CardContent>
