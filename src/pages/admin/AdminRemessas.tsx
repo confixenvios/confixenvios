@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ShipmentDetailsModal } from '@/components/admin/ShipmentDetailsModal';
+import { ShipmentOccurrencesModal } from '@/components/admin/ShipmentOccurrencesModal';
 
 interface Shipment {
   id: string;
@@ -83,6 +84,8 @@ const AdminRemessas = () => {
   const [selectedShipment, setSelectedShipment] = useState<string | null>(null);
   const [selectedShipmentDetails, setSelectedShipmentDetails] = useState<Shipment | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [occurrencesModalOpen, setOccurrencesModalOpen] = useState(false);
+  const [selectedShipmentOccurrences, setSelectedShipmentOccurrences] = useState<Shipment | null>(null);
 
   useEffect(() => {
     loadShipments();
@@ -235,6 +238,11 @@ const AdminRemessas = () => {
   const handleViewShipment = (shipment: Shipment) => {
     setSelectedShipmentDetails(shipment);
     setDetailsModalOpen(true);
+  };
+
+  const handleViewOccurrences = (shipment: Shipment) => {
+    setSelectedShipmentOccurrences(shipment);
+    setOccurrencesModalOpen(true);
   };
 
   const formatDate = (dateString: string) => {
@@ -496,7 +504,7 @@ const AdminRemessas = () => {
                           <Button
                             variant="ghost" 
                             size="sm"
-                            onClick={() => handleViewShipment(shipment)}
+                            onClick={() => handleViewOccurrences(shipment)}
                             className="h-8 w-8 p-0 hover:bg-primary/10"
                             title="Ver ocorrências do motorista"
                           >
@@ -894,6 +902,13 @@ const AdminRemessas = () => {
         isOpen={detailsModalOpen}
         onClose={() => setDetailsModalOpen(false)}
         shipment={selectedShipmentDetails}
+      />
+
+      {/* Modal de Ocorrências do Motorista */}
+      <ShipmentOccurrencesModal
+        isOpen={occurrencesModalOpen}
+        onClose={() => setOccurrencesModalOpen(false)}
+        shipment={selectedShipmentOccurrences}
       />
     </div>
   );
