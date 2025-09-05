@@ -860,6 +860,7 @@ export type Database = {
         Args: { motorista_uuid: string }
         Returns: {
           created_at: string
+          cte_key: string
           format: string
           height: number
           id: string
