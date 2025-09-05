@@ -535,10 +535,17 @@ const MotoristaDashboard = () => {
                         <p className="text-muted-foreground">Bairro</p>
                         <p className="font-medium">{selectedRemessa.sender_address?.neighborhood}</p>
                       </div>
-                      <div>
-                        <p className="text-muted-foreground">Cidade/Estado</p>
-                        <p className="font-medium">{selectedRemessa.sender_address?.city} - {selectedRemessa.sender_address?.state}</p>
-                      </div>
+                       <div>
+                         <p className="text-muted-foreground">Cidade/Estado</p>
+                         <p className="font-medium">
+                           {selectedRemessa.sender_address?.city && selectedRemessa.sender_address?.city !== 'A definir' ? 
+                             `${selectedRemessa.sender_address.city} - ${selectedRemessa.sender_address.state}` : 
+                             selectedRemessa.quote_data?.senderData?.city ? 
+                               `${selectedRemessa.quote_data.senderData.city} - ${selectedRemessa.quote_data.senderData.state}` :
+                               'Goiânia - GO'
+                           }
+                         </p>
+                       </div>
                       {selectedRemessa.sender_address?.phone && (
                         <div>
                           <p className="text-muted-foreground">Telefone</p>
@@ -582,10 +589,17 @@ const MotoristaDashboard = () => {
                         <p className="text-muted-foreground">Bairro</p>
                         <p className="font-medium">{selectedRemessa.recipient_address?.neighborhood}</p>
                       </div>
-                      <div>
-                        <p className="text-muted-foreground">Cidade/Estado</p>
-                        <p className="font-medium">{selectedRemessa.recipient_address?.city} - {selectedRemessa.recipient_address?.state}</p>
-                      </div>
+                       <div>
+                         <p className="text-muted-foreground">Cidade/Estado</p>
+                         <p className="font-medium">
+                           {selectedRemessa.recipient_address?.city && selectedRemessa.recipient_address?.city !== 'A definir' ? 
+                             `${selectedRemessa.recipient_address.city} - ${selectedRemessa.recipient_address.state}` : 
+                             selectedRemessa.quote_data?.recipientData?.city ? 
+                               `${selectedRemessa.quote_data.recipientData.city} - ${selectedRemessa.quote_data.recipientData.state}` :
+                               selectedRemessa.quote_data?.shippingQuote?.zoneName || 'N/A'
+                           }
+                         </p>
+                       </div>
                       {selectedRemessa.recipient_address?.phone && (
                         <div>
                           <p className="text-muted-foreground">Telefone</p>

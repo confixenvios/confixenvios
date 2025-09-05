@@ -632,10 +632,17 @@ const AdminRemessas = () => {
                       <p className="text-muted-foreground">Bairro</p>
                       <p className="font-medium">{selectedShipmentDetails.sender_address?.neighborhood}</p>
                     </div>
-                    <div>
-                      <p className="text-muted-foreground">Cidade/Estado</p>
-                      <p className="font-medium">{selectedShipmentDetails.sender_address?.city} - {selectedShipmentDetails.sender_address?.state}</p>
-                    </div>
+                     <div>
+                       <p className="text-muted-foreground">Cidade/Estado</p>
+                       <p className="font-medium">
+                         {selectedShipmentDetails.sender_address?.city && selectedShipmentDetails.sender_address?.city !== 'A definir' ? 
+                           `${selectedShipmentDetails.sender_address.city} - ${selectedShipmentDetails.sender_address.state}` : 
+                           selectedShipmentDetails.quote_data?.senderData?.city ? 
+                             `${selectedShipmentDetails.quote_data.senderData.city} - ${selectedShipmentDetails.quote_data.senderData.state}` :
+                             'Goiânia - GO'
+                         }
+                       </p>
+                     </div>
                     {selectedShipmentDetails.sender_address?.reference && (
                       <div className="col-span-2">
                         <p className="text-muted-foreground">Referência</p>
@@ -670,10 +677,17 @@ const AdminRemessas = () => {
                       <p className="text-muted-foreground">Bairro</p>
                       <p className="font-medium">{selectedShipmentDetails.recipient_address?.neighborhood}</p>
                     </div>
-                    <div>
-                      <p className="text-muted-foreground">Cidade/Estado</p>
-                      <p className="font-medium">{selectedShipmentDetails.recipient_address?.city} - {selectedShipmentDetails.recipient_address?.state}</p>
-                    </div>
+                     <div>
+                       <p className="text-muted-foreground">Cidade/Estado</p>
+                       <p className="font-medium">
+                         {selectedShipmentDetails.recipient_address?.city && selectedShipmentDetails.recipient_address?.city !== 'A definir' ? 
+                           `${selectedShipmentDetails.recipient_address.city} - ${selectedShipmentDetails.recipient_address.state}` : 
+                           selectedShipmentDetails.quote_data?.recipientData?.city ? 
+                             `${selectedShipmentDetails.quote_data.recipientData.city} - ${selectedShipmentDetails.quote_data.recipientData.state}` :
+                             selectedShipmentDetails.quote_data?.shippingQuote?.zoneName || 'N/A'
+                         }
+                       </p>
+                     </div>
                     {selectedShipmentDetails.recipient_address?.reference && (
                       <div className="col-span-2">
                         <p className="text-muted-foreground">Referência</p>

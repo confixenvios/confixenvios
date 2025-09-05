@@ -256,34 +256,66 @@ const ClientRemessas = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                      <div className="space-y-1">
-                        <p className="font-medium text-muted-foreground">Remetente</p>
-                        <p className="font-medium">{shipment.sender_address?.name}</p>
-                        <div className="flex items-center text-muted-foreground">
-                          <MapPin className="w-3 h-3 mr-1" />
-                          {shipment.sender_address?.city} - {shipment.sender_address?.state}
-                        </div>
-                      </div>
+                       <div className="space-y-1">
+                         <p className="font-medium text-muted-foreground">Remetente</p>
+                         <p className="font-medium">{shipment.sender_address?.name || 'N/A'}</p>
+                         <div className="flex items-center text-muted-foreground">
+                           <MapPin className="w-3 h-3 mr-1" />
+                           {shipment.sender_address?.city && shipment.sender_address?.city !== 'A definir' ? 
+                             `${shipment.sender_address.city} - ${shipment.sender_address.state}` : 
+                             shipment.quote_data?.senderData?.city ? 
+                               `${shipment.quote_data.senderData.city} - ${shipment.quote_data.senderData.state}` :
+                               'Goiânia - GO'
+                           }
+                         </div>
+                       </div>
 
-                      <div className="space-y-1">
-                        <p className="font-medium text-muted-foreground">Destinatário</p>
-                        <p className="font-medium">{shipment.recipient_address?.name}</p>
-                        <div className="flex items-center text-muted-foreground">
-                          <MapPin className="w-3 h-3 mr-1" />
-                          {shipment.recipient_address?.city} - {shipment.recipient_address?.state}
-                        </div>
-                      </div>
+                       <div className="space-y-1">
+                         <p className="font-medium text-muted-foreground">Destinatário</p>
+                         <p className="font-medium">{shipment.recipient_address?.name || 'N/A'}</p>
+                         <div className="flex items-center text-muted-foreground">
+                           <MapPin className="w-3 h-3 mr-1" />
+                           {shipment.recipient_address?.city && shipment.recipient_address?.city !== 'A definir' ? 
+                             `${shipment.recipient_address.city} - ${shipment.recipient_address.state}` : 
+                             shipment.quote_data?.recipientData?.city ? 
+                               `${shipment.quote_data.recipientData.city} - ${shipment.quote_data.recipientData.state}` :
+                               shipment.quote_data?.shippingQuote?.zoneName || 'N/A'
+                           }
+                         </div>
+                       </div>
 
-                      <div className="space-y-1">
-                        <p className="font-medium text-muted-foreground">Valor do Frete</p>
-                        {shipment.payment_data?.amount ? (
-                          <p className="font-medium">
-                            {formatCurrency(shipment.payment_data.amount)}
-                          </p>
-                        ) : (
-                          <p className="font-medium">N/A</p>
-                        )}
-                      </div>
+                       <div className="space-y-1">
+                         <p className="font-medium text-muted-foreground">Valor do Frete</p>
+                         {(() => {
+                           // Tentar obter o valor do frete de várias fontes
+                           let amount = null;
+                           
+                           // 1. Tentar payment_data.amount
+                           if (shipment.payment_data?.amount && shipment.payment_data.amount > 10) {
+                             amount = shipment.payment_data.amount;
+                           }
+                           // 2. Tentar payment_data.pixData.amount  
+                           else if (shipment.payment_data?.pixData?.amount && shipment.payment_data.pixData.amount > 10) {
+                             amount = shipment.payment_data.pixData.amount * 100; // converter de reais para centavos
+                           }
+                           // 3. Tentar quote_data.shippingQuote.economicPrice
+                           else if (shipment.quote_data?.shippingQuote?.economicPrice) {
+                             amount = shipment.quote_data.shippingQuote.economicPrice * 100; // converter de reais para centavos
+                           }
+                           // 4. Tentar quote_data.totalPrice
+                           else if (shipment.quote_data?.totalPrice) {
+                             amount = shipment.quote_data.totalPrice * 100; // converter de reais para centavos
+                           }
+
+                           return amount ? (
+                             <p className="font-medium">
+                               {formatCurrency(amount)}
+                             </p>
+                           ) : (
+                             <p className="font-medium text-muted-foreground">Valor não disponível</p>
+                           );
+                         })()}
+                       </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -396,10 +428,17 @@ const ClientRemessas = () => {
                       <p className="text-muted-foreground">Bairro</p>
                       <p className="font-medium">{selectedShipment.sender_address?.neighborhood}</p>
                     </div>
-                    <div>
-                      <p className="text-muted-foreground">Cidade/Estado</p>
-                      <p className="font-medium">{selectedShipment.sender_address?.city} - {selectedShipment.sender_address?.state}</p>
-                    </div>
+                     <div>
+                       <p className="text-muted-foreground">Cidade/Estado</p>
+                       <p className="font-medium">
+                         {selectedShipment.sender_address?.city && selectedShipment.sender_address?.city !== 'A definir' ? 
+                           `${selectedShipment.sender_address.city} - ${selectedShipment.sender_address.state}` : 
+                           selectedShipment.quote_data?.senderData?.city ? 
+                             `${selectedShipment.quote_data.senderData.city} - ${selectedShipment.quote_data.senderData.state}` :
+                             'Goiânia - GO'
+                         }
+                       </p>
+                     </div>
                     {selectedShipment.sender_address?.reference && (
                       <div className="col-span-2">
                         <p className="text-muted-foreground">Referência</p>
@@ -452,10 +491,17 @@ const ClientRemessas = () => {
                       <p className="text-muted-foreground">Bairro</p>
                       <p className="font-medium">{selectedShipment.recipient_address?.neighborhood}</p>
                     </div>
-                    <div>
-                      <p className="text-muted-foreground">Cidade/Estado</p>
-                      <p className="font-medium">{selectedShipment.recipient_address?.city} - {selectedShipment.recipient_address?.state}</p>
-                    </div>
+                     <div>
+                       <p className="text-muted-foreground">Cidade/Estado</p>
+                       <p className="font-medium">
+                         {selectedShipment.recipient_address?.city && selectedShipment.recipient_address?.city !== 'A definir' ? 
+                           `${selectedShipment.recipient_address.city} - ${selectedShipment.recipient_address.state}` : 
+                           selectedShipment.quote_data?.recipientData?.city ? 
+                             `${selectedShipment.quote_data.recipientData.city} - ${selectedShipment.quote_data.recipientData.state}` :
+                             selectedShipment.quote_data?.shippingQuote?.zoneName || 'N/A'
+                         }
+                       </p>
+                     </div>
                     {selectedShipment.recipient_address?.reference && (
                       <div className="col-span-2">
                         <p className="text-muted-foreground">Referência</p>
@@ -563,12 +609,34 @@ const ClientRemessas = () => {
                           <p className="text-muted-foreground">Método de Pagamento</p>
                           <p className="font-medium">{selectedShipment.payment_data.method?.toUpperCase()}</p>
                         </div>
-                        {selectedShipment.payment_data.amount && (
-                          <div>
-                            <p className="text-muted-foreground">Valor Pago</p>
-                            <p className="font-medium">{formatCurrency(selectedShipment.payment_data.amount)}</p>
-                          </div>
-                        )}
+                         {(() => {
+                           // Tentar obter o valor do frete de várias fontes
+                           let amount = null;
+                           
+                           // 1. Tentar payment_data.amount
+                           if (selectedShipment.payment_data?.amount && selectedShipment.payment_data.amount > 10) {
+                             amount = selectedShipment.payment_data.amount;
+                           }
+                           // 2. Tentar payment_data.pixData.amount  
+                           else if (selectedShipment.payment_data?.pixData?.amount && selectedShipment.payment_data.pixData.amount > 10) {
+                             amount = selectedShipment.payment_data.pixData.amount * 100; // converter de reais para centavos
+                           }
+                           // 3. Tentar quote_data.shippingQuote.economicPrice
+                           else if (selectedShipment.quote_data?.shippingQuote?.economicPrice) {
+                             amount = selectedShipment.quote_data.shippingQuote.economicPrice * 100; // converter de reais para centavos
+                           }
+                           // 4. Tentar quote_data.totalPrice
+                           else if (selectedShipment.quote_data?.totalPrice) {
+                             amount = selectedShipment.quote_data.totalPrice * 100; // converter de reais para centavos
+                           }
+
+                           return amount ? (
+                             <div>
+                               <p className="text-muted-foreground">Valor Pago</p>
+                               <p className="font-medium">{formatCurrency(amount)}</p>
+                             </div>
+                           ) : null;
+                         })()}
                         {selectedShipment.payment_data.paidAt && (
                           <div>
                             <p className="text-muted-foreground">Data do Pagamento</p>
