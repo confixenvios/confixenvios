@@ -3,10 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
-  History, 
+  BarChart3, 
   Search, 
-  Calendar,
+  CalendarIcon,
   Package,
   Clock,
   ArrowUpDown,
@@ -14,13 +16,19 @@ import {
   FileText,
   CreditCard,
   Truck,
-  Plus
+  Plus,
+  Download,
+  FileSpreadsheet
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router-dom";
+import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import * as XLSX from 'xlsx';
+import { cn } from "@/lib/utils";
 
 interface HistoryItem {
   id: string;
@@ -64,19 +72,22 @@ const ClientHistorico = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(subDays(new Date(), 30));
+  const [dateTo, setDateTo] = useState<Date | undefined>(new Date());
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (user) {
       loadHistory();
     }
-  }, [user]);
+  }, [user, dateFrom, dateTo]);
 
   const loadHistory = async () => {
     if (!user) return;
     
     setLoading(true);
     try {
-      const { data: shipmentsData, error } = await supabase
+      let query = supabase
         .from('shipments')
         .select(`
           id,
@@ -90,8 +101,17 @@ const ClientHistorico = () => {
           sender_address:addresses!sender_address_id(name, city, state),
           recipient_address:addresses!recipient_address_id(name, city, state)
         `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .eq('user_id', user.id);
+
+      // Apply date filters
+      if (dateFrom) {
+        query = query.gte('created_at', startOfDay(dateFrom).toISOString());
+      }
+      if (dateTo) {
+        query = query.lte('created_at', endOfDay(dateTo).toISOString());
+      }
+
+      const { data: shipmentsData, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error loading history:', error);
@@ -247,6 +267,66 @@ const ClientHistorico = () => {
     return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
   });
 
+  const exportToExcel = async () => {
+    setIsExporting(true);
+    try {
+      // Prepare data for Excel
+      const excelData = filteredItems.map(item => ({
+        'Data/Hora': format(new Date(item.date), "dd/MM/yyyy HH:mm", { locale: ptBR }),
+        'Tipo': item.type === 'shipment' ? 'Remessa' : 
+               item.type === 'payment' ? 'Pagamento' :
+               item.type === 'label' ? 'Etiqueta' : 'Rastreamento',
+        'Título': item.title,
+        'Descrição': item.description,
+        'Status': item.status,
+        'Código de Rastreamento': item.tracking_code || '-',
+        'Valor (R$)': item.value ? item.value.toFixed(2) : '-'
+      }));
+
+      // Create workbook and worksheet
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      
+      // Set column widths
+      const colWidths = [
+        { wch: 16 }, // Data/Hora
+        { wch: 12 }, // Tipo
+        { wch: 20 }, // Título
+        { wch: 40 }, // Descrição
+        { wch: 15 }, // Status
+        { wch: 20 }, // Código
+        { wch: 12 }  // Valor
+      ];
+      worksheet['!cols'] = colWidths;
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Relatório');
+
+      // Generate filename
+      const fromDate = dateFrom ? format(dateFrom, "dd-MM-yyyy") : '';
+      const toDate = dateTo ? format(dateTo, "dd-MM-yyyy") : '';
+      const filename = `relatorio-${fromDate}-a-${toDate}.xlsx`;
+
+      // Save file
+      XLSX.writeFile(workbook, filename);
+
+      toast({
+        title: "Excel exportado com sucesso",
+        description: `Arquivo ${filename} foi baixado`
+      });
+
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast({
+        title: "Erro ao exportar",
+        description: "Não foi possível gerar o arquivo Excel",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const typeStats = {
     shipment: historyItems.filter(i => i.type === 'shipment').length,
     payment: historyItems.filter(i => i.type === 'payment').length,
@@ -257,13 +337,31 @@ const ClientHistorico = () => {
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold text-foreground flex items-center">
-          <History className="mr-3 h-8 w-8 text-primary" />
-          Histórico
-        </h1>
-        <p className="text-muted-foreground">
-          Acompanhe todas as atividades e movimentações das suas remessas
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground flex items-center">
+              <BarChart3 className="mr-3 h-8 w-8 text-primary" />
+              Relatórios
+            </h1>
+            <p className="text-muted-foreground">
+              Gere relatórios detalhados das suas remessas e atividades
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              onClick={exportToExcel} 
+              disabled={isExporting || filteredItems.length === 0}
+              className="flex items-center gap-2"
+            >
+              {isExporting ? (
+                <Clock className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="w-4 h-4" />
+              )}
+              {isExporting ? 'Exportando...' : 'Baixar Excel'}
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -322,59 +420,169 @@ const ClientHistorico = () => {
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Filter className="w-5 h-5" />
-            <span>Filtros</span>
+            <span>Filtros e Período</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar no histórico..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+          <div className="space-y-4">
+            {/* Date Range Filters */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-2 block">Data Inicial</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dateFrom && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateFrom ? format(dateFrom, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateFrom}
+                      onSelect={setDateFrom}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-2 block">Data Final</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dateTo && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateTo ? format(dateTo, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateTo}
+                      onSelect={setDateTo}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">Períodos Rápidos</label>
+                <div className="flex flex-wrap gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setDateFrom(subDays(new Date(), 7));
+                      setDateTo(new Date());
+                    }}
+                  >
+                    7 dias
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setDateFrom(subDays(new Date(), 30));
+                      setDateTo(new Date());
+                    }}
+                  >
+                    30 dias
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setDateFrom(subDays(new Date(), 90));
+                      setDateTo(new Date());
+                    }}
+                  >
+                    90 dias
+                  </Button>
+                </div>
               </div>
             </div>
-            <div className="w-full sm:w-48">
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tipo de atividade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  <SelectItem value="shipment">Remessas</SelectItem>
-                  <SelectItem value="payment">Pagamentos</SelectItem>
-                  <SelectItem value="label">Etiquetas</SelectItem>
-                  <SelectItem value="tracking">Rastreamento</SelectItem>
-                </SelectContent>
-              </Select>
+            
+            {/* Search and Type Filters */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar no relatório..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="w-full sm:w-48">
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tipo de atividade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="shipment">Remessas</SelectItem>
+                    <SelectItem value="payment">Pagamentos</SelectItem>
+                    <SelectItem value="label">Etiquetas</SelectItem>
+                    <SelectItem value="tracking">Rastreamento</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                className="flex items-center gap-2"
+              >
+                <ArrowUpDown className="w-4 h-4" />
+                {sortOrder === 'desc' ? 'Mais recente' : 'Mais antigo'}
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-              className="flex items-center gap-2"
-            >
-              <ArrowUpDown className="w-4 h-4" />
-              {sortOrder === 'desc' ? 'Mais recente' : 'Mais antigo'}
-            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* History Timeline */}
+      {/* Results */}
       <Card className="border-border/50 shadow-card">
         <CardHeader>
-          <CardTitle>Linha do Tempo</CardTitle>
-          <CardDescription>
-            {filteredItems.length === 0 && !loading 
-              ? "Nenhuma atividade encontrada"
-              : `${filteredItems.length} atividade(s) encontrada(s)`
-            }
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Resultados do Relatório</CardTitle>
+              <CardDescription>
+                {loading ? "Carregando..." :
+                 filteredItems.length === 0 ? "Nenhuma atividade encontrada no período" :
+                 `${filteredItems.length} atividade(s) encontrada(s) ${dateFrom ? `de ${format(dateFrom, "dd/MM/yyyy")}` : ''} ${dateTo ? `até ${format(dateTo, "dd/MM/yyyy")}` : ''}`
+                }
+              </CardDescription>
+            </div>
+            {filteredItems.length > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={exportToExcel} 
+                disabled={isExporting}
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Baixar Excel
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -391,20 +599,33 @@ const ClientHistorico = () => {
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="text-center py-12">
-              <History className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma atividade encontrada</h3>
+              <BarChart3 className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Nenhum resultado encontrado</h3>
               <p className="text-muted-foreground mb-4">
                 {searchTerm || typeFilter !== 'all' 
-                  ? "Tente ajustar os filtros de pesquisa"
-                  : "Suas atividades aparecerão aqui conforme você usar o sistema"
+                  ? "Tente ajustar os filtros de pesquisa ou o período"
+                  : `Não há atividades no período selecionado ${dateFrom ? `(${format(dateFrom, "dd/MM/yyyy")} - ${dateTo ? format(dateTo, "dd/MM/yyyy") : 'hoje'})` : ''}`
                 }
               </p>
-              <Button asChild>
-                <Link to="/cliente/cotacoes">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nova Cotação
-                </Link>
-              </Button>
+              <div className="flex gap-2 justify-center">
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    setDateFrom(subDays(new Date(), 90));
+                    setDateTo(new Date());
+                    setSearchTerm('');
+                    setTypeFilter('all');
+                  }}
+                >
+                  Expandir para 90 dias
+                </Button>
+                <Button asChild>
+                  <Link to="/cliente/cotacoes">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nova Cotação
+                  </Link>
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-6">
