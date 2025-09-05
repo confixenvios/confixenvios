@@ -108,7 +108,7 @@ serve(async (req) => {
       );
     }
     
-    const { name, phone, email, cpf, amount, description, userId } = requestBody;
+    const { name, phone, email, cpf, amount, description, userId, quoteData, documentData } = requestBody;
 
     // Get API key
     const abacateApiKey = Deno.env.get('ABACATE_PAY_API_KEY');
@@ -142,57 +142,65 @@ serve(async (req) => {
 
     // NOVO: Salvar cotação temporária antes de gerar PIX
     console.log('💾 Salvando cotação temporária...');
+    console.log('📦 Dados da cotação recebidos:', quoteData);
     
-    // Dados da cotação que vêm do frontend (deve vir do shipmentData)
-    const quoteData = {
-      senderData: {
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        phone: formattedPhone,
-        document: cleanCpf
-      },
-      recipientData: {
-        // Dados temporários - serão preenchidos quando tiver dados completos
-        name: 'A definir',
-        email: 'definir@email.com',
-        phone: '(00) 00000-0000',
-        document: '00000000000',
-        address: {
-          street: 'Endereço a ser definido',
-          number: '0',
-          neighborhood: 'Centro',
-          city: 'A definir',
-          state: 'GO',
-          cep: '00000000'
+    // Verificar se os dados completos da cotação foram enviados
+    if (!quoteData || !quoteData.senderData || !quoteData.recipientData) {
+      console.error('❌ Dados da cotação incompletos');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Dados da cotação não encontrados. Reinicie o processo.' 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
         }
-      },
-      packageData: {
-        weight: 1, // Peso padrão - deve vir do frontend
+      );
+    }
+    
+    // Usar dados reais da cotação
+    const tempQuoteData = {
+      external_id: externalId,
+      user_id: userId || null,
+      sender_data: quoteData.senderData,
+      recipient_data: quoteData.recipientData,
+      package_data: quoteData.formData ? {
+        weight: parseFloat(quoteData.formData.weight) || 1,
+        length: parseFloat(quoteData.formData.length) || 20,
+        width: parseFloat(quoteData.formData.width) || 20,
+        height: parseFloat(quoteData.formData.height) || 20,
+        format: quoteData.formData.format || 'caixa',
+        quantity: parseInt(quoteData.formData.quantity) || 1,
+        unitValue: parseFloat(quoteData.formData.unitValue) || amount,
+        totalValue: quoteData.totalMerchandiseValue || amount
+      } : {
+        weight: 1,
         length: 20,
         width: 20,
         height: 20,
         format: 'caixa',
-        value: amount
+        quantity: 1,
+        unitValue: amount,
+        totalValue: amount
       },
-      quoteOptions: {
-        selectedOption: 'standard',
-        pickupOption: 'dropoff',
+      quote_options: {
+        selectedOption: quoteData.selectedOption || 'standard',
+        pickupOption: quoteData.pickupOption || 'dropoff',
         amount: amount,
-        description: description || 'Pagamento PIX - Confix Envios'
-      }
+        description: description || 'Pagamento PIX - Confix Envios',
+        shippingQuote: quoteData.quoteData?.shippingQuote || null,
+        pickupDetails: quoteData.pickupDetails || null,
+        documentType: documentData?.documentType || null,
+        nfeKey: documentData?.nfeKey || null,
+        merchandiseDescription: documentData?.merchandiseDescription || null
+      },
+      status: 'pending_payment'
     };
 
     const { data: savedQuote, error: quoteError } = await supabase
       .from('temp_quotes')
-      .insert([{
-        external_id: externalId,
-        user_id: userId || null,
-        sender_data: quoteData.senderData,
-        recipient_data: quoteData.recipientData,
-        package_data: quoteData.packageData,
-        quote_options: quoteData.quoteOptions,
-        status: 'pending_payment'
-      }])
+      .insert([tempQuoteData])
       .select()
       .single();
 

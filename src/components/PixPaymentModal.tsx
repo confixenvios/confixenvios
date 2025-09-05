@@ -155,6 +155,18 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     try {
       console.log('🔵 Iniciando criação do PIX...');
       
+      // Buscar dados completos da cotação no sessionStorage
+      const currentShipment = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
+      const documentData = JSON.parse(sessionStorage.getItem('documentData') || '{}');
+      
+      console.log('📦 Dados da cotação encontrados:', currentShipment);
+      console.log('📄 Dados do documento encontrados:', documentData);
+      
+      if (!currentShipment.quoteData) {
+        toast.error('Dados da cotação não encontrados. Reinicie o processo.');
+        return;
+      }
+      
       const pixPayload = {
         name: formData.name,
         phone: formData.phone,
@@ -162,10 +174,13 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
         cpf: formData.cpf,
         amount: amount,
         description: description || 'Pagamento via PIX - Confix Envios',
-        userId: user?.id || null
+        userId: user?.id || null,
+        // Enviar dados completos da cotação para salvar na temp_quotes
+        quoteData: currentShipment,
+        documentData: documentData
       };
       
-      console.log('📤 Enviando payload:', pixPayload);
+      console.log('📤 Enviando payload completo:', pixPayload);
 
       const { data, error } = await supabase.functions.invoke('create-pix-payment', {
         body: pixPayload
