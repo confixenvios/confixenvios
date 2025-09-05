@@ -134,7 +134,7 @@ export const RemessaDetalhes = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-sm w-[90vw] mx-auto max-h-[90vh] p-4 m-4 rounded-lg">
+        <DialogContent className="w-[90vw] max-w-[400px] max-h-[85vh] p-4 mx-auto">
           <DialogHeader className="pb-2">
             <DialogTitle className="flex items-center gap-2 text-base">
               <Package className="h-4 w-4" />
@@ -142,7 +142,7 @@ export const RemessaDetalhes = ({
             </DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[70vh] pr-2">
+          <ScrollArea className="max-h-[65vh] pr-2">
             <div className="space-y-3">
               {/* Status e Ações Principais */}
               <Card className="border-0 shadow-none bg-muted/30">
