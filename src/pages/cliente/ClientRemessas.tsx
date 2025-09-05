@@ -375,33 +375,45 @@ const ClientRemessas = () => {
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                         <div className="space-y-1">
-                           <p className="font-medium text-muted-foreground">Remetente</p>
-                           <p className="font-medium">{shipment.sender_address?.name || 'N/A'}</p>
-                           <div className="flex items-center text-muted-foreground">
-                             <MapPin className="w-3 h-3 mr-1" />
-                             {shipment.sender_address?.city && shipment.sender_address?.city !== 'A definir' ? 
-                               `${shipment.sender_address.city} - ${shipment.sender_address.state}` : 
-                               shipment.quote_data?.senderData?.city ? 
-                                 `${shipment.quote_data.senderData.city} - ${shipment.quote_data.senderData.state}` :
-                                 'Goiânia - GO'
-                             }
-                           </div>
-                         </div>
+                          <div className="space-y-1">
+                            <p className="font-medium text-muted-foreground">Remetente</p>
+                            <p className="font-medium">
+                              {shipment.quote_data?.addressData?.sender?.name || 
+                               shipment.sender_address?.name || 
+                               shipment.quote_data?.senderData?.name || 
+                               'N/A'
+                              }
+                            </p>
+                            <div className="flex items-center text-muted-foreground">
+                              <MapPin className="w-3 h-3 mr-1" />
+                              {shipment.sender_address?.city && shipment.sender_address?.city !== 'A definir' ? 
+                                `${shipment.sender_address.city} - ${shipment.sender_address.state}` : 
+                                shipment.quote_data?.senderData?.city ? 
+                                  `${shipment.quote_data.senderData.city} - ${shipment.quote_data.senderData.state}` :
+                                  'Goiânia - GO'
+                              }
+                            </div>
+                          </div>
 
-                         <div className="space-y-1">
-                           <p className="font-medium text-muted-foreground">Destinatário</p>
-                           <p className="font-medium">{shipment.recipient_address?.name || 'N/A'}</p>
-                           <div className="flex items-center text-muted-foreground">
-                             <MapPin className="w-3 h-3 mr-1" />
-                             {shipment.recipient_address?.city && shipment.recipient_address?.city !== 'A definir' ? 
-                               `${shipment.recipient_address.city} - ${shipment.recipient_address.state}` : 
-                               shipment.quote_data?.recipientData?.city ? 
-                                 `${shipment.quote_data.recipientData.city} - ${shipment.quote_data.recipientData.state}` :
-                                 shipment.quote_data?.shippingQuote?.zoneName || 'N/A'
-                             }
-                           </div>
-                         </div>
+                          <div className="space-y-1">
+                            <p className="font-medium text-muted-foreground">Destinatário</p>
+                            <p className="font-medium">
+                              {shipment.quote_data?.addressData?.recipient?.name || 
+                               shipment.recipient_address?.name || 
+                               shipment.quote_data?.recipientData?.name || 
+                               'N/A'
+                              }
+                            </p>
+                            <div className="flex items-center text-muted-foreground">
+                              <MapPin className="w-3 h-3 mr-1" />
+                              {shipment.recipient_address?.city && shipment.recipient_address?.city !== 'A definir' ? 
+                                `${shipment.recipient_address.city} - ${shipment.recipient_address.state}` : 
+                                shipment.quote_data?.recipientData?.city ? 
+                                  `${shipment.quote_data.recipientData.city} - ${shipment.quote_data.recipientData.state}` :
+                                  shipment.quote_data?.shippingQuote?.zoneName || 'N/A'
+                              }
+                            </div>
+                          </div>
 
                           <div className="space-y-1">
                             <p className="font-medium text-muted-foreground">Valor do Frete</p>
@@ -510,10 +522,15 @@ const ClientRemessas = () => {
                          'N/A'}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-muted-foreground">Opção de Coleta</p>
-                      <p className="font-medium">{selectedShipment.pickup_option === 'dropoff' ? 'Entrega no Hub' : 'Coleta no Local'}</p>
-                    </div>
+                     <div>
+                       <p className="text-muted-foreground">Opção de Coleta</p>
+                       <p className="font-medium">
+                         {(() => {
+                           const pickupOption = selectedShipment.quote_data?.deliveryDetails?.pickupOption || selectedShipment.pickup_option;
+                           return pickupOption === 'pickup' ? 'Coleta no Local' : 'Entrega no Hub';
+                         })()}
+                       </p>
+                     </div>
                     {selectedShipment.pickup_option === 'pickup' && (
                       <div>
                         <p className="text-muted-foreground">Taxa de Coleta</p>
@@ -535,15 +552,16 @@ const ClientRemessas = () => {
                 <div>
                   <h3 className="text-lg font-semibold mb-3">Dados do Remetente</h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Nome</p>
-                      <p className="font-medium">
-                        {selectedShipment.sender_address?.name && selectedShipment.sender_address?.name !== 'KENNEDY DE SOUZA OLIVEIRA' && selectedShipment.sender_address?.name !== 'A definir' ? 
-                          selectedShipment.sender_address.name : 
-                          selectedShipment.quote_data?.senderData?.name || 'Nome não informado'
-                        }
-                      </p>
-                    </div>
+                     <div>
+                       <p className="text-muted-foreground">Nome</p>
+                       <p className="font-medium">
+                         {selectedShipment.quote_data?.addressData?.sender?.name || 
+                          selectedShipment.sender_address?.name || 
+                          selectedShipment.quote_data?.senderData?.name || 
+                          'Nome não informado'
+                         }
+                       </p>
+                     </div>
                     <div>
                       <p className="text-muted-foreground">CEP</p>
                       <p className="font-medium">
@@ -619,15 +637,16 @@ const ClientRemessas = () => {
                 <div>
                   <h3 className="text-lg font-semibold mb-3">Dados do Destinatário</h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Nome</p>
-                      <p className="font-medium">
-                        {selectedShipment.recipient_address?.name && selectedShipment.recipient_address?.name !== 'JURI EXPRESS' && selectedShipment.recipient_address?.name !== 'A definir' ? 
-                          selectedShipment.recipient_address.name : 
-                          selectedShipment.quote_data?.recipientData?.name || 'Nome não informado'
-                        }
-                      </p>
-                    </div>
+                     <div>
+                       <p className="text-muted-foreground">Nome</p>
+                       <p className="font-medium">
+                         {selectedShipment.quote_data?.addressData?.recipient?.name || 
+                          selectedShipment.recipient_address?.name || 
+                          selectedShipment.quote_data?.recipientData?.name || 
+                          'Nome não informado'
+                         }
+                       </p>
+                     </div>
                     <div>
                       <p className="text-muted-foreground">CEP</p>
                       <p className="font-medium">
