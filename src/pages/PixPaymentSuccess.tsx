@@ -114,6 +114,19 @@ const PixPaymentSuccess = () => {
       // 2. Criar remessa com TODOS os dados do formulário
       const trackingCode = `ID${new Date().getFullYear()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
       
+      // Incluir dados do documento no quote_data
+      const enrichedQuoteData = {
+        ...completeShipmentData,
+        // Incluir dados do documento
+        documentType: documentData.documentType,
+        nfeKey: documentData.nfeKey,
+        merchandiseDescription: documentData.merchandiseDescription,
+        fiscalData: documentData.fiscalData,
+        // Manter compatibilidade com nomes alternativos
+        nfeChave: documentData.nfeKey,
+        descricaoMercadoria: documentData.merchandiseDescription
+      };
+      
       const newShipmentData = {
         tracking_code: trackingCode,
         user_id: user?.id || null,
@@ -128,8 +141,8 @@ const PixPaymentSuccess = () => {
         pickup_option: completeShipmentData.deliveryDetails?.pickupOption || 'dropoff',
         selected_option: completeShipmentData.deliveryDetails?.selectedOption || 'standard',
         document_type: documentData.fiscalData?.type || 'declaracao_conteudo',
-        // Salvar TODOS os dados completos no quote_data
-        quote_data: completeShipmentData,
+        // Salvar TODOS os dados completos no quote_data incluindo documento
+        quote_data: enrichedQuoteData,
         payment_data: {
           method: 'pix',
           payment_id: paymentId,

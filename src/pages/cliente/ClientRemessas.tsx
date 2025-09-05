@@ -294,7 +294,7 @@ const ClientRemessas = () => {
                              if (shipment.payment_data?.pixData?.amount) {
                                amount = shipment.payment_data.pixData.amount; // já está em centavos
                              }
-                             // 2. Tentar payment_data.amount (Stripe/Cartão)
+                             // 2. Tentar payment_data.amount (Stripe/Cartão - já em centavos)
                              else if (shipment.payment_data?.amount) {
                                amount = shipment.payment_data.amount;
                              }
@@ -605,24 +605,28 @@ const ClientRemessas = () => {
                 <div>
                   <h3 className="text-lg font-semibold mb-3">Dados do Documento</h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
-                    {selectedShipment.quote_data?.documentType && (
-                      <div>
-                        <p className="text-muted-foreground">Tipo de Documento</p>
-                        <p className="font-medium">
-                          {selectedShipment.quote_data.documentType === 'declaration' ? 'Declaração de Conteúdo' : 'Nota Fiscal'}
+                    <div>
+                      <p className="text-muted-foreground">Tipo de Documento</p>
+                      <p className="font-medium">
+                        {selectedShipment.quote_data?.documentType === 'nota_fiscal' ? 'Nota Fiscal' : 
+                         selectedShipment.quote_data?.documentType === 'declaration' ? 'Declaração de Conteúdo' :
+                         'Declaração de Conteúdo'}
+                      </p>
+                    </div>
+                    {(selectedShipment.quote_data?.nfeKey || selectedShipment.quote_data?.nfeChave) && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Chave da Nota Fiscal</p>
+                        <p className="font-medium font-mono text-xs break-all">
+                          {selectedShipment.quote_data.nfeKey || selectedShipment.quote_data.nfeChave}
                         </p>
                       </div>
                     )}
-                    {selectedShipment.quote_data?.nfeKey && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">Chave da Nota Fiscal</p>
-                        <p className="font-medium font-mono text-xs break-all">{selectedShipment.quote_data.nfeKey}</p>
-                      </div>
-                    )}
-                    {selectedShipment.quote_data?.merchandiseDescription && (
+                    {(selectedShipment.quote_data?.merchandiseDescription || selectedShipment.quote_data?.descricaoMercadoria) && (
                       <div className="col-span-2">
                         <p className="text-muted-foreground">Descrição da Mercadoria</p>
-                        <p className="font-medium">{selectedShipment.quote_data.merchandiseDescription}</p>
+                        <p className="font-medium">
+                          {selectedShipment.quote_data.merchandiseDescription || selectedShipment.quote_data.descricaoMercadoria}
+                        </p>
                       </div>
                     )}
                     {selectedShipment.quote_data?.merchandiseValue && (
@@ -641,6 +645,16 @@ const ClientRemessas = () => {
                       <div>
                         <p className="text-muted-foreground">Quantidade de Volumes</p>
                         <p className="font-medium">{selectedShipment.quote_data.quantity}</p>
+                      </div>
+                    )}
+                    {/* Mostrar informações adicionais se não houver dados específicos */}
+                    {!selectedShipment.quote_data?.merchandiseDescription && 
+                     !selectedShipment.quote_data?.descricaoMercadoria && 
+                     !selectedShipment.quote_data?.nfeKey && 
+                     !selectedShipment.quote_data?.nfeChave && (
+                      <div className="col-span-2 text-center py-4 text-muted-foreground">
+                        <p>Informações do documento não disponíveis</p>
+                        <p className="text-xs mt-1">Dados podem não ter sido preenchidos durante a cotação</p>
                       </div>
                     )}
                   </div>
@@ -662,9 +676,9 @@ const ClientRemessas = () => {
                             // Tentar obter o valor do frete de várias fontes
                             let amount = null;
                             
-                            // 1. Tentar payment_data.pixData.amount (PIX)
+                            // 1. Tentar payment_data.pixData.amount (PIX - já vem em centavos)
                             if (selectedShipment.payment_data?.pixData?.amount) {
-                              amount = selectedShipment.payment_data.pixData.amount * 100; // converter de reais para centavos
+                              amount = selectedShipment.payment_data.pixData.amount; // já está em centavos
                             }
                             // 2. Tentar payment_data.amount (Stripe/Cartão)
                             else if (selectedShipment.payment_data?.amount) {
