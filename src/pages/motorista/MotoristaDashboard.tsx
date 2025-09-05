@@ -110,21 +110,84 @@ const MotoristaDashboard = () => {
 
     try {
       setRefreshing(true);
+      
+      let photoUrls: string[] = [];
+      let signatureUrl: string | null = null;
+
+      // Upload photos to storage if provided
+      if (data?.photos && data.photos.length > 0) {
+        for (let i = 0; i < data.photos.length; i++) {
+          const photo = data.photos[i];
+          const fileExt = photo.name.split('.').pop();
+          const fileName = `${motoristaSession.id}/${remessaId}_photo_${Date.now()}_${i}.${fileExt}`;
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('shipment-photos')
+            .upload(fileName, photo);
+            
+          if (uploadError) {
+            console.error('Error uploading photo:', uploadError);
+          } else {
+            const { data: { publicUrl } } = supabase.storage
+              .from('shipment-photos')
+              .getPublicUrl(fileName);
+            photoUrls.push(publicUrl);
+          }
+        }
+      }
+
+      // Upload signature to storage if provided
+      if (data?.signature) {
+        // Convert base64 to blob
+        const base64Data = data.signature.split(',')[1];
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'image/png' });
+        
+        const fileName = `${motoristaSession.id}/${remessaId}_signature_${Date.now()}.png`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('shipment-signatures')
+          .upload(fileName, blob);
+          
+        if (uploadError) {
+          console.error('Error uploading signature:', uploadError);
+        } else {
+          const { data: { publicUrl } } = supabase.storage
+            .from('shipment-signatures')
+            .getPublicUrl(fileName);
+          signatureUrl = publicUrl;
+        }
+      }
 
       // Update shipment status
       const { error: shipmentError } = await supabase
         .from('shipments')
-        .update({ status: newStatus })
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', remessaId);
 
       if (shipmentError) throw shipmentError;
 
-      // Add to status history with enhanced data
+      // Add to status history with enhanced data including files
       const historyData = {
         shipment_id: remessaId,
         status: newStatus,
         motorista_id: motoristaSession.id,
-        observacoes: data?.occurrence?.observations || data?.observacoes || null
+        observacoes: data?.occurrence?.observations || data?.observacoes || null,
+        photos_urls: photoUrls.length > 0 ? photoUrls : null,
+        signature_url: signatureUrl,
+        occurrence_data: data?.occurrence ? {
+          type: data.occurrence.type,
+          description: data.occurrence.description,
+          timestamp: new Date().toISOString()
+        } : null
       };
 
       const { error: historyError } = await supabase
@@ -132,12 +195,6 @@ const MotoristaDashboard = () => {
         .insert([historyData]);
 
       if (historyError) throw historyError;
-
-      // TODO: Save photos and signatures to storage if provided
-      if (data?.photos || data?.signature) {
-        console.log('Photos and signature data:', { photos: data.photos, signature: data.signature });
-        // Implementation for file storage would go here
-      }
 
       toast.success('Status atualizado com sucesso!');
       await loadMinhasRemessas(motoristaSession.id);

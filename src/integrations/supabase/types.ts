@@ -406,7 +406,10 @@ export type Database = {
           id: string
           motorista_id: string | null
           observacoes: string | null
+          occurrence_data: Json | null
+          photos_urls: string[] | null
           shipment_id: string
+          signature_url: string | null
           status: string
         }
         Insert: {
@@ -414,7 +417,10 @@ export type Database = {
           id?: string
           motorista_id?: string | null
           observacoes?: string | null
+          occurrence_data?: Json | null
+          photos_urls?: string[] | null
           shipment_id: string
+          signature_url?: string | null
           status: string
         }
         Update: {
@@ -422,7 +428,10 @@ export type Database = {
           id?: string
           motorista_id?: string | null
           observacoes?: string | null
+          occurrence_data?: Json | null
+          photos_urls?: string[] | null
           shipment_id?: string
+          signature_url?: string | null
           status?: string
         }
         Relationships: [
