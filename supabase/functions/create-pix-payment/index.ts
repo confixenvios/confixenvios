@@ -128,6 +128,9 @@ serve(async (req) => {
 
     console.log('✅ API Key found');
 
+    // Gerar external ID único
+    const externalId = `confix_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    
     // Limpar e formatar dados
     const cleanPhone = phone.replace(/\D/g, '');
     const cleanCpf = cpf.replace(/\D/g, '');
@@ -136,6 +139,78 @@ serve(async (req) => {
     const formattedPhone = cleanPhone.length === 11 
       ? cleanPhone.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3')
       : cleanPhone.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
+
+    // NOVO: Salvar cotação temporária antes de gerar PIX
+    console.log('💾 Salvando cotação temporária...');
+    
+    // Dados da cotação que vêm do frontend (deve vir do shipmentData)
+    const quoteData = {
+      senderData: {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: formattedPhone,
+        document: cleanCpf
+      },
+      recipientData: {
+        // Dados temporários - serão preenchidos quando tiver dados completos
+        name: 'A definir',
+        email: 'definir@email.com',
+        phone: '(00) 00000-0000',
+        document: '00000000000',
+        address: {
+          street: 'Endereço a ser definido',
+          number: '0',
+          neighborhood: 'Centro',
+          city: 'A definir',
+          state: 'GO',
+          cep: '00000000'
+        }
+      },
+      packageData: {
+        weight: 1, // Peso padrão - deve vir do frontend
+        length: 20,
+        width: 20,
+        height: 20,
+        format: 'caixa',
+        value: amount
+      },
+      quoteOptions: {
+        selectedOption: 'standard',
+        pickupOption: 'dropoff',
+        amount: amount,
+        description: description || 'Pagamento PIX - Confix Envios'
+      }
+    };
+
+    const { data: savedQuote, error: quoteError } = await supabase
+      .from('temp_quotes')
+      .insert([{
+        external_id: externalId,
+        user_id: userId || null,
+        sender_data: quoteData.senderData,
+        recipient_data: quoteData.recipientData,
+        package_data: quoteData.packageData,
+        quote_options: quoteData.quoteOptions,
+        status: 'pending_payment'
+      }])
+      .select()
+      .single();
+
+    if (quoteError) {
+      console.error('❌ Erro ao salvar cotação temporária:', quoteError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Erro ao processar cotação. Tente novamente.' 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    console.log('✅ Cotação temporária salva:', savedQuote.id);
 
     // Payload para Abacate Pay
     const pixPayload = {
@@ -149,7 +224,7 @@ serve(async (req) => {
         taxId: cleanCpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
       },
       metadata: {
-        externalId: `confix_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        externalId: externalId,
         userId: userId || 'anonymous',
         source: 'confix-envios'
       }

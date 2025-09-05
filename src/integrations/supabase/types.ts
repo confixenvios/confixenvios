@@ -616,6 +616,51 @@ export type Database = {
         }
         Relationships: []
       }
+      temp_quotes: {
+        Row: {
+          created_at: string
+          expires_at: string
+          external_id: string
+          id: string
+          package_data: Json
+          quote_options: Json
+          recipient_data: Json
+          sender_data: Json
+          session_id: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          external_id: string
+          id?: string
+          package_data: Json
+          quote_options: Json
+          recipient_data: Json
+          sender_data: Json
+          session_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          external_id?: string
+          id?: string
+          package_data?: Json
+          quote_options?: Json
+          recipient_data?: Json
+          sender_data?: Json
+          session_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -744,6 +789,10 @@ export type Database = {
         Returns: undefined
       }
       cleanup_expired_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      cleanup_expired_temp_quotes: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }

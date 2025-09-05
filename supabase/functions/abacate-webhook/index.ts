@@ -42,23 +42,56 @@ serve(async (req) => {
       console.log('User ID extraído do pagamento:', userId);
       console.log('External ID validado:', externalId);
 
-      // Criar endereços temporários para a remessa usando dados do cliente
-      const customerData = pixData.customer?.metadata || {};
-      const baseAddress = {
-        name: customerData.name || 'Cliente',
-        street: 'Endereço a ser definido',
-        number: '0',
-        neighborhood: 'Centro',
-        city: 'A definir',
-        state: 'GO',
-        cep: '00000000',
-        user_id: userId
-      };
+      // NOVO: Buscar cotação temporária usando externalId
+      const { data: tempQuote, error: quoteError } = await supabase
+        .from('temp_quotes')
+        .select('*')
+        .eq('external_id', externalId)
+        .eq('status', 'pending_payment')
+        .single();
 
-      // Criar endereço de origem (remetente)
+      if (quoteError || !tempQuote) {
+        console.error('❌ Erro ao buscar cotação temporária:', quoteError);
+        console.error('ExternalId procurado:', externalId);
+        
+        // Log detalhado para debug
+        const { data: allQuotes } = await supabase
+          .from('temp_quotes')
+          .select('external_id, status, created_at')
+          .limit(5);
+        console.log('Cotações disponíveis:', allQuotes);
+        
+        return new Response(
+          JSON.stringify({ error: 'Cotação não encontrada para este pagamento' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('✅ Cotação temporária encontrada:', tempQuote.id);
+      
+      // Usar dados da cotação para criar endereços completos
+      const senderData = tempQuote.sender_data;
+      const recipientData = tempQuote.recipient_data;
+      const packageData = tempQuote.package_data;
+      const quoteOptions = tempQuote.quote_options;
+
+      // Dados do cliente do PIX para fallback
+      const customerData = pixData.customer?.metadata || {};
+
+      // Criar endereço de origem (remetente) usando dados da cotação
       const { data: senderAddress, error: senderError } = await supabase
         .from('addresses')
-        .insert([{ ...baseAddress, address_type: 'sender' }])
+        .insert([{
+          name: senderData.name,
+          street: senderData.address?.street || 'Endereço a ser definido',
+          number: senderData.address?.number || '0',
+          neighborhood: senderData.address?.neighborhood || 'Centro',
+          city: senderData.address?.city || 'A definir',
+          state: senderData.address?.state || 'GO',
+          cep: senderData.address?.cep || '00000000',
+          address_type: 'sender',
+          user_id: userId
+        }])
         .select()
         .single();
 
@@ -67,10 +100,20 @@ serve(async (req) => {
         throw senderError;
       }
 
-      // Criar endereço de destino (destinatário)
+      // Criar endereço de destino (destinatário) usando dados da cotação
       const { data: recipientAddress, error: recipientError } = await supabase
         .from('addresses')
-        .insert([{ ...baseAddress, address_type: 'recipient' }])
+        .insert([{
+          name: recipientData.name,
+          street: recipientData.address?.street || 'Endereço a ser definido',
+          number: recipientData.address?.number || '0',
+          neighborhood: recipientData.address?.neighborhood || 'Centro',
+          city: recipientData.address?.city || 'A definir',
+          state: recipientData.address?.state || 'GO',
+          cep: recipientData.address?.cep || '00000000',
+          address_type: 'recipient',
+          user_id: userId
+        }])
         .select()
         .single();
 
@@ -82,27 +125,29 @@ serve(async (req) => {
       // Gerar código de rastreamento
       const trackingCode = `TRK-${new Date().getFullYear()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
-      // Criar remessa no sistema
+      // Criar remessa usando dados completos da cotação
       const shipmentData = {
-        user_id: userId, // Associar ao usuário se logado
+        user_id: userId,
         tracking_code: trackingCode,
         sender_address_id: senderAddress.id,
         recipient_address_id: recipientAddress.id,
         quote_data: {
+          ...quoteOptions,
           paymentMethod: 'pix',
           pixPaymentId: pixData.id,
           externalId: externalId,
-          amount: pixData.amount / 100, // Converter centavos para reais
+          amount: pixData.amount / 100,
           paidAt: new Date().toISOString(),
-          customer: customerData
+          customer: customerData,
+          originalQuote: tempQuote.id
         },
-        selected_option: 'standard',
-        pickup_option: 'dropoff',
-        weight: 1, // Peso padrão - será atualizado quando tivermos mais dados
-        length: 20,
-        width: 20, 
-        height: 20,
-        format: 'caixa',
+        selected_option: quoteOptions.selectedOption || 'standard',
+        pickup_option: quoteOptions.pickupOption || 'dropoff',
+        weight: packageData.weight || 1,
+        length: packageData.length || 20,
+        width: packageData.width || 20, 
+        height: packageData.height || 20,
+        format: packageData.format || 'caixa',
         status: 'PAYMENT_RECEIVED',
         payment_data: {
           method: 'pix',
@@ -110,7 +155,8 @@ serve(async (req) => {
           pixData: pixData,
           webhookData: webhookData.data,
           externalId: externalId,
-          paidAt: new Date().toISOString()
+          paidAt: new Date().toISOString(),
+          quoteId: tempQuote.id
         }
       };
 
@@ -128,13 +174,24 @@ serve(async (req) => {
 
       console.log('Remessa criada com sucesso:', newShipment);
 
+      // Marcar cotação temporária como processada
+      await supabase
+        .from('temp_quotes')
+        .update({ 
+          status: 'processed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', tempQuote.id);
+
+      console.log('✅ Cotação temporária marcada como processada');
+
       // Criar histórico de status
       const { error: historyError } = await supabase
         .from('shipment_status_history')
         .insert([{
           shipment_id: newShipment.id,
           status: 'PAYMENT_RECEIVED',
-          observacoes: `Pagamento PIX aprovado via webhook. Valor: R$ ${(pixData.amount / 100).toFixed(2)}. ExternalId: ${externalId}. ${userId ? `Cliente: ${userId}` : 'Cliente anônimo.'}`
+          observacoes: `Pagamento PIX aprovado via webhook. Valor: R$ ${(pixData.amount / 100).toFixed(2)}. ExternalId: ${externalId}. Cotação: ${tempQuote.id}. ${userId ? `Cliente: ${userId}` : 'Cliente anônimo.'}`
         }]);
 
       if (historyError) {
