@@ -18,7 +18,8 @@ import {
   Truck,
   Plus,
   Download,
-  FileSpreadsheet
+  FileSpreadsheet,
+  MapPin
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -606,74 +607,160 @@ const ClientHistorico = () => {
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {filteredItems.map((item) => (
-                  <div key={item.id} className="p-4 bg-muted/20 hover:bg-muted/30 rounded-lg border border-border/50 transition-colors">
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 bg-accent/50 rounded-full flex items-center justify-center">
-                        {getStatusIcon(item.status)}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-                          <div className="flex items-center gap-3">
-                            <h4 className="font-semibold text-foreground">Remessa #{item.tracking_code || 'Pendente'}</h4>
+                  <Card key={item.id} className="border-border/30 hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <h3 className="font-semibold text-lg">
+                              {item.tracking_code || `ID${item.id.slice(0, 8).toUpperCase()}`}
+                            </h3>
                             {getStatusBadge(item.status)}
                           </div>
                           <div className="flex items-center text-sm text-muted-foreground">
                             <CalendarIcon className="w-4 h-4 mr-2" />
-                            {new Date(item.created_at).toLocaleDateString('pt-BR', {
+                            <span className="font-medium">Criado em:</span>
+                            <span className="ml-1">{new Date(item.created_at).toLocaleDateString('pt-BR', {
                               day: '2-digit',
                               month: '2-digit',
                               year: 'numeric',
                               hour: '2-digit',
                               minute: '2-digit'
-                            })}
-                          </div>
-                        </div>
-                        
-                        <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-                          Remessa para {item.recipient_address?.name || 'destinatário'} em {item.recipient_address?.city || 'cidade não informada'}, {item.recipient_address?.state || 'estado'}
-                        </p>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm mb-3">
-                          <div className="flex items-center gap-2">
-                            <Package className="w-4 h-4 text-muted-foreground" />
-                            <span>Peso: {item.weight}kg</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <CreditCard className="w-4 h-4 text-success" />
-                            <span className="font-semibold text-success">R$ {item.price.toFixed(2)}</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-info" />
-                            <span>{item.delivery_days} dias úteis</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <Truck className="w-4 h-4 text-warning" />
-                            <span>{item.selected_option}</span>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-border/50">
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground mb-1">Remetente</p>
-                            <p className="text-sm">{item.sender_address?.name}</p>
-                            <p className="text-xs text-muted-foreground">{item.sender_address?.city}, {item.sender_address?.state}</p>
-                          </div>
-                          
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground mb-1">Destinatário</p>
-                            <p className="text-sm">{item.recipient_address?.name}</p>
-                            <p className="text-xs text-muted-foreground">{item.recipient_address?.city}, {item.recipient_address?.state}</p>
+                            })}</span>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div className="space-y-1">
+                          <p className="font-medium text-muted-foreground">Remetente</p>
+                          <p className="font-medium">
+                            {(() => {
+                              // Primeiro tenta os dados do quote_data
+                              if (item.quote_data?.senderData?.name) {
+                                return item.quote_data.senderData.name;
+                              }
+                              // Depois tenta o address, mas verifica se não é um valor placeholder
+                              if (item.sender_address?.name && 
+                                  item.sender_address.name !== 'A definir' && 
+                                  item.sender_address.name.trim() !== '') {
+                                return item.sender_address.name;
+                              }
+                              return 'Nome não informado';
+                            })()}
+                          </p>
+                          <div className="flex items-center text-muted-foreground">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {(() => {
+                              // Primeiro tenta os dados do quote_data
+                              if (item.quote_data?.senderData?.address?.city) {
+                                return `${item.quote_data.senderData.address.city} - ${item.quote_data.senderData.address.state}`;
+                              }
+                              // Depois tenta o address, mas verifica se não é um valor placeholder
+                              if (item.sender_address?.city && 
+                                  item.sender_address.city !== 'A definir' && 
+                                  item.sender_address.city.trim() !== '') {
+                                return `${item.sender_address.city} - ${item.sender_address.state}`;
+                              }
+                              return 'Cidade não informada';
+                            })()}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="font-medium text-muted-foreground">Destinatário</p>
+                          <p className="font-medium">
+                            {(() => {
+                              // Primeiro tenta os dados do quote_data
+                              if (item.quote_data?.recipientData?.name) {
+                                return item.quote_data.recipientData.name;
+                              }
+                              // Depois tenta o address, mas verifica se não é um valor placeholder
+                              if (item.recipient_address?.name && 
+                                  item.recipient_address.name !== 'A definir' && 
+                                  item.recipient_address.name.trim() !== '') {
+                                return item.recipient_address.name;
+                              }
+                              return 'Nome não informado';
+                            })()}
+                          </p>
+                          <div className="flex items-center text-muted-foreground">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {(() => {
+                              // Primeiro tenta os dados do quote_data
+                              if (item.quote_data?.recipientData?.address?.city) {
+                                return `${item.quote_data.recipientData.address.city} - ${item.quote_data.recipientData.address.state}`;
+                              }
+                              // Depois tenta o address, mas verifica se não é um valor placeholder
+                              if (item.recipient_address?.city && 
+                                  item.recipient_address.city !== 'A definir' && 
+                                  item.recipient_address.city.trim() !== '') {
+                                return `${item.recipient_address.city} - ${item.recipient_address.state}`;
+                              }
+                              return 'Cidade não informada';
+                            })()}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="font-medium text-muted-foreground">Valor do Frete</p>
+                          {(() => {
+                            // Tentar obter o valor do frete de várias fontes
+                            let amount = null;
+                            
+                            // 1. Tentar payment_data.pixData.amount (PIX - já vem em centavos)
+                            if (item.payment_data?.pixData?.amount) {
+                              amount = item.payment_data.pixData.amount; // já está em centavos
+                            }
+                            // 2. Tentar payment_data.amount (PIX novo formato - vem em reais, precisa converter)
+                            else if (item.payment_data?.amount && item.payment_data?.method === 'pix') {
+                              amount = item.payment_data.amount * 100; // converter de reais para centavos
+                            }
+                            // 3. Tentar payment_data.amount (Stripe/Cartão - já em centavos)
+                            else if (item.payment_data?.amount) {
+                              amount = item.payment_data.amount;
+                            }
+                            // 4. Tentar quote_data.amount (valor já pago)
+                            else if (item.quote_data?.amount) {
+                              amount = item.quote_data.amount * 100; // converter de reais para centavos
+                            }
+                            // 5. Tentar quote_data.shippingQuote.economicPrice ou expressPrice
+                            else if (item.quote_data?.shippingQuote) {
+                              const price = item.selected_option === 'express' 
+                                ? item.quote_data.shippingQuote.expressPrice 
+                                : item.quote_data.shippingQuote.economicPrice;
+                              amount = price * 100; // converter de reais para centavos
+                            }
+                            // 6. Tentar quote_data.totalPrice
+                            else if (item.quote_data?.totalPrice) {
+                              amount = item.quote_data.totalPrice * 100; // converter de reais para centavos
+                            }
+                            // 7. Tentar deliveryDetails.totalPrice
+                            else if (item.quote_data?.deliveryDetails?.totalPrice) {
+                              amount = item.quote_data.deliveryDetails.totalPrice * 100;
+                            }
+                            // 8. Usar o campo price que já vem formatado
+                            else if (item.price) {
+                              amount = item.price * 100;
+                            }
+
+                            return amount ? (
+                              <p className="font-medium text-success">
+                                {new Intl.NumberFormat('pt-BR', {
+                                  style: 'currency',
+                                  currency: 'BRL'
+                                }).format(amount / 100)}
+                              </p>
+                            ) : (
+                              <p className="font-medium text-muted-foreground">Valor não disponível</p>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
