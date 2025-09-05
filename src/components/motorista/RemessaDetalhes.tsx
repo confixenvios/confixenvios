@@ -106,15 +106,28 @@ export const RemessaDetalhes = ({
   };
 
   const getFreightValue = () => {
+    // Tenta pegar do payment_data primeiro (já em centavos)
+    if (remessa.payment_data?.pix_details?.amount) {
+      return remessa.payment_data.pix_details.amount;
+    }
     if (remessa.payment_data?.pixData?.amount) {
       return remessa.payment_data.pixData.amount;
     }
     if (remessa.payment_data?.amount) {
       return remessa.payment_data.amount;
     }
-    if (remessa.quote_data?.amount) {
-      return remessa.quote_data.amount * 100;
+    
+    // Se não encontrar no payment_data, busca no quote_data
+    if (remessa.quote_data?.deliveryDetails?.totalPrice) {
+      return remessa.quote_data.deliveryDetails.totalPrice * 100; // Converte para centavos
     }
+    if (remessa.quote_data?.deliveryDetails?.shippingPrice) {
+      return remessa.quote_data.deliveryDetails.shippingPrice * 100; // Converte para centavos
+    }
+    if (remessa.quote_data?.amount) {
+      return remessa.quote_data.amount * 100; // Converte para centavos
+    }
+    
     return 0;
   };
 
