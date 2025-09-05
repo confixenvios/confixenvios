@@ -307,10 +307,51 @@ const AdminRemessas = () => {
     }
   };
 
-  const getQuoteValue = (quoteData: any) => {
-    if (quoteData?.selectedQuote?.price) {
-      return parseFloat(quoteData.selectedQuote.price);
+  const getQuoteValue = (shipment: Shipment) => {
+    const paymentData = shipment.payment_data as any;
+    const quoteData = shipment.quote_data as any;
+    
+    // 1. Tentar payment_data.pix_details.amount (PIX)
+    if (paymentData?.pix_details?.amount) {
+      return paymentData.pix_details.amount;
     }
+    
+    // 2. Tentar payment_data.amount (PIX novo formato - em reais)
+    if (paymentData?.amount && paymentData?.method === 'pix') {
+      return paymentData.amount;
+    }
+    
+    // 3. Tentar payment_data.amount (Stripe/Cartão - em centavos)
+    if (paymentData?.amount) {
+      return paymentData.amount / 100;
+    }
+    
+    // 4. Tentar quote_data.amount
+    if (quoteData?.amount) {
+      return quoteData.amount;
+    }
+    
+    // 5. Tentar quote_data.deliveryDetails.totalPrice
+    if (quoteData?.deliveryDetails?.totalPrice) {
+      return quoteData.deliveryDetails.totalPrice;
+    }
+    
+    // 6. Tentar quote_data.shippingQuote baseado na opção selecionada
+    if (quoteData?.shippingQuote) {
+      const price = shipment.selected_option === 'express' 
+        ? quoteData.shippingQuote.expressPrice 
+        : quoteData.shippingQuote.economicPrice;
+      if (price) return price;
+    }
+    
+    // 7. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
+    if (quoteData?.quoteData?.shippingQuote) {
+      const price = shipment.selected_option === 'express' 
+        ? quoteData.quoteData.shippingQuote.expressPrice 
+        : quoteData.quoteData.shippingQuote.economicPrice;
+      if (price) return price;
+    }
+    
     return 0;
   };
 
@@ -540,9 +581,9 @@ const AdminRemessas = () => {
                             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Valor</span>
                           </div>
                           <div>
-                            <p className="font-bold text-lg text-primary">
-                              R$ {getQuoteValue(shipment.quote_data).toFixed(2).replace('.', ',')}
-                            </p>
+                             <p className="font-bold text-lg text-primary">
+                               R$ {getQuoteValue(shipment).toFixed(2).replace('.', ',')}
+                             </p>
                             <div className="flex items-center text-xs text-muted-foreground mt-1">
                               <Package className="w-3 h-3 mr-1" />
                               {shipment.weight}kg • {shipment.format}
