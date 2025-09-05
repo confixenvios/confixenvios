@@ -33,14 +33,6 @@ const OCCURRENCE_TYPES: OccurrenceType[] = [
     newStatus: 'COLETA_FINALIZADA'
   },
   {
-    id: 'em_rota',
-    label: 'Em Rota de Entrega',
-    description: 'Mercadoria está em trânsito para entrega',
-    icon: Truck,
-    color: 'default',
-    newStatus: 'EM_TRANSITO'
-  },
-  {
     id: 'tentativa_entrega',
     label: 'Tentativa de Entrega',
     description: 'Entrega não realizada (requer motivo)',
@@ -55,22 +47,6 @@ const OCCURRENCE_TYPES: OccurrenceType[] = [
     icon: CheckCircle,
     color: 'success',
     newStatus: 'ENTREGA_FINALIZADA'
-  },
-  {
-    id: 'aguardando_destinatario',
-    label: 'Aguardando Destinatário',
-    description: 'Destinatário não disponível no momento',
-    icon: Clock,
-    color: 'secondary',
-    newStatus: 'AGUARDANDO_DESTINATARIO'
-  },
-  {
-    id: 'endereco_incorreto',
-    label: 'Endereço Incorreto',
-    description: 'Problema com o endereço de entrega',
-    icon: MapPin,
-    color: 'destructive',
-    newStatus: 'ENDERECO_INCORRETO'
   }
 ];
 
