@@ -270,7 +270,19 @@ const ClientDashboard = () => {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium">
-                        R$ {shipment.quote_data?.price || '0,00'}
+                        R$ {(() => {
+                          // Try to get the payment amount from different sources
+                          if (shipment.payment_data?.pixData?.amount) {
+                            return (shipment.payment_data.pixData.amount / 100).toFixed(2);
+                          }
+                          if (shipment.quote_data?.amount) {
+                            return shipment.quote_data.amount.toFixed(2);
+                          }
+                          if (shipment.quote_data?.price) {
+                            return shipment.quote_data.price.toFixed(2);
+                          }
+                          return '0,00';
+                        })()}
                       </p>
                     </div>
                   </div>
