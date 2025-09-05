@@ -4,14 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Truck, Package, MapPin, Phone, LogOut, CheckCircle, Clock, Calendar, Eye } from 'lucide-react';
+import { Truck, Package, MapPin, Phone, LogOut, CheckCircle, Clock, Calendar, Eye, User, FileText, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { RemessaDetalhes } from '@/components/motorista/RemessaDetalhes';
 
 interface MotoristaSession {
   id: string;
@@ -68,6 +65,7 @@ const MotoristaDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedRemessa, setSelectedRemessa] = useState<Remessa | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     // Check motorista session
@@ -107,10 +105,12 @@ const MotoristaDashboard = () => {
     }
   };
 
-  const updateRemessaStatus = async (remessaId: string, newStatus: string, observacoes?: string) => {
+  const updateRemessaStatus = async (remessaId: string, newStatus: string, data?: any) => {
     if (!motoristaSession) return;
 
     try {
+      setRefreshing(true);
+
       // Update shipment status
       const { error: shipmentError } = await supabase
         .from('shipments')
@@ -119,23 +119,33 @@ const MotoristaDashboard = () => {
 
       if (shipmentError) throw shipmentError;
 
-      // Add to status history
+      // Add to status history with enhanced data
+      const historyData = {
+        shipment_id: remessaId,
+        status: newStatus,
+        motorista_id: motoristaSession.id,
+        observacoes: data?.occurrence?.observations || data?.observacoes || null
+      };
+
       const { error: historyError } = await supabase
         .from('shipment_status_history')
-        .insert([{
-          shipment_id: remessaId,
-          status: newStatus,
-          motorista_id: motoristaSession.id,
-          observacoes
-        }]);
+        .insert([historyData]);
 
       if (historyError) throw historyError;
 
+      // TODO: Save photos and signatures to storage if provided
+      if (data?.photos || data?.signature) {
+        console.log('Photos and signature data:', { photos: data.photos, signature: data.signature });
+        // Implementation for file storage would go here
+      }
+
       toast.success('Status atualizado com sucesso!');
-      loadMinhasRemessas(motoristaSession.id);
+      await loadMinhasRemessas(motoristaSession.id);
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
       toast.error('Erro ao atualizar status');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -153,81 +163,48 @@ const MotoristaDashboard = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; variant: any; icon: any }> = {
-      'PENDING_LABEL': { label: 'Pendente', variant: 'secondary', icon: Clock },
-      'COLETA_ACEITA': { label: 'Coleta Aceita', variant: 'default', icon: CheckCircle },
-      'COLETA_FINALIZADA': { label: 'Coleta Finalizada', variant: 'default', icon: Package },
-      'ENTREGA_FINALIZADA': { label: 'Entrega Finalizada', variant: 'default', icon: CheckCircle }
+    const statusConfig: Record<string, { label: string; variant: any; color?: string }> = {
+      'PENDING_LABEL': { label: 'Aguardando', variant: 'secondary' },
+      'LABEL_GENERATED': { label: 'Pronto p/ Coleta', variant: 'default' },
+      'COLETA_ACEITA': { label: 'Aceita', variant: 'default', color: 'bg-blue-100 text-blue-800' },
+      'COLETA_FINALIZADA': { label: 'Coletado', variant: 'success', color: 'bg-green-100 text-green-800' },
+      'EM_TRANSITO': { label: 'Em Trânsito', variant: 'default', color: 'bg-yellow-100 text-yellow-800' },
+      'TENTATIVA_ENTREGA': { label: 'Tentativa', variant: 'destructive', color: 'bg-red-100 text-red-800' },
+      'ENTREGA_FINALIZADA': { label: 'Entregue', variant: 'success', color: 'bg-green-100 text-green-800' },
+      'AGUARDANDO_DESTINATARIO': { label: 'Aguard. Dest.', variant: 'secondary' },
+      'ENDERECO_INCORRETO': { label: 'End. Incorreto', variant: 'destructive' }
     };
 
-    const config = statusConfig[status] || { label: status, variant: 'outline', icon: Package };
-    const Icon = config.icon;
+    const config = statusConfig[status] || { label: status, variant: 'outline' };
 
     return (
-      <Badge variant={config.variant}>
-        <Icon className="h-3 w-3 mr-1" />
+      <Badge variant={config.variant} className={config.color}>
         {config.label}
       </Badge>
     );
   };
 
-  const getAvailableActions = (status: string, remessaId: string, remessa: Remessa) => {
-    const actions = [];
+  const canAcceptPickup = (status: string) => {
+    return ['PENDING_LABEL', 'LABEL_GENERATED'].includes(status);
+  };
 
-    // Adicionar botão de detalhes sempre
-    actions.push(
-      <Button
-        key="detalhes"
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          setSelectedRemessa(remessa);
-          setDetailsModalOpen(true);
-        }}
-      >
-        <Eye className="h-3 w-3 mr-1" />
-        Ver Detalhes
-      </Button>
-    );
+  const handleViewDetails = (remessa: Remessa) => {
+    setSelectedRemessa(remessa);
+    setDetailsModalOpen(true);
+  };
 
-    switch (status) {
-      case 'PENDING_LABEL':
-      case 'LABEL_GENERATED':
-        actions.push(
-          <Button
-            key="aceitar"
-            size="sm"
-            onClick={() => updateRemessaStatus(remessaId, 'COLETA_ACEITA')}
-          >
-            Aceitar Coleta
-          </Button>
-        );
+  const handleQuickAction = (remessaId: string, action: string) => {
+    switch (action) {
+      case 'accept_pickup':
+        updateRemessaStatus(remessaId, 'COLETA_ACEITA');
         break;
-      case 'COLETA_ACEITA':
-        actions.push(
-          <Button
-            key="finalizar-coleta"
-            size="sm"
-            onClick={() => updateRemessaStatus(remessaId, 'COLETA_FINALIZADA')}
-          >
-            Finalizar Coleta
-          </Button>
-        );
+      case 'complete_pickup':
+        updateRemessaStatus(remessaId, 'COLETA_FINALIZADA');
         break;
-      case 'COLETA_FINALIZADA':
-        actions.push(
-          <Button
-            key="confirmar-entrega"
-            size="sm"
-            onClick={() => updateRemessaStatus(remessaId, 'ENTREGA_FINALIZADA')}
-          >
-            Confirmar Entrega
-          </Button>
-        );
+      case 'complete_delivery':
+        updateRemessaStatus(remessaId, 'ENTREGA_FINALIZADA');
         break;
     }
-
-    return actions;
   };
 
   const formatDate = (dateString: string) => {
@@ -277,468 +254,195 @@ const MotoristaDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-background/80">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Truck className="h-5 w-5 text-primary-foreground" />
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+      {/* Mobile-First Header */}
+      <header className="sticky top-0 z-40 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 border-b">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-primary to-primary/80">
+                <Truck className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h1 className="font-semibold text-lg leading-tight">Portal do Motorista</h1>
+                <p className="text-sm text-muted-foreground truncate">
+                  {motoristaSession?.nome}
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-semibold">Portal do Motorista</h1>
-              <p className="text-sm text-muted-foreground">
-                Bem-vindo, {motoristaSession?.nome}
-              </p>
-            </div>
+            <Button variant="ghost" size="icon" onClick={handleLogout}>
+              <LogOut className="h-5 w-5" />
+            </Button>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Button>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold mb-2">Minhas Coletas</h2>
-          <p className="text-muted-foreground">
-            Gerencie suas coletas e entregas atribuídas
-          </p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/20">
-                  <Clock className="h-5 w-5 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Pendentes</p>
-                  <p className="text-xl font-bold">
-                    {remessas.filter(r => ['PENDING_LABEL', 'LABEL_GENERATED'].includes(r.status)).length}
-                  </p>
-                </div>
+      <main className="container mx-auto px-4 py-4 space-y-6">
+        {/* Stats Cards - Mobile Optimized */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
+          <Card className="border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900">
+            <CardContent className="p-3 text-center">
+              <div className="w-8 h-8 mx-auto mb-2 flex items-center justify-center rounded-full bg-orange-500 text-white">
+                <Clock className="h-4 w-4" />
               </div>
+              <p className="text-lg font-bold text-orange-700 dark:text-orange-300">
+                {remessas.filter(r => ['PENDING_LABEL', 'LABEL_GENERATED'].includes(r.status)).length}
+              </p>
+              <p className="text-xs text-orange-600 dark:text-orange-400">Pendentes</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20">
-                  <Package className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Em Andamento</p>
-                  <p className="text-xl font-bold">
-                    {remessas.filter(r => ['COLETA_ACEITA', 'COLETA_FINALIZADA'].includes(r.status)).length}
-                  </p>
-                </div>
+          <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
+            <CardContent className="p-3 text-center">
+              <div className="w-8 h-8 mx-auto mb-2 flex items-center justify-center rounded-full bg-blue-500 text-white">
+                <Truck className="h-4 w-4" />
               </div>
+              <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
+                {remessas.filter(r => ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO'].includes(r.status)).length}
+              </p>
+              <p className="text-xs text-blue-600 dark:text-blue-400">Em Rota</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/20">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Concluídas</p>
-                  <p className="text-xl font-bold">
-                    {remessas.filter(r => r.status === 'ENTREGA_FINALIZADA').length}
-                  </p>
-                </div>
+          <Card className="border-green-200 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
+            <CardContent className="p-3 text-center">
+              <div className="w-8 h-8 mx-auto mb-2 flex items-center justify-center rounded-full bg-green-500 text-white">
+                <CheckCircle className="h-4 w-4" />
               </div>
+              <p className="text-lg font-bold text-green-700 dark:text-green-300">
+                {remessas.filter(r => r.status === 'ENTREGA_FINALIZADA').length}
+              </p>
+              <p className="text-xs text-green-600 dark:text-green-400">Entregues</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Remessas Cards */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Lista de Remessas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {remessas.length === 0 ? (
-              <div className="text-center py-12">
-                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-lg font-medium mb-2">Nenhuma coleta atribuída</p>
-                <p className="text-muted-foreground">
+        {/* Remessas List - Mobile Optimized */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold">Minhas Remessas</h2>
+              <p className="text-sm text-muted-foreground">
+                {remessas.length} {remessas.length === 1 ? 'remessa' : 'remessas'} atribuída{remessas.length === 1 ? '' : 's'}
+              </p>
+            </div>
+            {refreshing && (
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent"></div>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((n) => (
+                <Card key={n} className="animate-pulse">
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div className="h-4 bg-muted rounded w-1/3"></div>
+                      <div className="h-3 bg-muted rounded w-1/2"></div>
+                      <div className="h-3 bg-muted rounded w-2/3"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : remessas.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-muted">
+                  <Package className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-medium mb-2">Nenhuma remessa atribuída</h3>
+                <p className="text-sm text-muted-foreground">
                   Aguarde novas remessas serem designadas para você.
                 </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {remessas.map((remessa) => (
-                  <Card key={remessa.id} className="border-border/30 hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <h3 className="font-semibold text-lg">
-                              {remessa.tracking_code || `ID${remessa.id.slice(0, 8).toUpperCase()}`}
-                            </h3>
-                            {getStatusBadge(remessa.status)}
-                          </div>
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Calendar className="w-4 h-4 mr-2" />
-                            <span className="font-medium">Criado em:</span>
-                            <span className="ml-1">{format(new Date(remessa.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
-                          </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {remessas.map((remessa) => {
+                const canAccept = canAcceptPickup(remessa.status);
+                
+                return (
+                  <Card 
+                    key={remessa.id} 
+                    className="hover:shadow-md transition-all duration-200 active:scale-95"
+                    onClick={() => handleViewDetails(remessa)}
+                  >
+                    <CardContent className="p-4">
+                      {/* Header */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0"></div>
+                          <span className="font-semibold truncate">
+                            {remessa.tracking_code || `ID${remessa.id.slice(0, 8).toUpperCase()}`}
+                          </span>
                         </div>
-                        <div className="flex space-x-2">
-                          {getAvailableActions(remessa.status, remessa.id, remessa)}
-                        </div>
+                        {getStatusBadge(remessa.status)}
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div className="space-y-1">
-                          <p className="font-medium text-muted-foreground">Remetente</p>
-                          <p className="font-medium">{remessa.sender_address?.name || 'Nome não informado'}</p>
-                          <div className="flex items-center text-muted-foreground">
-                            <MapPin className="w-3 h-3 mr-1" />
-                            {remessa.sender_address?.city ? 
-                              `${remessa.sender_address.city} - ${remessa.sender_address.state}` : 
-                              'Cidade não informada'
-                            }
+                      {/* Content */}
+                      <div className="space-y-3">
+                        {/* Route Info */}
+                        <div className="flex items-center gap-3 text-sm">
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <User className="w-3 h-3" />
+                            <span className="truncate">{remessa.sender_address?.name || 'Remetente'}</span>
                           </div>
-                          {remessa.sender_address?.phone && (
-                            <div className="flex items-center text-muted-foreground">
-                              <Phone className="w-3 h-3 mr-1" />
-                              {remessa.sender_address.phone}
-                            </div>
+                          <div className="text-muted-foreground">→</div>
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <MapPin className="w-3 h-3" />
+                            <span className="truncate">{remessa.recipient_address?.name || 'Destinatário'}</span>
+                          </div>
+                        </div>
+
+                        {/* Details */}
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Package className="w-3 h-3" />
+                            <span>{remessa.weight}kg</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            <span>{format(new Date(remessa.created_at), 'dd/MM HH:mm', { locale: ptBR })}</span>
+                          </div>
+                          {remessa.selected_option === 'express' && (
+                            <Badge variant="outline" className="text-xs">
+                              Expresso
+                            </Badge>
                           )}
                         </div>
 
-                        <div className="space-y-1">
-                          <p className="font-medium text-muted-foreground">Destinatário</p>
-                          <p className="font-medium">{remessa.recipient_address?.name || 'Nome não informado'}</p>
-                          <div className="flex items-center text-muted-foreground">
-                            <MapPin className="w-3 h-3 mr-1" />
-                            {remessa.recipient_address?.city ? 
-                              `${remessa.recipient_address.city} - ${remessa.recipient_address.state}` : 
-                              'Cidade não informada'
-                            }
-                          </div>
-                          {remessa.recipient_address?.phone && (
-                            <div className="flex items-center text-muted-foreground">
-                              <Phone className="w-3 h-3 mr-1" />
-                              {remessa.recipient_address.phone}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="space-y-1">
-                          <p className="font-medium text-muted-foreground">Informações</p>
-                          <div className="flex items-center text-muted-foreground">
-                            <Package className="w-3 h-3 mr-1" />
-                            Peso: {remessa.weight}kg
-                          </div>
-                          <div className="flex items-center text-muted-foreground">
-                            <Truck className="w-3 h-3 mr-1" />
-                            {remessa.selected_option === 'express' ? 'Expresso' : 'Econômico'}
-                          </div>
-                          {(() => {
-                            // Tentar obter o valor do frete de várias fontes
-                            let amount = null;
-                            
-                            if (remessa.payment_data?.pixData?.amount) {
-                              amount = remessa.payment_data.pixData.amount;
-                            } else if (remessa.payment_data?.amount) {
-                              amount = remessa.payment_data.amount;
-                            } else if (remessa.quote_data?.amount) {
-                              amount = remessa.quote_data.amount * 100;
-                            } else if (remessa.quote_data?.shippingQuote) {
-                              const price = remessa.selected_option === 'express' 
-                                ? remessa.quote_data.shippingQuote.expressPrice 
-                                : remessa.quote_data.shippingQuote.economicPrice;
-                              amount = price * 100;
-                            } else if (remessa.quote_data?.totalPrice) {
-                              amount = remessa.quote_data.totalPrice * 100;
-                            }
-
-                            return amount ? (
-                              <p className="font-medium text-success">
-                                {formatCurrency(amount)}
-                              </p>
-                            ) : (
-                              <p className="font-medium text-muted-foreground">Valor não disponível</p>
-                            );
-                          })()}
-                        </div>
+                        {/* Quick Actions */}
+                        {canAccept && (
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleQuickAction(remessa.id, 'accept_pickup');
+                            }}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Aceitar Coleta
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-        {/* Modal de Detalhes da Remessa */}
-        <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
-          <DialogContent className="max-w-4xl max-h-[80vh]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
-                Detalhes da Remessa - {selectedRemessa?.tracking_code || `ID${selectedRemessa?.id.slice(0, 8).toUpperCase()}`}
-              </DialogTitle>
-            </DialogHeader>
-            
-            <ScrollArea className="max-h-[60vh] pr-4">
-              {selectedRemessa && (
-                <div className="space-y-6">
-                  {/* Informações Gerais */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3">Informações Gerais</h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Código de Rastreamento</p>
-                        <p className="font-medium">{selectedRemessa.tracking_code || `ID${selectedRemessa.id.slice(0, 8).toUpperCase()}`}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Status</p>
-                        <div className="mt-1">{getStatusBadgeForDetails(selectedRemessa.status)}</div>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Data de Criação</p>
-                        <p className="font-medium">{formatDate(selectedRemessa.created_at)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Tipo de Serviço</p>
-                        <p className="font-medium">{selectedRemessa.selected_option === 'standard' ? 'Econômico' : 'Expresso'}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Opção de Coleta</p>
-                        <p className="font-medium">{selectedRemessa.pickup_option === 'dropoff' ? 'Entrega no Hub' : 'Coleta no Local'}</p>
-                      </div>
-                      {selectedRemessa.cte_key && (
-                        <div>
-                          <p className="text-muted-foreground">Chave CTE</p>
-                          <p className="font-medium font-mono text-xs">{selectedRemessa.cte_key}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Dados do Remetente */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3">Dados do Remetente</h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Nome</p>
-                        <p className="font-medium">{selectedRemessa.sender_address?.name}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">CEP</p>
-                        <p className="font-medium">{selectedRemessa.sender_address?.cep}</p>
-                      </div>
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">Endereço</p>
-                        <p className="font-medium">
-                          {selectedRemessa.sender_address?.street}, {selectedRemessa.sender_address?.number}
-                          {selectedRemessa.sender_address?.complement && `, ${selectedRemessa.sender_address.complement}`}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Bairro</p>
-                        <p className="font-medium">{selectedRemessa.sender_address?.neighborhood}</p>
-                      </div>
-                       <div>
-                         <p className="text-muted-foreground">Cidade/Estado</p>
-                         <p className="font-medium">
-                           {selectedRemessa.sender_address?.city && selectedRemessa.sender_address?.city !== 'A definir' ? 
-                             `${selectedRemessa.sender_address.city} - ${selectedRemessa.sender_address.state}` : 
-                             selectedRemessa.quote_data?.senderData?.city ? 
-                               `${selectedRemessa.quote_data.senderData.city} - ${selectedRemessa.quote_data.senderData.state}` :
-                               'Goiânia - GO'
-                           }
-                         </p>
-                       </div>
-                      {selectedRemessa.sender_address?.phone && (
-                        <div>
-                          <p className="text-muted-foreground">Telefone</p>
-                          <p className="font-medium flex items-center">
-                            <Phone className="h-3 w-3 mr-1" />
-                            {selectedRemessa.sender_address.phone}
-                          </p>
-                        </div>
-                      )}
-                      {selectedRemessa.sender_address?.reference && (
-                        <div className="col-span-2">
-                          <p className="text-muted-foreground">Referência</p>
-                          <p className="font-medium">{selectedRemessa.sender_address.reference}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Dados do Destinatário */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3">Dados do Destinatário</h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Nome</p>
-                        <p className="font-medium">{selectedRemessa.recipient_address?.name}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">CEP</p>
-                        <p className="font-medium">{selectedRemessa.recipient_address?.cep}</p>
-                      </div>
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">Endereço</p>
-                        <p className="font-medium">
-                          {selectedRemessa.recipient_address?.street}, {selectedRemessa.recipient_address?.number}
-                          {selectedRemessa.recipient_address?.complement && `, ${selectedRemessa.recipient_address.complement}`}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Bairro</p>
-                        <p className="font-medium">{selectedRemessa.recipient_address?.neighborhood}</p>
-                      </div>
-                       <div>
-                         <p className="text-muted-foreground">Cidade/Estado</p>
-                         <p className="font-medium">
-                           {selectedRemessa.recipient_address?.city && selectedRemessa.recipient_address?.city !== 'A definir' ? 
-                             `${selectedRemessa.recipient_address.city} - ${selectedRemessa.recipient_address.state}` : 
-                             selectedRemessa.quote_data?.recipientData?.city ? 
-                               `${selectedRemessa.quote_data.recipientData.city} - ${selectedRemessa.quote_data.recipientData.state}` :
-                               selectedRemessa.quote_data?.shippingQuote?.zoneName || 'N/A'
-                           }
-                         </p>
-                       </div>
-                      {selectedRemessa.recipient_address?.phone && (
-                        <div>
-                          <p className="text-muted-foreground">Telefone</p>
-                          <p className="font-medium flex items-center">
-                            <Phone className="h-3 w-3 mr-1" />
-                            {selectedRemessa.recipient_address.phone}
-                          </p>
-                        </div>
-                      )}
-                      {selectedRemessa.recipient_address?.reference && (
-                        <div className="col-span-2">
-                          <p className="text-muted-foreground">Referência</p>
-                          <p className="font-medium">{selectedRemessa.recipient_address.reference}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Dados do Pacote */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3">Dados do Pacote</h3>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Peso</p>
-                        <p className="font-medium">{selectedRemessa.weight}kg</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Comprimento</p>
-                        <p className="font-medium">{selectedRemessa.length}cm</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Largura</p>
-                        <p className="font-medium">{selectedRemessa.width}cm</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Altura</p>
-                        <p className="font-medium">{selectedRemessa.height}cm</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Formato</p>
-                        <p className="font-medium capitalize">{selectedRemessa.format}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Dados de Pagamento */}
-                  {selectedRemessa.payment_data && (
-                    <>
-                      <div>
-                        <h3 className="text-lg font-semibold mb-3">Dados de Pagamento</h3>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p className="text-muted-foreground">Método de Pagamento</p>
-                            <p className="font-medium">{selectedRemessa.payment_data.method?.toUpperCase()}</p>
-                          </div>
-                          {selectedRemessa.payment_data.amount && (
-                            <div>
-                              <p className="text-muted-foreground">Valor Pago</p>
-                              <p className="font-medium">{formatCurrency(selectedRemessa.payment_data.amount)}</p>
-                            </div>
-                          )}
-                          {selectedRemessa.payment_data.paidAt && (
-                            <div>
-                              <p className="text-muted-foreground">Data do Pagamento</p>
-                              <p className="font-medium">{formatDate(selectedRemessa.payment_data.paidAt)}</p>
-                            </div>
-                          )}
-                          {selectedRemessa.payment_data.status && (
-                            <div>
-                              <p className="text-muted-foreground">Status do Pagamento</p>
-                              <p className="font-medium">{selectedRemessa.payment_data.status === 'paid' ? 'PAGO' : selectedRemessa.payment_data.status}</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <Separator />
-                    </>
-                  )}
-
-                  {/* Dados da Cotação */}
-                  {selectedRemessa.quote_data && (
-                    <div>
-                      <h3 className="text-lg font-semibold mb-3">Dados da Cotação</h3>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        {selectedRemessa.quote_data.shippingQuote && (
-                          <>
-                            <div>
-                              <p className="text-muted-foreground">Zona de Entrega</p>
-                              <p className="font-medium">{selectedRemessa.quote_data.shippingQuote.zoneName} ({selectedRemessa.quote_data.shippingQuote.zone})</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Prazo Econômico</p>
-                              <p className="font-medium">{selectedRemessa.quote_data.shippingQuote.economicDays} dias</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Prazo Expresso</p>
-                              <p className="font-medium">{selectedRemessa.quote_data.shippingQuote.expressDays} dias</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Preço Original</p>
-                              <p className="font-medium">R$ {selectedRemessa.quote_data.shippingQuote.economicPrice.toFixed(2).replace('.', ',')}</p>
-                            </div>
-                          </>
-                        )}
-                        {selectedRemessa.quote_data.totalMerchandiseValue && (
-                          <div>
-                            <p className="text-muted-foreground">Valor da Mercadoria</p>
-                            <p className="font-medium">R$ {selectedRemessa.quote_data.totalMerchandiseValue.toFixed(2).replace('.', ',')}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
+        {/* Enhanced Remessa Details Modal */}
+        <RemessaDetalhes
+          isOpen={detailsModalOpen}
+          onClose={() => setDetailsModalOpen(false)}
+          remessa={selectedRemessa}
+          onUpdateStatus={updateRemessaStatus}
+        />
       </main>
     </div>
   );
