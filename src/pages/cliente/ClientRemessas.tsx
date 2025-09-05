@@ -294,24 +294,32 @@ const ClientRemessas = () => {
                              if (shipment.payment_data?.pixData?.amount) {
                                amount = shipment.payment_data.pixData.amount; // já está em centavos
                              }
-                             // 2. Tentar payment_data.amount (Stripe/Cartão - já em centavos)
+                             // 2. Tentar payment_data.amount (PIX novo formato - vem em reais, precisa converter)
+                             else if (shipment.payment_data?.amount && shipment.payment_data?.method === 'pix') {
+                               amount = shipment.payment_data.amount * 100; // converter de reais para centavos
+                             }
+                             // 3. Tentar payment_data.amount (Stripe/Cartão - já em centavos)
                              else if (shipment.payment_data?.amount) {
                                amount = shipment.payment_data.amount;
                              }
-                             // 3. Tentar quote_data.amount (valor já pago)
+                             // 4. Tentar quote_data.amount (valor já pago)
                              else if (shipment.quote_data?.amount) {
                                amount = shipment.quote_data.amount * 100; // converter de reais para centavos
                              }
-                             // 4. Tentar quote_data.shippingQuote.economicPrice ou expressPrice
+                             // 5. Tentar quote_data.shippingQuote.economicPrice ou expressPrice
                              else if (shipment.quote_data?.shippingQuote) {
                                const price = shipment.selected_option === 'express' 
                                  ? shipment.quote_data.shippingQuote.expressPrice 
                                  : shipment.quote_data.shippingQuote.economicPrice;
                                amount = price * 100; // converter de reais para centavos
                              }
-                             // 5. Tentar quote_data.totalPrice
+                             // 6. Tentar quote_data.totalPrice
                              else if (shipment.quote_data?.totalPrice) {
                                amount = shipment.quote_data.totalPrice * 100; // converter de reais para centavos
+                             }
+                             // 7. Tentar deliveryDetails.totalPrice
+                             else if (shipment.quote_data?.deliveryDetails?.totalPrice) {
+                               amount = shipment.quote_data.deliveryDetails.totalPrice * 100;
                              }
 
                              return amount ? (
@@ -680,20 +688,28 @@ const ClientRemessas = () => {
                             if (selectedShipment.payment_data?.pixData?.amount) {
                               amount = selectedShipment.payment_data.pixData.amount; // já está em centavos
                             }
-                            // 2. Tentar payment_data.amount (Stripe/Cartão)
+                            // 2. Tentar payment_data.amount (PIX novo formato - vem em reais, precisa converter)
+                            else if (selectedShipment.payment_data?.amount && selectedShipment.payment_data?.method === 'pix') {
+                              amount = selectedShipment.payment_data.amount * 100; // converter de reais para centavos
+                            }
+                            // 3. Tentar payment_data.amount (Stripe/Cartão - já em centavos)
                             else if (selectedShipment.payment_data?.amount) {
                               amount = selectedShipment.payment_data.amount;
                             }
-                            // 3. Tentar quote_data.shippingQuote.economicPrice ou expressPrice
+                            // 4. Tentar quote_data.shippingQuote.economicPrice ou expressPrice
                             else if (selectedShipment.quote_data?.shippingQuote) {
                               const price = selectedShipment.selected_option === 'express' 
                                 ? selectedShipment.quote_data.shippingQuote.expressPrice 
                                 : selectedShipment.quote_data.shippingQuote.economicPrice;
                               amount = price * 100; // converter de reais para centavos
                             }
-                            // 4. Tentar quote_data.totalPrice
+                            // 5. Tentar quote_data.totalPrice
                             else if (selectedShipment.quote_data?.totalPrice) {
                               amount = selectedShipment.quote_data.totalPrice * 100; // converter de reais para centavos
+                            }
+                            // 6. Tentar deliveryDetails.totalPrice
+                            else if (selectedShipment.quote_data?.deliveryDetails?.totalPrice) {
+                              amount = selectedShipment.quote_data.deliveryDetails.totalPrice * 100;
                             }
 
                             return amount ? (
