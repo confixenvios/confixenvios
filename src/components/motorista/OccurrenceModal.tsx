@@ -123,7 +123,15 @@ export const OccurrenceModal = ({ isOpen, onClose, onSave, shipmentId }: Occurre
                               {type.description}
                             </div>
                           </div>
-                          <Badge variant={type.color} className="ml-2">
+                          <Badge 
+                            variant={type.id === 'tentativa_entrega' ? 'secondary' : 
+                                    type.id === 'entregue' ? 'default' : 'default'} 
+                            className={`ml-2 ${
+                              type.id === 'coleta_realizada' ? 'bg-blue-100 text-blue-800 hover:bg-blue-200' :
+                              type.id === 'tentativa_entrega' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' :
+                              type.id === 'entregue' ? 'bg-green-100 text-green-800 hover:bg-green-200' : ''
+                            }`}
+                          >
                             {type.id === 'tentativa_entrega' ? 'Insucesso' : 
                              type.id === 'entregue' ? 'Entrega' : 'Coleta'}
                           </Badge>
