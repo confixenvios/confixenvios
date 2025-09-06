@@ -90,66 +90,65 @@ export const OccurrenceModal = ({ isOpen, onClose, onSave, shipmentId }: Occurre
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="w-[90vw] max-w-[400px] max-h-[80vh] p-4">
-        <DialogHeader className="pb-2">
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <FileText className="h-4 w-4" />
+      <DialogContent className="w-[95vw] max-w-sm p-4 gap-3">
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <FileText className="h-5 w-5" />
             Registrar Ocorrência
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+        <div className="space-y-4">
           {!selectedType ? (
-            <div className="bg-muted/30 rounded-lg p-4">
+            <>
               <p className="text-sm text-muted-foreground mb-3">
                 Selecione o tipo de ocorrência:
               </p>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {OCCURRENCE_TYPES.map((type) => {
                   const Icon = type.icon;
                   return (
-                    <Button
+                    <div
                       key={type.id}
-                      variant="outline"
-                      className="w-full justify-start h-auto p-3 hover:bg-muted/30 hover:border-muted-foreground/30"
+                      className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
                       onClick={() => setSelectedType(type)}
                     >
-                      <div className="flex items-center gap-2 w-full">
-                        <Icon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                        <div className="flex-1 text-left">
-                          <div className="font-medium text-sm text-foreground">{type.label}</div>
+                      <div className="flex items-center gap-3">
+                        <Icon className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <div className="font-medium text-sm">{type.label}</div>
                           <div className="text-xs text-muted-foreground">
                             {type.description}
                           </div>
                         </div>
-                        <Badge 
-                          variant="outline"
-                          className={`text-xs border ${
-                            type.id === 'coleta_realizada' ? 'border-blue-500 text-blue-700 bg-blue-50' :
-                            type.id === 'tentativa_entrega' ? 'border-yellow-500 text-yellow-700 bg-yellow-50' :
-                            type.id === 'entregue' ? 'border-green-500 text-green-700 bg-green-50' : ''
-                          }`}
-                        >
-                          {type.id === 'tentativa_entrega' ? 'Insucesso' : 
-                           type.id === 'entregue' ? 'Entrega' : 'Coleta'}
-                        </Badge>
                       </div>
-                    </Button>
+                      <Badge 
+                        variant="outline"
+                        className={`text-xs ${
+                          type.id === 'coleta_realizada' ? 'border-blue-500 text-blue-700 bg-blue-50' :
+                          type.id === 'tentativa_entrega' ? 'border-yellow-500 text-yellow-700 bg-yellow-50' :
+                          type.id === 'entregue' ? 'border-green-500 text-green-700 bg-green-50' : ''
+                        }`}
+                      >
+                        {type.id === 'tentativa_entrega' ? 'Insucesso' : 
+                         type.id === 'entregue' ? 'Entrega' : 'Coleta'}
+                      </Badge>
+                    </div>
                   );
                 })}
               </div>
-            </div>
+            </>
           ) : (
-            <div className="bg-muted/30 rounded-lg p-4 space-y-3">
-              <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
-                <selectedType.icon className="h-4 w-4" />
-                <div>
-                  <div className="font-medium text-sm">{selectedType.label}</div>
-                  <div className="text-xs text-muted-foreground">
+            <>
+              <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                <selectedType.icon className="h-5 w-5" />
+                <div className="flex-1">
+                  <div className="font-medium">{selectedType.label}</div>
+                  <div className="text-sm text-muted-foreground">
                     {selectedType.description}
                   </div>
                 </div>
-                <Badge variant={selectedType.color} className="text-xs">
+                <Badge variant={selectedType.color}>
                   Selecionado
                 </Badge>
               </div>
@@ -167,11 +166,11 @@ export const OccurrenceModal = ({ isOpen, onClose, onSave, shipmentId }: Occurre
                   value={observations}
                   onChange={(e) => setObservations(e.target.value)}
                   rows={3}
-                  className="resize-none text-sm"
+                  className="resize-none"
                 />
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-2">
                 <Button
                   variant="outline"
                   className="flex-1"
@@ -189,7 +188,7 @@ export const OccurrenceModal = ({ isOpen, onClose, onSave, shipmentId }: Occurre
                   Registrar
                 </Button>
               </div>
-            </div>
+            </>
           )}
         </div>
       </DialogContent>
