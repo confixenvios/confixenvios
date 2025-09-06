@@ -90,110 +90,106 @@ export const OccurrenceModal = ({ isOpen, onClose, onSave, shipmentId }: Occurre
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="w-[90vw] max-w-[400px] max-h-[85vh] p-4 mx-auto">
-        <DialogHeader>
+      <DialogContent className="w-[90vw] max-w-[400px] max-h-[80vh] p-4">
+        <DialogHeader className="pb-2">
           <DialogTitle className="flex items-center gap-2 text-base">
             <FileText className="h-4 w-4" />
             Registrar Ocorrência
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto">
           {!selectedType ? (
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Selecione o tipo de ocorrência:
-                </p>
-                <div className="space-y-2">
-                  {OCCURRENCE_TYPES.map((type) => {
-                    const Icon = type.icon;
-                    return (
-                      <Button
-                        key={type.id}
-                        variant="outline"
-                        className="w-full justify-start h-auto p-4 hover:bg-muted/30 hover:border-muted-foreground/30"
-                        onClick={() => setSelectedType(type)}
-                      >
-                        <div className="flex items-center gap-3 w-full">
-                          <Icon className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
-                          <div className="flex-1 text-left">
-                            <div className="font-medium text-foreground">{type.label}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {type.description}
-                            </div>
+            <div className="bg-muted/30 rounded-lg p-4">
+              <p className="text-sm text-muted-foreground mb-3">
+                Selecione o tipo de ocorrência:
+              </p>
+              <div className="space-y-2">
+                {OCCURRENCE_TYPES.map((type) => {
+                  const Icon = type.icon;
+                  return (
+                    <Button
+                      key={type.id}
+                      variant="outline"
+                      className="w-full justify-start h-auto p-3 hover:bg-muted/30 hover:border-muted-foreground/30"
+                      onClick={() => setSelectedType(type)}
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        <Icon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                        <div className="flex-1 text-left">
+                          <div className="font-medium text-sm text-foreground">{type.label}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {type.description}
                           </div>
-                          <Badge 
-                            variant="outline"
-                            className={`ml-2 border ${
-                              type.id === 'coleta_realizada' ? 'border-blue-500 text-blue-700 bg-blue-50' :
-                              type.id === 'tentativa_entrega' ? 'border-yellow-500 text-yellow-700 bg-yellow-50' :
-                              type.id === 'entregue' ? 'border-green-500 text-green-700 bg-green-50' : ''
-                            }`}
-                          >
-                            {type.id === 'tentativa_entrega' ? 'Insucesso' : 
-                             type.id === 'entregue' ? 'Entrega' : 'Coleta'}
-                          </Badge>
                         </div>
-                      </Button>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                        <Badge 
+                          variant="outline"
+                          className={`text-xs border ${
+                            type.id === 'coleta_realizada' ? 'border-blue-500 text-blue-700 bg-blue-50' :
+                            type.id === 'tentativa_entrega' ? 'border-yellow-500 text-yellow-700 bg-yellow-50' :
+                            type.id === 'entregue' ? 'border-green-500 text-green-700 bg-green-50' : ''
+                          }`}
+                        >
+                          {type.id === 'tentativa_entrega' ? 'Insucesso' : 
+                           type.id === 'entregue' ? 'Entrega' : 'Coleta'}
+                        </Badge>
+                      </div>
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
           ) : (
-            <Card>
-              <CardContent className="p-4 space-y-4">
-                <div className="flex items-center gap-3 p-3 bg-muted rounded-md">
-                  <selectedType.icon className="h-5 w-5" />
-                  <div>
-                    <div className="font-medium">{selectedType.label}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {selectedType.description}
-                    </div>
+            <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                <selectedType.icon className="h-4 w-4" />
+                <div>
+                  <div className="font-medium text-sm">{selectedType.label}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {selectedType.description}
                   </div>
-                  <Badge variant={selectedType.color}>
-                    Selecionado
-                  </Badge>
                 </div>
+                <Badge variant={selectedType.color} className="text-xs">
+                  Selecionado
+                </Badge>
+              </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Observações {selectedType.id === 'tentativa_entrega' && '(obrigatório)'}
-                  </label>
-                  <Textarea
-                    placeholder={
-                      selectedType.id === 'tentativa_entrega' 
-                        ? "Informe o motivo da não entrega..."
-                        : "Adicione observações sobre esta ocorrência (opcional)..."
-                    }
-                    value={observations}
-                    onChange={(e) => setObservations(e.target.value)}
-                    rows={3}
-                    className="resize-none"
-                  />
-                </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Observações {selectedType.id === 'tentativa_entrega' && '(obrigatório)'}
+                </label>
+                <Textarea
+                  placeholder={
+                    selectedType.id === 'tentativa_entrega' 
+                      ? "Informe o motivo da não entrega..."
+                      : "Adicione observações sobre esta ocorrência (opcional)..."
+                  }
+                  value={observations}
+                  onChange={(e) => setObservations(e.target.value)}
+                  rows={3}
+                  className="resize-none text-sm"
+                />
+              </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setSelectedType(null)}
-                  >
-                    Voltar
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    onClick={handleSave}
-                    disabled={
-                      selectedType.id === 'tentativa_entrega' && !observations.trim()
-                    }
-                  >
-                    Registrar Ocorrência
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setSelectedType(null)}
+                >
+                  Voltar
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleSave}
+                  disabled={
+                    selectedType.id === 'tentativa_entrega' && !observations.trim()
+                  }
+                >
+                  Registrar
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       </DialogContent>
