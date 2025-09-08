@@ -34,9 +34,17 @@ interface StatusHistory {
   status: string;
   created_at: string;
   observacoes: string | null;
-  photos_urls: string[] | null;
-  signature_url: string | null;
   occurrence_data: any;
+  motorista_id: string | null;
+  status_description: string | null;
+}
+
+interface ShipmentOccurrence {
+  id: string;
+  occurrence_type: string;
+  file_url: string;
+  description: string | null;
+  created_at: string;
   motorista_id: string | null;
 }
 
@@ -46,30 +54,43 @@ export const ShipmentDetailsModal = ({
   shipment 
 }: ShipmentDetailsModalProps) => {
   const [statusHistory, setStatusHistory] = useState<StatusHistory[]>([]);
+  const [occurrences, setOccurrences] = useState<ShipmentOccurrence[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen && shipment?.id) {
-      loadStatusHistory();
+      loadData();
     }
   }, [isOpen, shipment?.id]);
 
-  const loadStatusHistory = async () => {
+  const loadData = async () => {
     if (!shipment?.id) return;
     
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Carregar histórico de status
+      const { data: statusData, error: statusError } = await supabase
         .from('shipment_status_history')
         .select('*')
         .eq('shipment_id', shipment.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (statusError) throw statusError;
 
-      setStatusHistory(data || []);
+      // Carregar ocorrências (fotos e áudios)
+      const { data: occurrenceData, error: occurrenceError } = await supabase
+        .from('shipment_occurrences')
+        .select('*')
+        .eq('shipment_id', shipment.id)
+        .order('created_at', { ascending: false });
+
+      if (occurrenceError) throw occurrenceError;
+
+      setStatusHistory(statusData || []);
+      setOccurrences(occurrenceData || []);
     } catch (error) {
-      console.error('Erro ao carregar histórico:', error);
+      console.error('Erro ao carregar dados:', error);
     } finally {
       setLoading(false);
     }
@@ -293,10 +314,11 @@ export const ShipmentDetailsModal = ({
                     <div className="text-center py-4">
                       <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent mx-auto"></div>
                     </div>
-                  ) : statusHistory.length === 0 ? (
+                  ) : statusHistory.length === 0 && occurrences.length === 0 ? (
                     <p className="text-muted-foreground text-sm">Nenhuma ocorrência registrada</p>
                   ) : (
                     <div className="space-y-4">
+                      {/* Histórico de Status */}
                       {statusHistory.map((history, index) => (
                         <div key={history.id} className="relative">
                           {index < statusHistory.length - 1 && (
@@ -322,40 +344,63 @@ export const ShipmentDetailsModal = ({
                                 </p>
                               )}
 
-                              {/* Fotos */}
-                              {history.photos_urls && history.photos_urls.length > 0 && (
-                                <div className="mb-2">
-                                  <p className="text-xs font-medium mb-1 flex items-center gap-1">
-                                    <Camera className="h-3 w-3" />
-                                    Fotos ({history.photos_urls.length})
-                                  </p>
-                                  <div className="flex gap-2">
-                                    {history.photos_urls.map((url, idx) => (
-                                      <img
-                                        key={idx}
-                                        src={url}
-                                        alt={`Foto ${idx + 1}`}
-                                        className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80"
-                                        onClick={() => window.open(url, '_blank')}
-                                      />
-                                    ))}
-                                  </div>
-                                </div>
+                              {history.status_description && (
+                                <p className="text-sm text-muted-foreground mb-2 italic">
+                                  {history.status_description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Ocorrências (Fotos e Áudios) */}
+                      {occurrences.map((occurrence, index) => (
+                        <div key={occurrence.id} className="relative">
+                          {index < occurrences.length - 1 && (
+                            <div className="absolute left-6 top-8 w-px h-16 bg-border"></div>
+                          )}
+                          
+                          <div className="flex gap-3">
+                            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                              {occurrence.occurrence_type === 'foto' ? (
+                                <Camera className="h-4 w-4 text-blue-600" />
+                              ) : (
+                                <FileText className="h-4 w-4 text-green-600" />
+                              )}
+                            </div>
+                            
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge variant={occurrence.occurrence_type === 'foto' ? 'default' : 'secondary'}>
+                                  {occurrence.occurrence_type === 'foto' ? 'Foto' : 'Áudio'}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {formatDate(occurrence.created_at)}
+                                </span>
+                              </div>
+                              
+                              {occurrence.description && (
+                                <p className="text-sm text-muted-foreground mb-2">
+                                  {occurrence.description}
+                                </p>
                               )}
 
-                              {/* Assinatura */}
-                              {history.signature_url && (
-                                <div className="mb-2">
-                                  <p className="text-xs font-medium mb-1 flex items-center gap-1">
-                                    <PenTool className="h-3 w-3" />
-                                    Assinatura
-                                  </p>
-                                  <img
-                                    src={history.signature_url}
-                                    alt="Assinatura"
-                                    className="w-32 h-16 object-contain border rounded cursor-pointer hover:opacity-80"
-                                    onClick={() => window.open(history.signature_url!, '_blank')}
-                                  />
+                              {/* Exibir conteúdo da ocorrência */}
+                              {occurrence.occurrence_type === 'foto' ? (
+                                <img
+                                  src={occurrence.file_url}
+                                  alt="Foto da ocorrência"
+                                  className="w-24 h-24 object-cover rounded cursor-pointer hover:opacity-80"
+                                  onClick={() => window.open(occurrence.file_url, '_blank')}
+                                />
+                              ) : (
+                                <div className="p-2 bg-muted rounded text-sm">
+                                  <p className="text-muted-foreground">Clique para reproduzir áudio</p>
+                                  <audio controls className="w-full mt-1">
+                                    <source src={occurrence.file_url} type="audio/webm" />
+                                    Seu navegador não suporta o elemento de áudio.
+                                  </audio>
                                 </div>
                               )}
                             </div>

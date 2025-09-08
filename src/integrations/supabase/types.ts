@@ -400,42 +400,66 @@ export type Database = {
         }
         Relationships: []
       }
+      shipment_occurrences: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_url: string
+          id: string
+          motorista_id: string | null
+          occurrence_type: string
+          shipment_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_url: string
+          id?: string
+          motorista_id?: string | null
+          occurrence_type: string
+          shipment_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_url?: string
+          id?: string
+          motorista_id?: string | null
+          occurrence_type?: string
+          shipment_id?: string
+        }
+        Relationships: []
+      }
       shipment_status_history: {
         Row: {
-          audio_url: string | null
           created_at: string
           id: string
           motorista_id: string | null
           observacoes: string | null
           occurrence_data: Json | null
-          photos_urls: string[] | null
           shipment_id: string
-          signature_url: string | null
           status: string
+          status_description: string | null
         }
         Insert: {
-          audio_url?: string | null
           created_at?: string
           id?: string
           motorista_id?: string | null
           observacoes?: string | null
           occurrence_data?: Json | null
-          photos_urls?: string[] | null
           shipment_id: string
-          signature_url?: string | null
           status: string
+          status_description?: string | null
         }
         Update: {
-          audio_url?: string | null
           created_at?: string
           id?: string
           motorista_id?: string | null
           observacoes?: string | null
           occurrence_data?: Json | null
-          photos_urls?: string[] | null
           shipment_id?: string
-          signature_url?: string | null
           status?: string
+          status_description?: string | null
         }
         Relationships: [
           {

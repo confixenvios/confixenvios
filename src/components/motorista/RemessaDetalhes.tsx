@@ -96,7 +96,7 @@ export const RemessaDetalhes = ({
   };
 
   const handleOccurrenceSave = async (occurrence: any) => {
-    console.log('🎯 Iniciando salvamento de ocorrência:', {
+    console.log('🎯 Iniciando salvamento separado - Status e Ocorrências:', {
       remessaId: remessa.id,
       motoristaId: remessa.motorista_id,
       occurrence,
@@ -104,98 +104,130 @@ export const RemessaDetalhes = ({
       hasAudio: !!audioUrl
     });
 
-    // Upload photos first if any
-    let uploadedPhotoUrls: string[] = [];
-    if (photos.length > 0) {
-      console.log('📸 Fazendo upload de fotos...');
-      const supabase = createSecureSupabaseClient();
-      
-      for (const photo of photos) {
-        const fileName = `photo_${remessa.id}_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
-        const filePath = `shipment-photos/${fileName}`;
-        
-        const { data, error } = await supabase.storage
-          .from('shipment-photos')
-          .upload(filePath, photo, {
-            contentType: 'image/jpeg',
-            upsert: false
-          });
-          
-        if (!error) {
-          const { data: { publicUrl } } = supabase.storage
-            .from('shipment-photos')
-            .getPublicUrl(filePath);
-          uploadedPhotoUrls.push(publicUrl);
-          console.log('📸 Foto salva:', publicUrl);
-        } else {
-          console.error('❌ Erro no upload da foto:', error);
-        }
-      }
-    }
-
-    // Create status history record with all attachments
     const supabase = createSecureSupabaseClient();
     
-    const insertData = {
-      shipment_id: remessa.id,
-      status: occurrence.newStatus,
-      motorista_id: remessa.motorista_id,
-      observacoes: occurrence.observations || null,
-      occurrence_data: {
-        type: occurrence.type,
-        description: occurrence.description,
-        timestamp: new Date().toISOString()
-      },
-      photos_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
-      audio_url: audioUrl || null
-    };
-    
-    console.log('📝 Inserindo na shipment_status_history:', insertData);
-    
-    const { data, error } = await supabase
-      .from('shipment_status_history')
-      .insert(insertData)
-      .select();
-    
-    console.log('💾 Resultado do insert:', { data, error });
-    
-    if (!error) {
-      console.log('✅ Ocorrência salva com sucesso, atualizando status da remessa...');
-      
-      // Update shipment status
+    try {
+      // 1. Atualizar status da remessa
+      console.log('📊 Atualizando status da remessa...');
       const { error: updateError } = await supabase
         .from('shipments')
         .update({ 
           status: occurrence.newStatus,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString() 
         })
         .eq('id', remessa.id);
         
       if (updateError) {
-        console.error('❌ Erro ao atualizar status da remessa:', updateError);
-      } else {
-        console.log('✅ Status da remessa atualizado');
+        console.error('❌ Erro ao atualizar status:', updateError);
+        throw new Error(`Erro ao atualizar status: ${updateError.message}`);
       }
+
+      // 2. Registrar mudança de status no histórico
+      console.log('📝 Registrando no histórico de status...');
+      const { error: statusError } = await supabase
+        .from('shipment_status_history')
+        .insert({
+          shipment_id: remessa.id,
+          status: occurrence.newStatus,
+          motorista_id: remessa.motorista_id,
+          observacoes: occurrence.observations || null,
+          status_description: occurrence.description,
+          occurrence_data: {
+            type: occurrence.type,
+            description: occurrence.description,
+            timestamp: new Date().toISOString()
+          }
+        });
+      
+      if (statusError) {
+        console.error('❌ Erro ao registrar status:', statusError);
+        throw new Error(`Erro ao registrar histórico: ${statusError.message}`);
+      }
+
+      // 3. Salvar fotos como ocorrências
+      if (photos.length > 0) {
+        console.log('📸 Fazendo upload e salvando fotos...');
         
+        for (const photo of photos) {
+          // Upload da foto
+          const fileName = `photo_${remessa.id}_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+          const filePath = `shipment-photos/${fileName}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('shipment-photos')
+            .upload(filePath, photo, {
+              contentType: 'image/jpeg',
+              upsert: false
+            });
+          
+          if (!uploadError) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('shipment-photos')
+              .getPublicUrl(filePath);
+              
+            // Registrar foto como ocorrência
+            const { error: photoError } = await supabase
+              .from('shipment_occurrences')
+              .insert({
+                shipment_id: remessa.id,
+                motorista_id: remessa.motorista_id,
+                occurrence_type: 'foto',
+                file_url: publicUrl,
+                description: occurrence.observations || null
+              });
+              
+            if (photoError) {
+              console.error('❌ Erro ao registrar foto:', photoError);
+            } else {
+              console.log('📸 Foto registrada como ocorrência:', publicUrl);
+            }
+          } else {
+            console.error('❌ Erro no upload da foto:', uploadError);
+          }
+        }
+      }
+
+      // 4. Salvar áudio como ocorrência
+      if (audioUrl) {
+        console.log('🎵 Registrando áudio como ocorrência...');
+        const { error: audioError } = await supabase
+          .from('shipment_occurrences')
+          .insert({
+            shipment_id: remessa.id,
+            motorista_id: remessa.motorista_id,
+            occurrence_type: 'audio',
+            file_url: audioUrl,
+            description: occurrence.observations || null
+          });
+          
+        if (audioError) {
+          console.error('❌ Erro ao registrar áudio:', audioError);
+        } else {
+          console.log('🎵 Áudio registrado como ocorrência');
+        }
+      }
+      
+      console.log('✅ Processo completo finalizado');
+      
       toast({
         title: "Sucesso",
-        description: "Ocorrência registrada com sucesso!"
+        description: "Status atualizado e ocorrências registradas!"
       });
-    } else {
-      console.error('❌ Erro ao salvar ocorrência:', error);
+      
+    } catch (error: any) {
+      console.error('❌ Erro no processo:', error);
       toast({
         title: "Erro", 
-        description: `Erro ao registrar ocorrência: ${error.message}`,
+        description: error.message,
         variant: "destructive"
       });
     }
     
-    // Reset attachments after saving
+    // Reset states
     setPhotos([]);
     setAudioUrl(null);
-    
-    // Close modals and refresh
-    onClose();
+    setShowOccurrenceModal(false);
+    onUpdateStatus(remessa.id, occurrence.newStatus);
   };
 
 
