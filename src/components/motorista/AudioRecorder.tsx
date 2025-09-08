@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Card, CardContent } from '@/components/ui/card';
 import { Mic, MicOff, Play, Pause, RotateCcw, Check, X } from 'lucide-react';
 import { createSecureSupabaseClient } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface AudioRecorderProps {
   isOpen: boolean;
@@ -147,7 +147,7 @@ export const AudioRecorder = ({
       const filePath = `shipment-audio/${fileName}`;
 
       const { data, error } = await supabase.storage
-        .from('shipment-signatures')
+        .from('shipment-audio')
         .upload(filePath, audioBlob, {
           contentType: 'audio/webm',
           upsert: false
@@ -156,7 +156,7 @@ export const AudioRecorder = ({
       if (error) throw error;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('shipment-signatures')
+        .from('shipment-audio')
         .getPublicUrl(filePath);
 
       onSave(publicUrl);
