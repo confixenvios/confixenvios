@@ -179,24 +179,8 @@ serve(async (req) => {
       shipmentId = newShipment.id;
       console.log('Create payment - Created shipment with ID:', shipmentId);
       
-      // Dispatch automatic webhook for shipment creation
-      try {
-        console.log('Create payment - Dispatching automatic webhook...');
-        const webhookResponse = await supabaseService.functions.invoke('shipment-webhook-dispatch', {
-          body: {
-            shipmentId: newShipment.id,
-            shipmentData: shipmentData
-          }
-        });
-        
-        if (webhookResponse.error) {
-          console.error('Create payment - Webhook dispatch error:', webhookResponse.error);
-        } else {
-          console.log('Create payment - Webhook dispatched successfully');
-        }
-      } catch (webhookError) {
-        console.error('Create payment - Webhook error (non-critical):', webhookError);
-      }
+      // Webhook will be dispatched automatically by database trigger
+      console.log('Create payment - Shipment created:', shipmentId, '- Webhook will be triggered automatically');
     }
 
     // Se temos um shipment_id válido, atualizar com o session_id
