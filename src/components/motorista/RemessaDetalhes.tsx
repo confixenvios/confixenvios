@@ -250,98 +250,95 @@ export const RemessaDetalhes = ({
 
           <ScrollArea className="max-h-[65vh] pr-2">
             <div className="space-y-3">
-              {/* Status e Ações Principais */}
-              <Card className="border-0 shadow-none bg-muted/30">
-                <CardHeader className="pb-2 px-4 pt-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-base leading-tight break-words flex-1 min-w-0">
-                      {remessa.tracking_code || `ID${remessa.id.slice(0, 8).toUpperCase()}`}
+              {/* Cabeçalho com Status */}
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold">
+                    {remessa.tracking_code || `ID${remessa.id.slice(0, 8).toUpperCase()}`}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Criado em: {format(new Date(remessa.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                  </p>
+                </div>
+                <div className="text-right">
+                  {canChangeStatus() ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowOccurrenceModal(true)}
+                      className="flex items-center gap-2"
+                    >
+                      {getStatusBadge(remessa.status)}
+                      <FileText className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    getStatusBadge(remessa.status)
+                  )}
+                </div>
+              </div>
+
+              {/* Botão Aceitar Coleta - apenas para remessas novas */}
+              {canAcceptPickup() && (
+                <Card className="border-green-200 bg-green-50">
+                  <CardContent className="p-4">
+                    <Button
+                      className="w-full h-12 text-base"
+                      onClick={handleAcceptPickup}
+                    >
+                      <CheckCircle className="h-5 w-5 mr-2" />
+                      Aceitar Coleta
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Seção de Ocorrências - apenas para motoristas ativos */}
+              {canChangeStatus() && (
+                <Card className="border-blue-200 bg-blue-50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Registrar Ocorrência
                     </CardTitle>
-                    <div className="flex-shrink-0">
-                      {canChangeStatus() ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShowOccurrenceModal(true)}
-                          className="text-xs px-2 py-1 h-auto border border-muted-foreground/20 hover:bg-muted"
-                        >
-                          <div className="flex items-center gap-1">
-                            {getStatusBadge(remessa.status)}
-                            <FileText className="h-3 w-3 opacity-60" />
-                          </div>
-                        </Button>
-                      ) : (
-                        getStatusBadge(remessa.status)
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0 space-y-3 px-4 pb-4">
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4 mr-2 flex-shrink-0" />
-                    <span>Criado em: {format(new Date(remessa.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
-                  </div>
-
-                  {/* Ações Rápidas */}
-                  <div className="space-y-2">
-                    {canAcceptPickup() && (
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
                       <Button
-                        className="w-full"
-                        onClick={handleAcceptPickup}
+                        variant="outline"
+                        onClick={() => setShowPhotoUpload(true)}
+                        className="h-12 flex flex-col items-center gap-1"
                       >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Aceitar Coleta
+                        <Camera className="h-5 w-5" />
+                        <span className="text-xs">Foto</span>
                       </Button>
-                    )}
-                  </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowAudioRecorder(true)}
+                        className="h-12 flex flex-col items-center gap-1"
+                      >
+                        <Mic className="h-5 w-5" />
+                        <span className="text-xs">Áudio</span>
+                      </Button>
+                    </div>
 
-                  {/* Registrar Ocorrência - apenas se motorista pode alterar status */}
-                  {canChangeStatus() && (
-                    <>
-                      <Separator />
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-muted-foreground">Registrar Ocorrência</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full text-sm"
-                            onClick={() => setShowPhotoUpload(true)}
-                          >
-                            <Camera className="h-4 w-4 mr-1" />
-                            Foto
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full text-sm"
-                            onClick={() => setShowAudioRecorder(true)}
-                          >
-                            <Mic className="h-4 w-4 mr-1" />
-                            Áudio
-                          </Button>
-                        </div>
-
-                        {/* Status dos Anexos */}
-                        {(photos.length > 0 || audioUrl) && (
-                          <div className="flex gap-2 text-xs">
-                            {photos.length > 0 && (
-                              <Badge variant="outline">
-                                {photos.length} foto{photos.length > 1 ? 's' : ''}
-                              </Badge>
-                            )}
-                            {audioUrl && (
-                              <Badge variant="outline">
-                                Áudio gravado
-                              </Badge>
-                            )}
-                          </div>
+                    {/* Status dos Anexos */}
+                    {(photos.length > 0 || audioUrl) && (
+                      <div className="flex gap-2 text-xs">
+                        {photos.length > 0 && (
+                          <Badge variant="secondary">
+                            {photos.length} foto{photos.length > 1 ? 's' : ''} anexada{photos.length > 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                        {audioUrl && (
+                          <Badge variant="secondary">
+                            Áudio gravado
+                          </Badge>
                         )}
                       </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Informações da Remessa */}
               <Card className="border-0 shadow-none bg-muted/30">
