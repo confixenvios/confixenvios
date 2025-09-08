@@ -11,10 +11,14 @@ import {
   CheckCircle, 
   AlertTriangle, 
   Package,
-  ArrowLeft 
+  ArrowLeft,
+  Mic,
+  Download,
+  Volume2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { AudioPlayer } from './AudioPlayer';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ShipmentOccurrencesModalProps {
@@ -30,6 +34,7 @@ interface StatusHistory {
   observacoes: string | null;
   photos_urls: string[] | null;
   signature_url: string | null;
+  audio_url: string | null;
   occurrence_data: any;
   motorista_id: string | null;
 }
@@ -102,6 +107,15 @@ export const ShipmentOccurrencesModal = ({
       default:
         return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
+  };
+
+  const handleDownloadAudio = (audioUrl: string, trackingCode: string, statusHistory: StatusHistory) => {
+    const link = document.createElement('a');
+    link.href = audioUrl;
+    link.download = `audio_${trackingCode}_${statusHistory.status}_${format(new Date(statusHistory.created_at), 'ddMMyyyy_HHmm')}.webm`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const formatDate = (dateString: string | null | undefined): string => {
@@ -193,6 +207,20 @@ export const ShipmentOccurrencesModal = ({
                           </div>
                         )}
 
+                        {/* Áudio */}
+                        {history.audio_url && (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium flex items-center gap-2">
+                              <Mic className="h-4 w-4" />
+                              Áudio de Confirmação do Cliente
+                            </p>
+                            <AudioPlayer 
+                              audioUrl={history.audio_url}
+                              fileName={`audio_${shipment.tracking_code || shipment.id.slice(0,8)}_${history.status}_${format(new Date(history.created_at), 'ddMMyyyy_HHmm')}.webm`}
+                            />
+                          </div>
+                        )}
+
                         {/* Fotos */}
                         {history.photos_urls && history.photos_urls.length > 0 && (
                           <div className="space-y-2">
@@ -239,9 +267,9 @@ export const ShipmentOccurrencesModal = ({
                         )}
 
                         {/* Indicador se não há anexos */}
-                        {!history.observacoes && !history.photos_urls?.length && !history.signature_url && !history.occurrence_data && (
+                        {!history.observacoes && !history.photos_urls?.length && !history.signature_url && !history.audio_url && !history.occurrence_data && (
                           <div className="text-xs text-muted-foreground italic bg-muted/30 rounded p-2">
-                            Nenhuma observação, foto ou assinatura registrada para esta ocorrência
+                            Nenhuma observação, foto, áudio ou assinatura registrada para esta ocorrência
                           </div>
                         )}
                       </div>

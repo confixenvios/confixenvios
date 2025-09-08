@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,8 @@ import { ptBR } from 'date-fns/locale';
 import { AudioRecorder } from './AudioRecorder';
 import { PhotoUpload } from './PhotoUpload';
 import { OccurrenceModal } from './OccurrenceModal';
+import { createSecureSupabaseClient } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface RemessaDetalhesProps {
   isOpen: boolean;
@@ -42,6 +44,15 @@ export const RemessaDetalhes = ({
   const [showOccurrenceModal, setShowOccurrenceModal] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  // Reset attachments when modal opens/closes
+  React.useEffect(() => {
+    if (!isOpen) {
+      setPhotos([]);
+      setAudioUrl(null);
+    }
+  }, [isOpen]);
 
   if (!remessa) return null;
 
@@ -84,18 +95,80 @@ export const RemessaDetalhes = ({
     setAudioUrl(savedAudioUrl);
   };
 
-  const handleOccurrenceSave = (occurrence: any) => {
-    const data = {
-      occurrence,
-      photos: photos.length > 0 ? photos : undefined,
-      audioUrl: audioUrl || undefined
-    };
+  const handleOccurrenceSave = async (occurrence: any) => {
+    // Upload photos first if any
+    let uploadedPhotoUrls: string[] = [];
+    if (photos.length > 0) {
+      const supabase = createSecureSupabaseClient();
+      
+      for (const photo of photos) {
+        const fileName = `photo_${remessa.id}_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+        const filePath = `shipment-photos/${fileName}`;
+        
+        const { data, error } = await supabase.storage
+          .from('shipment-photos')
+          .upload(filePath, photo, {
+            contentType: 'image/jpeg',
+            upsert: false
+          });
+          
+        if (!error) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('shipment-photos')
+            .getPublicUrl(filePath);
+          uploadedPhotoUrls.push(publicUrl);
+        }
+      }
+    }
+
+    // Create status history record with all attachments
+    const supabase = createSecureSupabaseClient();
     
-    onUpdateStatus(remessa.id, occurrence.newStatus, data);
+    const { error } = await supabase
+      .from('shipment_status_history')
+      .insert({
+        shipment_id: remessa.id,
+        status: occurrence.newStatus,
+        motorista_id: remessa.motorista_id,
+        observacoes: occurrence.observations || null,
+        occurrence_data: {
+          type: occurrence.type,
+          description: occurrence.description,
+          timestamp: new Date().toISOString()
+        },
+        photos_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
+        audio_url: audioUrl || null
+      });
+    
+    if (!error) {
+      // Update shipment status
+      await supabase
+        .from('shipments')
+        .update({ 
+          status: occurrence.newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', remessa.id);
+        
+      toast({
+        title: "Sucesso",
+        description: "Ocorrência registrada com sucesso!"
+      });
+    } else {
+      console.error('Erro ao salvar ocorrência:', error);
+      toast({
+        title: "Erro", 
+        description: "Erro ao registrar ocorrência. Tente novamente.",
+        variant: "destructive"
+      });
+    }
     
     // Reset attachments after saving
     setPhotos([]);
     setAudioUrl(null);
+    
+    // Close modals and refresh
+    onClose();
   };
 
 

@@ -529,6 +529,7 @@ const MotoristaDashboard = () => {
               loadMinhasRemessas(motoristaSession.id);
               loadRemessasDisponiveis();
             }
+            setDetailsModalOpen(false);
           }}
         />
       </main>

@@ -402,6 +402,7 @@ export type Database = {
       }
       shipment_status_history: {
         Row: {
+          audio_url: string | null
           created_at: string
           id: string
           motorista_id: string | null
@@ -413,6 +414,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          audio_url?: string | null
           created_at?: string
           id?: string
           motorista_id?: string | null
@@ -424,6 +426,7 @@ export type Database = {
           status: string
         }
         Update: {
+          audio_url?: string | null
           created_at?: string
           id?: string
           motorista_id?: string | null
