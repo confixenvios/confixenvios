@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { RemessaDetalhes } from '@/components/motorista/RemessaDetalhes';
+import { OccurrenceModal } from '@/components/motorista/OccurrenceModal';
 import { getMotoristaShipments, getAvailableShipments, acceptShipment, type MotoristaShipment, type BaseShipment } from '@/services/shipmentsService';
 
 interface MotoristaSession {
@@ -25,6 +26,7 @@ const MotoristaDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedRemessa, setSelectedRemessa] = useState<MotoristaShipment | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [occurrenceModalOpen, setOccurrenceModalOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
 
@@ -59,13 +61,13 @@ const MotoristaDashboard = () => {
     const statusConfig = {
       'PENDING_LABEL': { label: 'Aguardando Etiqueta', variant: 'secondary' as const },
       'LABEL_GENERATED': { label: 'Etiqueta Gerada', variant: 'default' as const },
-      'PAYMENT_CONFIRMED': { label: 'Pagamento Confirmado', variant: 'default' as const },
-      'PAID': { label: 'Pago', variant: 'success' as const },
+      'PAYMENT_CONFIRMED': { label: 'Disponível para Coleta', variant: 'default' as const },
+      'PAID': { label: 'Disponível para Coleta', variant: 'default' as const },
       'COLETA_ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
       'COLETA_FINALIZADA': { label: 'Coleta Realizada', variant: 'success' as const },
       'EM_TRANSITO': { label: 'Em Trânsito', variant: 'default' as const },
       'TENTATIVA_ENTREGA': { label: 'Insucesso na Entrega', variant: 'destructive' as const },
-      'ENTREGA_FINALIZADA': { label: 'Entregue ao Destinatário com Sucesso', variant: 'success' as const },
+      'ENTREGA_FINALIZADA': { label: 'Entregue', variant: 'success' as const },
       'AGUARDANDO_DESTINATARIO': { label: 'Aguardando Destinatário', variant: 'secondary' as const },
       'ENDERECO_INCORRETO': { label: 'Endereço Incorreto', variant: 'destructive' as const }
     };
@@ -74,6 +76,10 @@ const MotoristaDashboard = () => {
                    { label: status, variant: 'outline' as const };
     
     return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const canChangeStatus = (remessa: MotoristaShipment) => {
+    return remessa.motorista_id && ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'TENTATIVA_ENTREGA'].includes(remessa.status);
   };
 
   const loadMinhasRemessas = async (motoristaId: string) => {
@@ -424,7 +430,21 @@ const MotoristaDashboard = () => {
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
-                              {getStatusBadge(remessa.status)}
+                              {canChangeStatus(remessa) ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedRemessa(remessa);
+                                    setOccurrenceModalOpen(true);
+                                  }}
+                                  className="h-8 px-2"
+                                >
+                                  {getStatusBadge(remessa.status)}
+                                </Button>
+                              ) : (
+                                getStatusBadge(remessa.status)
+                              )}
                             </div>
                           </div>
 
@@ -461,18 +481,20 @@ const MotoristaDashboard = () => {
                                 <Eye className="h-3 w-3 mr-1" />
                                 Ver
                               </Button>
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedRemessa(remessa);
-                                  setDetailsModalOpen(true);
-                                }}
-                                className="bg-blue-600 hover:bg-blue-700"
-                              >
-                                <FileText className="h-3 w-3 mr-1" />
-                                Gerenciar
-                              </Button>
+                              {canChangeStatus(remessa) && (
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedRemessa(remessa);
+                                    setOccurrenceModalOpen(true);
+                                  }}
+                                  className="bg-blue-600 hover:bg-blue-700"
+                                >
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  Gerar Ocorrência
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -499,6 +521,24 @@ const MotoristaDashboard = () => {
             setDetailsModalOpen(false);
           }}
         />
+
+        {/* Occurrence Modal */}
+        {selectedRemessa && (
+          <OccurrenceModal
+            isOpen={occurrenceModalOpen}
+            onClose={() => setOccurrenceModalOpen(false)}
+            onSave={async (occurrence) => {
+              console.log('📊 Ocorrência criada:', occurrence);
+              toast.success('Ocorrência registrada com sucesso!');
+              if (motoristaSession?.id) {
+                loadMinhasRemessas(motoristaSession.id);
+                loadRemessasDisponiveis();
+              }
+              setOccurrenceModalOpen(false);
+            }}
+            shipmentId={selectedRemessa.id}
+          />
+        )}
       </main>
     </div>
   );
