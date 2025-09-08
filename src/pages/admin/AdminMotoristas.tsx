@@ -378,27 +378,29 @@ const AdminMotoristas = () => {
                            <Pencil className="h-3 w-3" />
                          </Button>
                          
-                         {motorista.status === 'pendente' ? (
-                           <Button
-                             variant="default"
-                             size="sm"
-                             onClick={() => approveMotorista(motorista)}
-                           >
-                             <UserCheck className="h-3 w-3" />
-                           </Button>
-                         ) : (
-                           <Button
-                             variant="outline"
-                             size="sm"
-                             onClick={() => toggleStatus(motorista)}
-                           >
-                             {motorista.status === 'ativo' ? (
-                               <UserX className="h-3 w-3" />
-                             ) : (
-                               <UserCheck className="h-3 w-3" />
-                             )}
-                           </Button>
-                         )}
+                          {motorista.status === 'pendente' ? (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => approveMotorista(motorista)}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <UserCheck className="h-3 w-3 mr-1" />
+                              Aprovar
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleStatus(motorista)}
+                            >
+                              {motorista.status === 'ativo' ? (
+                                <UserX className="h-3 w-3" />
+                              ) : (
+                                <UserCheck className="h-3 w-3" />
+                              )}
+                            </Button>
+                          )}
                        </div>
                      </TableCell>
                   </TableRow>
