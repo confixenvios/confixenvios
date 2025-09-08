@@ -764,6 +764,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_shipment: {
+        Args: { motorista_uuid: string; shipment_id: string }
+        Returns: Json
+      }
       authenticate_motorista: {
         Args: { input_email: string; input_password: string }
         Returns: Json
@@ -859,6 +863,30 @@ export type Database = {
       generate_tracking_code: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_available_shipments: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          cte_key: string
+          format: string
+          height: number
+          id: string
+          length: number
+          payment_data: Json
+          pickup_option: string
+          quote_data: Json
+          recipient_address: Json
+          recipient_address_id: string
+          selected_option: string
+          sender_address: Json
+          sender_address_id: string
+          status: string
+          tracking_code: string
+          updated_at: string
+          weight: number
+          width: number
+        }[]
       }
       get_current_session_id: {
         Args: Record<PropertyKey, never>

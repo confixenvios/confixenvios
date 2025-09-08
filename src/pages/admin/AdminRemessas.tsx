@@ -80,8 +80,6 @@ const AdminRemessas = () => {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [motoristas, setMotoristas] = useState<Motorista[]>([]);
-  const [showAssignDialog, setShowAssignDialog] = useState(false);
-  const [selectedShipment, setSelectedShipment] = useState<string | null>(null);
   const [selectedShipmentDetails, setSelectedShipmentDetails] = useState<Shipment | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [occurrencesModalOpen, setOccurrencesModalOpen] = useState(false);
@@ -89,7 +87,6 @@ const AdminRemessas = () => {
 
   useEffect(() => {
     loadShipments();
-    loadMotoristas();
   }, []);
 
   const loadShipments = async () => {
@@ -196,20 +193,6 @@ const AdminRemessas = () => {
     }
   };
 
-  const loadMotoristas = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('motoristas')
-        .select('*')
-        .eq('status', 'ativo')
-        .order('nome');
-
-      if (error) throw error;
-      setMotoristas(data || []);
-    } catch (error) {
-      console.error('Erro ao carregar motoristas:', error);
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -287,33 +270,6 @@ const AdminRemessas = () => {
     });
   };
 
-  const handleAssignMotorista = async (motoristaId: string) => {
-    if (!selectedShipment) return;
-
-    try {
-      const { error } = await supabase
-        .from('shipments')
-        .update({ motorista_id: motoristaId })
-        .eq('id', selectedShipment);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Motorista designado com sucesso!",
-      });
-      setShowAssignDialog(false);
-      setSelectedShipment(null);
-      loadShipments();
-    } catch (error) {
-      console.error('Erro ao designar motorista:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao designar motorista",
-        variant: "destructive"
-      });
-    }
-  };
 
   const getQuoteValue = (shipment: Shipment) => {
     const paymentData = shipment.payment_data as any;
@@ -510,17 +466,6 @@ const AdminRemessas = () => {
                           >
                             <FileText className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedShipment(shipment.id);
-                              setShowAssignDialog(true);
-                            }}
-                            className="h-8 w-8 p-0 hover:bg-primary/10"
-                          >
-                            <UserPlus className="h-4 w-4" />
-                          </Button>
                         </div>
                       </div>
                     </div>
@@ -575,9 +520,12 @@ const AdminRemessas = () => {
                               <div>
                                 <p className="font-semibold text-sm">{shipment.motoristas.nome}</p>
                                 <p className="text-xs text-muted-foreground">{shipment.motoristas.telefone}</p>
+                                <Badge variant="default" className="text-xs mt-1 bg-green-100 text-green-700">
+                                  Aceita pelo motorista
+                                </Badge>
                               </div>
                             ) : (
-                              <Badge variant="outline" className="text-xs">Não designado</Badge>
+                              <Badge variant="outline" className="text-xs">Aguardando aceite</Badge>
                             )}
                           </div>
                         </div>
@@ -608,42 +556,6 @@ const AdminRemessas = () => {
         </CardContent>
       </Card>
 
-      {/* Assign Motorista Dialog */}
-      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Designar Motorista</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Selecione um motorista para esta remessa:
-            </p>
-            <div className="space-y-2">
-              {motoristas.map((motorista) => (
-                <Button
-                  key={motorista.id}
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => handleAssignMotorista(motorista.id)}
-                >
-                  <Truck className="h-4 w-4 mr-2" />
-                  <div className="text-left">
-                    <p className="font-medium">{motorista.nome}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {motorista.telefone} • {motorista.email}
-                    </p>
-                  </div>
-                </Button>
-              ))}
-              {motoristas.length === 0 && (
-                <p className="text-center text-muted-foreground py-4">
-                  Nenhum motorista ativo disponível
-                </p>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Modal de Detalhes da Remessa */}
       <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>

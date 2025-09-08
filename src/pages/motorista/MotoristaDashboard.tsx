@@ -62,10 +62,12 @@ const MotoristaDashboard = () => {
   const navigate = useNavigate();
   const [motoristaSession, setMotoristaSession] = useState<MotoristaSession | null>(null);
   const [remessas, setRemessas] = useState<Remessa[]>([]);
+  const [remessasDisponiveis, setRemessasDisponiveis] = useState<Remessa[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRemessa, setSelectedRemessa] = useState<Remessa | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [accepting, setAccepting] = useState<string | null>(null);
 
   useEffect(() => {
     // Check motorista session
@@ -78,6 +80,7 @@ const MotoristaDashboard = () => {
     const session = JSON.parse(sessionData);
     setMotoristaSession(session);
     loadMinhasRemessas(session.id);
+    loadRemessasDisponiveis();
   }, [navigate]);
 
   const loadMinhasRemessas = async (motoristaId: string) => {
@@ -118,6 +121,56 @@ const MotoristaDashboard = () => {
       toast.error('Erro ao carregar suas coletas');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadRemessasDisponiveis = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_available_shipments');
+      
+      if (error) throw error;
+      
+      // Transformar os dados para o formato esperado pelo componente
+      const transformedData = (data || []).map((item: any) => ({
+        ...item,
+        sender_address: item.sender_address || {},
+        recipient_address: item.recipient_address || {}
+      }));
+      
+      setRemessasDisponiveis(transformedData);
+    } catch (error) {
+      console.error('Erro ao carregar remessas disponíveis:', error);
+      toast.error('Erro ao carregar remessas disponíveis');
+    }
+  };
+
+  const handleAcceptShipment = async (shipmentId: string) => {
+    if (!motoristaSession?.id) return;
+    
+    setAccepting(shipmentId);
+    try {
+      const { data, error } = await supabase.rpc('accept_shipment', {
+        shipment_id: shipmentId,
+        motorista_uuid: motoristaSession.id
+      });
+
+      if (error) throw error;
+
+      const result = data as { success: boolean; message?: string; error?: string };
+      
+      if (result.success) {
+        toast.success(result.message || 'Remessa aceita com sucesso!');
+        // Recarregar as listas
+        loadMinhasRemessas(motoristaSession.id);
+        loadRemessasDisponiveis();
+      } else {
+        toast.error(result.error || 'Erro ao aceitar remessa');
+      }
+    } catch (error) {
+      console.error('Erro ao aceitar remessa:', error);
+      toast.error('Erro ao aceitar remessa');
+    } finally {
+      setAccepting(null);
     }
   };
 
@@ -235,7 +288,125 @@ const MotoristaDashboard = () => {
           </div>
         )}
 
-        {/* Remessas List - Only for active drivers */}
+        {/* Remessas Disponíveis - Only for active drivers */}
+        {motoristaSession?.status === 'ativo' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold">Remessas Disponíveis</h2>
+                <p className="text-sm text-muted-foreground">
+                  {remessasDisponiveis.length} {remessasDisponiveis.length === 1 ? 'remessa disponível' : 'remessas disponíveis'}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadRemessasDisponiveis}
+                disabled={refreshing}
+                className="text-xs"
+              >
+                {refreshing ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+                ) : (
+                  'Atualizar'
+                )}
+              </Button>
+            </div>
+
+            {remessasDisponiveis.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-muted">
+                    <Package className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-medium mb-2">Nenhuma remessa disponível</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Não há remessas aguardando coleta no momento.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {remessasDisponiveis.map((remessa) => (
+                  <Card key={remessa.id} className="hover:shadow-md transition-shadow border-blue-200">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        {/* Header */}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-medium text-sm">{remessa.tracking_code}</h3>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(remessa.created_at).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                              Disponível
+                            </Badge>
+                          </div>
+                        </div>
+
+                        {/* Addresses */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                          <div className="space-y-1">
+                            <p className="font-medium text-muted-foreground">Remetente</p>
+                            <p className="font-medium">{remessa.sender_address?.name}</p>
+                            <p className="text-muted-foreground">
+                              {remessa.sender_address?.city}, {remessa.sender_address?.state}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="font-medium text-muted-foreground">Destinatário</p>
+                            <p className="font-medium">{remessa.recipient_address?.name}</p>
+                            <p className="text-muted-foreground">
+                              {remessa.recipient_address?.city}, {remessa.recipient_address?.state}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          <div className="text-xs text-muted-foreground">
+                            {remessa.weight}kg | {remessa.length}x{remessa.width}x{remessa.height}cm
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedRemessa(remessa);
+                                setDetailsModalOpen(true);
+                              }}
+                            >
+                              <Eye className="h-3 w-3 mr-1" />
+                              Ver
+                            </Button>
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => handleAcceptShipment(remessa.id)}
+                              disabled={accepting === remessa.id}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              {accepting === remessa.id ? (
+                                <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent mr-1"></div>
+                              ) : (
+                                <Plus className="h-3 w-3 mr-1" />
+                              )}
+                              Aceitar
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Minhas Remessas - Only for active drivers */}
         {motoristaSession?.status === 'ativo' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -255,9 +426,19 @@ const MotoristaDashboard = () => {
                   <FileText className="h-4 w-4 mr-1" />
                   Relatórios
                 </Button>
-                {refreshing && (
-                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent"></div>
-                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadMinhasRemessas(motoristaSession?.id || '')}
+                  disabled={refreshing}
+                  className="text-xs"
+                >
+                  {refreshing ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+                  ) : (
+                    'Atualizar'
+                  )}
+                </Button>
               </div>
             </div>
 
@@ -267,9 +448,9 @@ const MotoristaDashboard = () => {
                   <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-muted">
                     <Package className="h-8 w-8 text-muted-foreground" />
                   </div>
-                  <h3 className="font-medium mb-2">Nenhuma remessa ativa</h3>
+                  <h3 className="font-medium mb-2">Nenhuma remessa aceita</h3>
                   <p className="text-sm text-muted-foreground">
-                    Aguarde novas remessas serem designadas para você. Para ver suas entregas realizadas, acesse os relatórios.
+                    Você ainda não aceitou nenhuma remessa. Verifique as remessas disponíveis acima.
                   </p>
                 </CardContent>
               </Card>
@@ -343,7 +524,12 @@ const MotoristaDashboard = () => {
           isOpen={detailsModalOpen}
           onClose={() => setDetailsModalOpen(false)}
           remessa={selectedRemessa}
-          onUpdateStatus={() => {}}
+          onUpdateStatus={() => {
+            if (motoristaSession?.id) {
+              loadMinhasRemessas(motoristaSession.id);
+              loadRemessasDisponiveis();
+            }
+          }}
         />
       </main>
     </div>
