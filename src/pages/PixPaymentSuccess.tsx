@@ -173,8 +173,8 @@ const PixPaymentSuccess = () => {
       
       // Disparar webhook automático após criação da remessa
       try {
-        console.log('🔄 Disparando webhook automático...');
-        const { error: webhookError } = await supabase.functions.invoke('shipment-webhook-dispatch', {
+        console.log('🔄 Disparando webhook automático para remessa:', newShipment.id);
+        const { data: webhookResult, error: webhookError } = await supabase.functions.invoke('shipment-webhook-dispatch', {
           body: {
             shipmentId: newShipment.id,
             shipmentData: enrichedQuoteData
@@ -182,12 +182,12 @@ const PixPaymentSuccess = () => {
         });
         
         if (webhookError) {
-          console.error('Erro ao disparar webhook:', webhookError);
+          console.error('❌ Erro ao disparar webhook:', webhookError);
         } else {
-          console.log('✅ Webhook disparado com sucesso');
+          console.log('✅ Webhook disparado com sucesso:', webhookResult);
         }
       } catch (webhookError) {
-        console.error('Erro no disparo do webhook (não crítico):', webhookError);
+        console.error('❌ Erro no disparo do webhook (não crítico):', webhookError);
       }
       
       // Limpar dados do sessionStorage após criar a remessa

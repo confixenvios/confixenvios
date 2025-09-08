@@ -133,67 +133,77 @@ const WebhookManagement = () => {
   const testWebhook = async (integration: SecureIntegration) => {
     setTesting(true);
     try {
-      // Send consolidated webhook payload for testing
+      // Test with the exact format from the specification
       const testPayload = {
-        event: "shipment_confirmed",
-        shipmentId: "test-" + Date.now(),
+        event: "shipment_created",
+        shipmentId: "ID2025TEST" + Date.now(),
         clienteId: "TEST_CLIENT",
-        status: "PAGO_AGUARDANDO_ETIQUETA",
-        notificationType: "admin-only",
-        adminNotification: true,
-
+        status: "CRIADO",
+        
         remetente: {
-          nome: "Loja Teste",
-          cpfCnpj: "12345678901",
+          nome: "João da Silva",
+          cpf_cnpj: "12345678900",
           telefone: "62999999999",
-          email: "teste@loja.com",
-          cep: "74345260",
-          endereco: "Rua Teste",
-          numero: "123",
-          bairro: "Centro",
-          cidade: "Goiânia",
-          estado: "GO",
-          referencia: ""
-        },
-
-        destinatario: {
-          nome: "Cliente Teste",
-          cpfCnpj: "98765432100",
-          telefone: "11988887777",
-          email: "cliente@teste.com",
-          cep: "01307001",
-          endereco: "Rua Destino",
-          numero: "456",
-          bairro: "Centro",
-          cidade: "São Paulo",
-          estado: "SP",
-          referencia: ""
-        },
-
-        pacote: {
-          pesoKg: 2.5,
-          comprimentoCm: 30,
-          larguraCm: 20,
-          alturaCm: 15,
-          formato: "CAIXA"
-        },
-
-        mercadoria: {
-          quantidade: 1,
-          valorUnitario: 50.00,
-          valorTotal: 50.00,
-          documentoFiscal: {
-            tipo: "DECLARACAO_CONTEUDO",
-            temNotaFiscal: false,
-            chaveNfe: null
+          email: "joao@email.com",
+          endereco: {
+            cep: "74345-260",
+            rua: "Rua X",
+            numero: "123",
+            bairro: "Centro",
+            cidade: "Goiânia",
+            estado: "GO",
+            complemento: "Apto 101"
           }
         },
-
-        pagamento: {
-          metodo: "PIX",
-          valor: 25.90,
-          status: "PAID",
-          dataPagamento: new Date().toISOString()
+        
+        destinatario: {
+          nome: "Maria Oliveira",
+          cpf_cnpj: "98765432100",
+          telefone: "62988888888",
+          email: "maria@email.com",
+          endereco: {
+            cep: "70295-500",
+            rua: "Avenida Y",
+            numero: "456",
+            bairro: "Setor Sul",
+            cidade: "Brasília",
+            estado: "DF",
+            complemento: "Casa"
+          }
+        },
+        
+        coleta: {
+          tipo: "BALCÃO",
+          local_coleta: "Endereço do remetente"
+        },
+        
+        mercadoria: {
+          quantidade: 2,
+          valor_unitario: 150.00,
+          valor_total: 300.00,
+          descricao: "Caixas de eletrônicos"
+        },
+        
+        pacote: {
+          peso: 10.5,
+          dimensoes: {
+            comprimento: 40,
+            largura: 30,
+            altura: 20
+          },
+          formato: "Caixa"
+        },
+        
+        documento_fiscal: {
+          tipo: "DECLARACAO",
+          chave_nfe: null,
+          valor_declarado: 300.00
+        },
+        
+        frete: {
+          tipo: "Econômico",
+          valor: 46.11,
+          prazo: "3 dias úteis"
         }
       };
 
