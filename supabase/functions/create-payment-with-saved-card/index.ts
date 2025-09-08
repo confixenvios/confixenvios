@@ -75,6 +75,27 @@ serve(async (req) => {
 
     console.log('Payment intent created:', paymentIntent.id);
 
+    // If shipmentData contains shipment creation info, dispatch webhook
+    if (shipmentData?.needsShipmentCreation) {
+      try {
+        console.log('Create payment with saved card - Dispatching automatic webhook...');
+        const webhookResponse = await supabaseService.functions.invoke('shipment-webhook-dispatch', {
+          body: {
+            shipmentId: shipmentData.id,
+            shipmentData: shipmentData
+          }
+        });
+        
+        if (webhookResponse.error) {
+          console.error('Create payment with saved card - Webhook dispatch error:', webhookResponse.error);
+        } else {
+          console.log('Create payment with saved card - Webhook dispatched successfully');
+        }
+      } catch (webhookError) {
+        console.error('Create payment with saved card - Webhook error (non-critical):', webhookError);
+      }
+    }
+
     // Get active integration for webhook dispatch
     const supabaseService = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",

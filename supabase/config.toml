@@ -32,3 +32,9 @@ verify_jwt = true
 
 [functions.create-payment-with-saved-card]
 verify_jwt = true
+
+[functions.motorista-operations]
+verify_jwt = false
+
+[functions.shipment-webhook-dispatch]
+verify_jwt = false
