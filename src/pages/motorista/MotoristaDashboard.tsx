@@ -29,39 +29,24 @@ const MotoristaDashboard = () => {
   const [accepting, setAccepting] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('🚀 === DASHBOARD MOTORISTA INICIADO ===');
-    console.log('🔍 Verificando sessão do motorista...');
-    
     const sessionData = localStorage.getItem('motorista_session');
-    console.log('📱 Session data do localStorage:', sessionData);
-    console.log('🌐 URL atual:', window.location.href);
-    console.log('📊 Estado atual - loading:', loading, 'remessas:', remessas.length);
     
     if (!sessionData) {
-      console.log('❌ Nenhuma sessão encontrada - redirecionando para auth');
       navigate('/motorista/auth');
       return;
     }
 
     try {
       const session = JSON.parse(sessionData);
-      console.log('👤 Sessão parseada:', session);
-      console.log('🆔 ID do motorista:', session.id);
-      console.log('📧 Email do motorista:', session.email);
-      console.log('📋 Status do motorista:', session.status);
-      console.log('👨‍💼 Nome do motorista:', session.nome);
       
       if (!session.id) {
-        console.error('❌ ID do motorista não encontrado na sessão!');
         localStorage.removeItem('motorista_session');
         navigate('/motorista/auth');
         return;
       }
       
       setMotoristaSession(session);
-      console.log('🔄 Chamando loadMinhasRemessas com ID:', session.id);
       loadMinhasRemessas(session.id);
-      console.log('🔄 Chamando loadRemessasDisponiveis...');
       loadRemessasDisponiveis();
     } catch (error) {
       console.error('❌ Erro ao parsear sessão:', error);
@@ -70,20 +55,30 @@ const MotoristaDashboard = () => {
     }
   }, [navigate]);
 
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      'PENDING_LABEL': { label: 'Aguardando Etiqueta', variant: 'secondary' as const },
+      'LABEL_GENERATED': { label: 'Etiqueta Gerada', variant: 'default' as const },
+      'PAYMENT_CONFIRMED': { label: 'Pagamento Confirmado', variant: 'default' as const },
+      'PAID': { label: 'Pago', variant: 'success' as const },
+      'COLETA_ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
+      'COLETA_FINALIZADA': { label: 'Coleta Realizada', variant: 'success' as const },
+      'EM_TRANSITO': { label: 'Em Trânsito', variant: 'default' as const },
+      'TENTATIVA_ENTREGA': { label: 'Insucesso na Entrega', variant: 'destructive' as const },
+      'ENTREGA_FINALIZADA': { label: 'Entregue ao Destinatário com Sucesso', variant: 'success' as const },
+      'AGUARDANDO_DESTINATARIO': { label: 'Aguardando Destinatário', variant: 'secondary' as const },
+      'ENDERECO_INCORRETO': { label: 'Endereço Incorreto', variant: 'destructive' as const }
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || 
+                   { label: status, variant: 'outline' as const };
+    
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
   const loadMinhasRemessas = async (motoristaId: string) => {
     try {
-      console.log('🚛 === CARREGANDO REMESSAS COM SERVIÇO CENTRALIZADO ===');
-      console.log('🆔 Motorista ID:', motoristaId);
-      
       const data = await getMotoristaShipments(motoristaId);
-      
-      console.log('📦 Remessas retornadas do serviço:', data);
-      console.log('📊 Quantidade de remessas:', data.length);
-      
-      if (data.length > 0) {
-        console.log('📦 Primeira remessa:', data[0]);
-      }
-      
       setRemessas(data);
     } catch (error) {
       console.error('❌ Erro ao carregar remessas:', error);
@@ -95,13 +90,7 @@ const MotoristaDashboard = () => {
 
   const loadRemessasDisponiveis = async () => {
     try {
-      console.log('🔍 === CARREGANDO REMESSAS DISPONÍVEIS ===');
-      
       const data = await getAvailableShipments();
-      
-      console.log('📦 Remessas disponíveis:', data);
-      console.log('📊 Quantidade disponível:', data.length);
-      
       setRemessasDisponiveis(data);
     } catch (error) {
       console.error('❌ Erro ao carregar remessas disponíveis:', error);
@@ -114,17 +103,12 @@ const MotoristaDashboard = () => {
     
     setAccepting(shipmentId);
     try {
-      console.log('🚚 === ACEITANDO REMESSA COM SERVIÇO CENTRALIZADO ===');
-      console.log('📦 Remessa ID:', shipmentId);
-      console.log('🆔 Motorista ID:', motoristaSession.id);
-      
       const result = await acceptShipment(shipmentId, motoristaSession.id);
       
       if (result && typeof result === 'object' && 'success' in result) {
         const response = result as { success: boolean; message?: string; error?: string };
         if (response.success) {
           toast.success(response.message || 'Remessa aceita com sucesso!');
-          // Recarregar as listas
           loadMinhasRemessas(motoristaSession.id);
           loadRemessasDisponiveis();
         } else {
@@ -143,7 +127,6 @@ const MotoristaDashboard = () => {
 
   const handleLogout = async () => {
     try {
-      // Só limpar localStorage, não precisamos do Supabase auth
       localStorage.removeItem('motorista_session');
       navigate('/motorista/auth');
       toast.success('Logout realizado com sucesso');
@@ -214,7 +197,7 @@ const MotoristaDashboard = () => {
           </Card>
         )}
 
-        {/* Stats Cards - Mobile Optimized - Only for active drivers */}
+        {/* Stats Cards - Only for active drivers */}
         {motoristaSession?.status === 'ativo' && (
           <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <Card className="border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900">
@@ -223,9 +206,9 @@ const MotoristaDashboard = () => {
                   <Clock className="h-4 w-4" />
                 </div>
                 <p className="text-lg text-orange-700 dark:text-orange-300">
-                  {remessas.filter(r => ['PENDING_LABEL', 'LABEL_GENERATED', 'PAYMENT_CONFIRMED', 'PAID'].includes(r.status)).length}
+                  {remessasDisponiveis.length}
                 </p>
-                <p className="text-xs text-orange-600 dark:text-orange-400">Pendentes</p>
+                <p className="text-xs text-orange-600 dark:text-orange-400">Disponíveis</p>
               </CardContent>
             </Card>
 
@@ -295,10 +278,9 @@ const MotoristaDashboard = () => {
             ) : (
               <div className="space-y-3">
                 {remessasDisponiveis.map((remessa) => (
-                  <Card key={remessa.id} className="hover:shadow-md transition-shadow border-blue-200">
+                  <Card key={remessa.id} className="hover:shadow-md transition-shadow border-green-200">
                     <CardContent className="p-4">
                       <div className="space-y-3">
-                        {/* Header */}
                         <div className="flex items-center justify-between">
                           <div>
                             <h3 className="font-medium text-sm">{remessa.tracking_code}</h3>
@@ -307,13 +289,12 @@ const MotoristaDashboard = () => {
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
-                              Disponível
+                            <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-300">
+                              Aguardando Coleta
                             </Badge>
                           </div>
                         </div>
 
-                        {/* Addresses */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                           <div className="space-y-1">
                             <p className="font-medium text-muted-foreground">Remetente</p>
@@ -331,7 +312,6 @@ const MotoristaDashboard = () => {
                           </div>
                         </div>
 
-                        {/* Actions */}
                         <div className="flex items-center justify-between pt-2 border-t">
                           <div className="text-xs text-muted-foreground">
                             {remessa.weight}kg | {remessa.length}x{remessa.width}x{remessa.height}cm
@@ -358,9 +338,9 @@ const MotoristaDashboard = () => {
                               {accepting === remessa.id ? (
                                 <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent mr-1"></div>
                               ) : (
-                                <Plus className="h-3 w-3 mr-1" />
+                                <CheckCircle className="h-3 w-3 mr-1" />
                               )}
-                              Aceitar
+                              Aceitar Coleta
                             </Button>
                           </div>
                         </div>
@@ -396,7 +376,7 @@ const MotoristaDashboard = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => loadMinhasRemessas(motoristaSession?.id || '')}
+                  onClick={() => motoristaSession?.id && loadMinhasRemessas(motoristaSession.id)}
                   disabled={refreshing}
                   className="text-xs"
                 >
@@ -413,74 +393,92 @@ const MotoristaDashboard = () => {
               <Card>
                 <CardContent className="p-8 text-center">
                   <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-muted">
-                    <Package className="h-8 w-8 text-muted-foreground" />
+                    <Truck className="h-8 w-8 text-muted-foreground" />
                   </div>
-                  <h3 className="font-medium mb-2">Nenhuma remessa aceita</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Você ainda não aceitou nenhuma remessa. Verifique as remessas disponíveis acima.
+                  <h3 className="font-medium mb-2">Nenhuma remessa ativa</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Aceite remessas da lista "Disponíveis" para começar.
                   </p>
+                  <Button onClick={() => navigate('/motorista/relatorios')} variant="outline" size="sm">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Ver Histórico
+                  </Button>
                 </CardContent>
               </Card>
             ) : (
               <div className="space-y-3">
-                {remessas.filter(remessa => remessa.status !== 'ENTREGA_FINALIZADA').map((remessa) => (
-                  <Card key={remessa.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="space-y-3">
-                        {/* Header */}
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-medium text-sm">{remessa.tracking_code}</h3>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(remessa.created_at).toLocaleDateString('pt-BR')}
-                            </p>
+                {remessas
+                  .filter(r => r.status !== 'ENTREGA_FINALIZADA')
+                  .map((remessa) => (
+                    <Card 
+                      key={remessa.id} 
+                      className="hover:shadow-md transition-shadow border-blue-200"
+                    >
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-medium text-sm">{remessa.tracking_code}</h3>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(remessa.created_at).toLocaleDateString('pt-BR')}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {getStatusBadge(remessa.status)}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {remessa.status}
-                            </Badge>
-                          </div>
-                        </div>
 
-                        {/* Addresses */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                          <div className="space-y-1">
-                            <p className="font-medium text-muted-foreground">Remetente</p>
-                            <p className="font-medium">{remessa.sender_address?.name}</p>
-                            <p className="text-muted-foreground">
-                              {remessa.sender_address?.city}, {remessa.sender_address?.state}
-                            </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            <div className="space-y-1">
+                              <p className="font-medium text-muted-foreground">Remetente</p>
+                              <p className="font-medium">{remessa.sender_address?.name}</p>
+                              <p className="text-muted-foreground">
+                                {remessa.sender_address?.city}, {remessa.sender_address?.state}
+                              </p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="font-medium text-muted-foreground">Destinatário</p>
+                              <p className="font-medium">{remessa.recipient_address?.name}</p>
+                              <p className="text-muted-foreground">
+                                {remessa.recipient_address?.city}, {remessa.recipient_address?.state}
+                              </p>
+                            </div>
                           </div>
-                          <div className="space-y-1">
-                            <p className="font-medium text-muted-foreground">Destinatário</p>
-                            <p className="font-medium">{remessa.recipient_address?.name}</p>
-                            <p className="text-muted-foreground">
-                              {remessa.recipient_address?.city}, {remessa.recipient_address?.state}
-                            </p>
-                          </div>
-                        </div>
 
-                        {/* Actions */}
-                        <div className="flex items-center justify-between pt-2 border-t">
-                          <div className="text-xs text-muted-foreground">
-                            {remessa.weight}kg | {remessa.length}x{remessa.width}x{remessa.height}cm
+                          <div className="flex items-center justify-between pt-2 border-t">
+                            <div className="text-xs text-muted-foreground">
+                              {remessa.weight}kg | {remessa.length}x{remessa.width}x{remessa.height}cm
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedRemessa(remessa);
+                                  setDetailsModalOpen(true);
+                                }}
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                Ver
+                              </Button>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedRemessa(remessa);
+                                  setDetailsModalOpen(true);
+                                }}
+                                className="bg-blue-600 hover:bg-blue-700"
+                              >
+                                <FileText className="h-3 w-3 mr-1" />
+                                Gerenciar
+                              </Button>
+                            </div>
                           </div>
-                          <Button
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              setSelectedRemessa(remessa);
-                              setDetailsModalOpen(true);
-                            }}
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            Ver
-                          </Button>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))}
               </div>
             )}
           </div>

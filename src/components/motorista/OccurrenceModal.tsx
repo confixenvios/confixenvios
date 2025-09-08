@@ -102,7 +102,7 @@ export const OccurrenceModal = ({ isOpen, onClose, onSave, shipmentId }: Occurre
         <DialogHeader className="space-y-2">
           <DialogTitle className="flex items-center gap-2 text-lg">
             <FileText className="h-5 w-5" />
-            Registrar Ocorrência
+            Alterar Status da Remessa
           </DialogTitle>
         </DialogHeader>
 
@@ -110,7 +110,7 @@ export const OccurrenceModal = ({ isOpen, onClose, onSave, shipmentId }: Occurre
           {!selectedType ? (
             <>
               <p className="text-sm text-muted-foreground mb-3">
-                Selecione o tipo de ocorrência:
+                Selecione o próximo status da remessa:
               </p>
               <div className="space-y-3">
                 {OCCURRENCE_TYPES.map((type) => {

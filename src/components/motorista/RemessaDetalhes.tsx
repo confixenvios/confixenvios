@@ -78,11 +78,15 @@ export const RemessaDetalhes = ({
   };
 
   const canAcceptPickup = () => {
-    return ['PENDING_LABEL', 'LABEL_GENERATED', 'PAYMENT_CONFIRMED', 'PAID'].includes(remessa.status);
+    return ['PENDING_LABEL', 'LABEL_GENERATED', 'PAYMENT_CONFIRMED', 'PAID'].includes(remessa.status) && !remessa.motorista_id;
   };
 
   const canRegisterOccurrence = () => {
-    return !['ENTREGA_FINALIZADA'].includes(remessa.status);
+    return remessa.motorista_id && ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'TENTATIVA_ENTREGA'].includes(remessa.status);
+  };
+
+  const canChangeStatus = () => {
+    return remessa.motorista_id && ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'TENTATIVA_ENTREGA'].includes(remessa.status);
   };
 
   const handleAcceptPickup = () => {
@@ -276,14 +280,14 @@ export const RemessaDetalhes = ({
                       </Button>
                     )}
                     
-                    {canRegisterOccurrence() && (
+                    {canChangeStatus() && (
                       <Button
-                        variant="outline"
+                        variant="default"
                         className="w-full"
                         onClick={() => setShowOccurrenceModal(true)}
                       >
                         <FileText className="h-4 w-4 mr-2" />
-                        Registrar Ocorrência
+                        Alterar Status
                       </Button>
                     )}
                   </div>
