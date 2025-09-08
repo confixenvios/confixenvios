@@ -7,9 +7,12 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Pencil, UserX, UserCheck, Clock } from 'lucide-react';
+import { Plus, Pencil, UserX, UserCheck, Clock, Trash2, BarChart3, Calendar, Package, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface Motorista {
   id: string;
@@ -21,11 +24,28 @@ interface Motorista {
   created_at: string;
 }
 
+interface MotoristaStats {
+  motorista_id: string;
+  total_remessas: number;
+  remessas_entregues: number;
+  remessas_pendentes: number;
+  remessas_canceladas: number;
+  taxa_sucesso: number;
+}
+
 const AdminMotoristas = () => {
   const [motoristas, setMotoristas] = useState<Motorista[]>([]);
+  const [motoristaStats, setMotoristaStats] = useState<MotoristaStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isStatsDialogOpen, setIsStatsDialogOpen] = useState(false);
+  const [selectedMotoristaStats, setSelectedMotoristaStats] = useState<MotoristaStats | null>(null);
+  const [selectedMotorista, setSelectedMotorista] = useState<Motorista | null>(null);
   const [editingMotorista, setEditingMotorista] = useState<Motorista | null>(null);
+  const [dateRange, setDateRange] = useState({
+    from: format(startOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'),
+    to: format(endOfMonth(new Date()), 'yyyy-MM-dd')
+  });
   const [formData, setFormData] = useState({
     nome: '',
     cpf: '',
@@ -38,6 +58,10 @@ const AdminMotoristas = () => {
   useEffect(() => {
     loadMotoristas();
   }, []);
+
+  useEffect(() => {
+    loadMotoristaStats();
+  }, [dateRange, motoristas]);
 
   const loadMotoristas = async () => {
     try {
@@ -59,6 +83,79 @@ const AdminMotoristas = () => {
       toast.error(`Erro ao carregar motoristas: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMotoristaStats = async () => {
+    if (motoristas.length === 0) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('shipments')
+        .select(`
+          motorista_id,
+          status,
+          created_at
+        `)
+        .not('motorista_id', 'is', null)
+        .gte('created_at', dateRange.from + 'T00:00:00')
+        .lte('created_at', dateRange.to + 'T23:59:59');
+
+      if (error) throw error;
+
+      // Calcular estatísticas por motorista
+      const statsMap = new Map<string, MotoristaStats>();
+      
+      data?.forEach(shipment => {
+        if (!shipment.motorista_id) return;
+        
+        const existing = statsMap.get(shipment.motorista_id) || {
+          motorista_id: shipment.motorista_id,
+          total_remessas: 0,
+          remessas_entregues: 0,
+          remessas_pendentes: 0,
+          remessas_canceladas: 0,
+          taxa_sucesso: 0
+        };
+
+        existing.total_remessas++;
+        
+        switch (shipment.status) {
+          case 'DELIVERED':
+            existing.remessas_entregues++;
+            break;
+          case 'CANCELLED':
+            existing.remessas_canceladas++;
+            break;
+          default:
+            existing.remessas_pendentes++;
+            break;
+        }
+
+        existing.taxa_sucesso = existing.total_remessas > 0 
+          ? (existing.remessas_entregues / existing.total_remessas) * 100 
+          : 0;
+
+        statsMap.set(shipment.motorista_id, existing);
+      });
+
+      // Incluir motoristas sem remessas
+      motoristas.forEach(motorista => {
+        if (!statsMap.has(motorista.id)) {
+          statsMap.set(motorista.id, {
+            motorista_id: motorista.id,
+            total_remessas: 0,
+            remessas_entregues: 0,
+            remessas_pendentes: 0,
+            remessas_canceladas: 0,
+            taxa_sucesso: 0
+          });
+        }
+      });
+
+      setMotoristaStats(Array.from(statsMap.values()));
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas:', error);
     }
   };
 
@@ -140,6 +237,51 @@ const AdminMotoristas = () => {
     setIsDialogOpen(true);
   };
 
+  const handleDelete = async (motorista: Motorista) => {
+    try {
+      // Verificar se o motorista tem remessas associadas
+      const { data: shipments, error: checkError } = await supabase
+        .from('shipments')
+        .select('id')
+        .eq('motorista_id', motorista.id)
+        .limit(1);
+
+      if (checkError) throw checkError;
+
+      if (shipments && shipments.length > 0) {
+        toast.error('Não é possível excluir motorista com remessas associadas. Inative o motorista em vez de excluir.');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('motoristas')
+        .delete()
+        .eq('id', motorista.id);
+
+      if (error) throw error;
+      
+      toast.success('Motorista excluído com sucesso!');
+      loadMotoristas();
+    } catch (error) {
+      console.error('Erro ao excluir motorista:', error);
+      toast.error('Erro ao excluir motorista');
+    }
+  };
+
+  const handleViewStats = (motorista: Motorista) => {
+    const stats = motoristaStats.find(s => s.motorista_id === motorista.id);
+    setSelectedMotorista(motorista);
+    setSelectedMotoristaStats(stats || {
+      motorista_id: motorista.id,
+      total_remessas: 0,
+      remessas_entregues: 0,
+      remessas_pendentes: 0,
+      remessas_canceladas: 0,
+      taxa_sucesso: 0
+    });
+    setIsStatsDialogOpen(true);
+  };
+
   const approveMotorista = async (motorista: Motorista) => {
     try {
       const { error } = await supabase
@@ -207,6 +349,17 @@ const AdminMotoristas = () => {
     );
   };
 
+  const getMotoristaStats = (motoristaId: string) => {
+    return motoristaStats.find(s => s.motorista_id === motoristaId) || {
+      motorista_id: motoristaId,
+      total_remessas: 0,
+      remessas_entregues: 0,
+      remessas_pendentes: 0,
+      remessas_canceladas: 0,
+      taxa_sucesso: 0
+    };
+  };
+
   if (loading) {
     return (
       <div className="p-6">
@@ -221,12 +374,12 @@ const AdminMotoristas = () => {
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">Motoristas</h1>
-            <p className="text-muted-foreground">
-              Gerencie os motoristas e suas aprovações. Motoristas com status "Pendente" aguardam aprovação.
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold">Motoristas</h1>
+          <p className="text-muted-foreground">
+            Gerencie os motoristas e suas aprovações. Motoristas com status "Pendente" aguardam aprovação.
+          </p>
+        </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -337,6 +490,47 @@ const AdminMotoristas = () => {
         </Dialog>
       </div>
 
+      {/* Filtros de período */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Período para Estatísticas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 items-end">
+            <div className="space-y-2">
+              <Label htmlFor="dateFrom">Data Inicial</Label>
+              <Input
+                id="dateFrom"
+                type="date"
+                value={dateRange.from}
+                onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dateTo">Data Final</Label>
+              <Input
+                id="dateTo"
+                type="date"
+                value={dateRange.to}
+                onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
+              />
+            </div>
+            <Button 
+              variant="outline"
+              onClick={() => setDateRange({
+                from: format(startOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'),
+                to: format(endOfMonth(new Date()), 'yyyy-MM-dd')
+              })}
+            >
+              Último Mês
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Lista de Motoristas</CardTitle>
@@ -350,34 +544,64 @@ const AdminMotoristas = () => {
                 <TableHead>Telefone</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Remessas</TableHead>
+                <TableHead>Taxa Sucesso</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {motoristas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     Nenhum motorista cadastrado ainda.
                   </TableCell>
                 </TableRow>
               ) : (
-                motoristas.map((motorista) => (
-                  <TableRow key={motorista.id}>
-                    <TableCell className="font-medium">{motorista.nome}</TableCell>
-                    <TableCell>{motorista.cpf}</TableCell>
-                    <TableCell>{motorista.telefone}</TableCell>
-                    <TableCell>{motorista.email}</TableCell>
-                    <TableCell>{getStatusBadge(motorista.status)}</TableCell>
-                     <TableCell>
-                       <div className="flex gap-2">
-                         <Button
-                           variant="outline"
-                           size="sm"
-                           onClick={() => handleEdit(motorista)}
-                         >
-                           <Pencil className="h-3 w-3" />
-                         </Button>
-                         
+                motoristas.map((motorista) => {
+                  const stats = getMotoristaStats(motorista.id);
+                  return (
+                    <TableRow key={motorista.id}>
+                      <TableCell className="font-medium">{motorista.nome}</TableCell>
+                      <TableCell>{motorista.cpf}</TableCell>
+                      <TableCell>{motorista.telefone}</TableCell>
+                      <TableCell>{motorista.email}</TableCell>
+                      <TableCell>{getStatusBadge(motorista.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4 text-blue-500" />
+                          <span>{stats.total_remessas}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {stats.taxa_sucesso > 80 ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : stats.taxa_sucesso > 50 ? (
+                            <Clock className="h-4 w-4 text-yellow-500" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-500" />
+                          )}
+                          <span>{stats.taxa_sucesso.toFixed(1)}%</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(motorista)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewStats(motorista)}
+                          >
+                            <BarChart3 className="h-3 w-3" />
+                          </Button>
+                          
                           {motorista.status === 'pendente' ? (
                             <Button
                               variant="default"
@@ -401,15 +625,138 @@ const AdminMotoristas = () => {
                               )}
                             </Button>
                           )}
-                       </div>
-                     </TableCell>
-                  </TableRow>
-                ))
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Excluir Motorista</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir o motorista "{motorista.nome}"? 
+                                  Esta ação não pode ser desfeita e só é possível se o motorista não tiver remessas associadas.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(motorista)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      {/* Modal de Estatísticas */}
+      <Dialog open={isStatsDialogOpen} onOpenChange={setIsStatsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Relatório de Desempenho - {selectedMotorista?.nome}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedMotoristaStats && (
+            <div className="space-y-6">
+              <div className="text-sm text-muted-foreground">
+                Período: {format(new Date(dateRange.from), 'dd/MM/yyyy', { locale: ptBR })} até {format(new Date(dateRange.to), 'dd/MM/yyyy', { locale: ptBR })}
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <Package className="h-4 w-4 text-blue-500" />
+                      <div>
+                        <div className="text-2xl font-bold">{selectedMotoristaStats.total_remessas}</div>
+                        <div className="text-xs text-muted-foreground">Total de Remessas</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <div>
+                        <div className="text-2xl font-bold">{selectedMotoristaStats.remessas_entregues}</div>
+                        <div className="text-xs text-muted-foreground">Entregas</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <Clock className="h-4 w-4 text-yellow-500" />
+                      <div>
+                        <div className="text-2xl font-bold">{selectedMotoristaStats.remessas_pendentes}</div>
+                        <div className="text-xs text-muted-foreground">Pendentes</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <XCircle className="h-4 w-4 text-red-500" />
+                      <div>
+                        <div className="text-2xl font-bold">{selectedMotoristaStats.remessas_canceladas}</div>
+                        <div className="text-xs text-muted-foreground">Canceladas</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Taxa de Sucesso</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="text-3xl font-bold">
+                      {selectedMotoristaStats.taxa_sucesso.toFixed(1)}%
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {selectedMotoristaStats.remessas_entregues} de {selectedMotoristaStats.total_remessas} remessas entregues
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full" 
+                      style={{ width: `${selectedMotoristaStats.taxa_sucesso}%` }}
+                    ></div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
