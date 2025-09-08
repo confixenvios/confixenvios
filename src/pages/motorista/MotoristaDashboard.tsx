@@ -70,14 +70,16 @@ const MotoristaDashboard = () => {
   const [accepting, setAccepting] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check motorista session
+    console.log('🚀 === DASHBOARD MOTORISTA INICIADO ===');
     console.log('🔍 Verificando sessão do motorista...');
+    
     const sessionData = localStorage.getItem('motorista_session');
     console.log('📱 Session data do localStorage:', sessionData);
+    console.log('🌐 URL atual:', window.location.href);
+    console.log('📊 Estado atual - loading:', loading, 'remessas:', remessas.length);
     
     if (!sessionData) {
       console.log('❌ Nenhuma sessão encontrada - redirecionando para auth');
-      console.log('🔗 URL atual:', window.location.href);
       navigate('/motorista/auth');
       return;
     }
@@ -85,12 +87,22 @@ const MotoristaDashboard = () => {
     try {
       const session = JSON.parse(sessionData);
       console.log('👤 Sessão parseada:', session);
-      console.log('🆔 ID do motorista na sessão:', session.id);
-      console.log('📧 Email do motorista na sessão:', session.email);
-      console.log('📋 Status do motorista na sessão:', session.status);
+      console.log('🆔 ID do motorista:', session.id);
+      console.log('📧 Email do motorista:', session.email);
+      console.log('📋 Status do motorista:', session.status);
+      console.log('👨‍💼 Nome do motorista:', session.nome);
+      
+      if (!session.id) {
+        console.error('❌ ID do motorista não encontrado na sessão!');
+        localStorage.removeItem('motorista_session');
+        navigate('/motorista/auth');
+        return;
+      }
       
       setMotoristaSession(session);
+      console.log('🔄 Chamando loadMinhasRemessas com ID:', session.id);
       loadMinhasRemessas(session.id);
+      console.log('🔄 Chamando loadRemessasDisponiveis...');
       loadRemessasDisponiveis();
     } catch (error) {
       console.error('❌ Erro ao parsear sessão:', error);
