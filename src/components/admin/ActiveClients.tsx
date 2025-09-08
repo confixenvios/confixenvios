@@ -307,8 +307,10 @@ const ActiveClients = () => {
     setDeletingClient(clientId);
     
     try {
-      // Delete user from auth.users (this will cascade to profiles and user_roles)
-      const { error } = await supabase.auth.admin.deleteUser(clientId);
+      // Call RPC function to delete user
+      const { error } = await supabase.rpc('delete_user_admin', {
+        user_id_to_delete: clientId
+      });
       
       if (error) {
         throw error;

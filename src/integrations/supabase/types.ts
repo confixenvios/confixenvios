@@ -839,6 +839,10 @@ export type Database = {
           phone: string
         }[]
       }
+      delete_user_admin: {
+        Args: { user_id_to_delete: string }
+        Returns: undefined
+      }
       encrypt_integration_secret: {
         Args: { integration_id: string; secret_value: string }
         Returns: string
