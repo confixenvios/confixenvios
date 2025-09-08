@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +8,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { RemessaDetalhes } from '@/components/motorista/RemessaDetalhes';
+import { getMotoristaShipments, getAvailableShipments, acceptShipment, type MotoristaShipment, type BaseShipment } from '@/services/shipmentsService';
 
 interface MotoristaSession {
   id: string;
@@ -17,54 +17,11 @@ interface MotoristaSession {
   status: string;
 }
 
-interface Remessa {
-  id: string;
-  tracking_code: string;
-  status: string;
-  created_at: string;
-  weight: number | string;
-  length: number | string;
-  width: number | string;
-  height: number | string;
-  format: string;
-  selected_option: string;
-  pickup_option: string;
-  sender_address: {
-    name: string;
-    street: string;
-    number: string;
-    neighborhood: string;
-    city: string;
-    state: string;
-    cep: string;
-    complement?: string;
-    reference?: string;
-    phone?: string;
-  };
-  recipient_address: {
-    name: string;
-    street: string;
-    number: string;
-    neighborhood: string;
-    city: string;
-    state: string;
-    cep: string;
-    complement?: string;
-    reference?: string;
-    phone?: string;
-  };
-  quote_data: any;
-  payment_data: any;
-  cte_key?: string;
-}
-
-const MotoristaDashboard = () => {
-  const navigate = useNavigate();
   const [motoristaSession, setMotoristaSession] = useState<MotoristaSession | null>(null);
-  const [remessas, setRemessas] = useState<Remessa[]>([]);
-  const [remessasDisponiveis, setRemessasDisponiveis] = useState<Remessa[]>([]);
+  const [remessas, setRemessas] = useState<MotoristaShipment[]>([]);
+  const [remessasDisponiveis, setRemessasDisponiveis] = useState<BaseShipment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRemessa, setSelectedRemessa] = useState<Remessa | null>(null);
+  const [selectedRemessa, setSelectedRemessa] = useState<MotoristaShipment | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
@@ -113,104 +70,19 @@ const MotoristaDashboard = () => {
 
   const loadMinhasRemessas = async (motoristaId: string) => {
     try {
-      console.log('🚛 Carregando remessas para motorista ID:', motoristaId);
+      console.log('🚛 === CARREGANDO REMESSAS COM SERVIÇO CENTRALIZADO ===');
+      console.log('🆔 Motorista ID:', motoristaId);
       
-      // Verificar o status do motorista primeiro
-      const { data: motoristaData, error: motoristaError } = await supabase
-        .from('motoristas')
-        .select('status')
-        .eq('id', motoristaId)
-        .single();
-
-      if (motoristaError) {
-        console.error('❌ Erro ao verificar status do motorista:', motoristaError);
-        throw motoristaError;
-      }
-
-      console.log('👤 Status do motorista:', motoristaData.status);
-
-      // Se o motorista está pendente, não carregar remessas
-      if (motoristaData.status === 'pendente') {
-        console.log('⏳ Motorista pendente - não carregando remessas');
-        setRemessas([]);
-        setLoading(false);
-        return;
-      }
-
-      // Buscar remessas diretamente da tabela com join para endereços
-      console.log('🔍 Buscando remessas diretamente da tabela...');
-      const { data, error } = await supabase
-        .from('shipments')
-        .select(`
-          id,
-          tracking_code,
-          status,
-          created_at,
-          weight,
-          length,
-          width,
-          height,
-          format,
-          selected_option,
-          pickup_option,
-          quote_data,
-          payment_data,
-          label_pdf_url,
-          cte_key,
-          sender_address:addresses!shipments_sender_address_id_fkey(
-            name,
-            street,
-            number,
-            neighborhood,
-            city,
-            state,
-            cep,
-            complement,
-            reference,
-            phone
-          ),
-          recipient_address:addresses!shipments_recipient_address_id_fkey(
-            name,
-            street,
-            number,
-            neighborhood,
-            city,
-            state,
-            cep,
-            complement,
-            reference,
-            phone
-          )
-        `)
-        .eq('motorista_id', motoristaId)
-        .not('status', 'in', '(CANCELLED,DRAFT)')
-        .order('created_at', { ascending: false });
-
-      console.log('📦 Resposta completa da query direta:');
-      console.log('- Data:', data);
-      console.log('- Error:', error);
-      console.log('- Tipo de data:', typeof data);
-      console.log('- É array?', Array.isArray(data));
-      console.log('- Quantidade de items:', data?.length);
+      const data = await getMotoristaShipments(motoristaId);
       
-      if (data && data.length > 0) {
-        console.log('📦 Primeira remessa para debug:', data[0]);
-        console.log('📦 Campos da primeira remessa:', Object.keys(data[0]));
-      }
-
-      if (error) {
-        console.error('❌ Erro na query direta:', error);
-        console.error('❌ Código do erro:', error.code);
-        console.error('❌ Mensagem do erro:', error.message);
-        console.error('❌ Detalhes do erro:', error.details);
-        throw error;
+      console.log('📦 Remessas retornadas do serviço:', data);
+      console.log('📊 Quantidade de remessas:', data.length);
+      
+      if (data.length > 0) {
+        console.log('📦 Primeira remessa:', data[0]);
       }
       
-      console.log('📦 Dados retornados da query:', data);
-      console.log('📊 Quantidade de remessas:', data?.length || 0);
-      
-      // Os dados já vêm no formato correto
-      setRemessas(data || []);
+      setRemessas(data);
     } catch (error) {
       console.error('❌ Erro ao carregar remessas:', error);
       toast.error('Erro ao carregar suas coletas');
@@ -221,20 +93,16 @@ const MotoristaDashboard = () => {
 
   const loadRemessasDisponiveis = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_available_shipments');
+      console.log('🔍 === CARREGANDO REMESSAS DISPONÍVEIS ===');
       
-      if (error) throw error;
+      const data = await getAvailableShipments();
       
-      // Transformar os dados para o formato esperado pelo componente
-      const transformedData = (data || []).map((item: any) => ({
-        ...item,
-        sender_address: item.sender_address || {},
-        recipient_address: item.recipient_address || {}
-      }));
+      console.log('📦 Remessas disponíveis:', data);
+      console.log('📊 Quantidade disponível:', data.length);
       
-      setRemessasDisponiveis(transformedData);
+      setRemessasDisponiveis(data);
     } catch (error) {
-      console.error('Erro ao carregar remessas disponíveis:', error);
+      console.error('❌ Erro ao carregar remessas disponíveis:', error);
       toast.error('Erro ao carregar remessas disponíveis');
     }
   };
@@ -244,14 +112,11 @@ const MotoristaDashboard = () => {
     
     setAccepting(shipmentId);
     try {
-      const { data, error } = await supabase.rpc('accept_shipment', {
-        shipment_id: shipmentId,
-        motorista_uuid: motoristaSession.id
-      });
-
-      if (error) throw error;
-
-      const result = data as { success: boolean; message?: string; error?: string };
+      console.log('🚚 === ACEITANDO REMESSA COM SERVIÇO CENTRALIZADO ===');
+      console.log('📦 Remessa ID:', shipmentId);
+      console.log('🆔 Motorista ID:', motoristaSession.id);
+      
+      const result = await acceptShipment(shipmentId, motoristaSession.id);
       
       if (result.success) {
         toast.success(result.message || 'Remessa aceita com sucesso!');
@@ -262,7 +127,7 @@ const MotoristaDashboard = () => {
         toast.error(result.error || 'Erro ao aceitar remessa');
       }
     } catch (error) {
-      console.error('Erro ao aceitar remessa:', error);
+      console.error('❌ Erro ao aceitar remessa:', error);
       toast.error('Erro ao aceitar remessa');
     } finally {
       setAccepting(null);
@@ -281,6 +146,17 @@ const MotoristaDashboard = () => {
       navigate('/motorista/auth');
     }
   };
+
+    try {
+      // Só limpar localStorage, não precisamos do Supabase auth
+      localStorage.removeItem('motorista_session');
+      navigate('/motorista/auth');
+      toast.success('Logout realizado com sucesso');
+    } catch (error) {
+      console.error('Erro no logout:', error);
+      localStorage.removeItem('motorista_session');
+      navigate('/motorista/auth');
+    }
 
   if (loading) {
     return (
