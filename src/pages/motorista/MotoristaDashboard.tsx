@@ -22,10 +22,10 @@ interface Remessa {
   tracking_code: string;
   status: string;
   created_at: string;
-  weight: number;
-  length: number;
-  width: number;
-  height: number;
+  weight: number | string;
+  length: number | string;
+  width: number | string;
+  height: number | string;
   format: string;
   selected_option: string;
   pickup_option: string;
