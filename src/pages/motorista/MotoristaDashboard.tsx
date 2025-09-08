@@ -77,17 +77,26 @@ const MotoristaDashboard = () => {
     
     if (!sessionData) {
       console.log('❌ Nenhuma sessão encontrada - redirecionando para auth');
+      console.log('🔗 URL atual:', window.location.href);
       navigate('/motorista/auth');
       return;
     }
 
-    const session = JSON.parse(sessionData);
-    console.log('👤 Sessão parseada:', session);
-    console.log('🆔 ID do motorista na sessão:', session.id);
-    
-    setMotoristaSession(session);
-    loadMinhasRemessas(session.id);
-    loadRemessasDisponiveis();
+    try {
+      const session = JSON.parse(sessionData);
+      console.log('👤 Sessão parseada:', session);
+      console.log('🆔 ID do motorista na sessão:', session.id);
+      console.log('📧 Email do motorista na sessão:', session.email);
+      console.log('📋 Status do motorista na sessão:', session.status);
+      
+      setMotoristaSession(session);
+      loadMinhasRemessas(session.id);
+      loadRemessasDisponiveis();
+    } catch (error) {
+      console.error('❌ Erro ao parsear sessão:', error);
+      localStorage.removeItem('motorista_session');
+      navigate('/motorista/auth');
+    }
   }, [navigate]);
 
   const loadMinhasRemessas = async (motoristaId: string) => {
