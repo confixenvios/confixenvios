@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -116,9 +116,16 @@ const MotoristaAuth = () => {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            <p>Problemas para acessar?</p>
-            <p>Entre em contato com o administrador</p>
+          <div className="mt-6 text-center text-sm">
+            <p className="text-muted-foreground mb-2">
+              Ainda não tem uma conta?{' '}
+              <Link to="/motorista/registro" className="text-primary hover:underline">
+                Cadastre-se aqui
+              </Link>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Problemas para acessar? Entre em contato com o administrador
+            </p>
           </div>
         </CardContent>
       </Card>
