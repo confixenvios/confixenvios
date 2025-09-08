@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { RemessaDetalhes } from '@/components/motorista/RemessaDetalhes';
-import { OccurrenceModal } from '@/components/motorista/OccurrenceModal';
+import { OccurrenceSimpleModal } from '@/components/motorista/OccurrenceSimpleModal';
 import { getMotoristaShipments, getAvailableShipments, acceptShipment, type MotoristaShipment, type BaseShipment } from '@/services/shipmentsService';
 
 interface MotoristaSession {
@@ -426,21 +426,7 @@ const MotoristaDashboard = () => {
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
-                              {remessa.motorista_id && ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'TENTATIVA_ENTREGA'].includes(remessa.status) ? (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedRemessa(remessa);
-                                    setOccurrenceModalOpen(true);
-                                  }}
-                                  className="h-8 px-2 hover:bg-muted"
-                                >
-                                  {getStatusBadge(remessa.status)}
-                                </Button>
-                              ) : (
-                                getStatusBadge(remessa.status)
-                              )}
+                              {getStatusBadge(remessa.status)}
                             </div>
                           </div>
 
@@ -539,20 +525,19 @@ const MotoristaDashboard = () => {
         />
 
         {/* Occurrence Modal */}
-        {selectedRemessa && (
-          <OccurrenceModal
+        {selectedRemessa && motoristaSession?.id && (
+          <OccurrenceSimpleModal
             isOpen={occurrenceModalOpen}
             onClose={() => setOccurrenceModalOpen(false)}
-            onSave={async (occurrence) => {
-              console.log('📊 Ocorrência criada:', occurrence);
-              toast.success('Ocorrência registrada com sucesso!');
+            shipmentId={selectedRemessa.id}
+            motoristaId={motoristaSession.id}
+            onSuccess={() => {
+              console.log('📊 Ocorrência criada com sucesso');
               if (motoristaSession?.id) {
                 loadMinhasRemessas(motoristaSession.id);
                 loadRemessasDisponiveis();
               }
-              setOccurrenceModalOpen(false);
             }}
-            shipmentId={selectedRemessa.id}
           />
         )}
       </main>
