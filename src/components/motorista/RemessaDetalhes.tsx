@@ -258,7 +258,21 @@ export const RemessaDetalhes = ({
                       {remessa.tracking_code || `ID${remessa.id.slice(0, 8).toUpperCase()}`}
                     </CardTitle>
                     <div className="flex-shrink-0">
-                      {getStatusBadge(remessa.status)}
+                      {canChangeStatus() ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowOccurrenceModal(true)}
+                          className="text-xs px-2 py-1 h-auto border border-muted-foreground/20 hover:bg-muted"
+                        >
+                          <div className="flex items-center gap-1">
+                            {getStatusBadge(remessa.status)}
+                            <FileText className="h-3 w-3 opacity-60" />
+                          </div>
+                        </Button>
+                      ) : (
+                        getStatusBadge(remessa.status)
+                      )}
                     </div>
                   </div>
                 </CardHeader>
@@ -279,55 +293,52 @@ export const RemessaDetalhes = ({
                         Aceitar Coleta
                       </Button>
                     )}
-                    
-                    {canChangeStatus() && (
-                      <Button
-                        variant="default"
-                        className="w-full"
-                        onClick={() => setShowOccurrenceModal(true)}
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Alterar Status
-                      </Button>
-                    )}
                   </div>
 
-                  {/* Anexos */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-sm"
-                      onClick={() => setShowPhotoUpload(true)}
-                    >
-                      <Camera className="h-4 w-4 mr-1" />
-                      Foto
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-sm"
-                      onClick={() => setShowAudioRecorder(true)}
-                    >
-                      <Mic className="h-4 w-4 mr-1" />
-                      Áudio
-                    </Button>
-                  </div>
+                  {/* Registrar Ocorrência - apenas se motorista pode alterar status */}
+                  {canChangeStatus() && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">Registrar Ocorrência</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-sm"
+                            onClick={() => setShowPhotoUpload(true)}
+                          >
+                            <Camera className="h-4 w-4 mr-1" />
+                            Foto
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-sm"
+                            onClick={() => setShowAudioRecorder(true)}
+                          >
+                            <Mic className="h-4 w-4 mr-1" />
+                            Áudio
+                          </Button>
+                        </div>
 
-                  {/* Status dos Anexos */}
-                  {(photos.length > 0 || audioUrl) && (
-                    <div className="flex gap-2 text-xs">
-                      {photos.length > 0 && (
-                        <Badge variant="outline">
-                          {photos.length} foto{photos.length > 1 ? 's' : ''}
-                        </Badge>
-                      )}
-                      {audioUrl && (
-                        <Badge variant="outline">
-                          Áudio gravado
-                        </Badge>
-                      )}
-                    </div>
+                        {/* Status dos Anexos */}
+                        {(photos.length > 0 || audioUrl) && (
+                          <div className="flex gap-2 text-xs">
+                            {photos.length > 0 && (
+                              <Badge variant="outline">
+                                {photos.length} foto{photos.length > 1 ? 's' : ''}
+                              </Badge>
+                            )}
+                            {audioUrl && (
+                              <Badge variant="outline">
+                                Áudio gravado
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </>
                   )}
                 </CardContent>
               </Card>
