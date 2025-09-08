@@ -143,8 +143,15 @@ export const AudioRecorder = ({
 
     setIsUploading(true);
     try {
+      console.log('📤 Iniciando upload de áudio...');
+      console.log('🔊 Audio blob size:', audioBlob.size);
+      console.log('📦 Shipment ID:', shipmentId);
+
       const fileName = `audio_${shipmentId}_${Date.now()}.webm`;
-      const filePath = `shipment-audio/${fileName}`;
+      const filePath = `${fileName}`; // Remover diretório para bucket público
+
+      console.log('📂 File path:', filePath);
+      console.log('📋 Tentando upload para bucket shipment-audio...');
 
       const { data, error } = await supabase.storage
         .from('shipment-audio')
@@ -153,11 +160,20 @@ export const AudioRecorder = ({
           upsert: false
         });
 
-      if (error) throw error;
+      console.log('📤 Upload response:', { data, error });
+
+      if (error) {
+        console.error('❌ Erro no upload:', error);
+        throw error;
+      }
+
+      console.log('✅ Upload realizado com sucesso:', data);
 
       const { data: { publicUrl } } = supabase.storage
         .from('shipment-audio')
         .getPublicUrl(filePath);
+
+      console.log('🔗 Public URL gerada:', publicUrl);
 
       onSave(publicUrl);
       
