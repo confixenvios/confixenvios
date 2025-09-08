@@ -66,47 +66,40 @@ const MotoristaRegistro = () => {
     setLoading(true);
 
     try {
-      console.log('🔄 Iniciando cadastro de motorista...', {
+      console.log('🔄 Iniciando cadastro de motorista via função segura...', {
         nome: formData.nome,
-        email: formData.email,
-        status: 'pendente'
+        email: formData.email
       });
 
-      // Criar novo motorista com status pendente
-      const { data, error } = await supabase
-        .from('motoristas')
-        .insert([{
-          nome: formData.nome,
-          cpf: formData.cpf,
-          telefone: formData.telefone,
-          email: formData.email,
-          senha: formData.senha,
-          status: 'pendente'
-        }])
-        .select();
+      // Usar função segura para cadastro público
+      const { data, error } = await supabase.rpc('register_motorista_public', {
+        p_nome: formData.nome,
+        p_cpf: formData.cpf,
+        p_telefone: formData.telefone,
+        p_email: formData.email,
+        p_senha: formData.senha
+      });
 
-      console.log('📝 Resposta do Supabase:', { data, error });
+      console.log('📝 Resposta da função:', { data, error });
 
       if (error) {
-        console.error('❌ Erro específico do Supabase:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
-        });
-        
-        if (error.code === '23505') {
-          toast.error('E-mail ou CPF já cadastrado');
-        } else if (error.code === '42501') {
-          toast.error('Erro de permissão. Verifique as configurações de segurança.');
-        } else {
-          toast.error(`Erro no cadastro: ${error.message}`);
-        }
+        console.error('❌ Erro da função RPC:', error);
+        toast.error(`Erro na função: ${error.message}`);
         return;
       }
 
-      console.log('✅ Motorista cadastrado com sucesso:', data);
-      toast.success('Cadastro realizado com sucesso! Aguarde a aprovação do administrador.');
+      // Converter resposta para tipo conhecido
+      const result = data as { success: boolean; error?: string; message?: string };
+
+      // Verificar resposta da função
+      if (result && result.success === false) {
+        console.error('❌ Erro retornado pela função:', result.error);
+        toast.error(result.error || 'Erro desconhecido');
+        return;
+      }
+
+      console.log('✅ Motorista cadastrado com sucesso via função segura');
+      toast.success(result?.message || 'Cadastro realizado com sucesso!');
       navigate('/motorista/auth');
 
     } catch (error: any) {

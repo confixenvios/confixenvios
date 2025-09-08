@@ -954,6 +954,16 @@ export type Database = {
         Args: { user_email: string }
         Returns: undefined
       }
+      register_motorista_public: {
+        Args: {
+          p_cpf: string
+          p_email: string
+          p_nome: string
+          p_senha: string
+          p_telefone: string
+        }
+        Returns: Json
+      }
       validate_anonymous_session: {
         Args: { session_token: string }
         Returns: string
