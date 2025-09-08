@@ -71,13 +71,20 @@ const MotoristaDashboard = () => {
 
   useEffect(() => {
     // Check motorista session
+    console.log('🔍 Verificando sessão do motorista...');
     const sessionData = localStorage.getItem('motorista_session');
+    console.log('📱 Session data do localStorage:', sessionData);
+    
     if (!sessionData) {
+      console.log('❌ Nenhuma sessão encontrada - redirecionando para auth');
       navigate('/motorista/auth');
       return;
     }
 
     const session = JSON.parse(sessionData);
+    console.log('👤 Sessão parseada:', session);
+    console.log('🆔 ID do motorista na sessão:', session.id);
+    
     setMotoristaSession(session);
     loadMinhasRemessas(session.id);
     loadRemessasDisponiveis();
@@ -85,6 +92,8 @@ const MotoristaDashboard = () => {
 
   const loadMinhasRemessas = async (motoristaId: string) => {
     try {
+      console.log('🚛 Carregando remessas para motorista ID:', motoristaId);
+      
       // Verificar o status do motorista primeiro
       const { data: motoristaData, error: motoristaError } = await supabase
         .from('motoristas')
@@ -92,21 +101,34 @@ const MotoristaDashboard = () => {
         .eq('id', motoristaId)
         .single();
 
-      if (motoristaError) throw motoristaError;
+      if (motoristaError) {
+        console.error('❌ Erro ao verificar status do motorista:', motoristaError);
+        throw motoristaError;
+      }
+
+      console.log('👤 Status do motorista:', motoristaData.status);
 
       // Se o motorista está pendente, não carregar remessas
       if (motoristaData.status === 'pendente') {
+        console.log('⏳ Motorista pendente - não carregando remessas');
         setRemessas([]);
         setLoading(false);
         return;
       }
 
+      console.log('🔍 Chamando get_motorista_shipments...');
       const { data, error } = await supabase
         .rpc('get_motorista_shipments', { 
           motorista_uuid: motoristaId 
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro na RPC get_motorista_shipments:', error);
+        throw error;
+      }
+      
+      console.log('📦 Dados retornados da RPC:', data);
+      console.log('📊 Quantidade de remessas:', data?.length || 0);
       
       // Transformar os dados para o formato esperado pelo componente
       const transformedData = (data || []).map((item: any) => ({
@@ -115,9 +137,10 @@ const MotoristaDashboard = () => {
         recipient_address: item.recipient_address || {}
       }));
       
+      console.log('✅ Remessas transformadas:', transformedData);
       setRemessas(transformedData);
     } catch (error) {
-      console.error('Erro ao carregar remessas:', error);
+      console.error('❌ Erro ao carregar remessas:', error);
       toast.error('Erro ao carregar suas coletas');
     } finally {
       setLoading(false);
