@@ -13,14 +13,14 @@ import {
   Calendar, 
   CheckCircle,
   Camera,
-  PenTool,
+  Mic,
   FileText,
   ArrowLeft,
   Truck
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { SignaturePad } from './SignaturePad';
+import { AudioRecorder } from './AudioRecorder';
 import { PhotoUpload } from './PhotoUpload';
 import { OccurrenceModal } from './OccurrenceModal';
 
@@ -37,11 +37,11 @@ export const RemessaDetalhes = ({
   remessa, 
   onUpdateStatus 
 }: RemessaDetalhesProps) => {
-  const [showSignaturePad, setShowSignaturePad] = useState(false);
+  const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [showPhotoUpload, setShowPhotoUpload] = useState(false);
   const [showOccurrenceModal, setShowOccurrenceModal] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
-  const [signature, setSignature] = useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
   if (!remessa) return null;
 
@@ -80,22 +80,22 @@ export const RemessaDetalhes = ({
     setPhotos(prev => [...prev, photo]);
   };
 
-  const handleSignatureSave = (signatureDataUrl: string) => {
-    setSignature(signatureDataUrl);
+  const handleAudioSave = (savedAudioUrl: string) => {
+    setAudioUrl(savedAudioUrl);
   };
 
   const handleOccurrenceSave = (occurrence: any) => {
     const data = {
       occurrence,
       photos: photos.length > 0 ? photos : undefined,
-      signature: signature || undefined
+      audioUrl: audioUrl || undefined
     };
     
     onUpdateStatus(remessa.id, occurrence.newStatus, data);
     
     // Reset attachments after saving
     setPhotos([]);
-    setSignature(null);
+    setAudioUrl(null);
   };
 
 
@@ -169,24 +169,24 @@ export const RemessaDetalhes = ({
                       variant="outline"
                       size="sm"
                       className="w-full text-sm"
-                      onClick={() => setShowSignaturePad(true)}
+                      onClick={() => setShowAudioRecorder(true)}
                     >
-                      <PenTool className="h-4 w-4 mr-1" />
-                      Assinatura
+                      <Mic className="h-4 w-4 mr-1" />
+                      Áudio
                     </Button>
                   </div>
 
                   {/* Status dos Anexos */}
-                  {(photos.length > 0 || signature) && (
+                  {(photos.length > 0 || audioUrl) && (
                     <div className="flex gap-2 text-xs">
                       {photos.length > 0 && (
                         <Badge variant="outline">
                           {photos.length} foto{photos.length > 1 ? 's' : ''}
                         </Badge>
                       )}
-                      {signature && (
+                      {audioUrl && (
                         <Badge variant="outline">
-                          Assinatura capturada
+                          Áudio gravado
                         </Badge>
                       )}
                     </div>
@@ -316,11 +316,12 @@ export const RemessaDetalhes = ({
         </DialogContent>
       </Dialog>
 
-      <SignaturePad
-        isOpen={showSignaturePad}
-        onClose={() => setShowSignaturePad(false)}
-        onSave={handleSignatureSave}
-        title="Assinatura do Recebedor"
+      <AudioRecorder
+        isOpen={showAudioRecorder}
+        onClose={() => setShowAudioRecorder(false)}
+        onSave={handleAudioSave}
+        title="Confirmação do Cliente"
+        shipmentId={remessa.id}
       />
 
       <PhotoUpload
