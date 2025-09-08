@@ -98,38 +98,6 @@ export const RemessaDetalhes = ({
     setSignature(null);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(amount / 100);
-  };
-
-  const getFreightValue = () => {
-    // Tenta pegar do payment_data primeiro (já em centavos)
-    if (remessa.payment_data?.pix_details?.amount) {
-      return remessa.payment_data.pix_details.amount;
-    }
-    if (remessa.payment_data?.pixData?.amount) {
-      return remessa.payment_data.pixData.amount;
-    }
-    if (remessa.payment_data?.amount) {
-      return remessa.payment_data.amount;
-    }
-    
-    // Se não encontrar no payment_data, busca no quote_data
-    if (remessa.quote_data?.deliveryDetails?.totalPrice) {
-      return remessa.quote_data.deliveryDetails.totalPrice * 100; // Converte para centavos
-    }
-    if (remessa.quote_data?.deliveryDetails?.shippingPrice) {
-      return remessa.quote_data.deliveryDetails.shippingPrice * 100; // Converte para centavos
-    }
-    if (remessa.quote_data?.amount) {
-      return remessa.quote_data.amount * 100; // Converte para centavos
-    }
-    
-    return 0;
-  };
 
   return (
     <>
@@ -248,9 +216,9 @@ export const RemessaDetalhes = ({
                       </p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">Valor do Frete</p>
-                      <p className="font-medium text-success">
-                        {formatCurrency(getFreightValue())}
+                      <p className="text-muted-foreground text-xs">Dimensões</p>
+                      <p className="font-medium">
+                        {remessa.length}x{remessa.width}x{remessa.height}cm
                       </p>
                     </div>
                   </div>
