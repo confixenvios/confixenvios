@@ -78,10 +78,6 @@ const MotoristaDashboard = () => {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const canChangeStatus = (remessa: MotoristaShipment) => {
-    return remessa.motorista_id && ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'TENTATIVA_ENTREGA'].includes(remessa.status);
-  };
-
   const loadMinhasRemessas = async (motoristaId: string) => {
     try {
       const data = await getMotoristaShipments(motoristaId);
@@ -430,7 +426,7 @@ const MotoristaDashboard = () => {
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
-                              {canChangeStatus(remessa) ? (
+                              {remessa.motorista_id && ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'TENTATIVA_ENTREGA'].includes(remessa.status) ? (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -438,7 +434,7 @@ const MotoristaDashboard = () => {
                                     setSelectedRemessa(remessa);
                                     setOccurrenceModalOpen(true);
                                   }}
-                                  className="h-8 px-2"
+                                  className="h-8 px-2 hover:bg-muted"
                                 >
                                   {getStatusBadge(remessa.status)}
                                 </Button>
@@ -481,7 +477,7 @@ const MotoristaDashboard = () => {
                                 <Eye className="h-3 w-3 mr-1" />
                                 Ver
                               </Button>
-                              {canChangeStatus(remessa) && (
+                              {remessa.motorista_id && ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'TENTATIVA_ENTREGA'].includes(remessa.status) && (
                                 <Button
                                   variant="default"
                                   size="sm"
