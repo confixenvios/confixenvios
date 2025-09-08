@@ -449,14 +449,34 @@ const MotoristaDashboard = () => {
                               <p className="font-medium text-muted-foreground">Remetente</p>
                               <p className="font-medium">{remessa.sender_address?.name}</p>
                               <p className="text-muted-foreground">
-                                {remessa.sender_address?.city}, {remessa.sender_address?.state}
+                                {remessa.sender_address?.street}, {remessa.sender_address?.number}
+                                {remessa.sender_address?.complement && `, ${remessa.sender_address.complement}`}
+                              </p>
+                              <p className="text-muted-foreground">
+                                {remessa.sender_address?.neighborhood}
+                              </p>
+                              <p className="text-muted-foreground">
+                                {remessa.sender_address?.city} - {remessa.sender_address?.state}
+                              </p>
+                              <p className="text-muted-foreground">
+                                CEP: {remessa.sender_address?.cep}
                               </p>
                             </div>
                             <div className="space-y-1">
                               <p className="font-medium text-muted-foreground">Destinatário</p>
                               <p className="font-medium">{remessa.recipient_address?.name}</p>
                               <p className="text-muted-foreground">
-                                {remessa.recipient_address?.city}, {remessa.recipient_address?.state}
+                                {remessa.recipient_address?.street}, {remessa.recipient_address?.number}
+                                {remessa.recipient_address?.complement && `, ${remessa.recipient_address.complement}`}
+                              </p>
+                              <p className="text-muted-foreground">
+                                {remessa.recipient_address?.neighborhood}
+                              </p>
+                              <p className="text-muted-foreground">
+                                {remessa.recipient_address?.city} - {remessa.recipient_address?.state}
+                              </p>
+                              <p className="text-muted-foreground">
+                                CEP: {remessa.recipient_address?.cep}
                               </p>
                             </div>
                           </div>
