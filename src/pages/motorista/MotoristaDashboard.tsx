@@ -137,16 +137,56 @@ const MotoristaDashboard = () => {
         return;
       }
 
-      console.log('🔍 Chamando get_motorista_shipments_public...');
-      console.log('🎯 Parâmetros da RPC:', { motorista_uuid: motoristaId });
-      console.log('🔧 Tipo do ID:', typeof motoristaId, 'Valor:', motoristaId);
-      
+      // Buscar remessas diretamente da tabela com join para endereços
+      console.log('🔍 Buscando remessas diretamente da tabela...');
       const { data, error } = await supabase
-        .rpc('get_motorista_shipments_public', { 
-          motorista_uuid: motoristaId 
-        });
+        .from('shipments')
+        .select(`
+          id,
+          tracking_code,
+          status,
+          created_at,
+          weight,
+          length,
+          width,
+          height,
+          format,
+          selected_option,
+          pickup_option,
+          quote_data,
+          payment_data,
+          label_pdf_url,
+          cte_key,
+          sender_address:addresses!shipments_sender_address_id_fkey(
+            name,
+            street,
+            number,
+            neighborhood,
+            city,
+            state,
+            cep,
+            complement,
+            reference,
+            phone
+          ),
+          recipient_address:addresses!shipments_recipient_address_id_fkey(
+            name,
+            street,
+            number,
+            neighborhood,
+            city,
+            state,
+            cep,
+            complement,
+            reference,
+            phone
+          )
+        `)
+        .eq('motorista_id', motoristaId)
+        .not('status', 'in', '(CANCELLED,DRAFT)')
+        .order('created_at', { ascending: false });
 
-      console.log('📦 Resposta completa da RPC get_motorista_shipments_public:');
+      console.log('📦 Resposta completa da query direta:');
       console.log('- Data:', data);
       console.log('- Error:', error);
       console.log('- Tipo de data:', typeof data);
@@ -159,25 +199,18 @@ const MotoristaDashboard = () => {
       }
 
       if (error) {
-        console.error('❌ Erro na RPC get_motorista_shipments_public:', error);
+        console.error('❌ Erro na query direta:', error);
         console.error('❌ Código do erro:', error.code);
         console.error('❌ Mensagem do erro:', error.message);
         console.error('❌ Detalhes do erro:', error.details);
         throw error;
       }
       
-      console.log('📦 Dados retornados da RPC:', data);
+      console.log('📦 Dados retornados da query:', data);
       console.log('📊 Quantidade de remessas:', data?.length || 0);
       
-      // Transformar os dados para o formato esperado pelo componente
-      const transformedData = (data || []).map((item: any) => ({
-        ...item,
-        sender_address: item.sender_address || {},
-        recipient_address: item.recipient_address || {}
-      }));
-      
-      console.log('✅ Remessas transformadas:', transformedData);
-      setRemessas(transformedData);
+      // Os dados já vêm no formato correto
+      setRemessas(data || []);
     } catch (error) {
       console.error('❌ Erro ao carregar remessas:', error);
       toast.error('Erro ao carregar suas coletas');
