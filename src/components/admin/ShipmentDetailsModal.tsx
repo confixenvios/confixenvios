@@ -105,10 +105,10 @@ export const ShipmentDetailsModal = ({
       'PAYMENT_CONFIRMED': { label: 'Pagamento Confirmado', variant: 'default' as const },
       'PAID': { label: 'Pago', variant: 'success' as const },
       'COLETA_ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
-      'COLETA_FINALIZADA': { label: 'Coleta Finalizada', variant: 'success' as const },
+      'COLETA_FINALIZADA': { label: 'Coleta Realizada', variant: 'success' as const },
       'EM_TRANSITO': { label: 'Em Trânsito', variant: 'default' as const },
-      'TENTATIVA_ENTREGA': { label: 'Tentativa de Entrega', variant: 'destructive' as const },
-      'ENTREGA_FINALIZADA': { label: 'Entregue', variant: 'success' as const },
+      'TENTATIVA_ENTREGA': { label: 'Insucesso na Entrega', variant: 'destructive' as const },
+      'ENTREGA_FINALIZADA': { label: 'Entregue ao Destinatário com Sucesso', variant: 'success' as const },
       'AGUARDANDO_DESTINATARIO': { label: 'Aguardando Destinatário', variant: 'secondary' as const },
       'ENDERECO_INCORRETO': { label: 'Endereço Incorreto', variant: 'destructive' as const }
     };

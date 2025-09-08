@@ -30,7 +30,7 @@ interface RemessaDetalhesProps {
   isOpen: boolean;
   onClose: () => void;
   remessa: any;
-  onUpdateStatus: (remessaId: string, newStatus: string, data?: any) => void;
+  onUpdateStatus: (newStatus: string, data?: any) => void;
 }
 
 export const RemessaDetalhes = ({ 
@@ -60,11 +60,13 @@ export const RemessaDetalhes = ({
     const statusConfig = {
       'PENDING_LABEL': { label: 'Aguardando Etiqueta', variant: 'secondary' as const },
       'LABEL_GENERATED': { label: 'Etiqueta Gerada', variant: 'default' as const },
+      'PAYMENT_CONFIRMED': { label: 'Pagamento Confirmado', variant: 'success' as const },
+      'PAID': { label: 'Pago', variant: 'success' as const },
       'COLETA_ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
-      'COLETA_FINALIZADA': { label: 'Coleta Finalizada', variant: 'success' as const },
+      'COLETA_FINALIZADA': { label: 'Coleta Realizada', variant: 'success' as const },
       'EM_TRANSITO': { label: 'Em Trânsito', variant: 'default' as const },
-      'TENTATIVA_ENTREGA': { label: 'Tentativa de Entrega', variant: 'destructive' as const },
-      'ENTREGA_FINALIZADA': { label: 'Entregue', variant: 'success' as const },
+      'TENTATIVA_ENTREGA': { label: 'Insucesso na Entrega', variant: 'destructive' as const },
+      'ENTREGA_FINALIZADA': { label: 'Entregue ao Destinatário com Sucesso', variant: 'success' as const },
       'AGUARDANDO_DESTINATARIO': { label: 'Aguardando Destinatário', variant: 'secondary' as const },
       'ENDERECO_INCORRETO': { label: 'Endereço Incorreto', variant: 'destructive' as const }
     };
@@ -76,7 +78,7 @@ export const RemessaDetalhes = ({
   };
 
   const canAcceptPickup = () => {
-    return ['PENDING_LABEL', 'LABEL_GENERATED'].includes(remessa.status);
+    return ['PENDING_LABEL', 'LABEL_GENERATED', 'PAYMENT_CONFIRMED', 'PAID'].includes(remessa.status);
   };
 
   const canRegisterOccurrence = () => {
@@ -84,7 +86,7 @@ export const RemessaDetalhes = ({
   };
 
   const handleAcceptPickup = () => {
-    onUpdateStatus(remessa.id, 'COLETA_ACEITA');
+    onUpdateStatus('COLETA_ACEITA');
   };
 
   const handlePhotoSave = (photo: File) => {
@@ -227,7 +229,7 @@ export const RemessaDetalhes = ({
     setPhotos([]);
     setAudioUrl(null);
     setShowOccurrenceModal(false);
-    onUpdateStatus(remessa.id, occurrence.newStatus);
+    onUpdateStatus(occurrence.newStatus);
   };
 
 

@@ -491,7 +491,9 @@ const MotoristaDashboard = () => {
           isOpen={detailsModalOpen}
           onClose={() => setDetailsModalOpen(false)}
           remessa={selectedRemessa}
-          onUpdateStatus={() => {
+          onUpdateStatus={(newStatus: string) => {
+            console.log('📊 Status atualizado para:', newStatus);
+            toast.success('Status atualizado com sucesso!');
             if (motoristaSession?.id) {
               loadMinhasRemessas(motoristaSession.id);
               loadRemessasDisponiveis();

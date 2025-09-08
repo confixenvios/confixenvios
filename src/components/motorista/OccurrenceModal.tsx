@@ -33,17 +33,25 @@ const OCCURRENCE_TYPES: OccurrenceType[] = [
     newStatus: 'COLETA_FINALIZADA'
   },
   {
+    id: 'em_transito',
+    label: 'Em Trânsito',
+    description: 'Mercadoria em deslocamento para entrega',
+    icon: Truck,
+    color: 'default',
+    newStatus: 'EM_TRANSITO'
+  },
+  {
     id: 'tentativa_entrega',
-    label: 'Tentativa de Entrega',
-    description: 'Entrega não realizada (requer motivo)',
+    label: 'Insucesso na Entrega',
+    description: 'Tentativa de entrega sem sucesso (requer motivo)',
     icon: AlertTriangle,
     color: 'destructive',
     newStatus: 'TENTATIVA_ENTREGA'
   },
   {
     id: 'entregue',
-    label: 'Entregue ao Destinatário',
-    description: 'Mercadoria entregue com sucesso',
+    label: 'Entregue ao Destinatário com Sucesso',
+    description: 'Mercadoria entregue com sucesso ao destinatário',
     icon: CheckCircle,
     color: 'success',
     newStatus: 'ENTREGA_FINALIZADA'
@@ -122,17 +130,20 @@ export const OccurrenceModal = ({ isOpen, onClose, onSave, shipmentId }: Occurre
                           </div>
                         </div>
                       </div>
-                      <Badge 
-                        variant="outline"
-                        className={`text-xs ${
-                          type.id === 'coleta_realizada' ? 'border-blue-500 text-blue-700 bg-blue-50' :
-                          type.id === 'tentativa_entrega' ? 'border-yellow-500 text-yellow-700 bg-yellow-50' :
-                          type.id === 'entregue' ? 'border-green-500 text-green-700 bg-green-50' : ''
-                        }`}
-                      >
-                        {type.id === 'tentativa_entrega' ? 'Insucesso' : 
-                         type.id === 'entregue' ? 'Entrega' : 'Coleta'}
-                      </Badge>
+                        <Badge 
+                          variant="outline"
+                          className={`text-xs ${
+                            type.id === 'coleta_realizada' ? 'border-blue-500 text-blue-700 bg-blue-50' :
+                            type.id === 'em_transito' ? 'border-purple-500 text-purple-700 bg-purple-50' :
+                            type.id === 'tentativa_entrega' ? 'border-red-500 text-red-700 bg-red-50' :
+                            type.id === 'entregue' ? 'border-green-500 text-green-700 bg-green-50' : ''
+                          }`}
+                        >
+                          {type.id === 'coleta_realizada' ? 'Coleta' :
+                           type.id === 'em_transito' ? 'Transporte' : 
+                           type.id === 'tentativa_entrega' ? 'Insucesso' : 
+                           type.id === 'entregue' ? 'Entrega' : ''}
+                        </Badge>
                     </div>
                   );
                 })}
