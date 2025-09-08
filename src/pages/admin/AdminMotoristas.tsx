@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Pencil, UserX, UserCheck } from 'lucide-react';
+import { Plus, Pencil, UserX, UserCheck, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Motorista {
@@ -17,7 +17,7 @@ interface Motorista {
   cpf: string;
   telefone: string;
   email: string;
-  status: 'ativo' | 'inativo';
+  status: 'ativo' | 'inativo' | 'pendente';
   created_at: string;
 }
 
@@ -32,7 +32,7 @@ const AdminMotoristas = () => {
     telefone: '',
     email: '',
     senha: '',
-    status: 'ativo' as 'ativo' | 'inativo'
+    status: 'ativo' as 'ativo' | 'inativo' | 'pendente'
   });
 
   useEffect(() => {
@@ -140,6 +140,23 @@ const AdminMotoristas = () => {
     setIsDialogOpen(true);
   };
 
+  const approveMotorista = async (motorista: Motorista) => {
+    try {
+      const { error } = await supabase
+        .from('motoristas')
+        .update({ status: 'ativo' })
+        .eq('id', motorista.id);
+
+      if (error) throw error;
+      
+      toast.success('Motorista aprovado com sucesso!');
+      loadMotoristas();
+    } catch (error) {
+      console.error('Erro ao aprovar motorista:', error);
+      toast.error('Erro ao aprovar motorista');
+    }
+  };
+
   const toggleStatus = async (motorista: Motorista) => {
     const newStatus = motorista.status === 'ativo' ? 'inativo' : 'ativo';
     
@@ -159,20 +176,33 @@ const AdminMotoristas = () => {
     }
   };
 
-  const getStatusBadge = (status: 'ativo' | 'inativo') => {
+  const getStatusBadge = (status: 'ativo' | 'inativo' | 'pendente') => {
+    let variant: 'default' | 'secondary' | 'outline' = 'secondary';
+    let icon;
+    let text;
+    
+    switch (status) {
+      case 'ativo':
+        variant = 'default';
+        icon = <UserCheck className="h-3 w-3 mr-1" />;
+        text = 'Ativo';
+        break;
+      case 'inativo':
+        variant = 'secondary';
+        icon = <UserX className="h-3 w-3 mr-1" />;
+        text = 'Inativo';
+        break;
+      case 'pendente':
+        variant = 'outline';
+        icon = <Clock className="h-3 w-3 mr-1" />;
+        text = 'Pendente';
+        break;
+    }
+    
     return (
-      <Badge variant={status === 'ativo' ? 'default' : 'secondary'}>
-        {status === 'ativo' ? (
-          <>
-            <UserCheck className="h-3 w-3 mr-1" />
-            Ativo
-          </>
-        ) : (
-          <>
-            <UserX className="h-3 w-3 mr-1" />
-            Inativo
-          </>
-        )}
+      <Badge variant={variant}>
+        {icon}
+        {text}
       </Badge>
     );
   };
@@ -191,12 +221,12 @@ const AdminMotoristas = () => {
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Motoristas</h1>
-          <p className="text-muted-foreground">
-            Gerencie os motoristas responsáveis pelas coletas e entregas
-          </p>
-        </div>
+          <div>
+            <h1 className="text-2xl font-bold">Motoristas</h1>
+            <p className="text-muted-foreground">
+              Gerencie os motoristas e suas aprovações. Motoristas com status "Pendente" aguardam aprovação.
+            </p>
+          </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -278,15 +308,16 @@ const AdminMotoristas = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={(value: 'ativo' | 'inativo') => setFormData({ ...formData, status: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ativo">Ativo</SelectItem>
-                    <SelectItem value="inativo">Inativo</SelectItem>
-                  </SelectContent>
-                </Select>
+                 <Select value={formData.status} onValueChange={(value: 'ativo' | 'inativo' | 'pendente') => setFormData({ ...formData, status: value })}>
+                   <SelectTrigger>
+                     <SelectValue />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="ativo">Ativo</SelectItem>
+                     <SelectItem value="inativo">Inativo</SelectItem>
+                     <SelectItem value="pendente">Pendente</SelectItem>
+                   </SelectContent>
+                 </Select>
               </div>
 
               <div className="flex gap-2 pt-4">
@@ -337,28 +368,39 @@ const AdminMotoristas = () => {
                     <TableCell>{motorista.telefone}</TableCell>
                     <TableCell>{motorista.email}</TableCell>
                     <TableCell>{getStatusBadge(motorista.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(motorista)}
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleStatus(motorista)}
-                        >
-                          {motorista.status === 'ativo' ? (
-                            <UserX className="h-3 w-3" />
-                          ) : (
-                            <UserCheck className="h-3 w-3" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
+                     <TableCell>
+                       <div className="flex gap-2">
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => handleEdit(motorista)}
+                         >
+                           <Pencil className="h-3 w-3" />
+                         </Button>
+                         
+                         {motorista.status === 'pendente' ? (
+                           <Button
+                             variant="default"
+                             size="sm"
+                             onClick={() => approveMotorista(motorista)}
+                           >
+                             <UserCheck className="h-3 w-3" />
+                           </Button>
+                         ) : (
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => toggleStatus(motorista)}
+                           >
+                             {motorista.status === 'ativo' ? (
+                               <UserX className="h-3 w-3" />
+                             ) : (
+                               <UserCheck className="h-3 w-3" />
+                             )}
+                           </Button>
+                         )}
+                       </div>
+                     </TableCell>
                   </TableRow>
                 ))
               )}

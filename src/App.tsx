@@ -46,6 +46,7 @@ import AdminWebhookLogs from "./pages/admin/AdminWebhookLogs";
 import AdminTestarTabela from "./pages/admin/AdminTestarTabela";
 import AdminDocsIntegracao from "./pages/admin/AdminDocsIntegracao";
 import MotoristaAuth from "./pages/motorista/MotoristaAuth";
+import MotoristaRegistro from "./pages/motorista/MotoristaRegistro";
 import MotoristaDashboard from "./pages/motorista/MotoristaDashboard";
 import MotoristaRelatorios from "./pages/motorista/MotoristaRelatorios";
 
@@ -126,6 +127,7 @@ const App = () => (
 
             {/* Motorista Routes */}
             <Route path="/motorista/auth" element={<MotoristaAuth />} />
+            <Route path="/motorista/registro" element={<MotoristaRegistro />} />
             <Route path="/motorista" element={<MotoristaDashboard />} />
             <Route path="/motorista/dashboard" element={<MotoristaDashboard />} />
             <Route path="/motorista/relatorios" element={<MotoristaRelatorios />} />

@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import QuoteForm from "@/components/QuoteForm";
 import { Truck, Zap, Package } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -81,10 +82,28 @@ const Index = () => {
 
       {/* Footer */}
       <footer className="border-t border-border py-6 sm:py-8 px-2 sm:px-4">
-        <div className="container mx-auto text-center">
-          <p className="text-sm sm:text-base text-muted-foreground">
-            © 2025 Confix Envios. Todos os direitos reservados.
-          </p>
+        <div className="container mx-auto">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-sm sm:text-base text-muted-foreground">
+              © 2025 Confix Envios. Todos os direitos reservados.
+            </p>
+            
+            <div className="flex items-center gap-4 text-sm">
+              <Link 
+                to="/motorista/registro" 
+                className="text-primary hover:underline flex items-center gap-1"
+              >
+                <Truck className="h-4 w-4" />
+                Seja um Motorista
+              </Link>
+              <Link 
+                to="/motorista/auth" 
+                className="text-muted-foreground hover:text-primary hover:underline"
+              >
+                Portal do Motorista
+              </Link>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
