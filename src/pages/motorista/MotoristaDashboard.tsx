@@ -17,6 +17,8 @@ interface MotoristaSession {
   status: string;
 }
 
+const MotoristaDashboard = () => {
+  const navigate = useNavigate();
   const [motoristaSession, setMotoristaSession] = useState<MotoristaSession | null>(null);
   const [remessas, setRemessas] = useState<MotoristaShipment[]>([]);
   const [remessasDisponiveis, setRemessasDisponiveis] = useState<BaseShipment[]>([]);
@@ -118,13 +120,18 @@ interface MotoristaSession {
       
       const result = await acceptShipment(shipmentId, motoristaSession.id);
       
-      if (result.success) {
-        toast.success(result.message || 'Remessa aceita com sucesso!');
-        // Recarregar as listas
-        loadMinhasRemessas(motoristaSession.id);
-        loadRemessasDisponiveis();
+      if (result && typeof result === 'object' && 'success' in result) {
+        const response = result as { success: boolean; message?: string; error?: string };
+        if (response.success) {
+          toast.success(response.message || 'Remessa aceita com sucesso!');
+          // Recarregar as listas
+          loadMinhasRemessas(motoristaSession.id);
+          loadRemessasDisponiveis();
+        } else {
+          toast.error(response.error || 'Erro ao aceitar remessa');
+        }
       } else {
-        toast.error(result.error || 'Erro ao aceitar remessa');
+        toast.error('Erro ao aceitar remessa');
       }
     } catch (error) {
       console.error('❌ Erro ao aceitar remessa:', error);
@@ -146,17 +153,6 @@ interface MotoristaSession {
       navigate('/motorista/auth');
     }
   };
-
-    try {
-      // Só limpar localStorage, não precisamos do Supabase auth
-      localStorage.removeItem('motorista_session');
-      navigate('/motorista/auth');
-      toast.success('Logout realizado com sucesso');
-    } catch (error) {
-      console.error('Erro no logout:', error);
-      localStorage.removeItem('motorista_session');
-      navigate('/motorista/auth');
-    }
 
   if (loading) {
     return (
@@ -345,7 +341,7 @@ interface MotoristaSession {
                               variant="outline" 
                               size="sm"
                               onClick={() => {
-                                setSelectedRemessa(remessa);
+                                setSelectedRemessa(remessa as MotoristaShipment);
                                 setDetailsModalOpen(true);
                               }}
                             >
