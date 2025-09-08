@@ -66,6 +66,12 @@ const MotoristaRegistro = () => {
     setLoading(true);
 
     try {
+      console.log('🔄 Iniciando cadastro de motorista...', {
+        nome: formData.nome,
+        email: formData.email,
+        status: 'pendente'
+      });
+
       // Criar novo motorista com status pendente
       const { data, error } = await supabase
         .from('motoristas')
@@ -79,20 +85,32 @@ const MotoristaRegistro = () => {
         }])
         .select();
 
+      console.log('📝 Resposta do Supabase:', { data, error });
+
       if (error) {
+        console.error('❌ Erro específico do Supabase:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        
         if (error.code === '23505') {
           toast.error('E-mail ou CPF já cadastrado');
+        } else if (error.code === '42501') {
+          toast.error('Erro de permissão. Verifique as configurações de segurança.');
         } else {
-          throw error;
+          toast.error(`Erro no cadastro: ${error.message}`);
         }
         return;
       }
 
+      console.log('✅ Motorista cadastrado com sucesso:', data);
       toast.success('Cadastro realizado com sucesso! Aguarde a aprovação do administrador.');
       navigate('/motorista/auth');
 
     } catch (error: any) {
-      console.error('Erro ao cadastrar motorista:', error);
+      console.error('❌ Erro geral ao cadastrar motorista:', error);
       toast.error('Erro ao realizar cadastro: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setLoading(false);
