@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { 
   Users, 
   Search, 
@@ -18,9 +19,12 @@ import {
   Eye,
   ChevronDown,
   ChevronRight,
-  Crown
+  Crown,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from "@/hooks/use-toast";
 
 interface ClientData {
   id: string;
@@ -61,6 +65,8 @@ const ActiveClients = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
   const [filterBy, setFilterBy] = useState<'all' | 'active' | 'inactive'>('all');
+  const [deletingClient, setDeletingClient] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     loadClients();
@@ -287,6 +293,47 @@ const ActiveClients = () => {
     }
   };
 
+  const handleDeleteClient = async (clientId: string, clientEmail: string | null) => {
+    // Prevent deletion of master user
+    if (clientEmail === 'grupoconfix@gmail.com') {
+      toast({
+        title: "Operação não permitida",
+        description: "Não é possível excluir a conta master do sistema.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDeletingClient(clientId);
+    
+    try {
+      // Delete user from auth.users (this will cascade to profiles and user_roles)
+      const { error } = await supabase.auth.admin.deleteUser(clientId);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Remove client from local state
+      setClients(prev => prev.filter(client => client.id !== clientId));
+      
+      toast({
+        title: "Cliente excluído com sucesso",
+        description: "O cadastro do cliente foi removido permanentemente do sistema.",
+      });
+      
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      toast({
+        title: "Erro ao excluir cliente",
+        description: "Ocorreu um erro ao tentar excluir o cliente. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingClient(null);
+    }
+  };
+
   const filteredClients = clients.filter(client => {
     const matchesSearch = 
       client.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -425,19 +472,71 @@ const ActiveClients = () => {
                   </div>
                 </div>
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setExpandedClient(
-                    expandedClient === client.id ? null : client.id
-                  )}
-                >
-                  {expandedClient === client.id ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4" />
-                  )}
-                </Button>
+                <div className="flex items-center space-x-2">
+                  {/* Delete Button */}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={isMasterUser(client) || deletingClient === client.id}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        {deletingClient === client.id ? (
+                          <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center space-x-2">
+                          <AlertTriangle className="h-5 w-5 text-destructive" />
+                          <span>Confirmar Exclusão</span>
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-2">
+                          <p>
+                            Tem certeza que deseja excluir permanentemente o cadastro de{' '}
+                            <strong>{getClientName(client)}</strong>?
+                          </p>
+                          <div className="p-3 bg-destructive/10 rounded-lg text-sm">
+                            <p className="font-medium text-destructive mb-2">⚠️ Esta ação é irreversível!</p>
+                            <ul className="text-muted-foreground space-y-1 text-xs">
+                              <li>• Todos os dados do cliente serão removidos</li>
+                              <li>• Histórico de {client.shipment_count} remessas será mantido</li>
+                              <li>• O cliente não conseguirá mais fazer login</li>
+                            </ul>
+                          </div>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteClient(client.id, client.email)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Excluir Cliente
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+
+                  {/* Expand Button */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setExpandedClient(
+                      expandedClient === client.id ? null : client.id
+                    )}
+                  >
+                    {expandedClient === client.id ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
 
               {expandedClient === client.id && (
