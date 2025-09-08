@@ -137,16 +137,16 @@ const MotoristaDashboard = () => {
         return;
       }
 
-      console.log('🔍 Chamando get_motorista_shipments...');
+      console.log('🔍 Chamando get_motorista_shipments_public...');
       console.log('🎯 Parâmetros da RPC:', { motorista_uuid: motoristaId });
       console.log('🔧 Tipo do ID:', typeof motoristaId, 'Valor:', motoristaId);
       
       const { data, error } = await supabase
-        .rpc('get_motorista_shipments', { 
+        .rpc('get_motorista_shipments_public', { 
           motorista_uuid: motoristaId 
         });
 
-      console.log('📦 Resposta completa da RPC get_motorista_shipments:');
+      console.log('📦 Resposta completa da RPC get_motorista_shipments_public:');
       console.log('- Data:', data);
       console.log('- Error:', error);
       console.log('- Tipo de data:', typeof data);
@@ -159,7 +159,7 @@ const MotoristaDashboard = () => {
       }
 
       if (error) {
-        console.error('❌ Erro na RPC get_motorista_shipments:', error);
+        console.error('❌ Erro na RPC get_motorista_shipments_public:', error);
         console.error('❌ Código do erro:', error.code);
         console.error('❌ Mensagem do erro:', error.message);
         console.error('❌ Detalhes do erro:', error.details);
