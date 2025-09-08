@@ -240,224 +240,173 @@ export const RemessaDetalhes = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="w-[90vw] max-w-[400px] max-h-[85vh] p-4 mx-auto">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Package className="h-4 w-4" />
-              Detalhes da Remessa
-            </DialogTitle>
+        <DialogContent className="w-[90vw] max-w-[400px] max-h-[85vh] p-0 mx-auto">
+          <DialogHeader className="p-4 pb-0">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg font-semibold">
+                {remessa.tracking_code || `ID${remessa.id.slice(0, 8).toUpperCase()}`}
+              </DialogTitle>
+              {canChangeStatus() ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowOccurrenceModal(true)}
+                  className="h-8 px-2"
+                >
+                  {getStatusBadge(remessa.status)}
+                </Button>
+              ) : (
+                getStatusBadge(remessa.status)
+              )}
+            </div>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[65vh] pr-2">
-            <div className="space-y-3">
-              {/* Cabeçalho com Status */}
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold">
-                    {remessa.tracking_code || `ID${remessa.id.slice(0, 8).toUpperCase()}`}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Criado em: {format(new Date(remessa.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                  </p>
-                </div>
-                <div className="text-right">
-                  {canChangeStatus() ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowOccurrenceModal(true)}
-                      className="flex items-center gap-2"
-                    >
-                      {getStatusBadge(remessa.status)}
-                      <FileText className="h-4 w-4" />
-                    </Button>
-                  ) : (
-                    getStatusBadge(remessa.status)
-                  )}
-                </div>
+          <div className="p-4 pt-2">
+            {/* Aceitar Coleta - Destacado */}
+            {canAcceptPickup() && (
+              <div className="mb-4">
+                <Button
+                  className="w-full h-12 text-base font-semibold"
+                  onClick={handleAcceptPickup}
+                >
+                  <CheckCircle className="h-5 w-5 mr-2" />
+                  Coleta Aceita
+                </Button>
               </div>
+            )}
 
-              {/* Botão Aceitar Coleta - apenas para remessas novas */}
-              {canAcceptPickup() && (
-                <Card className="border-green-200 bg-green-50">
-                  <CardContent className="p-4">
-                    <Button
-                      className="w-full h-12 text-base"
-                      onClick={handleAcceptPickup}
-                    >
-                      <CheckCircle className="h-5 w-5 mr-2" />
-                      Aceitar Coleta
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Seção de Ocorrências - apenas para motoristas ativos */}
-              {canChangeStatus() && (
-                <Card className="border-blue-200 bg-blue-50">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Registrar Ocorrência
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowPhotoUpload(true)}
-                        className="h-12 flex flex-col items-center gap-1"
-                      >
-                        <Camera className="h-5 w-5" />
-                        <span className="text-xs">Foto</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowAudioRecorder(true)}
-                        className="h-12 flex flex-col items-center gap-1"
-                      >
-                        <Mic className="h-5 w-5" />
-                        <span className="text-xs">Áudio</span>
-                      </Button>
-                    </div>
-
-                    {/* Status dos Anexos */}
-                    {(photos.length > 0 || audioUrl) && (
-                      <div className="flex gap-2 text-xs">
-                        {photos.length > 0 && (
-                          <Badge variant="secondary">
-                            {photos.length} foto{photos.length > 1 ? 's' : ''} anexada{photos.length > 1 ? 's' : ''}
-                          </Badge>
-                        )}
-                        {audioUrl && (
-                          <Badge variant="secondary">
-                            Áudio gravado
-                          </Badge>
-                        )}
-                      </div>
+            {/* Registrar Ocorrência - Simples */}
+            {canChangeStatus() && (
+              <div className="mb-4 p-3 bg-muted/30 rounded-lg">
+                <h4 className="text-sm font-medium mb-3 text-center">Registrar Ocorrência</h4>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowPhotoUpload(true)}
+                    className="flex-1 h-10"
+                  >
+                    <Camera className="h-4 w-4 mr-2" />
+                    Foto
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAudioRecorder(true)}
+                    className="flex-1 h-10"
+                  >
+                    <Mic className="h-4 w-4 mr-2" />
+                    Áudio
+                  </Button>
+                </div>
+                {(photos.length > 0 || audioUrl) && (
+                  <div className="flex gap-2 mt-2 justify-center">
+                    {photos.length > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {photos.length} foto{photos.length > 1 ? 's' : ''}
+                      </Badge>
                     )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Informações da Remessa */}
-              <Card className="border-0 shadow-none bg-muted/30">
-                <CardHeader className="pb-2 px-4 pt-4">
-                  <CardTitle className="text-base">Informações da Remessa</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 px-4 pb-4">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-muted-foreground text-xs">Peso</p>
-                      <p className="font-medium">{remessa.weight}kg</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Formato</p>
-                      <p className="font-medium capitalize">{remessa.format}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Serviço</p>
-                      <p className="font-medium">
-                        {remessa.selected_option === 'express' ? 'Expresso' : 'Econômico'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Dimensões</p>
-                      <p className="font-medium">
-                        {remessa.length}x{remessa.width}x{remessa.height}cm
-                      </p>
-                    </div>
+                    {audioUrl && (
+                      <Badge variant="secondary" className="text-xs">
+                        Áudio
+                      </Badge>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
+                )}
+              </div>
+            )}
 
-              {/* Remetente */}
-              <Card className="border-0 shadow-none bg-muted/30">
-                <CardHeader className="pb-2 px-4 pt-4">
-                  <CardTitle className="text-base flex items-center gap-2">
+            <ScrollArea className="max-h-[50vh]">
+              <div className="space-y-4">
+                {/* Info Básica */}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Peso:</span>
+                    <p className="font-medium">{remessa.weight}kg</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Formato:</span>
+                    <p className="font-medium capitalize">{remessa.format}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Serviço:</span>
+                    <p className="font-medium">
+                      {remessa.selected_option === 'express' ? 'Expresso' : 'Econômico'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Dimensões:</span>
+                    <p className="font-medium">{remessa.length}x{remessa.width}x{remessa.height}cm</p>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Remetente */}
+                <div>
+                  <h4 className="font-medium mb-2 flex items-center gap-2">
                     <User className="h-4 w-4" />
                     Remetente
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm px-4 pb-4">
-                  <div>
-                    <p className="font-medium break-words">{remessa.sender_address?.name}</p>
+                  </h4>
+                  <div className="text-sm space-y-1">
+                    <p className="font-medium">{remessa.sender_address?.name}</p>
                     {remessa.sender_address?.phone && (
-                      <div className="flex items-center text-muted-foreground mt-1">
-                        <Phone className="w-3 h-3 mr-1 flex-shrink-0" />
-                        <a href={`tel:${remessa.sender_address.phone}`} className="hover:underline break-words">
-                          {remessa.sender_address.phone}
-                        </a>
-                      </div>
+                      <p className="text-muted-foreground">
+                        <Phone className="h-3 w-3 inline mr-1" />
+                        {remessa.sender_address.phone}
+                      </p>
                     )}
+                    <p className="text-muted-foreground">
+                      {remessa.sender_address?.street}, {remessa.sender_address?.number}
+                      <br />
+                      {remessa.sender_address?.neighborhood}
+                      <br />
+                      {remessa.sender_address?.city} - {remessa.sender_address?.state}
+                      <br />
+                      CEP: {remessa.sender_address?.cep}
+                    </p>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-3 h-3 mt-0.5 text-muted-foreground flex-shrink-0" />
-                    <div className="text-muted-foreground text-xs leading-relaxed">
-                      <p className="break-words">{remessa.sender_address?.street}, {remessa.sender_address?.number}</p>
-                      <p className="break-words">{remessa.sender_address?.neighborhood}</p>
-                      <p className="break-words">{remessa.sender_address?.city} - {remessa.sender_address?.state}</p>
-                      <p>CEP: {remessa.sender_address?.cep}</p>
-                      {remessa.sender_address?.complement && (
-                        <p className="break-words">Complemento: {remessa.sender_address.complement}</p>
-                      )}
-                      {remessa.sender_address?.reference && (
-                        <p className="break-words">Referência: {remessa.sender_address.reference}</p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
 
-              {/* Destinatário */}
-              <Card className="border-0 shadow-none bg-muted/30">
-                <CardHeader className="pb-2 px-4 pt-4">
-                  <CardTitle className="text-base flex items-center gap-2">
+                <Separator />
+
+                {/* Destinatário */}
+                <div>
+                  <h4 className="font-medium mb-2 flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
                     Destinatário
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm px-4 pb-4">
-                  <div>
-                    <p className="font-medium break-words">{remessa.recipient_address?.name}</p>
+                  </h4>
+                  <div className="text-sm space-y-1">
+                    <p className="font-medium">{remessa.recipient_address?.name}</p>
                     {remessa.recipient_address?.phone && (
-                      <div className="flex items-center text-muted-foreground mt-1">
-                        <Phone className="w-3 h-3 mr-1 flex-shrink-0" />
-                        <a href={`tel:${remessa.recipient_address.phone}`} className="hover:underline break-words">
-                          {remessa.recipient_address.phone}
-                        </a>
-                      </div>
+                      <p className="text-muted-foreground">
+                        <Phone className="h-3 w-3 inline mr-1" />
+                        {remessa.recipient_address.phone}
+                      </p>
                     )}
+                    <p className="text-muted-foreground">
+                      {remessa.recipient_address?.street}, {remessa.recipient_address?.number}
+                      <br />
+                      {remessa.recipient_address?.neighborhood}
+                      <br />
+                      {remessa.recipient_address?.city} - {remessa.recipient_address?.state}
+                      <br />
+                      CEP: {remessa.recipient_address?.cep}
+                    </p>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-3 h-3 mt-0.5 text-muted-foreground flex-shrink-0" />
-                    <div className="text-muted-foreground text-xs leading-relaxed">
-                      <p className="break-words">{remessa.recipient_address?.street}, {remessa.recipient_address?.number}</p>
-                      <p className="break-words">{remessa.recipient_address?.neighborhood}</p>
-                      <p className="break-words">{remessa.recipient_address?.city} - {remessa.recipient_address?.state}</p>
-                      <p>CEP: {remessa.recipient_address?.cep}</p>
-                      {remessa.recipient_address?.complement && (
-                        <p className="break-words">Complemento: {remessa.recipient_address.complement}</p>
-                      )}
-                      {remessa.recipient_address?.reference && (
-                        <p className="break-words">Referência: {remessa.recipient_address.reference}</p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </ScrollArea>
+                </div>
+              </div>
+            </ScrollArea>
 
-          <div className="flex pt-3 border-t">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={onClose}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar
-            </Button>
+            {/* Botão Voltar */}
+            <div className="mt-4 pt-4 border-t">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={onClose}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voltar
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
