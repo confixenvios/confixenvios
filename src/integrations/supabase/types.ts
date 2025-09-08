@@ -872,18 +872,16 @@ export type Database = {
           format: string
           height: number
           id: string
+          label_pdf_url: string
           length: number
           payment_data: Json
           pickup_option: string
           quote_data: Json
           recipient_address: Json
-          recipient_address_id: string
           selected_option: string
           sender_address: Json
-          sender_address_id: string
           status: string
           tracking_code: string
-          updated_at: string
           weight: number
           width: number
         }[]
@@ -908,18 +906,16 @@ export type Database = {
           format: string
           height: number
           id: string
+          label_pdf_url: string
           length: number
           payment_data: Json
           pickup_option: string
           quote_data: Json
           recipient_address: Json
-          recipient_address_id: string
           selected_option: string
           sender_address: Json
-          sender_address_id: string
           status: string
           tracking_code: string
-          updated_at: string
           weight: number
           width: number
         }[]
