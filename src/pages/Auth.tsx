@@ -46,13 +46,11 @@ const Auth = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !loading) {
-      // Wait for user role to be loaded before redirecting
-      if (userRole !== null) {
-        // This is client auth page, all users go to client dashboard
-        navigate('/cliente/dashboard');
-      }
+      console.log('User authenticated:', !!user, 'Loading:', loading, 'UserRole:', userRole);
+      // Redirect immediately after authentication, don't wait for user role
+      navigate('/cliente/dashboard');
     }
-  }, [user, loading, userRole, navigate]);
+  }, [user, loading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

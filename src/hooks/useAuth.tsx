@@ -97,10 +97,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(session?.user ?? null);
             
             if (session?.user) {
-              // Defer profile loading to prevent deadlocks
-              setTimeout(() => {
-                loadUserProfile(session.user.id);
-              }, 0);
+              // Load profile data immediately but don't block other operations
+              loadUserProfile(session.user.id);
             } else {
               setProfile(null);
               setUserRole(null);
@@ -119,9 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          setTimeout(() => {
-            loadUserProfile(session.user.id);
-          }, 0);
+          loadUserProfile(session.user.id);
         }
         
         setLoading(false);
