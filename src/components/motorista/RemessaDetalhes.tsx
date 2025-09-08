@@ -246,7 +246,18 @@ export const RemessaDetalhes = ({
               <DialogTitle className="text-lg font-semibold">
                 {remessa.tracking_code || `ID${remessa.id.slice(0, 8).toUpperCase()}`}
               </DialogTitle>
-              {canChangeStatus() ? (
+              
+              {/* Botão Aceitar Coleta ou Status */}
+              {canAcceptPickup() ? (
+                <Button
+                  size="sm"
+                  onClick={handleAcceptPickup}
+                  className="h-8 px-3"
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Coleta Aceita
+                </Button>
+              ) : canChangeStatus() ? (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -262,19 +273,6 @@ export const RemessaDetalhes = ({
           </DialogHeader>
 
           <div className="p-4 pt-2">
-            {/* Aceitar Coleta - Destacado */}
-            {canAcceptPickup() && (
-              <div className="mb-4">
-                <Button
-                  className="w-full h-12 text-base font-semibold"
-                  onClick={handleAcceptPickup}
-                >
-                  <CheckCircle className="h-5 w-5 mr-2" />
-                  Coleta Aceita
-                </Button>
-              </div>
-            )}
-
             {/* Registrar Ocorrência - Simples */}
             {canChangeStatus() && (
               <div className="mb-4 p-3 bg-muted/30 rounded-lg">
