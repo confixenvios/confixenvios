@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { RemessaDetalhes } from '@/components/motorista/RemessaDetalhes';
+import { RemessaVisualizacao } from '@/components/motorista/RemessaVisualizacao';
 import { OccurrenceSimpleModal } from '@/components/motorista/OccurrenceSimpleModal';
 import { getMotoristaShipments, getAvailableShipments, acceptShipment, type MotoristaShipment, type BaseShipment } from '@/services/shipmentsService';
 
@@ -26,6 +27,7 @@ const MotoristaDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedRemessa, setSelectedRemessa] = useState<MotoristaShipment | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
   const [occurrenceModalOpen, setOccurrenceModalOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
@@ -324,7 +326,7 @@ const MotoristaDashboard = () => {
                               size="sm"
                               onClick={() => {
                                 setSelectedRemessa(remessa as MotoristaShipment);
-                                setDetailsModalOpen(true);
+                                setViewModalOpen(true);
                               }}
                             >
                               <Eye className="h-3 w-3 mr-1" />
@@ -477,7 +479,7 @@ const MotoristaDashboard = () => {
                                 size="sm"
                                 onClick={() => {
                                   setSelectedRemessa(remessa);
-                                  setDetailsModalOpen(true);
+                                  setViewModalOpen(true);
                                 }}
                               >
                                 <Eye className="h-3 w-3 mr-1" />
@@ -506,6 +508,15 @@ const MotoristaDashboard = () => {
               </div>
             )}
           </div>
+        )}
+
+        {/* View Modal - Simple visualization */}
+        {selectedRemessa && (
+          <RemessaVisualizacao
+            isOpen={viewModalOpen}
+            onClose={() => setViewModalOpen(false)}
+            remessa={selectedRemessa}
+          />
         )}
 
         {/* Enhanced Remessa Details Modal */}
