@@ -54,7 +54,7 @@ export const ConfirmSignupEmail = ({
             target="_blank"
             style={button}
           >
-            Confirmar Email
+            Confirmar Email e Acessar Área do Cliente
           </Link>
         </div>
 
