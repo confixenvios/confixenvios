@@ -147,6 +147,51 @@ const AdminFiliais = () => {
     }
   };
 
+  const handleTestWebhook = async (branchId: string) => {
+    try {
+      // Chamar a edge function diretamente para testar o webhook
+      const { data, error } = await supabase.functions.invoke('company-branch-webhook-dispatch', {
+        body: {
+          branch_id: branchId,
+          event_type: 'company_branch_updated'
+        }
+      });
+
+      if (error) {
+        console.error('Erro ao testar webhook:', error);
+        toast({
+          title: 'Erro',
+          description: 'Erro ao testar webhook: ' + error.message,
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      const result = data;
+      console.log('Resultado do teste de webhook:', result);
+
+      if (result.success) {
+        toast({
+          title: 'Webhook Testado',
+          description: `Webhook enviado para ${result.integrations_notified} integração(ões). Verifique os logs para detalhes.`,
+        });
+      } else {
+        toast({
+          title: 'Erro no Webhook',
+          description: result.error || 'Erro desconhecido ao processar webhook',
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao testar webhook:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao testar webhook da filial',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -497,6 +542,14 @@ const AdminFiliais = () => {
                     >
                       <Edit className="w-4 h-4" />
                       <span className="hidden sm:inline">Editar</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleTestWebhook(branch.id)}
+                      className="flex items-center gap-2 text-blue-600 hover:text-blue-700"
+                    >
+                      <span className="hidden sm:inline">Testar Webhook</span>
                     </Button>
                     <Button
                       variant="outline"

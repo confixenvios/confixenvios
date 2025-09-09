@@ -1092,6 +1092,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      manual_company_branch_webhook_dispatch: {
+        Args: { branch_uuid: string; webhook_event_type?: string }
+        Returns: Json
+      }
       manual_webhook_dispatch: {
         Args: { shipment_uuid: string }
         Returns: Json
