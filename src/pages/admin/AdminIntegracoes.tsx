@@ -267,6 +267,73 @@ const AdminIntegracoes = () => {
     }
   };
 
+  const handleDispatchShipmentWebhook = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.functions.invoke('shipment-webhook-dispatch', {
+        body: {
+          shipmentId: '3b69900c-748f-4e79-ba32-e80076c6adac', // ID2025CJULKS
+          shipmentData: {
+            addressData: {
+              recipient: {
+                document: '54007348000130',
+                email: 'juriexpressgyn@gmail.com', 
+                phone: '(62) 99919-1433'
+              },
+              sender: {
+                document: '81746318104',
+                email: 'ksobrgo@gmail.com',
+                phone: '(62) 99919-1438'
+              }
+            },
+            deliveryDetails: {
+              shippingPrice: 1,
+              estimatedDays: 5
+            },
+            merchandiseDetails: {
+              totalValue: 125,
+              unitValue: 125
+            },
+            technicalData: {
+              quantity: 1
+            },
+            merchandiseDescription: 'Evelope de documentos',
+            documentType: 'declaration',
+            quoteData: {
+              totalMerchandiseValue: 125,
+              unitValue: 125,
+              shippingQuote: {
+                economicPrice: 1
+              }
+            }
+          }
+        }
+      });
+
+      if (error) {
+        console.error('Webhook dispatch error:', error);
+        throw error;
+      }
+
+      toast({
+        title: "Sucesso",
+        description: "Webhook disparado manualmente para remessa ID2025CJULKS! Verifique os logs de webhook."
+      });
+
+      console.log('Webhook dispatch result:', data);
+    } catch (error) {
+      console.error('Error dispatching webhook:', error);
+      toast({
+        title: "Erro",
+        description: `Erro ao disparar webhook: ${error}`,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6">
@@ -372,6 +439,33 @@ const AdminIntegracoes = () => {
                 <strong>Payload consolidado inclui:</strong> Remetente, Destinatário, Pacote, Mercadoria e Pagamento
               </div>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Teste Manual de Webhook */}
+      <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
+              <div className="space-y-2 text-sm">
+                <p className="font-medium text-orange-900 dark:text-orange-100">Teste Manual de Webhook</p>
+                <div className="text-orange-700 dark:text-orange-300 space-y-1">
+                  <p>A remessa <strong>ID2025CJULKS</strong> foi criada mas o webhook não foi disparado automaticamente.</p>
+                  <p>Use o botão ao lado para disparar manualmente o webhook com todos os dados incluindo informações das filiais.</p>
+                </div>
+              </div>
+            </div>
+            <Button 
+              onClick={handleDispatchShipmentWebhook}
+              disabled={loading}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+              size="sm"
+            >
+              <TestTube className="h-4 w-4 mr-2" />
+              {loading ? 'Disparando...' : 'Disparar Webhook ID2025CJULKS'}
+            </Button>
           </div>
         </CardContent>
       </Card>

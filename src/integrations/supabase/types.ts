@@ -1074,6 +1074,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      manual_webhook_dispatch: {
+        Args: { shipment_uuid: string }
+        Returns: Json
+      }
       monitor_security_events: {
         Args: Record<PropertyKey, never>
         Returns: {
