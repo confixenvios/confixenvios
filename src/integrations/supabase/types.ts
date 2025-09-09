@@ -113,6 +113,10 @@ export type Database = {
         Row: {
           active: boolean | null
           cep: string
+          cfop_comercio_dentro_estado: string | null
+          cfop_comercio_fora_estado: string | null
+          cfop_industria_dentro_estado: string | null
+          cfop_industria_fora_estado: string | null
           city: string
           cnpj: string
           complement: string | null
@@ -120,11 +124,13 @@ export type Database = {
           email: string | null
           fantasy_name: string | null
           id: string
+          inscricao_estadual: string | null
           is_main_branch: boolean | null
           name: string
           neighborhood: string
           number: string
           phone: string | null
+          rntrc: string | null
           state: string
           street: string
           updated_at: string
@@ -132,6 +138,10 @@ export type Database = {
         Insert: {
           active?: boolean | null
           cep: string
+          cfop_comercio_dentro_estado?: string | null
+          cfop_comercio_fora_estado?: string | null
+          cfop_industria_dentro_estado?: string | null
+          cfop_industria_fora_estado?: string | null
           city: string
           cnpj: string
           complement?: string | null
@@ -139,11 +149,13 @@ export type Database = {
           email?: string | null
           fantasy_name?: string | null
           id?: string
+          inscricao_estadual?: string | null
           is_main_branch?: boolean | null
           name: string
           neighborhood: string
           number: string
           phone?: string | null
+          rntrc?: string | null
           state: string
           street: string
           updated_at?: string
@@ -151,6 +163,10 @@ export type Database = {
         Update: {
           active?: boolean | null
           cep?: string
+          cfop_comercio_dentro_estado?: string | null
+          cfop_comercio_fora_estado?: string | null
+          cfop_industria_dentro_estado?: string | null
+          cfop_industria_fora_estado?: string | null
           city?: string
           cnpj?: string
           complement?: string | null
@@ -158,11 +174,13 @@ export type Database = {
           email?: string | null
           fantasy_name?: string | null
           id?: string
+          inscricao_estadual?: string | null
           is_main_branch?: boolean | null
           name?: string
           neighborhood?: string
           number?: string
           phone?: string | null
+          rntrc?: string | null
           state?: string
           street?: string
           updated_at?: string

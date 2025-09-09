@@ -15,6 +15,8 @@ interface CompanyBranch {
   id: string;
   name: string;
   cnpj: string;
+  rntrc?: string;
+  inscricao_estadual?: string;
   fantasy_name?: string;
   email?: string;
   phone?: string;
@@ -25,6 +27,10 @@ interface CompanyBranch {
   neighborhood: string;
   city: string;
   state: string;
+  cfop_comercio_dentro_estado: string;
+  cfop_comercio_fora_estado: string;
+  cfop_industria_dentro_estado: string;
+  cfop_industria_fora_estado: string;
   is_main_branch: boolean;
   active: boolean;
   created_at: string;
@@ -39,6 +45,8 @@ const AdminFiliais = () => {
   const [formData, setFormData] = useState({
     name: '',
     cnpj: '',
+    rntrc: '',
+    inscricao_estadual: '',
     fantasy_name: '',
     email: '',
     phone: '',
@@ -49,6 +57,10 @@ const AdminFiliais = () => {
     neighborhood: '',
     city: '',
     state: '',
+    cfop_comercio_dentro_estado: '5353',
+    cfop_comercio_fora_estado: '6353',
+    cfop_industria_dentro_estado: '6352',
+    cfop_industria_fora_estado: '6352',
     is_main_branch: false,
     active: true
   });
@@ -139,6 +151,8 @@ const AdminFiliais = () => {
     setFormData({
       name: '',
       cnpj: '',
+      rntrc: '',
+      inscricao_estadual: '',
       fantasy_name: '',
       email: '',
       phone: '',
@@ -149,6 +163,10 @@ const AdminFiliais = () => {
       neighborhood: '',
       city: '',
       state: '',
+      cfop_comercio_dentro_estado: '5353',
+      cfop_comercio_fora_estado: '6353',
+      cfop_industria_dentro_estado: '6352',
+      cfop_industria_fora_estado: '6352',
       is_main_branch: false,
       active: true
     });
@@ -160,6 +178,8 @@ const AdminFiliais = () => {
       setFormData({
         name: branch.name,
         cnpj: branch.cnpj,
+        rntrc: branch.rntrc || '',
+        inscricao_estadual: branch.inscricao_estadual || '',
         fantasy_name: branch.fantasy_name || '',
         email: branch.email || '',
         phone: branch.phone || '',
@@ -170,6 +190,10 @@ const AdminFiliais = () => {
         neighborhood: branch.neighborhood,
         city: branch.city,
         state: branch.state,
+        cfop_comercio_dentro_estado: branch.cfop_comercio_dentro_estado || '5353',
+        cfop_comercio_fora_estado: branch.cfop_comercio_fora_estado || '6353',
+        cfop_industria_dentro_estado: branch.cfop_industria_dentro_estado || '6352',
+        cfop_industria_fora_estado: branch.cfop_industria_fora_estado || '6352',
         is_main_branch: branch.is_main_branch,
         active: branch.active
       });
@@ -251,6 +275,26 @@ const AdminFiliais = () => {
                     value={formData.cnpj}
                     onChange={(e) => setFormData({...formData, cnpj: e.target.value})}
                     placeholder="00.000.000/0001-00"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="rntrc">RNTRC</Label>
+                  <Input
+                    id="rntrc"
+                    value={formData.rntrc}
+                    onChange={(e) => setFormData({...formData, rntrc: e.target.value})}
+                    placeholder="123456789"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="inscricao_estadual">Inscrição Estadual</Label>
+                  <Input
+                    id="inscricao_estadual"
+                    value={formData.inscricao_estadual}
+                    onChange={(e) => setFormData({...formData, inscricao_estadual: e.target.value})}
+                    placeholder="123.456.789.123"
                   />
                 </div>
                 
@@ -345,7 +389,54 @@ const AdminFiliais = () => {
                     maxLength={2}
                   />
                 </div>
-                
+              </div>
+              
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm text-foreground">CFOP - Código Fiscal de Operação</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cfop_comercio_dentro_estado">CFOP Comércio - Dentro de GO</Label>
+                    <Input
+                      id="cfop_comercio_dentro_estado"
+                      value={formData.cfop_comercio_dentro_estado}
+                      onChange={(e) => setFormData({...formData, cfop_comercio_dentro_estado: e.target.value})}
+                      placeholder="5353"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="cfop_comercio_fora_estado">CFOP Comércio - Fora do Estado</Label>
+                    <Input
+                      id="cfop_comercio_fora_estado"
+                      value={formData.cfop_comercio_fora_estado}
+                      onChange={(e) => setFormData({...formData, cfop_comercio_fora_estado: e.target.value})}
+                      placeholder="6353"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="cfop_industria_dentro_estado">CFOP Indústria - Dentro de GO</Label>
+                    <Input
+                      id="cfop_industria_dentro_estado"
+                      value={formData.cfop_industria_dentro_estado}
+                      onChange={(e) => setFormData({...formData, cfop_industria_dentro_estado: e.target.value})}
+                      placeholder="6352"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="cfop_industria_fora_estado">CFOP Indústria - Fora do Estado</Label>
+                    <Input
+                      id="cfop_industria_fora_estado"
+                      value={formData.cfop_industria_fora_estado}
+                      onChange={(e) => setFormData({...formData, cfop_industria_fora_estado: e.target.value})}
+                      placeholder="6352"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="is_main_branch"
