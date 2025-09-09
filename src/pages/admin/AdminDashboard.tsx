@@ -84,21 +84,29 @@ const AdminDashboard = () => {
 
   const loadDashboardData = async () => {
     try {
+      console.log('🔄 Carregando dados do dashboard...');
+      
       // Total clients
       const { count: clientsCount } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
+
+      console.log('👥 Total de clientes:', clientsCount);
 
       // Total shipments
       const { count: shipmentsCount } = await supabase
         .from('shipments')
         .select('*', { count: 'exact', head: true });
 
+      console.log('📦 Total de shipments:', shipmentsCount);
+
       // Pending shipments
       const { count: pendingCount } = await supabase
         .from('shipments')
         .select('*', { count: 'exact', head: true })
         .in('status', ['PENDING_DOCUMENT', 'PENDING_LABEL', 'PENDING_PAYMENT']);
+
+      console.log('⏳ Shipments pendentes:', pendingCount);
 
       // Recent shipments with payment data
       const { data: recentShipments } = await supabase
@@ -117,8 +125,11 @@ const AdminDashboard = () => {
           recipient_address:addresses!recipient_address_id(city, state, name)
         `)
         .not('user_id', 'is', null)
+        .or('payment_data.not.is.null,quote_data.not.is.null')
         .order('created_at', { ascending: false })
         .limit(10);
+
+      console.log('📋 Recent shipments encontrados:', recentShipments?.length);
 
       // Get user profiles for recent shipments
       let enrichedShipments = [];
@@ -138,48 +149,63 @@ const AdminDashboard = () => {
         });
       }
 
-      // Calculate total revenue from ALL shipments with valid payment data
+      // Calculate total revenue from ALL shipments with valid payment or quote data
       const { data: allShipments } = await supabase
         .from('shipments')
         .select('payment_data, quote_data, selected_option')
-        .not('quote_data', 'is', null);
+        .or('payment_data.not.is.null,quote_data.not.is.null');
+
+      console.log('💰 Total shipments para cálculo de receita:', allShipments?.length);
 
       let totalRevenue = 0;
       allShipments?.forEach(shipment => {
         const paymentData = shipment.payment_data as any;
         const quoteData = shipment.quote_data as any;
+        let shipmentValue = 0;
         
         // 1. Tentar payment_data.pix_details.amount (PIX)
         if (paymentData?.pix_details?.amount) {
-          totalRevenue += paymentData.pix_details.amount;
+          shipmentValue = paymentData.pix_details.amount;
+          totalRevenue += shipmentValue;
         }
         // 2. Tentar payment_data.amount (PIX novo formato - em reais)
         else if (paymentData?.amount && paymentData?.method === 'pix') {
-          totalRevenue += paymentData.amount;
+          shipmentValue = paymentData.amount;
+          totalRevenue += shipmentValue;
         }
         // 3. Tentar payment_data.amount (Stripe/Cartão - em centavos)
         else if (paymentData?.amount) {
-          totalRevenue += paymentData.amount / 100;
+          shipmentValue = paymentData.amount / 100;
+          totalRevenue += shipmentValue;
         }
         // 4. Tentar quote_data.deliveryDetails.totalPrice
         else if (quoteData?.deliveryDetails?.totalPrice) {
-          totalRevenue += quoteData.deliveryDetails.totalPrice;
+          shipmentValue = quoteData.deliveryDetails.totalPrice;
+          totalRevenue += shipmentValue;
         }
         // 5. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
         else if (quoteData?.quoteData?.shippingQuote) {
           const price = shipment.selected_option === 'express' 
             ? quoteData.quoteData.shippingQuote.expressPrice 
             : quoteData.quoteData.shippingQuote.economicPrice;
-          totalRevenue += price || 0;
+          shipmentValue = price || 0;
+          totalRevenue += shipmentValue;
         }
         // 6. Tentar quote_data.shippingQuote baseado na opção selecionada
         else if (quoteData?.shippingQuote) {
           const price = shipment.selected_option === 'express' 
             ? quoteData.shippingQuote.expressPrice 
             : quoteData.shippingQuote.economicPrice;
-          totalRevenue += price || 0;
+          shipmentValue = price || 0;
+          totalRevenue += shipmentValue;
+        }
+        
+        if (shipmentValue > 0) {
+          console.log('💵 Shipment com valor:', shipmentValue, 'Método:', paymentData?.method || 'quote');
         }
       });
+
+      console.log('💰 Receita total calculada:', totalRevenue);
 
       setStats({
         totalClients: clientsCount || 0,
