@@ -215,15 +215,63 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
  * Serviço para buscar remessas disponíveis para motoristas
  */
 export const getAvailableShipments = async (): Promise<BaseShipment[]> => {
-  const { data, error } = await supabase.rpc('get_available_shipments');
+  // Usar query SQL direta em vez de RPC para obter dados estruturados corretamente
+  const { data, error } = await supabase
+    .from('shipments')
+    .select(`
+      id,
+      tracking_code,
+      status,
+      created_at,
+      weight,
+      length,
+      width,
+      height,
+      format,
+      selected_option,
+      pickup_option,
+      quote_data,
+      payment_data,
+      label_pdf_url,
+      cte_key,
+      sender_address:addresses!shipments_sender_address_id_fkey (
+        name,
+        street,
+        number,
+        neighborhood,
+        city,
+        state,
+        cep,
+        complement,
+        reference,
+        phone
+      ),
+      recipient_address:addresses!shipments_recipient_address_id_fkey (
+        name,
+        street,
+        number,
+        neighborhood,
+        city,
+        state,
+        cep,
+        complement,
+        reference,
+        phone
+      )
+    `)
+    .is('motorista_id', null)
+    .in('status', ['PAYMENT_CONFIRMED', 'PAID', 'PENDING_LABEL', 'LABEL_GENERATED'])
+    .order('created_at', { ascending: true });
   
-  if (error) throw error;
+  if (error) {
+    console.error('❌ Erro ao buscar remessas disponíveis:', error);
+    throw error;
+  }
+  
+  console.log('🚛 Remessas disponíveis:', data);
   
   return data?.map((item: any) => ({
-    ...item,
-    // Use the addresses directly as they come from the RPC function
-    sender_address: item.sender_address || createEmptyAddress(),
-    recipient_address: item.recipient_address || createEmptyAddress()
+    ...normalizeShipmentData(item)
   })) || [];
 };
 
