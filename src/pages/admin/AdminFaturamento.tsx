@@ -160,13 +160,67 @@ const AdminFaturamento = () => {
     return { startDateFilter, endDateFilter };
   };
 
+  // Função para calcular valor de um shipment
+  const calculateShipmentValue = (shipment: any) => {
+    const paymentData = shipment.payment_data as any;
+    const quoteData = shipment.quote_data as any;
+    
+    console.log('📊 Calculando valor do shipment:', shipment.id);
+    console.log('📊 Payment data:', paymentData);
+    console.log('📊 Quote data presente:', !!quoteData);
+    
+    // 1. PIX com pix_details.amount
+    if (paymentData?.pix_details?.amount) {
+      console.log('✅ Valor encontrado em pix_details.amount:', paymentData.pix_details.amount);
+      return paymentData.pix_details.amount;
+    }
+    // 2. PIX com amount direto
+    if (paymentData?.amount && paymentData?.method === 'pix') {
+      console.log('✅ Valor encontrado em payment_data.amount (PIX):', paymentData.amount);
+      return paymentData.amount;
+    }
+    // 3. Stripe/cartão (em centavos)
+    if (paymentData?.amount) {
+      const value = paymentData.amount / 100;
+      console.log('✅ Valor encontrado em payment_data.amount (Stripe):', value);
+      return value;
+    }
+    // 4. Quote delivery details
+    if (quoteData?.deliveryDetails?.totalPrice) {
+      console.log('✅ Valor encontrado em deliveryDetails.totalPrice:', quoteData.deliveryDetails.totalPrice);
+      return quoteData.deliveryDetails.totalPrice;
+    }
+    // 5. Quote data shipping quote
+    if (quoteData?.quoteData?.shippingQuote) {
+      const price = shipment.selected_option === 'express' 
+        ? quoteData.quoteData.shippingQuote.expressPrice 
+        : quoteData.quoteData.shippingQuote.economicPrice;
+      console.log('✅ Valor encontrado em quoteData.shippingQuote:', price);
+      return price || 0;
+    }
+    // 6. Shipping quote direto
+    if (quoteData?.shippingQuote) {
+      const price = shipment.selected_option === 'express' 
+        ? quoteData.shippingQuote.expressPrice 
+        : quoteData.shippingQuote.economicPrice;
+      console.log('✅ Valor encontrado em shippingQuote:', price);
+      return price || 0;
+    }
+    
+    console.log('❌ Nenhum valor encontrado para o shipment');
+    return 0;
+  };
+
   const loadBillingData = async () => {
     try {
+      console.log('🔄 FATURAMENTO: Iniciando carregamento...');
       setLoading(true);
       const { startDateFilter, endDateFilter } = getDateRangeFilter();
 
-      // Query base para shipments
-      let shipmentsQuery = supabase
+      console.log('📅 Período:', { startDateFilter, endDateFilter });
+
+      // Buscar shipments
+      let query = supabase
         .from('shipments')
         .select(`
           id,
@@ -182,17 +236,24 @@ const AdminFaturamento = () => {
           profiles(first_name, last_name, email)
         `)
         .gte('created_at', startDateFilter.toISOString())
-        .lte('created_at', endDateFilter.toISOString())
-        .not('quote_data', 'is', null);
+        .lte('created_at', endDateFilter.toISOString());
 
       // Aplicar filtros
       if (selectedClient !== 'all') {
-        shipmentsQuery = shipmentsQuery.eq('user_id', selectedClient);
+        query = query.eq('user_id', selectedClient);
       }
 
-      const { data: shipments } = await shipmentsQuery;
+      const { data: shipments, error } = await query;
+      
+      if (error) {
+        console.error('❌ Erro na query:', error);
+        throw error;
+      }
 
-      if (!shipments) {
+      console.log('📦 Shipments encontrados:', shipments?.length);
+
+      if (!shipments || shipments.length === 0) {
+        console.log('⚠️ Nenhum shipment encontrado');
         setBillingData({
           totalRevenue: 0,
           totalShipments: 0,
@@ -205,10 +266,8 @@ const AdminFaturamento = () => {
         return;
       }
 
-      // Processar dados
+      // Filtrar por região se necessário
       let filteredShipments = shipments;
-
-      // Filtro por região
       if (selectedRegion !== 'all') {
         const [cityFilter, stateFilter] = selectedRegion.split(' - ');
         filteredShipments = shipments.filter(shipment => {
@@ -220,48 +279,29 @@ const AdminFaturamento = () => {
         });
       }
 
-      // Calcular valores
-      const totalRevenue = filteredShipments.reduce((sum, shipment) => {
-        const paymentData = shipment.payment_data as any;
-        const quoteData = shipment.quote_data as any;
-        
-        // 1. Tentar payment_data.pix_details.amount (PIX)
-        if (paymentData?.pix_details?.amount) {
-          return sum + paymentData.pix_details.amount;
+      console.log('🔍 Shipments após filtros:', filteredShipments.length);
+
+      // Calcular receita total
+      let totalRevenue = 0;
+      let shipmentsProcessed = 0;
+
+      filteredShipments.forEach((shipment, index) => {
+        const value = calculateShipmentValue(shipment);
+        if (value > 0) {
+          totalRevenue += value;
+          shipmentsProcessed++;
         }
-        // 2. Tentar payment_data.amount (PIX novo formato - em reais)
-        else if (paymentData?.amount && paymentData?.method === 'pix') {
-          return sum + paymentData.amount;
-        }
-        // 3. Tentar payment_data.amount (Stripe/Cartão - em centavos)
-        else if (paymentData?.amount) {
-          return sum + (paymentData.amount / 100);
-        }
-        // 4. Tentar quote_data.deliveryDetails.totalPrice
-        else if (quoteData?.deliveryDetails?.totalPrice) {
-          return sum + quoteData.deliveryDetails.totalPrice;
-        }
-        // 5. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
-        else if (quoteData?.quoteData?.shippingQuote) {
-          const price = (shipment as any).selected_option === 'express' 
-            ? quoteData.quoteData.shippingQuote.expressPrice 
-            : quoteData.quoteData.shippingQuote.economicPrice;
-          return sum + (price || 0);
-        }
-        // 6. Tentar quote_data.shippingQuote baseado na opção selecionada
-        else if (quoteData?.shippingQuote) {
-          const price = (shipment as any).selected_option === 'express' 
-            ? quoteData.shippingQuote.expressPrice 
-            : quoteData.shippingQuote.economicPrice;
-          return sum + (price || 0);
-        }
-        return sum;
-      }, 0);
+      });
+
+      console.log('💰 RESULTADO FINAL:');
+      console.log('💰 Receita total:', totalRevenue);
+      console.log('💰 Shipments com valor:', shipmentsProcessed);
+      console.log('💰 Total de shipments:', filteredShipments.length);
 
       const totalShipments = filteredShipments.length;
       const averageValue = totalShipments > 0 ? totalRevenue / totalShipments : 0;
 
-      // Faturamento por cliente
+      // Processar dados por cliente
       const clientRevenue = new Map();
       filteredShipments.forEach(shipment => {
         const profile = shipment.profiles as any;
@@ -271,40 +311,7 @@ const AdminFaturamento = () => {
           : profile?.first_name || profile?.email || 'Cliente';
         const clientEmail = profile?.email || '';
         
-        const paymentData = shipment.payment_data as any;
-        const quoteData = shipment.quote_data as any;
-        let value = 0;
-        
-        // 1. Tentar payment_data.pix_details.amount (PIX)
-        if (paymentData?.pix_details?.amount) {
-          value = paymentData.pix_details.amount;
-        }
-        // 2. Tentar payment_data.amount (PIX novo formato - em reais)
-        else if (paymentData?.amount && paymentData?.method === 'pix') {
-          value = paymentData.amount;
-        }
-        // 3. Tentar payment_data.amount (Stripe/Cartão - em centavos)
-        else if (paymentData?.amount) {
-          value = paymentData.amount / 100;
-        }
-        // 4. Tentar quote_data.deliveryDetails.totalPrice
-        else if (quoteData?.deliveryDetails?.totalPrice) {
-          value = quoteData.deliveryDetails.totalPrice;
-        }
-        // 5. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
-        else if (quoteData?.quoteData?.shippingQuote) {
-          const price = (shipment as any).selected_option === 'express' 
-            ? quoteData.quoteData.shippingQuote.expressPrice 
-            : quoteData.quoteData.shippingQuote.economicPrice;
-          value = price || 0;
-        }
-        // 6. Tentar quote_data.shippingQuote baseado na opção selecionada
-        else if (quoteData?.shippingQuote) {
-          const price = (shipment as any).selected_option === 'express' 
-            ? quoteData.shippingQuote.expressPrice 
-            : quoteData.shippingQuote.economicPrice;
-          value = price || 0;
-        }
+        const value = calculateShipmentValue(shipment);
 
         if (!clientRevenue.has(clientKey)) {
           clientRevenue.set(clientKey, {
@@ -324,7 +331,7 @@ const AdminFaturamento = () => {
         .sort((a, b) => b.total_value - a.total_value)
         .slice(0, 10);
 
-      // Faturamento por região
+      // Processar dados por região
       const regionRevenue = new Map();
       filteredShipments.forEach(shipment => {
         const regions = new Set();
@@ -336,40 +343,7 @@ const AdminFaturamento = () => {
           regions.add(`${shipment.recipient_address.city} - ${shipment.recipient_address.state}`);
         }
 
-        const paymentData = shipment.payment_data as any;
-        const quoteData = shipment.quote_data as any;
-        let value = 0;
-        
-        // 1. Tentar payment_data.pix_details.amount (PIX)
-        if (paymentData?.pix_details?.amount) {
-          value = paymentData.pix_details.amount;
-        }
-        // 2. Tentar payment_data.amount (PIX novo formato - em reais)
-        else if (paymentData?.amount && paymentData?.method === 'pix') {
-          value = paymentData.amount;
-        }
-        // 3. Tentar payment_data.amount (Stripe/Cartão - em centavos)
-        else if (paymentData?.amount) {
-          value = paymentData.amount / 100;
-        }
-        // 4. Tentar quote_data.deliveryDetails.totalPrice
-        else if (quoteData?.deliveryDetails?.totalPrice) {
-          value = quoteData.deliveryDetails.totalPrice;
-        }
-        // 5. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
-        else if (quoteData?.quoteData?.shippingQuote) {
-          const price = (shipment as any).selected_option === 'express' 
-            ? quoteData.quoteData.shippingQuote.expressPrice 
-            : quoteData.quoteData.shippingQuote.economicPrice;
-          value = price || 0;
-        }
-        // 6. Tentar quote_data.shippingQuote baseado na opção selecionada
-        else if (quoteData?.shippingQuote) {
-          const price = (shipment as any).selected_option === 'express' 
-            ? quoteData.shippingQuote.expressPrice 
-            : quoteData.shippingQuote.economicPrice;
-          value = price || 0;
-        }
+        const value = calculateShipmentValue(shipment);
 
         regions.forEach(region => {
           if (!regionRevenue.has(region)) {
@@ -385,7 +359,7 @@ const AdminFaturamento = () => {
         .sort((a, b) => b.total_value - a.total_value)
         .slice(0, 10);
 
-      // Faturamento por período
+      // Processar dados por período
       const periodRevenue = new Map();
       filteredShipments.forEach(shipment => {
         const date = new Date(shipment.created_at);
@@ -409,40 +383,7 @@ const AdminFaturamento = () => {
             periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         }
 
-        const paymentData = shipment.payment_data as any;
-        const quoteData = shipment.quote_data as any;
-        let value = 0;
-        
-        // 1. Tentar payment_data.pix_details.amount (PIX)
-        if (paymentData?.pix_details?.amount) {
-          value = paymentData.pix_details.amount;
-        }
-        // 2. Tentar payment_data.amount (PIX novo formato - em reais)
-        else if (paymentData?.amount && paymentData?.method === 'pix') {
-          value = paymentData.amount;
-        }
-        // 3. Tentar payment_data.amount (Stripe/Cartão - em centavos)
-        else if (paymentData?.amount) {
-          value = paymentData.amount / 100;
-        }
-        // 4. Tentar quote_data.deliveryDetails.totalPrice
-        else if (quoteData?.deliveryDetails?.totalPrice) {
-          value = quoteData.deliveryDetails.totalPrice;
-        }
-        // 5. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
-        else if (quoteData?.quoteData?.shippingQuote) {
-          const price = (shipment as any).selected_option === 'express' 
-            ? quoteData.quoteData.shippingQuote.expressPrice 
-            : quoteData.quoteData.shippingQuote.economicPrice;
-          value = price || 0;
-        }
-        // 6. Tentar quote_data.shippingQuote baseado na opção selecionada
-        else if (quoteData?.shippingQuote) {
-          const price = (shipment as any).selected_option === 'express' 
-            ? quoteData.shippingQuote.expressPrice 
-            : quoteData.shippingQuote.economicPrice;
-          value = price || 0;
-        }
+        const value = calculateShipmentValue(shipment);
 
         if (!periodRevenue.has(periodKey)) {
           periodRevenue.set(periodKey, {
@@ -468,40 +409,7 @@ const AdminFaturamento = () => {
           : profile?.first_name || profile?.email || 'Cliente';
         const clientEmail = profile?.email || '';
         
-        const paymentData = shipment.payment_data as any;
-        const quoteData = shipment.quote_data as any;
-        let value = 0;
-        
-        // 1. Tentar payment_data.pix_details.amount (PIX)
-        if (paymentData?.pix_details?.amount) {
-          value = paymentData.pix_details.amount;
-        }
-        // 2. Tentar payment_data.amount (PIX novo formato - em reais)
-        else if (paymentData?.amount && paymentData?.method === 'pix') {
-          value = paymentData.amount;
-        }
-        // 3. Tentar payment_data.amount (Stripe/Cartão - em centavos)
-        else if (paymentData?.amount) {
-          value = paymentData.amount / 100;
-        }
-        // 4. Tentar quote_data.deliveryDetails.totalPrice
-        else if (quoteData?.deliveryDetails?.totalPrice) {
-          value = quoteData.deliveryDetails.totalPrice;
-        }
-        // 5. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
-        else if (quoteData?.quoteData?.shippingQuote) {
-          const price = (shipment as any).selected_option === 'express' 
-            ? quoteData.quoteData.shippingQuote.expressPrice 
-            : quoteData.quoteData.shippingQuote.economicPrice;
-          value = price || 0;
-        }
-        // 6. Tentar quote_data.shippingQuote baseado na opção selecionada
-        else if (quoteData?.shippingQuote) {
-          const price = (shipment as any).selected_option === 'express' 
-            ? quoteData.shippingQuote.expressPrice 
-            : quoteData.shippingQuote.economicPrice;
-          value = price || 0;
-        }
+        const value = calculateShipmentValue(shipment);
 
         return {
           id: shipment.id,
@@ -528,8 +436,10 @@ const AdminFaturamento = () => {
         shipmentDetails
       });
 
+      console.log('✅ Dados de faturamento carregados com sucesso!');
+
     } catch (error) {
-      console.error('Error loading billing data:', error);
+      console.error('❌ Erro ao carregar dados de faturamento:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar dados de faturamento",
@@ -569,25 +479,26 @@ const AdminFaturamento = () => {
       ])
     ];
 
-    const csvString = csvContent.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const csv = csvContent.map(row => row.join(',')).join('\\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
     link.setAttribute('download', `faturamento_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--muted))'];
-
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground mt-2">Carregando dados de faturamento...</p>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando dados de faturamento...</p>
+          </div>
         </div>
       </div>
     );
@@ -596,32 +507,34 @@ const AdminFaturamento = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <DollarSign className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold text-foreground">Faturamento</h1>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Faturamento</h1>
+          <p className="text-muted-foreground">
+            Análise financeira e relatórios de receita
+          </p>
         </div>
-        <Button onClick={exportToCSV} disabled={!billingData?.shipmentDetails.length}>
-          <Download className="h-4 w-4 mr-2" />
+        <Button onClick={exportToCSV} className="w-fit">
+          <Download className="w-4 h-4 mr-2" />
           Exportar CSV
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card>
+      {/* Filtros */}
+      <Card className="border-border/50 shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Filter className="h-5 w-5" />
+            <Filter className="w-5 h-5" />
             <span>Filtros</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label>Período</Label>
+              <Label htmlFor="period">Período</Label>
               <Select value={dateRange} onValueChange={(value: any) => setDateRange(value)}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Selecione o período" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="daily">Diário (30 dias)</SelectItem>
@@ -633,32 +546,11 @@ const AdminFaturamento = () => {
               </Select>
             </div>
 
-            {dateRange === 'custom' && (
-              <>
-                <div className="space-y-2">
-                  <Label>Data Inicial</Label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Data Final</Label>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
-
             <div className="space-y-2">
-              <Label>Cliente</Label>
+              <Label htmlFor="client">Cliente</Label>
               <Select value={selectedClient} onValueChange={setSelectedClient}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Todos os Clientes" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os Clientes</SelectItem>
@@ -672,10 +564,10 @@ const AdminFaturamento = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>Região</Label>
+              <Label htmlFor="region">Região</Label>
               <Select value={selectedRegion} onValueChange={setSelectedRegion}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Todas as Regiões" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as Regiões</SelectItem>
@@ -688,215 +580,210 @@ const AdminFaturamento = () => {
               </Select>
             </div>
           </div>
+
+          {dateRange === 'custom' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Data Inicial</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endDate">Data Final</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Summary Cards */}
-      {billingData && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <DollarSign className="h-8 w-8 text-success" />
-                <div>
-                  <p className="text-2xl font-bold text-foreground">
-                    {formatCurrency(billingData.totalRevenue)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Faturamento Total</p>
-                </div>
+      {/* Cards de Resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="border-border/50 shadow-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Faturamento Total</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {formatCurrency(billingData?.totalRevenue || 0)}
+                </p>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <Package className="h-8 w-8 text-primary" />
-                <div>
-                  <p className="text-2xl font-bold text-foreground">
-                    {billingData.totalShipments.toLocaleString('pt-BR')}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Total de Envios</p>
-                </div>
+              <div className="w-12 h-12 bg-success/10 rounded-full flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-success" />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-8 w-8 text-warning" />
-                <div>
-                  <p className="text-2xl font-bold text-foreground">
-                    {formatCurrency(billingData.averageValue)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Valor Médio</p>
-                </div>
+        <Card className="border-border/50 shadow-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Total de Envios</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {billingData?.totalShipments || 0}
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                <Package className="w-6 h-6 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Charts */}
-      {billingData && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Revenue by Period */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Faturamento por Período</CardTitle>
-            </CardHeader>
-            <CardContent>
+        <Card className="border-border/50 shadow-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Valor Médio</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {formatCurrency(billingData?.averageValue || 0)}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-warning" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Faturamento por Período */}
+        <Card className="border-border/50 shadow-card">
+          <CardHeader>
+            <CardTitle>Faturamento por Período</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {billingData?.revenueByPeriod && billingData.revenueByPeriod.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={billingData.revenueByPeriod}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="period" />
                   <YAxis />
-                  <Tooltip 
-                    formatter={(value) => [formatCurrency(Number(value)), 'Faturamento']}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="total_value" 
-                    stroke="hsl(var(--primary))" 
-                    strokeWidth={2}
-                  />
+                  <Tooltip formatter={(value) => [formatCurrency(Number(value)), 'Faturamento']} />
+                  <Line type="monotone" dataKey="total_value" stroke="hsl(var(--primary))" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                Nenhum dado disponível para o período selecionado
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Top Clients */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Top 10 Clientes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={billingData.revenueByClient.slice(0, 5)}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="client_name" 
-                    tick={{ fontSize: 12 }}
-                    interval={0}
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                  />
-                  <YAxis />
-                  <Tooltip 
-                    formatter={(value) => [formatCurrency(Number(value)), 'Faturamento']}
-                  />
-                  <Bar 
-                    dataKey="total_value" 
-                    fill="hsl(var(--primary))" 
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Top Regions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Top 5 Regiões</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={billingData.revenueByRegion.slice(0, 5)}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ region, percent }) => `${region.split(' - ')[0]} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="total_value"
-                  >
-                    {billingData.revenueByRegion.slice(0, 5).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value) => [formatCurrency(Number(value)), 'Faturamento']}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Revenue by Client (Table) */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Faturamento por Cliente</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 max-h-80 overflow-y-auto">
+        {/* Top 10 Clientes */}
+        <Card className="border-border/50 shadow-card">
+          <CardHeader>
+            <CardTitle>Top 10 Clientes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {billingData?.revenueByClient && billingData.revenueByClient.length > 0 ? (
+              <div className="space-y-4">
                 {billingData.revenueByClient.map((client, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div key={client.client_email} className="flex items-center justify-between p-3 bg-card rounded-lg border">
                     <div>
-                      <p className="font-medium text-foreground">{client.client_name}</p>
+                      <p className="font-medium">{client.client_name}</p>
                       <p className="text-sm text-muted-foreground">{client.client_email}</p>
                       <p className="text-xs text-muted-foreground">{client.shipment_count} envios</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-foreground">{formatCurrency(client.total_value)}</p>
+                      <p className="font-bold text-success">{formatCurrency(client.total_value)}</p>
+                      <Badge variant="outline" className="text-xs">
+                        #{index + 1}
+                      </Badge>
                     </div>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Detailed Shipments List */}
-      {billingData && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <FileText className="h-5 w-5" />
-              <span>Detalhes dos Envios</span>
-            </CardTitle>
-            <CardDescription>
-              Lista completa dos envios no período selecionado
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {billingData.shipmentDetails.map((shipment) => (
-                <div key={shipment.id} className="p-4 border border-border/50 rounded-lg">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1 flex-1">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-mono text-sm font-medium">
-                          {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
-                        </span>
-                        <Badge variant="secondary">
-                          {shipment.status}
-                        </Badge>
-                      </div>
-                      
-                      <div className="text-sm text-muted-foreground">
-                        <p><strong>Cliente:</strong> {shipment.client_name} ({shipment.client_email})</p>
-                        <p><strong>Data:</strong> {formatDate(shipment.created_at)}</p>
-                        <p><strong>Rota:</strong> {shipment.origin_city}-{shipment.origin_state} → {shipment.destination_city}-{shipment.destination_state}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-foreground">
-                        {formatCurrency(shipment.value)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                Nenhum cliente encontrado
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
+      </div>
+
+      {/* Tabela de Detalhes */}
+      <Card className="border-border/50 shadow-card">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <FileText className="w-5 h-5" />
+            <span>Detalhes dos Envios</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {billingData?.shipmentDetails && billingData.shipmentDetails.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Código</th>
+                    <th className="text-left p-2">Cliente</th>
+                    <th className="text-left p-2">Valor</th>
+                    <th className="text-left p-2">Status</th>
+                    <th className="text-left p-2">Data</th>
+                    <th className="text-left p-2">Rota</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {billingData.shipmentDetails.slice(0, 20).map((shipment) => (
+                    <tr key={shipment.id} className="border-b hover:bg-muted/50">
+                      <td className="p-2 font-mono text-sm">
+                        {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
+                      </td>
+                      <td className="p-2">
+                        <div>
+                          <p className="font-medium">{shipment.client_name}</p>
+                          <p className="text-xs text-muted-foreground">{shipment.client_email}</p>
+                        </div>
+                      </td>
+                      <td className="p-2 font-bold text-success">
+                        {formatCurrency(shipment.value)}
+                      </td>
+                      <td className="p-2">
+                        <Badge variant={shipment.status === 'DELIVERED' ? 'default' : 'secondary'}>
+                          {shipment.status}
+                        </Badge>
+                      </td>
+                      <td className="p-2 text-sm">
+                        {formatDate(shipment.created_at)}
+                      </td>
+                      <td className="p-2 text-sm">
+                        {shipment.origin_city} → {shipment.destination_city}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {billingData.shipmentDetails.length > 20 && (
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando 20 de {billingData.shipmentDetails.length} envios. Exporte o CSV para ver todos.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">Nenhum envio encontrado para o período selecionado</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
