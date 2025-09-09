@@ -26,7 +26,11 @@ const Document = () => {
   // Campos específicos para declaração de conteúdo
   const [declarationNumber, setDeclarationNumber] = useState<string>("01");
   const [issueDate, setIssueDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [deliveryForecast, setDeliveryForecast] = useState<string>("");
+  const [deliveryForecast, setDeliveryForecast] = useState<string>(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  });
   const [totalValue, setTotalValue] = useState<string>("");
 
   useEffect(() => {
