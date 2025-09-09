@@ -109,7 +109,7 @@ const AdminFaturamento = () => {
         setClients(clientsList);
       }
 
-      // Carregar lista de regiões (cidades/estados únicos)
+      // Carregar lista de regiões
       const { data: addressesData } = await supabase
         .from('addresses')
         .select('city, state')
@@ -165,29 +165,25 @@ const AdminFaturamento = () => {
     const paymentData = shipment.payment_data as any;
     const quoteData = shipment.quote_data as any;
     
-    console.log('📊 Calculando valor do shipment:', shipment.id);
-    console.log('📊 Payment data:', paymentData);
-    console.log('📊 Quote data presente:', !!quoteData);
-    
     // 1. PIX com pix_details.amount
     if (paymentData?.pix_details?.amount) {
-      console.log('✅ Valor encontrado em pix_details.amount:', paymentData.pix_details.amount);
+      console.log('✅ Valor PIX encontrado:', paymentData.pix_details.amount);
       return paymentData.pix_details.amount;
     }
     // 2. PIX com amount direto
     if (paymentData?.amount && paymentData?.method === 'pix') {
-      console.log('✅ Valor encontrado em payment_data.amount (PIX):', paymentData.amount);
+      console.log('✅ Valor PIX amount encontrado:', paymentData.amount);
       return paymentData.amount;
     }
     // 3. Stripe/cartão (em centavos)
     if (paymentData?.amount) {
       const value = paymentData.amount / 100;
-      console.log('✅ Valor encontrado em payment_data.amount (Stripe):', value);
+      console.log('✅ Valor Stripe encontrado:', value);
       return value;
     }
     // 4. Quote delivery details
     if (quoteData?.deliveryDetails?.totalPrice) {
-      console.log('✅ Valor encontrado em deliveryDetails.totalPrice:', quoteData.deliveryDetails.totalPrice);
+      console.log('✅ Valor deliveryDetails encontrado:', quoteData.deliveryDetails.totalPrice);
       return quoteData.deliveryDetails.totalPrice;
     }
     // 5. Quote data shipping quote
@@ -195,7 +191,7 @@ const AdminFaturamento = () => {
       const price = shipment.selected_option === 'express' 
         ? quoteData.quoteData.shippingQuote.expressPrice 
         : quoteData.quoteData.shippingQuote.economicPrice;
-      console.log('✅ Valor encontrado em quoteData.shippingQuote:', price);
+      console.log('✅ Valor quoteData.shippingQuote encontrado:', price);
       return price || 0;
     }
     // 6. Shipping quote direto
@@ -203,11 +199,10 @@ const AdminFaturamento = () => {
       const price = shipment.selected_option === 'express' 
         ? quoteData.shippingQuote.expressPrice 
         : quoteData.shippingQuote.economicPrice;
-      console.log('✅ Valor encontrado em shippingQuote:', price);
+      console.log('✅ Valor shippingQuote encontrado:', price);
       return price || 0;
     }
     
-    console.log('❌ Nenhum valor encontrado para o shipment');
     return 0;
   };
 
@@ -219,7 +214,7 @@ const AdminFaturamento = () => {
 
       console.log('📅 Período:', { startDateFilter, endDateFilter });
 
-      // Buscar shipments
+      // Buscar shipments SEM tentar fazer join com profiles
       let query = supabase
         .from('shipments')
         .select(`
@@ -232,11 +227,11 @@ const AdminFaturamento = () => {
           selected_option,
           user_id,
           sender_address:addresses!shipments_sender_address_id_fkey(city, state),
-          recipient_address:addresses!shipments_recipient_address_id_fkey(city, state),
-          profiles(first_name, last_name, email)
+          recipient_address:addresses!shipments_recipient_address_id_fkey(city, state)
         `)
         .gte('created_at', startDateFilter.toISOString())
-        .lte('created_at', endDateFilter.toISOString());
+        .lte('created_at', endDateFilter.toISOString())
+        .or('payment_data.not.is.null,quote_data.not.is.null');
 
       // Aplicar filtros
       if (selectedClient !== 'all') {
@@ -266,6 +261,17 @@ const AdminFaturamento = () => {
         return;
       }
 
+      // Buscar profiles dos usuários SEPARADAMENTE
+      const userIds = [...new Set(shipments.map(s => s.user_id).filter(Boolean))];
+      console.log('👥 User IDs únicos:', userIds);
+      
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email')
+        .in('id', userIds);
+
+      console.log('👥 Profiles encontrados:', profiles?.length);
+
       // Filtrar por região se necessário
       let filteredShipments = shipments;
       if (selectedRegion !== 'all') {
@@ -286,17 +292,20 @@ const AdminFaturamento = () => {
       let shipmentsProcessed = 0;
 
       filteredShipments.forEach((shipment, index) => {
+        console.log(`💰 Processando shipment ${index + 1}:`, shipment.id);
         const value = calculateShipmentValue(shipment);
         if (value > 0) {
           totalRevenue += value;
           shipmentsProcessed++;
+          console.log(`✅ Valor adicionado: R$ ${value} (Total: R$ ${totalRevenue})`);
+        } else {
+          console.log('❌ Nenhum valor encontrado para este shipment');
         }
       });
 
       console.log('💰 RESULTADO FINAL:');
       console.log('💰 Receita total:', totalRevenue);
       console.log('💰 Shipments com valor:', shipmentsProcessed);
-      console.log('💰 Total de shipments:', filteredShipments.length);
 
       const totalShipments = filteredShipments.length;
       const averageValue = totalShipments > 0 ? totalRevenue / totalShipments : 0;
@@ -304,7 +313,7 @@ const AdminFaturamento = () => {
       // Processar dados por cliente
       const clientRevenue = new Map();
       filteredShipments.forEach(shipment => {
-        const profile = shipment.profiles as any;
+        const profile = profiles?.find(p => p.id === shipment.user_id);
         const clientKey = shipment.user_id;
         const clientName = profile?.first_name && profile?.last_name 
           ? `${profile.first_name} ${profile.last_name}`
@@ -403,7 +412,7 @@ const AdminFaturamento = () => {
 
       // Detalhes dos envios
       const shipmentDetails = filteredShipments.map(shipment => {
-        const profile = shipment.profiles as any;
+        const profile = profiles?.find(p => p.id === shipment.user_id);
         const clientName = profile?.first_name && profile?.last_name 
           ? `${profile.first_name} ${profile.last_name}`
           : profile?.first_name || profile?.email || 'Cliente';
@@ -436,7 +445,7 @@ const AdminFaturamento = () => {
         shipmentDetails
       });
 
-      console.log('✅ Dados de faturamento carregados com sucesso!');
+      console.log('✅ Dados finais definidos no state!');
 
     } catch (error) {
       console.error('❌ Erro ao carregar dados de faturamento:', error);
