@@ -155,8 +155,24 @@ const AdminDashboardEnhanced = () => {
       // Calcular receita total
       const totalRevenue = shipments?.reduce((sum, shipment) => {
         const quoteData = shipment.quote_data as any;
-        if (quoteData?.selectedQuote?.price) {
-          return sum + parseFloat(quoteData.selectedQuote.price);
+        
+        // 1. Tentar quote_data.deliveryDetails.totalPrice
+        if (quoteData?.deliveryDetails?.totalPrice) {
+          return sum + quoteData.deliveryDetails.totalPrice;
+        }
+        // 2. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
+        else if (quoteData?.quoteData?.shippingQuote) {
+          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+            ? quoteData.quoteData.shippingQuote.expressPrice 
+            : quoteData.quoteData.shippingQuote.economicPrice;
+          return sum + (price || 0);
+        }
+        // 3. Tentar quote_data.shippingQuote baseado na opção selecionada
+        else if (quoteData?.shippingQuote) {
+          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+            ? quoteData.shippingQuote.expressPrice 
+            : quoteData.shippingQuote.economicPrice;
+          return sum + (price || 0);
         }
         return sum;
       }, 0) || 0;
@@ -186,7 +202,26 @@ const AdminDashboardEnhanced = () => {
         }
 
         const quoteData = shipment.quote_data as any;
-        const revenue = quoteData?.selectedQuote?.price ? parseFloat(quoteData.selectedQuote.price) : 0;
+        let revenue = 0;
+        
+        // 1. Tentar quote_data.deliveryDetails.totalPrice
+        if (quoteData?.deliveryDetails?.totalPrice) {
+          revenue = quoteData.deliveryDetails.totalPrice;
+        }
+        // 2. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
+        else if (quoteData?.quoteData?.shippingQuote) {
+          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+            ? quoteData.quoteData.shippingQuote.expressPrice 
+            : quoteData.quoteData.shippingQuote.economicPrice;
+          revenue = price || 0;
+        }
+        // 3. Tentar quote_data.shippingQuote baseado na opção selecionada
+        else if (quoteData?.shippingQuote) {
+          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+            ? quoteData.shippingQuote.expressPrice 
+            : quoteData.shippingQuote.economicPrice;
+          revenue = price || 0;
+        }
 
         if (!revenueMap.has(periodKey)) {
           revenueMap.set(periodKey, { period: periodKey, revenue: 0, shipments: 0 });
@@ -213,7 +248,26 @@ const AdminDashboardEnhanced = () => {
         }
 
         const quoteData = shipment.quote_data as any;
-        const revenue = quoteData?.selectedQuote?.price ? parseFloat(quoteData.selectedQuote.price) : 0;
+        let revenue = 0;
+        
+        // 1. Tentar quote_data.deliveryDetails.totalPrice
+        if (quoteData?.deliveryDetails?.totalPrice) {
+          revenue = quoteData.deliveryDetails.totalPrice;
+        }
+        // 2. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
+        else if (quoteData?.quoteData?.shippingQuote) {
+          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+            ? quoteData.quoteData.shippingQuote.expressPrice 
+            : quoteData.quoteData.shippingQuote.economicPrice;
+          revenue = price || 0;
+        }
+        // 3. Tentar quote_data.shippingQuote baseado na opção selecionada
+        else if (quoteData?.shippingQuote) {
+          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+            ? quoteData.shippingQuote.expressPrice 
+            : quoteData.shippingQuote.economicPrice;
+          revenue = price || 0;
+        }
 
         regions.forEach(region => {
           if (!regionMap.has(region)) {
@@ -239,7 +293,26 @@ const AdminDashboardEnhanced = () => {
           : profile?.first_name || profile?.email || 'Cliente';
 
         const quoteData = shipment.quote_data as any;
-        const revenue = quoteData?.selectedQuote?.price ? parseFloat(quoteData.selectedQuote.price) : 0;
+        let revenue = 0;
+        
+        // 1. Tentar quote_data.deliveryDetails.totalPrice
+        if (quoteData?.deliveryDetails?.totalPrice) {
+          revenue = quoteData.deliveryDetails.totalPrice;
+        }
+        // 2. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
+        else if (quoteData?.quoteData?.shippingQuote) {
+          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+            ? quoteData.quoteData.shippingQuote.expressPrice 
+            : quoteData.quoteData.shippingQuote.economicPrice;
+          revenue = price || 0;
+        }
+        // 3. Tentar quote_data.shippingQuote baseado na opção selecionada
+        else if (quoteData?.shippingQuote) {
+          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+            ? quoteData.shippingQuote.expressPrice 
+            : quoteData.shippingQuote.economicPrice;
+          revenue = price || 0;
+        }
 
         if (!clientMap.has(clientKey)) {
           clientMap.set(clientKey, { client_name: clientName, revenue: 0, shipments: 0 });
