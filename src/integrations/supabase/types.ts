@@ -109,6 +109,66 @@ export type Database = {
         }
         Relationships: []
       }
+      company_branches: {
+        Row: {
+          active: boolean | null
+          cep: string
+          city: string
+          cnpj: string
+          complement: string | null
+          created_at: string
+          email: string | null
+          fantasy_name: string | null
+          id: string
+          is_main_branch: boolean | null
+          name: string
+          neighborhood: string
+          number: string
+          phone: string | null
+          state: string
+          street: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          cep: string
+          city: string
+          cnpj: string
+          complement?: string | null
+          created_at?: string
+          email?: string | null
+          fantasy_name?: string | null
+          id?: string
+          is_main_branch?: boolean | null
+          name: string
+          neighborhood: string
+          number: string
+          phone?: string | null
+          state: string
+          street: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          cep?: string
+          city?: string
+          cnpj?: string
+          complement?: string | null
+          created_at?: string
+          email?: string | null
+          fantasy_name?: string | null
+          id?: string
+          is_main_branch?: boolean | null
+          name?: string
+          neighborhood?: string
+          number?: string
+          phone?: string | null
+          state?: string
+          street?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       integration_audit_logs: {
         Row: {
           action: string

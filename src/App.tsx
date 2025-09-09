@@ -37,6 +37,7 @@ import AdminDashboardEnhanced from "./pages/admin/AdminDashboardEnhanced";
 import AdminClienteDetalhes from "./pages/admin/AdminClienteDetalhes";
 import AdminClientes from "./pages/admin/AdminClientes";
 import AdminMotoristas from "./pages/admin/AdminMotoristas";
+import AdminFiliais from "./pages/admin/AdminFiliais";
 import AdminRemessas from "./pages/admin/AdminRemessas";
 import AdminFaturamento from "./pages/admin/AdminFaturamento";
 import AdminHistorico from "./pages/admin/AdminHistorico";
@@ -111,6 +112,7 @@ const App = () => (
                       <Route path="clientes" element={<AdminClientes />} />
                       <Route path="clientes/:id" element={<AdminClienteDetalhes />} />
                       <Route path="motoristas" element={<AdminMotoristas />} />
+                      <Route path="filiais" element={<AdminFiliais />} />
                       <Route path="faturamento" element={<AdminFaturamento />} />
                       <Route path="remessas" element={<AdminRemessas />} />
                       <Route path="integracoes" element={<AdminIntegracoes />} />
