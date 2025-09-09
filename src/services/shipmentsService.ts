@@ -215,64 +215,70 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
  * Serviço para buscar remessas disponíveis para motoristas
  */
 export const getAvailableShipments = async (): Promise<BaseShipment[]> => {
-  // Usar query SQL direta em vez de RPC para obter dados estruturados corretamente
-  const { data, error } = await supabase
-    .from('shipments')
-    .select(`
-      id,
-      tracking_code,
-      status,
-      created_at,
-      weight,
-      length,
-      width,
-      height,
-      format,
-      selected_option,
-      pickup_option,
-      quote_data,
-      payment_data,
-      label_pdf_url,
-      cte_key,
-      sender_address:addresses!shipments_sender_address_id_fkey (
-        name,
-        street,
-        number,
-        neighborhood,
-        city,
-        state,
-        cep,
-        complement,
-        reference,
-        phone
-      ),
-      recipient_address:addresses!shipments_recipient_address_id_fkey (
-        name,
-        street,
-        number,
-        neighborhood,
-        city,
-        state,
-        cep,
-        complement,
-        reference,
-        phone
-      )
-    `)
-    .is('motorista_id', null)
-    .in('status', ['PAYMENT_CONFIRMED', 'PAID', 'PENDING_LABEL', 'LABEL_GENERATED'])
-    .order('created_at', { ascending: true });
+  console.log('📋 Iniciando busca por remessas disponíveis...');
   
-  if (error) {
-    console.error('❌ Erro ao buscar remessas disponíveis:', error);
+  try {
+    // Buscar remessas sem join primeiro para testar
+    const { data: shipmentsData, error: shipmentsError } = await supabase
+      .from('shipments')
+      .select('*')
+      .is('motorista_id', null)
+      .in('status', ['PAYMENT_CONFIRMED', 'PAID', 'PENDING_LABEL', 'LABEL_GENERATED'])
+      .order('created_at', { ascending: true });
+    
+    if (shipmentsError) {
+      console.error('❌ Erro ao buscar remessas:', shipmentsError);
+      throw shipmentsError;
+    }
+    
+    console.log('📦 Remessas encontradas:', shipmentsData?.length || 0, shipmentsData);
+    
+    if (!shipmentsData || shipmentsData.length === 0) {
+      console.log('⚠️ Nenhuma remessa disponível encontrada');
+      return [];
+    }
+    
+    // Buscar endereços separadamente para cada remessa
+    const remessasComEnderecos = await Promise.all(
+      shipmentsData.map(async (shipment) => {
+        console.log(`🔍 Buscando endereços para remessa ${shipment.id}...`);
+        
+        // Buscar endereço do remetente
+        const { data: senderAddress } = await supabase
+          .from('addresses')
+          .select('*')
+          .eq('id', shipment.sender_address_id)
+          .maybeSingle();
+        
+        // Buscar endereço do destinatário
+        const { data: recipientAddress } = await supabase
+          .from('addresses')
+          .select('*')
+          .eq('id', shipment.recipient_address_id)
+          .maybeSingle();
+        
+        console.log(`📍 Endereços da remessa ${shipment.id}:`, {
+          sender: senderAddress,
+          recipient: recipientAddress
+        });
+        
+        return {
+          ...normalizeShipmentData({
+            ...shipment,
+            sender_address: senderAddress || createEmptyAddress(),
+            recipient_address: recipientAddress || createEmptyAddress()
+          })
+        };
+      })
+    );
+    
+    console.log('✅ Remessas processadas com sucesso:', remessasComEnderecos);
+    return remessasComEnderecos;
+    
+  } catch (error) {
+    console.error('❌ Erro completo ao buscar remessas disponíveis:', error);
     throw error;
   }
-  
-  console.log('🚛 Remessas disponíveis:', data);
-  
-  return data?.map((item: any) => ({
-    ...normalizeShipmentData(item)
-  })) || [];
 };
 
 /**
