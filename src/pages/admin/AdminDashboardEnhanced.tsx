@@ -138,48 +138,116 @@ const AdminDashboardEnhanced = () => {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'PENDING_LABEL');
 
-      // Carregar envios recentes para calcular receita e evolução
+      // Carregar envios recentes SEM join com profiles - mesma abordagem do faturamento
       const { data: shipments } = await supabase
         .from('shipments')
         .select(`
           *,
           sender_address:addresses!shipments_sender_address_id_fkey(city, state),
-          recipient_address:addresses!shipments_recipient_address_id_fkey(city, state),
-          profiles(first_name, last_name, email)
+          recipient_address:addresses!shipments_recipient_address_id_fkey(city, state)
         `)
         .gte('created_at', startDateFilter.toISOString())
         .lte('created_at', endDateFilter.toISOString())
-        .not('quote_data', 'is', null)
+        .not('user_id', 'is', null)
+        .or('payment_data.not.is.null,quote_data.not.is.null')
         .order('created_at', { ascending: false });
 
-      // Calcular receita total
-      const totalRevenue = shipments?.reduce((sum, shipment) => {
+      console.log('📊 [DASHBOARD ENHANCED] Shipments encontrados:', shipments?.length);
+
+      // Buscar profiles separadamente se existirem shipments
+      let enrichedShipments = [];
+      if (shipments && shipments.length > 0) {
+        const userIds = [...new Set(shipments.map(s => s.user_id).filter(Boolean))];
+        console.log('👥 [DASHBOARD ENHANCED] User IDs únicos:', userIds.length);
+        
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email')
+          .in('id', userIds);
+        
+        console.log('👤 [DASHBOARD ENHANCED] Profiles encontrados:', profiles?.length);
+
+        enrichedShipments = shipments.map(shipment => {
+          const profile = profiles?.find(p => p.id === shipment.user_id);
+          return {
+            ...shipment,
+            profiles: profile || { first_name: 'N/A', last_name: '', email: 'N/A' }
+          };
+        });
+      }
+
+      // Função para calcular valor do shipment - MESMA LÓGICA DO FATURAMENTO
+      const calculateShipmentValue = (shipment: any) => {
+        const paymentData = shipment.payment_data as any;
         const quoteData = shipment.quote_data as any;
         
-        // 1. Tentar quote_data.deliveryDetails.totalPrice
-        if (quoteData?.deliveryDetails?.totalPrice) {
-          return sum + quoteData.deliveryDetails.totalPrice;
+        // 1. PIX com pix_details.amount
+        if (paymentData?.pix_details?.amount) {
+          console.log('✅ [DASHBOARD ENHANCED] Valor PIX encontrado:', paymentData.pix_details.amount);
+          return paymentData.pix_details.amount;
         }
-        // 2. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
-        else if (quoteData?.quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+        // 2. PIX com amount direto
+        if (paymentData?.amount && paymentData?.method === 'pix') {
+          console.log('✅ [DASHBOARD ENHANCED] Valor PIX amount encontrado:', paymentData.amount);
+          return paymentData.amount;
+        }
+        // 3. Stripe/cartão (em centavos)
+        if (paymentData?.amount) {
+          const value = paymentData.amount / 100;
+          console.log('✅ [DASHBOARD ENHANCED] Valor Stripe encontrado:', value);
+          return value;
+        }
+        // 4. Quote delivery details
+        if (quoteData?.deliveryDetails?.totalPrice) {
+          console.log('✅ [DASHBOARD ENHANCED] Valor deliveryDetails encontrado:', quoteData.deliveryDetails.totalPrice);
+          return quoteData.deliveryDetails.totalPrice;
+        }
+        // 5. Quote data shipping quote
+        if (quoteData?.quoteData?.shippingQuote) {
+          const price = shipment.selected_option === 'express' 
             ? quoteData.quoteData.shippingQuote.expressPrice 
             : quoteData.quoteData.shippingQuote.economicPrice;
-          return sum + (price || 0);
+          console.log('✅ [DASHBOARD ENHANCED] Valor quoteData.shippingQuote encontrado:', price);
+          return price || 0;
         }
-        // 3. Tentar quote_data.shippingQuote baseado na opção selecionada
-        else if (quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+        // 6. Shipping quote direto
+        if (quoteData?.shippingQuote) {
+          const price = shipment.selected_option === 'express' 
             ? quoteData.shippingQuote.expressPrice 
             : quoteData.shippingQuote.economicPrice;
-          return sum + (price || 0);
+          console.log('✅ [DASHBOARD ENHANCED] Valor shippingQuote encontrado:', price);
+          return price || 0;
         }
-        return sum;
-      }, 0) || 0;
+        
+        return 0;
+      };
 
-      // Evolução da receita por período
+      // Calcular receita total usando enrichedShipments
+      let totalRevenue = 0;
+      let processedCount = 0;
+      
+      if (enrichedShipments && enrichedShipments.length > 0) {
+        enrichedShipments.forEach((shipment, index) => {
+          console.log(`💰 [DASHBOARD ENHANCED] Processando shipment ${index + 1}:`, shipment.id);
+          const shipmentValue = calculateShipmentValue(shipment);
+          if (shipmentValue > 0) {
+            totalRevenue += shipmentValue;
+            processedCount++;
+            console.log(`✅ [DASHBOARD ENHANCED] Valor adicionado: R$ ${shipmentValue} (Total: R$ ${totalRevenue})`);
+          }
+        });
+      }
+      
+      console.log('💰 [DASHBOARD ENHANCED] RECEITA TOTAL CALCULADA:', {
+        totalShipments: enrichedShipments?.length || 0,
+        processedCount,
+        totalRevenue,
+        formattedRevenue: `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      });
+
+      // Evolução da receita por período usando enrichedShipments
       const revenueMap = new Map();
-      shipments?.forEach(shipment => {
+      enrichedShipments?.forEach(shipment => {
         const date = new Date(shipment.created_at);
         let periodKey: string;
 
@@ -201,27 +269,7 @@ const AdminDashboardEnhanced = () => {
             periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         }
 
-        const quoteData = shipment.quote_data as any;
-        let revenue = 0;
-        
-        // 1. Tentar quote_data.deliveryDetails.totalPrice
-        if (quoteData?.deliveryDetails?.totalPrice) {
-          revenue = quoteData.deliveryDetails.totalPrice;
-        }
-        // 2. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
-        else if (quoteData?.quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
-            ? quoteData.quoteData.shippingQuote.expressPrice 
-            : quoteData.quoteData.shippingQuote.economicPrice;
-          revenue = price || 0;
-        }
-        // 3. Tentar quote_data.shippingQuote baseado na opção selecionada
-        else if (quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
-            ? quoteData.shippingQuote.expressPrice 
-            : quoteData.shippingQuote.economicPrice;
-          revenue = price || 0;
-        }
+        const revenue = calculateShipmentValue(shipment);
 
         if (!revenueMap.has(periodKey)) {
           revenueMap.set(periodKey, { period: periodKey, revenue: 0, shipments: 0 });
@@ -235,9 +283,9 @@ const AdminDashboardEnhanced = () => {
       const revenueEvolution = Array.from(revenueMap.values())
         .sort((a, b) => a.period.localeCompare(b.period));
 
-      // Receita por região
+      // Receita por região usando enrichedShipments
       const regionMap = new Map();
-      shipments?.forEach(shipment => {
+      enrichedShipments?.forEach(shipment => {
         const regions = new Set();
         
         if (shipment.sender_address?.city && shipment.sender_address?.state) {
@@ -247,27 +295,7 @@ const AdminDashboardEnhanced = () => {
           regions.add(`${shipment.recipient_address.city} - ${shipment.recipient_address.state}`);
         }
 
-        const quoteData = shipment.quote_data as any;
-        let revenue = 0;
-        
-        // 1. Tentar quote_data.deliveryDetails.totalPrice
-        if (quoteData?.deliveryDetails?.totalPrice) {
-          revenue = quoteData.deliveryDetails.totalPrice;
-        }
-        // 2. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
-        else if (quoteData?.quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
-            ? quoteData.quoteData.shippingQuote.expressPrice 
-            : quoteData.quoteData.shippingQuote.economicPrice;
-          revenue = price || 0;
-        }
-        // 3. Tentar quote_data.shippingQuote baseado na opção selecionada
-        else if (quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
-            ? quoteData.shippingQuote.expressPrice 
-            : quoteData.shippingQuote.economicPrice;
-          revenue = price || 0;
-        }
+        const revenue = calculateShipmentValue(shipment);
 
         regions.forEach(region => {
           if (!regionMap.has(region)) {
@@ -283,36 +311,16 @@ const AdminDashboardEnhanced = () => {
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 5);
 
-      // Receita por cliente
+      // Receita por cliente usando enrichedShipments
       const clientMap = new Map();
-      shipments?.forEach(shipment => {
+      enrichedShipments?.forEach(shipment => {
         const profile = shipment.profiles as any;
         const clientKey = shipment.user_id;
         const clientName = profile?.first_name && profile?.last_name 
           ? `${profile.first_name} ${profile.last_name}`
           : profile?.first_name || profile?.email || 'Cliente';
 
-        const quoteData = shipment.quote_data as any;
-        let revenue = 0;
-        
-        // 1. Tentar quote_data.deliveryDetails.totalPrice
-        if (quoteData?.deliveryDetails?.totalPrice) {
-          revenue = quoteData.deliveryDetails.totalPrice;
-        }
-        // 2. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
-        else if (quoteData?.quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
-            ? quoteData.quoteData.shippingQuote.expressPrice 
-            : quoteData.quoteData.shippingQuote.economicPrice;
-          revenue = price || 0;
-        }
-        // 3. Tentar quote_data.shippingQuote baseado na opção selecionada
-        else if (quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
-            ? quoteData.shippingQuote.expressPrice 
-            : quoteData.shippingQuote.economicPrice;
-          revenue = price || 0;
-        }
+        const revenue = calculateShipmentValue(shipment);
 
         if (!clientMap.has(clientKey)) {
           clientMap.set(clientKey, { client_name: clientName, revenue: 0, shipments: 0 });
@@ -327,15 +335,8 @@ const AdminDashboardEnhanced = () => {
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 5);
 
-      // Buscar envios recentes para exibir na lista
-      const { data: recentShipments } = await supabase
-        .from('shipments')
-        .select(`
-          *,
-          profiles(first_name, last_name, email)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(5);
+      // Usar os enrichedShipments já carregados para a lista de recentes (limitar a 5)
+      const recentShipments = enrichedShipments.slice(0, 5);
 
       setStats({
         totalClients: clientCount || 0,
