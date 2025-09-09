@@ -59,12 +59,74 @@ serve(async (req) => {
       throw new Error('Shipment not found');
     }
 
+    // Get company branches data (required information)
+    const { data: branches, error: branchesError } = await supabaseService
+      .from('company_branches')
+      .select('*')
+      .eq('active', true)
+      .order('is_main_branch', { ascending: false });
+
+    if (branchesError) {
+      console.error('Shipment webhook dispatch - Error fetching branches:', branchesError);
+      throw new Error('Failed to fetch company branches data');
+    }
+
+    const mainBranch = branches?.find(b => b.is_main_branch) || branches?.[0];
+    
+    if (!mainBranch) {
+      console.error('Shipment webhook dispatch - No company branch found');
+      throw new Error('No company branch configured - required for CTE dispatch');
+    }
+
     // Build payload in the exact format requested
     const webhookPayload = {
       event: "shipment_created",
       shipmentId: fullShipment.tracking_code,
       clienteId: fullShipment.user_id ? `CID${fullShipment.user_id.substring(0, 8)}` : 'GUEST',
       status: "CRIADO",
+      
+      // Company branches data (required for CTE)
+      empresa: {
+        filial_principal: {
+          cnpj: mainBranch.cnpj,
+          razao_social: mainBranch.name,
+          nome_fantasia: mainBranch.fantasy_name || mainBranch.name,
+          endereco: {
+            cep: mainBranch.cep,
+            rua: mainBranch.street,
+            numero: mainBranch.number,
+            complemento: mainBranch.complement || '',
+            bairro: mainBranch.neighborhood,
+            cidade: mainBranch.city,
+            estado: mainBranch.state
+          },
+          contato: {
+            telefone: mainBranch.phone || '',
+            email: mainBranch.email || ''
+          }
+        },
+        filiais: branches?.map(branch => ({
+          id: branch.id,
+          cnpj: branch.cnpj,
+          razao_social: branch.name,
+          nome_fantasia: branch.fantasy_name || branch.name,
+          endereco: {
+            cep: branch.cep,
+            rua: branch.street,
+            numero: branch.number,
+            complemento: branch.complement || '',
+            bairro: branch.neighborhood,
+            cidade: branch.city,
+            estado: branch.state
+          },
+          contato: {
+            telefone: branch.phone || '',
+            email: branch.email || ''
+          },
+          is_matriz: branch.is_main_branch,
+          ativa: branch.active
+        })) || []
+      },
       
       remetente: {
         nome: fullShipment.sender_address?.name || '',
