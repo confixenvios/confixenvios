@@ -221,8 +221,8 @@ export const getAvailableShipments = async (): Promise<BaseShipment[]> => {
   
   return data?.map((item: any) => ({
     ...item,
-    sender_address: item.sender_address || createEmptyAddress(),
-    recipient_address: item.recipient_address || createEmptyAddress()
+    sender_address: item.sender_address ?? createEmptyAddress(),
+    recipient_address: item.recipient_address ?? createEmptyAddress()
   })) || [];
 };
 
