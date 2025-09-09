@@ -219,29 +219,12 @@ export const getAvailableShipments = async (): Promise<BaseShipment[]> => {
   
   if (error) throw error;
   
-  console.log('🚛 Available shipments raw data:', data);
-  
-  return data?.map((item: any) => {
-    console.log('🚛 Processing shipment:', {
-      id: item.id,
-      tracking_code: item.tracking_code,
-      sender_address: item.sender_address,
-      recipient_address: item.recipient_address,
-      sender_type: typeof item.sender_address,
-      recipient_type: typeof item.recipient_address
-    });
-    
-    return {
-      ...item,
-      // Keep the original addresses if they exist and are objects, otherwise use empty
-      sender_address: (item.sender_address && typeof item.sender_address === 'object') 
-        ? item.sender_address 
-        : createEmptyAddress(),
-      recipient_address: (item.recipient_address && typeof item.recipient_address === 'object') 
-        ? item.recipient_address 
-        : createEmptyAddress()
-    };
-  }) || [];
+  return data?.map((item: any) => ({
+    ...item,
+    // Use the addresses directly as they come from the RPC function
+    sender_address: item.sender_address || createEmptyAddress(),
+    recipient_address: item.recipient_address || createEmptyAddress()
+  })) || [];
 };
 
 /**
