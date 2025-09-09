@@ -36,62 +36,50 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  // Função para calcular o valor de um shipment
+  // Função para calcular o valor de um shipment - IGUAL AO FATURAMENTO
   const calculateShipmentValue = (shipment: any) => {
     const paymentData = shipment.payment_data as any;
     const quoteData = shipment.quote_data as any;
-    let shipmentValue = 0;
-    let source = 'none';
     
-    console.log('🧮 [DASHBOARD] Calculando valor para shipment:', {
-      hasPaymentData: !!paymentData,
-      hasQuoteData: !!quoteData,
-      selectedOption: shipment.selected_option
-    });
-    
-    // 1. Prioridade: payment_data.pix_details.amount (PIX)
+    // 1. PIX com pix_details.amount
     if (paymentData?.pix_details?.amount) {
-      shipmentValue = paymentData.pix_details.amount;
-      source = 'pix_details.amount';
+      console.log('✅ [DASHBOARD] Valor PIX encontrado:', paymentData.pix_details.amount);
+      return paymentData.pix_details.amount;
     }
-    // 2. payment_data.amount (PIX novo formato - em reais)
-    else if (paymentData?.amount && paymentData?.method === 'pix') {
-      shipmentValue = paymentData.amount;
-      source = 'payment_data.amount (pix)';
+    // 2. PIX com amount direto
+    if (paymentData?.amount && paymentData?.method === 'pix') {
+      console.log('✅ [DASHBOARD] Valor PIX amount encontrado:', paymentData.amount);
+      return paymentData.amount;
     }
-    // 3. payment_data.amount (Stripe/Cartão - em centavos)
-    else if (paymentData?.amount) {
-      shipmentValue = paymentData.amount / 100;
-      source = 'payment_data.amount (stripe/centavos)';
+    // 3. Stripe/cartão (em centavos)
+    if (paymentData?.amount) {
+      const value = paymentData.amount / 100;
+      console.log('✅ [DASHBOARD] Valor Stripe encontrado:', value);
+      return value;
     }
-    // 4. quote_data.deliveryDetails.totalPrice
-    else if (quoteData?.deliveryDetails?.totalPrice) {
-      shipmentValue = quoteData.deliveryDetails.totalPrice;
-      source = 'deliveryDetails.totalPrice';
+    // 4. Quote delivery details
+    if (quoteData?.deliveryDetails?.totalPrice) {
+      console.log('✅ [DASHBOARD] Valor deliveryDetails encontrado:', quoteData.deliveryDetails.totalPrice);
+      return quoteData.deliveryDetails.totalPrice;
     }
-    // 5. quote_data.quoteData.shippingQuote baseado na opção selecionada
-    else if (quoteData?.quoteData?.shippingQuote) {
+    // 5. Quote data shipping quote
+    if (quoteData?.quoteData?.shippingQuote) {
       const price = shipment.selected_option === 'express' 
         ? quoteData.quoteData.shippingQuote.expressPrice 
         : quoteData.quoteData.shippingQuote.economicPrice;
-      shipmentValue = price || 0;
-      source = 'quoteData.shippingQuote';
+      console.log('✅ [DASHBOARD] Valor quoteData.shippingQuote encontrado:', price);
+      return price || 0;
     }
-    // 6. quote_data.shippingQuote baseado na opção selecionada
-    else if (quoteData?.shippingQuote) {
+    // 6. Shipping quote direto
+    if (quoteData?.shippingQuote) {
       const price = shipment.selected_option === 'express' 
         ? quoteData.shippingQuote.expressPrice 
         : quoteData.shippingQuote.economicPrice;
-      shipmentValue = price || 0;
-      source = 'shippingQuote';
+      console.log('✅ [DASHBOARD] Valor shippingQuote encontrado:', price);
+      return price || 0;
     }
     
-    console.log('💵 [DASHBOARD] Valor calculado:', {
-      value: shipmentValue,
-      source: source
-    });
-    
-    return shipmentValue;
+    return 0;
   };
 
   useEffect(() => {
@@ -163,7 +151,7 @@ const AdminDashboard = () => {
         .in('status', ['PENDING_DOCUMENT', 'PENDING_LABEL', 'PENDING_PAYMENT']);
       console.log('⏳ [DASHBOARD] Shipments pendentes:', pendingCount);
 
-      // Recent shipments with payment data
+      // Buscar shipments SEM tentar fazer join com profiles - IGUAL AO FATURAMENTO
       const { data: recentShipments } = await supabase
         .from('shipments')
         .select(`
@@ -176,19 +164,20 @@ const AdminDashboard = () => {
           payment_data,
           weight,
           selected_option,
-          sender_address:addresses!sender_address_id(city, state, name),
-          recipient_address:addresses!recipient_address_id(city, state, name)
+          sender_address:addresses!shipments_sender_address_id_fkey(city, state, name),
+          recipient_address:addresses!shipments_recipient_address_id_fkey(city, state, name)
         `)
         .not('user_id', 'is', null)
         .or('payment_data.not.is.null,quote_data.not.is.null')
         .order('created_at', { ascending: false })
         .limit(10);
+      
       console.log('📋 [DASHBOARD] Recent shipments encontrados:', recentShipments?.length);
 
-      // Get user profiles for recent shipments
+      // Buscar profiles dos usuários SEPARADAMENTE - IGUAL AO FATURAMENTO
       let enrichedShipments = [];
       if (recentShipments && recentShipments.length > 0) {
-        const userIds = recentShipments.map(s => s.user_id).filter(Boolean);
+        const userIds = [...new Set(recentShipments.map(s => s.user_id).filter(Boolean))];
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, first_name, last_name, email')
@@ -204,9 +193,10 @@ const AdminDashboard = () => {
       }
 
       // Calculate total revenue from ALL shipments with valid payment or quote data
+      // MESMA LÓGICA DO FATURAMENTO
       const { data: allShipments } = await supabase
         .from('shipments')
-        .select('payment_data, quote_data, selected_option')
+        .select('id, payment_data, quote_data, selected_option')
         .or('payment_data.not.is.null,quote_data.not.is.null');
       
       console.log('💰 [DASHBOARD] Total shipments para cálculo de receita:', allShipments?.length);
@@ -216,11 +206,14 @@ const AdminDashboard = () => {
       
       if (allShipments && allShipments.length > 0) {
         allShipments.forEach((shipment, index) => {
+          console.log(`💰 [DASHBOARD] Processando shipment ${index + 1}:`, shipment.id);
           const shipmentValue = calculateShipmentValue(shipment);
           if (shipmentValue > 0) {
             totalRevenue += shipmentValue;
             shipmentsProcessed++;
-            console.log(`💵 [DASHBOARD] Shipment ${index + 1} - Valor: R$ ${shipmentValue.toFixed(2)}`);
+            console.log(`✅ [DASHBOARD] Valor adicionado: R$ ${shipmentValue} (Total: R$ ${totalRevenue})`);
+          } else {
+            console.log('❌ [DASHBOARD] Nenhum valor encontrado para este shipment');
           }
         });
       }
