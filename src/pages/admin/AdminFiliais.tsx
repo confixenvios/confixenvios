@@ -183,10 +183,10 @@ const AdminFiliais = () => {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="p-6 flex items-center justify-center">
+        <div className="container mx-auto max-w-7xl p-6 flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Carregando filiais...</p>
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground text-lg">Carregando filiais...</p>
           </div>
         </div>
       </AdminLayout>
@@ -195,14 +195,14 @@ const AdminFiliais = () => {
 
   return (
     <AdminLayout>
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="container mx-auto max-w-7xl p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Building2 className="h-6 w-6" />
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              <Building2 className="h-7 w-7" />
               Filiais do Embarcador
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mt-2">
               Gerencie as filiais da empresa para emissão de CTe
             </p>
           </div>
@@ -377,22 +377,23 @@ const AdminFiliais = () => {
           </Dialog>
         </div>
 
-        <div className="grid gap-4">
+        <div className="grid gap-6">
           {branches.map((branch) => (
-            <Card key={branch.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
+            <Card key={branch.id} className="shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <Building2 className="h-5 w-5 text-primary" />
                       {branch.fantasy_name || branch.name}
                       {branch.is_main_branch && (
-                        <Badge variant="default">Principal</Badge>
+                        <Badge variant="default" className="text-xs">Principal</Badge>
                       )}
                       {!branch.active && (
-                        <Badge variant="destructive">Inativo</Badge>
+                        <Badge variant="destructive" className="text-xs">Inativo</Badge>
                       )}
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="mt-1 text-sm">
                       CNPJ: {branch.cnpj}
                     </CardDescription>
                   </div>
@@ -401,42 +402,55 @@ const AdminFiliais = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => openDialog(branch)}
+                      className="flex items-center gap-2"
                     >
                       <Edit className="w-4 h-4" />
+                      <span className="hidden sm:inline">Editar</span>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleDelete(branch.id)}
+                      className="flex items-center gap-2 text-destructive hover:text-destructive"
                     >
                       <Trash2 className="w-4 h-4" />
+                      <span className="hidden sm:inline">Excluir</span>
                     </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    <span>
-                      {branch.street}, {branch.number}
-                      {branch.complement && `, ${branch.complement}`}
-                      <br />
-                      {branch.neighborhood} - {branch.city}/{branch.state}
-                      <br />
-                      CEP: {branch.cep}
-                    </span>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-sm">
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium mb-1">Endereço</p>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {branch.street}, {branch.number}
+                        {branch.complement && `, ${branch.complement}`}
+                        <br />
+                        {branch.neighborhood} - {branch.city}/{branch.state}
+                        <br />
+                        CEP: {branch.cep}
+                      </p>
+                    </div>
                   </div>
                   {branch.email && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-muted-foreground" />
-                      <span>{branch.email}</span>
+                    <div className="flex items-start gap-3">
+                      <Mail className="w-5 h-5 text-muted-foreground mt-0.5" />
+                      <div className="flex-1">
+                        <p className="font-medium mb-1">E-mail</p>
+                        <p className="text-muted-foreground">{branch.email}</p>
+                      </div>
                     </div>
                   )}
                   {branch.phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-muted-foreground" />
-                      <span>{branch.phone}</span>
+                    <div className="flex items-start gap-3">
+                      <Phone className="w-5 h-5 text-muted-foreground mt-0.5" />
+                      <div className="flex-1">
+                        <p className="font-medium mb-1">Telefone</p>
+                        <p className="text-muted-foreground">{branch.phone}</p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -445,12 +459,17 @@ const AdminFiliais = () => {
           ))}
           
           {branches.length === 0 && (
-            <Card>
-              <CardContent className="text-center py-8">
-                <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  Nenhuma filial cadastrada. Clique em "Nova Filial" para começar.
+            <Card className="border-dashed">
+              <CardContent className="text-center py-12">
+                <Building2 className="w-16 h-16 text-muted-foreground mx-auto mb-6" />
+                <h3 className="text-lg font-semibold mb-2">Nenhuma filial cadastrada</h3>
+                <p className="text-muted-foreground mb-6">
+                  Clique em "Nova Filial" para começar a gerenciar as filiais da empresa.
                 </p>
+                <Button onClick={() => openDialog()}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Criar primeira filial
+                </Button>
               </CardContent>
             </Card>
           )}
