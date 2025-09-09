@@ -36,6 +36,64 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
+  // Função para calcular o valor de um shipment
+  const calculateShipmentValue = (shipment: any) => {
+    const paymentData = shipment.payment_data as any;
+    const quoteData = shipment.quote_data as any;
+    let shipmentValue = 0;
+    let source = 'none';
+    
+    console.log('🧮 [DASHBOARD] Calculando valor para shipment:', {
+      hasPaymentData: !!paymentData,
+      hasQuoteData: !!quoteData,
+      selectedOption: shipment.selected_option
+    });
+    
+    // 1. Prioridade: payment_data.pix_details.amount (PIX)
+    if (paymentData?.pix_details?.amount) {
+      shipmentValue = paymentData.pix_details.amount;
+      source = 'pix_details.amount';
+    }
+    // 2. payment_data.amount (PIX novo formato - em reais)
+    else if (paymentData?.amount && paymentData?.method === 'pix') {
+      shipmentValue = paymentData.amount;
+      source = 'payment_data.amount (pix)';
+    }
+    // 3. payment_data.amount (Stripe/Cartão - em centavos)
+    else if (paymentData?.amount) {
+      shipmentValue = paymentData.amount / 100;
+      source = 'payment_data.amount (stripe/centavos)';
+    }
+    // 4. quote_data.deliveryDetails.totalPrice
+    else if (quoteData?.deliveryDetails?.totalPrice) {
+      shipmentValue = quoteData.deliveryDetails.totalPrice;
+      source = 'deliveryDetails.totalPrice';
+    }
+    // 5. quote_data.quoteData.shippingQuote baseado na opção selecionada
+    else if (quoteData?.quoteData?.shippingQuote) {
+      const price = shipment.selected_option === 'express' 
+        ? quoteData.quoteData.shippingQuote.expressPrice 
+        : quoteData.quoteData.shippingQuote.economicPrice;
+      shipmentValue = price || 0;
+      source = 'quoteData.shippingQuote';
+    }
+    // 6. quote_data.shippingQuote baseado na opção selecionada
+    else if (quoteData?.shippingQuote) {
+      const price = shipment.selected_option === 'express' 
+        ? quoteData.shippingQuote.expressPrice 
+        : quoteData.shippingQuote.economicPrice;
+      shipmentValue = price || 0;
+      source = 'shippingQuote';
+    }
+    
+    console.log('💵 [DASHBOARD] Valor calculado:', {
+      value: shipmentValue,
+      source: source
+    });
+    
+    return shipmentValue;
+  };
+
   useEffect(() => {
     loadDashboardData();
     
@@ -84,29 +142,26 @@ const AdminDashboard = () => {
 
   const loadDashboardData = async () => {
     try {
-      console.log('🔄 Carregando dados do dashboard...');
+      console.log('🔄 [DASHBOARD] Iniciando carregamento de dados...');
       
       // Total clients
       const { count: clientsCount } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
-
-      console.log('👥 Total de clientes:', clientsCount);
+      console.log('👥 [DASHBOARD] Total de clientes:', clientsCount);
 
       // Total shipments
       const { count: shipmentsCount } = await supabase
         .from('shipments')
         .select('*', { count: 'exact', head: true });
-
-      console.log('📦 Total de shipments:', shipmentsCount);
+      console.log('📦 [DASHBOARD] Total de shipments:', shipmentsCount);
 
       // Pending shipments
       const { count: pendingCount } = await supabase
         .from('shipments')
         .select('*', { count: 'exact', head: true })
         .in('status', ['PENDING_DOCUMENT', 'PENDING_LABEL', 'PENDING_PAYMENT']);
-
-      console.log('⏳ Shipments pendentes:', pendingCount);
+      console.log('⏳ [DASHBOARD] Shipments pendentes:', pendingCount);
 
       // Recent shipments with payment data
       const { data: recentShipments } = await supabase
@@ -128,8 +183,7 @@ const AdminDashboard = () => {
         .or('payment_data.not.is.null,quote_data.not.is.null')
         .order('created_at', { ascending: false })
         .limit(10);
-
-      console.log('📋 Recent shipments encontrados:', recentShipments?.length);
+      console.log('📋 [DASHBOARD] Recent shipments encontrados:', recentShipments?.length);
 
       // Get user profiles for recent shipments
       let enrichedShipments = [];
@@ -154,58 +208,29 @@ const AdminDashboard = () => {
         .from('shipments')
         .select('payment_data, quote_data, selected_option')
         .or('payment_data.not.is.null,quote_data.not.is.null');
-
-      console.log('💰 Total shipments para cálculo de receita:', allShipments?.length);
+      
+      console.log('💰 [DASHBOARD] Total shipments para cálculo de receita:', allShipments?.length);
 
       let totalRevenue = 0;
-      allShipments?.forEach(shipment => {
-        const paymentData = shipment.payment_data as any;
-        const quoteData = shipment.quote_data as any;
-        let shipmentValue = 0;
-        
-        // 1. Tentar payment_data.pix_details.amount (PIX)
-        if (paymentData?.pix_details?.amount) {
-          shipmentValue = paymentData.pix_details.amount;
-          totalRevenue += shipmentValue;
-        }
-        // 2. Tentar payment_data.amount (PIX novo formato - em reais)
-        else if (paymentData?.amount && paymentData?.method === 'pix') {
-          shipmentValue = paymentData.amount;
-          totalRevenue += shipmentValue;
-        }
-        // 3. Tentar payment_data.amount (Stripe/Cartão - em centavos)
-        else if (paymentData?.amount) {
-          shipmentValue = paymentData.amount / 100;
-          totalRevenue += shipmentValue;
-        }
-        // 4. Tentar quote_data.deliveryDetails.totalPrice
-        else if (quoteData?.deliveryDetails?.totalPrice) {
-          shipmentValue = quoteData.deliveryDetails.totalPrice;
-          totalRevenue += shipmentValue;
-        }
-        // 5. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
-        else if (quoteData?.quoteData?.shippingQuote) {
-          const price = shipment.selected_option === 'express' 
-            ? quoteData.quoteData.shippingQuote.expressPrice 
-            : quoteData.quoteData.shippingQuote.economicPrice;
-          shipmentValue = price || 0;
-          totalRevenue += shipmentValue;
-        }
-        // 6. Tentar quote_data.shippingQuote baseado na opção selecionada
-        else if (quoteData?.shippingQuote) {
-          const price = shipment.selected_option === 'express' 
-            ? quoteData.shippingQuote.expressPrice 
-            : quoteData.shippingQuote.economicPrice;
-          shipmentValue = price || 0;
-          totalRevenue += shipmentValue;
-        }
-        
-        if (shipmentValue > 0) {
-          console.log('💵 Shipment com valor:', shipmentValue, 'Método:', paymentData?.method || 'quote');
-        }
+      let shipmentsProcessed = 0;
+      
+      if (allShipments && allShipments.length > 0) {
+        allShipments.forEach((shipment, index) => {
+          const shipmentValue = calculateShipmentValue(shipment);
+          if (shipmentValue > 0) {
+            totalRevenue += shipmentValue;
+            shipmentsProcessed++;
+            console.log(`💵 [DASHBOARD] Shipment ${index + 1} - Valor: R$ ${shipmentValue.toFixed(2)}`);
+          }
+        });
+      }
+      
+      console.log('💰 [DASHBOARD] RESULTADO FINAL:', {
+        totalShipments: allShipments?.length || 0,
+        shipmentsWithValue: shipmentsProcessed,
+        totalRevenue: totalRevenue,
+        formattedRevenue: `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       });
-
-      console.log('💰 Receita total calculada:', totalRevenue);
 
       setStats({
         totalClients: clientsCount || 0,
@@ -217,7 +242,7 @@ const AdminDashboard = () => {
       });
       setLastUpdated(new Date());
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('❌ [DASHBOARD] Erro ao carregar dados:', error);
     } finally {
       setLoading(false);
     }
@@ -245,7 +270,7 @@ const AdminDashboard = () => {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Dashboard Administrativo</h1>
           <p className="text-muted-foreground">
-            Visão geral do sistema Confix Envios
+            Visão geral da plataforma e indicadores de performance
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -290,29 +315,13 @@ const AdminDashboard = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Total de Remessas</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Total de Envios</p>
                 <p className="text-2xl font-bold text-foreground">
                   {loading ? '...' : stats.totalShipments}
                 </p>
               </div>
               <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
                 <Package className="w-6 h-6 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/50 shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Remessas Pendentes</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {loading ? '...' : stats.pendingShipments}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-6 h-6 text-destructive" />
               </div>
             </div>
           </CardContent>
@@ -333,6 +342,22 @@ const AdminDashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="border-border/50 shadow-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Envios Pendentes</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {loading ? '...' : stats.pendingShipments}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-6 h-6 text-destructive" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Recent Activity */}
@@ -343,7 +368,7 @@ const AdminDashboard = () => {
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center space-x-2">
                 <Package className="w-5 h-5" />
-                <span>Remessas Recentes</span>
+                <span>Envios Recentes</span>
               </span>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/admin/remessas">
@@ -408,47 +433,16 @@ const AdminDashboard = () => {
                         <div className="space-y-1">
                           <p className="font-medium text-muted-foreground">Valor</p>
                           {(() => {
-                            const paymentData = shipment.payment_data as any;
-                            const quoteData = shipment.quote_data as any;
-                            let amount = null;
+                            const amount = calculateShipmentValue(shipment);
                             
-                            // 1. Tentar payment_data.pix_details.amount (PIX)
-                            if (paymentData?.pix_details?.amount) {
-                              amount = paymentData.pix_details.amount;
-                            }
-                            // 2. Tentar payment_data.amount (PIX novo formato - em reais)
-                            else if (paymentData?.amount && paymentData?.method === 'pix') {
-                              amount = paymentData.amount;
-                            }
-                            // 3. Tentar payment_data.amount (Stripe/Cartão - em centavos)
-                            else if (paymentData?.amount) {
-                              amount = paymentData.amount / 100;
-                            }
-                            // 4. Tentar quote_data.deliveryDetails.totalPrice
-                            else if (quoteData?.deliveryDetails?.totalPrice) {
-                              amount = quoteData.deliveryDetails.totalPrice;
-                            }
-                            // 5. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
-                            else if (quoteData?.quoteData?.shippingQuote) {
-                              const price = shipment.selected_option === 'express' 
-                                ? quoteData.quoteData.shippingQuote.expressPrice 
-                                : quoteData.quoteData.shippingQuote.economicPrice;
-                              amount = price;
-                            }
-                            // 6. Tentar quote_data.shippingQuote baseado na opção selecionada
-                            else if (quoteData?.shippingQuote) {
-                              const price = shipment.selected_option === 'express' 
-                                ? quoteData.shippingQuote.expressPrice 
-                                : quoteData.shippingQuote.economicPrice;
-                              amount = price;
-                            }
-
-                            return amount ? (
-                              <p className="font-medium text-success">
+                            return amount > 0 ? (
+                              <p className="font-bold text-success">
                                 R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </p>
                             ) : (
-                              <p className="font-medium text-muted-foreground">R$ 0,00</p>
+                              <p className="text-muted-foreground">
+                                N/A
+                              </p>
                             );
                           })()}
                         </div>
@@ -469,42 +463,35 @@ const AdminDashboard = () => {
               <span>Ações Rápidas</span>
             </CardTitle>
             <CardDescription>
-              Acesse rapidamente as funcionalidades principais
+              Acesso rápido aos recursos administrativos
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <Button asChild className="w-full justify-start">
+          <CardContent className="space-y-3">
+            <Button variant="outline" size="sm" className="w-full justify-start" asChild>
               <Link to="/admin/clientes">
                 <Users className="w-4 h-4 mr-2" />
                 Gerenciar Clientes
               </Link>
             </Button>
             
-            <Button asChild variant="outline" className="w-full justify-start">
+            <Button variant="outline" size="sm" className="w-full justify-start" asChild>
               <Link to="/admin/remessas">
                 <Package className="w-4 h-4 mr-2" />
-                Ver Todas as Remessas
+                Visualizar Remessas
               </Link>
             </Button>
             
-            <Button asChild variant="outline" className="w-full justify-start">
+            <Button variant="outline" size="sm" className="w-full justify-start" asChild>
               <Link to="/admin/integracoes">
                 <Webhook className="w-4 h-4 mr-2" />
                 Configurar Integrações
               </Link>
             </Button>
             
-            <Button asChild variant="outline" className="w-full justify-start">
+            <Button variant="outline" size="sm" className="w-full justify-start" asChild>
               <Link to="/admin/docs-integracao">
                 <FileText className="w-4 h-4 mr-2" />
-                Documentação TMS
-              </Link>
-            </Button>
-            
-            <Button asChild variant="outline" className="w-full justify-start">
-              <Link to="/admin/webhooks/logs">
-                <FileText className="w-4 h-4 mr-2" />
-                Ver Logs de Webhooks
+                Documentação
               </Link>
             </Button>
           </CardContent>
