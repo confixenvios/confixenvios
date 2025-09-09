@@ -174,6 +174,8 @@ const AdminFaturamento = () => {
           status,
           created_at,
           quote_data,
+          payment_data,
+          selected_option,
           user_id,
           sender_address:addresses!shipments_sender_address_id_fkey(city, state),
           recipient_address:addresses!shipments_recipient_address_id_fkey(city, state),
@@ -220,22 +222,35 @@ const AdminFaturamento = () => {
 
       // Calcular valores
       const totalRevenue = filteredShipments.reduce((sum, shipment) => {
+        const paymentData = shipment.payment_data as any;
         const quoteData = shipment.quote_data as any;
         
-        // 1. Tentar quote_data.deliveryDetails.totalPrice
-        if (quoteData?.deliveryDetails?.totalPrice) {
+        // 1. Tentar payment_data.pix_details.amount (PIX)
+        if (paymentData?.pix_details?.amount) {
+          return sum + paymentData.pix_details.amount;
+        }
+        // 2. Tentar payment_data.amount (PIX novo formato - em reais)
+        else if (paymentData?.amount && paymentData?.method === 'pix') {
+          return sum + paymentData.amount;
+        }
+        // 3. Tentar payment_data.amount (Stripe/Cartão - em centavos)
+        else if (paymentData?.amount) {
+          return sum + (paymentData.amount / 100);
+        }
+        // 4. Tentar quote_data.deliveryDetails.totalPrice
+        else if (quoteData?.deliveryDetails?.totalPrice) {
           return sum + quoteData.deliveryDetails.totalPrice;
         }
-        // 2. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
+        // 5. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
         else if (quoteData?.quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+          const price = (shipment as any).selected_option === 'express' 
             ? quoteData.quoteData.shippingQuote.expressPrice 
             : quoteData.quoteData.shippingQuote.economicPrice;
           return sum + (price || 0);
         }
-        // 3. Tentar quote_data.shippingQuote baseado na opção selecionada
+        // 6. Tentar quote_data.shippingQuote baseado na opção selecionada
         else if (quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+          const price = (shipment as any).selected_option === 'express' 
             ? quoteData.shippingQuote.expressPrice 
             : quoteData.shippingQuote.economicPrice;
           return sum + (price || 0);
@@ -256,23 +271,36 @@ const AdminFaturamento = () => {
           : profile?.first_name || profile?.email || 'Cliente';
         const clientEmail = profile?.email || '';
         
+        const paymentData = shipment.payment_data as any;
         const quoteData = shipment.quote_data as any;
         let value = 0;
         
-        // 1. Tentar quote_data.deliveryDetails.totalPrice
-        if (quoteData?.deliveryDetails?.totalPrice) {
+        // 1. Tentar payment_data.pix_details.amount (PIX)
+        if (paymentData?.pix_details?.amount) {
+          value = paymentData.pix_details.amount;
+        }
+        // 2. Tentar payment_data.amount (PIX novo formato - em reais)
+        else if (paymentData?.amount && paymentData?.method === 'pix') {
+          value = paymentData.amount;
+        }
+        // 3. Tentar payment_data.amount (Stripe/Cartão - em centavos)
+        else if (paymentData?.amount) {
+          value = paymentData.amount / 100;
+        }
+        // 4. Tentar quote_data.deliveryDetails.totalPrice
+        else if (quoteData?.deliveryDetails?.totalPrice) {
           value = quoteData.deliveryDetails.totalPrice;
         }
-        // 2. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
+        // 5. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
         else if (quoteData?.quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+          const price = (shipment as any).selected_option === 'express' 
             ? quoteData.quoteData.shippingQuote.expressPrice 
             : quoteData.quoteData.shippingQuote.economicPrice;
           value = price || 0;
         }
-        // 3. Tentar quote_data.shippingQuote baseado na opção selecionada
+        // 6. Tentar quote_data.shippingQuote baseado na opção selecionada
         else if (quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+          const price = (shipment as any).selected_option === 'express' 
             ? quoteData.shippingQuote.expressPrice 
             : quoteData.shippingQuote.economicPrice;
           value = price || 0;
@@ -308,23 +336,36 @@ const AdminFaturamento = () => {
           regions.add(`${shipment.recipient_address.city} - ${shipment.recipient_address.state}`);
         }
 
+        const paymentData = shipment.payment_data as any;
         const quoteData = shipment.quote_data as any;
         let value = 0;
         
-        // 1. Tentar quote_data.deliveryDetails.totalPrice
-        if (quoteData?.deliveryDetails?.totalPrice) {
+        // 1. Tentar payment_data.pix_details.amount (PIX)
+        if (paymentData?.pix_details?.amount) {
+          value = paymentData.pix_details.amount;
+        }
+        // 2. Tentar payment_data.amount (PIX novo formato - em reais)
+        else if (paymentData?.amount && paymentData?.method === 'pix') {
+          value = paymentData.amount;
+        }
+        // 3. Tentar payment_data.amount (Stripe/Cartão - em centavos)
+        else if (paymentData?.amount) {
+          value = paymentData.amount / 100;
+        }
+        // 4. Tentar quote_data.deliveryDetails.totalPrice
+        else if (quoteData?.deliveryDetails?.totalPrice) {
           value = quoteData.deliveryDetails.totalPrice;
         }
-        // 2. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
+        // 5. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
         else if (quoteData?.quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+          const price = (shipment as any).selected_option === 'express' 
             ? quoteData.quoteData.shippingQuote.expressPrice 
             : quoteData.quoteData.shippingQuote.economicPrice;
           value = price || 0;
         }
-        // 3. Tentar quote_data.shippingQuote baseado na opção selecionada
+        // 6. Tentar quote_data.shippingQuote baseado na opção selecionada
         else if (quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+          const price = (shipment as any).selected_option === 'express' 
             ? quoteData.shippingQuote.expressPrice 
             : quoteData.shippingQuote.economicPrice;
           value = price || 0;
@@ -368,23 +409,36 @@ const AdminFaturamento = () => {
             periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         }
 
+        const paymentData = shipment.payment_data as any;
         const quoteData = shipment.quote_data as any;
         let value = 0;
         
-        // 1. Tentar quote_data.deliveryDetails.totalPrice
-        if (quoteData?.deliveryDetails?.totalPrice) {
+        // 1. Tentar payment_data.pix_details.amount (PIX)
+        if (paymentData?.pix_details?.amount) {
+          value = paymentData.pix_details.amount;
+        }
+        // 2. Tentar payment_data.amount (PIX novo formato - em reais)
+        else if (paymentData?.amount && paymentData?.method === 'pix') {
+          value = paymentData.amount;
+        }
+        // 3. Tentar payment_data.amount (Stripe/Cartão - em centavos)
+        else if (paymentData?.amount) {
+          value = paymentData.amount / 100;
+        }
+        // 4. Tentar quote_data.deliveryDetails.totalPrice
+        else if (quoteData?.deliveryDetails?.totalPrice) {
           value = quoteData.deliveryDetails.totalPrice;
         }
-        // 2. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
+        // 5. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
         else if (quoteData?.quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+          const price = (shipment as any).selected_option === 'express' 
             ? quoteData.quoteData.shippingQuote.expressPrice 
             : quoteData.quoteData.shippingQuote.economicPrice;
           value = price || 0;
         }
-        // 3. Tentar quote_data.shippingQuote baseado na opção selecionada
+        // 6. Tentar quote_data.shippingQuote baseado na opção selecionada
         else if (quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+          const price = (shipment as any).selected_option === 'express' 
             ? quoteData.shippingQuote.expressPrice 
             : quoteData.shippingQuote.economicPrice;
           value = price || 0;
@@ -414,23 +468,36 @@ const AdminFaturamento = () => {
           : profile?.first_name || profile?.email || 'Cliente';
         const clientEmail = profile?.email || '';
         
+        const paymentData = shipment.payment_data as any;
         const quoteData = shipment.quote_data as any;
         let value = 0;
         
-        // 1. Tentar quote_data.deliveryDetails.totalPrice
-        if (quoteData?.deliveryDetails?.totalPrice) {
+        // 1. Tentar payment_data.pix_details.amount (PIX)
+        if (paymentData?.pix_details?.amount) {
+          value = paymentData.pix_details.amount;
+        }
+        // 2. Tentar payment_data.amount (PIX novo formato - em reais)
+        else if (paymentData?.amount && paymentData?.method === 'pix') {
+          value = paymentData.amount;
+        }
+        // 3. Tentar payment_data.amount (Stripe/Cartão - em centavos)
+        else if (paymentData?.amount) {
+          value = paymentData.amount / 100;
+        }
+        // 4. Tentar quote_data.deliveryDetails.totalPrice
+        else if (quoteData?.deliveryDetails?.totalPrice) {
           value = quoteData.deliveryDetails.totalPrice;
         }
-        // 2. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
+        // 5. Tentar quote_data.quoteData.shippingQuote baseado na opção selecionada
         else if (quoteData?.quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+          const price = (shipment as any).selected_option === 'express' 
             ? quoteData.quoteData.shippingQuote.expressPrice 
             : quoteData.quoteData.shippingQuote.economicPrice;
           value = price || 0;
         }
-        // 3. Tentar quote_data.shippingQuote baseado na opção selecionada
+        // 6. Tentar quote_data.shippingQuote baseado na opção selecionada
         else if (quoteData?.shippingQuote) {
-          const price = quoteData.deliveryDetails?.selectedOption === 'express' 
+          const price = (shipment as any).selected_option === 'express' 
             ? quoteData.shippingQuote.expressPrice 
             : quoteData.shippingQuote.economicPrice;
           value = price || 0;
