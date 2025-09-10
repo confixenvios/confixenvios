@@ -310,21 +310,43 @@ const AdminCte = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => window.open(emission.xml_url, '_blank')}
+                              onClick={() => {
+                                console.log('Abrindo XML:', emission.xml_url);
+                                window.open(emission.xml_url, '_blank');
+                              }}
                             >
                               <FileText className="h-4 w-4 mr-1" />
                               XML
                             </Button>
                           )}
                           {emission.dacte_url && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => window.open(emission.dacte_url, '_blank')}
-                            >
-                              <ExternalLink className="h-4 w-4 mr-1" />
-                              DACTE
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  console.log('Abrindo DACTE:', emission.dacte_url);
+                                  window.open(emission.dacte_url, '_blank');
+                                }}
+                              >
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                DACTE
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(emission.dacte_url);
+                                  toast({
+                                    title: "Copiado!",
+                                    description: "Link do DACTE copiado para a área de transferência",
+                                  });
+                                }}
+                                title="Copiar link do DACTE"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </TableCell>
