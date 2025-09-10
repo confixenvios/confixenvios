@@ -1099,6 +1099,10 @@ export type Database = {
         Args: { branch_uuid: string; webhook_event_type?: string }
         Returns: Json
       }
+      manual_dispatch_webhook_by_tracking_code: {
+        Args: { p_tracking_code: string }
+        Returns: Json
+      }
       manual_webhook_dispatch: {
         Args: { shipment_uuid: string }
         Returns: Json
