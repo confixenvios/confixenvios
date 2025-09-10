@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.shipment-webhook-dispatch]
 verify_jwt = false
+
+[functions.cte-webhook]
+verify_jwt = false

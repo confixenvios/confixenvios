@@ -187,6 +187,71 @@ export type Database = {
         }
         Relationships: []
       }
+      cte_emissoes: {
+        Row: {
+          chave_cte: string
+          created_at: string
+          dacte_url: string | null
+          epec: boolean | null
+          id: string
+          modelo: string
+          motivo: string | null
+          numero_cte: string
+          payload_bruto: Json | null
+          remessa_id: string
+          serie: string
+          shipment_id: string | null
+          status: string
+          updated_at: string
+          uuid_cte: string
+          xml_url: string | null
+        }
+        Insert: {
+          chave_cte: string
+          created_at?: string
+          dacte_url?: string | null
+          epec?: boolean | null
+          id?: string
+          modelo: string
+          motivo?: string | null
+          numero_cte: string
+          payload_bruto?: Json | null
+          remessa_id: string
+          serie: string
+          shipment_id?: string | null
+          status: string
+          updated_at?: string
+          uuid_cte: string
+          xml_url?: string | null
+        }
+        Update: {
+          chave_cte?: string
+          created_at?: string
+          dacte_url?: string | null
+          epec?: boolean | null
+          id?: string
+          modelo?: string
+          motivo?: string | null
+          numero_cte?: string
+          payload_bruto?: Json | null
+          remessa_id?: string
+          serie?: string
+          shipment_id?: string | null
+          status?: string
+          updated_at?: string
+          uuid_cte?: string
+          xml_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cte_emissoes_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integration_audit_logs: {
         Row: {
           action: string
