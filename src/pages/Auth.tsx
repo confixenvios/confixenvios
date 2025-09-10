@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, LogIn, UserPlus, ArrowLeft, Mail, Key, FileText } from "lucide-react";
+import { Loader2, LogIn, UserPlus, ArrowLeft, Mail, Key, FileText, Building, User, CheckSquare } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import logoConfixEnvios from '@/assets/logo-confix-envios.png';
-import { formatDocument, validateDocument } from "@/utils/documentValidation";
+import { formatDocument, validateDocument, getDocumentType } from "@/utils/documentValidation";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -37,7 +39,10 @@ const Auth = () => {
     firstName: '',
     lastName: '',
     phone: '',
-    document: ''
+    document: '',
+    documentType: '' as 'CPF' | 'CNPJ' | '',
+    inscricaoEstadual: '',
+    isIsento: false
   });
 
   // Reset password form
@@ -123,8 +128,15 @@ const Auth = () => {
     setIsLoading(true);
     setError('');
 
-    if (!signupData.email || !signupData.password || !signupData.confirmPassword || !signupData.phone || !signupData.document) {
+    if (!signupData.email || !signupData.password || !signupData.confirmPassword || !signupData.phone || !signupData.document || !signupData.documentType) {
       setError('Preencha todos os campos obrigatórios');
+      setIsLoading(false);
+      return;
+    }
+
+    // Validar inscrição estadual para CNPJ
+    if (signupData.documentType === 'CNPJ' && !signupData.isIsento && !signupData.inscricaoEstadual.trim()) {
+      setError('Inscrição Estadual é obrigatória para CNPJ');
       setIsLoading(false);
       return;
     }
@@ -156,7 +168,8 @@ const Auth = () => {
         signupData.firstName,
         signupData.lastName,
         signupData.phone,
-        signupData.document
+        signupData.document,
+        signupData.inscricaoEstadual || 'ISENTO'
       );
       
       if (result.error) {
@@ -183,7 +196,10 @@ const Auth = () => {
           firstName: '',
           lastName: '',
           phone: '',
-          document: ''
+          document: '',
+          documentType: '',
+          inscricaoEstadual: '',
+          isIsento: false
         });
         setError('');
       } else {
@@ -367,26 +383,103 @@ const Auth = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="signup-document" className="flex items-center">
-                      <FileText className="h-4 w-4 mr-2" />
-                      CPF ou CNPJ *
-                    </Label>
-                    <Input
-                      id="signup-document"
-                      type="text"
-                      placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                      value={signupData.document}
-                      onChange={(e) => {
-                        const formattedValue = formatDocument(e.target.value);
+                    <Label htmlFor="signup-document-type">Tipo de Documento *</Label>
+                    <Select
+                      value={signupData.documentType}
+                      onValueChange={(value: 'CPF' | 'CNPJ') => {
                         setSignupData(prev => ({
                           ...prev,
-                          document: formattedValue
+                          documentType: value,
+                          document: '',
+                          inscricaoEstadual: '',
+                          isIsento: false
                         }));
                       }}
-                      disabled={isLoading}
-                      maxLength={18}
-                    />
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo de documento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CPF">
+                          <div className="flex items-center">
+                            <User className="h-4 w-4 mr-2" />
+                            CPF - Pessoa Física
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="CNPJ">
+                          <div className="flex items-center">
+                            <Building className="h-4 w-4 mr-2" />
+                            CNPJ - Pessoa Jurídica
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+
+                  {signupData.documentType && (
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-document" className="flex items-center">
+                        <FileText className="h-4 w-4 mr-2" />
+                        {signupData.documentType === 'CPF' ? 'CPF' : 'CNPJ'} *
+                      </Label>
+                      <Input
+                        id="signup-document"
+                        type="text"
+                        placeholder={signupData.documentType === 'CPF' ? '000.000.000-00' : '00.000.000/0000-00'}
+                        value={signupData.document}
+                        onChange={(e) => {
+                          const formattedValue = formatDocument(e.target.value);
+                          const docType = getDocumentType(formattedValue);
+                          setSignupData(prev => ({
+                            ...prev,
+                            document: formattedValue,
+                            // Se o tipo mudou automaticamente, atualizar
+                            documentType: docType || prev.documentType
+                          }));
+                        }}
+                        disabled={isLoading}
+                        maxLength={18}
+                      />
+                    </div>
+                  )}
+
+                  {signupData.documentType === 'CNPJ' && (
+                    <>
+                      <div className="space-y-3">
+                        <Label>Inscrição Estadual *</Label>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="isento-checkbox"
+                            checked={signupData.isIsento}
+                            onCheckedChange={(checked) => {
+                              setSignupData(prev => ({
+                                ...prev,
+                                isIsento: !!checked,
+                                inscricaoEstadual: checked ? 'ISENTO' : ''
+                              }));
+                            }}
+                          />
+                          <Label htmlFor="isento-checkbox" className="text-sm font-normal">
+                            Isento de Inscrição Estadual
+                          </Label>
+                        </div>
+                        
+                        {!signupData.isIsento && (
+                          <Input
+                            id="signup-inscricao"
+                            type="text"
+                            placeholder="Digite a Inscrição Estadual"
+                            value={signupData.inscricaoEstadual}
+                            onChange={(e) => setSignupData(prev => ({
+                              ...prev,
+                              inscricaoEstadual: e.target.value
+                            }))}
+                            disabled={isLoading}
+                          />
+                        )}
+                      </div>
+                    </>
+                  )}
                   
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email *</Label>

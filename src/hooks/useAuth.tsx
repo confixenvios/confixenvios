@@ -22,7 +22,7 @@ interface AuthContextType {
   profile: Profile | null;
   userRole: UserRole | null;
   loading: boolean;
-  signUp: (email: string, password: string, firstName?: string, lastName?: string, phone?: string, document?: string) => Promise<{ error: any; needsConfirmation?: boolean }>;
+  signUp: (email: string, password: string, firstName?: string, lastName?: string, phone?: string, document?: string, inscricaoEstadual?: string) => Promise<{ error: any; needsConfirmation?: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
@@ -136,7 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const signUp = async (email: string, password: string, firstName = '', lastName = '', phone = '', document = '') => {
+  const signUp = async (email: string, password: string, firstName = '', lastName = '', phone = '', document = '', inscricaoEstadual = '') => {
     const redirectUrl = `${window.location.origin}/cliente/dashboard`;
     
     const { data, error } = await supabase.auth.signUp({
@@ -149,6 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           last_name: lastName,
           phone: phone,
           document: document,
+          inscricao_estadual: inscricaoEstadual,
         }
       }
     });
