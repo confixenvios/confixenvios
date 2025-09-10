@@ -59,6 +59,34 @@ serve(async (req) => {
       throw new Error('Shipment not found');
     }
 
+    // Extract personal data from quote_data (where it's usually stored)
+    const senderPersonalData = {
+      document: fullShipment.quote_data?.addressData?.sender?.document || 
+                fullShipment.quote_data?.senderData?.document ||
+                fullShipment.quote_data?.sender?.document || '',
+      phone: fullShipment.quote_data?.addressData?.sender?.phone || 
+             fullShipment.quote_data?.senderData?.phone ||
+             fullShipment.quote_data?.sender?.phone || '',
+      email: fullShipment.quote_data?.addressData?.sender?.email || 
+             fullShipment.quote_data?.senderData?.email ||
+             fullShipment.quote_data?.sender?.email || ''
+    };
+
+    const recipientPersonalData = {
+      document: fullShipment.quote_data?.addressData?.recipient?.document || 
+                fullShipment.quote_data?.recipientData?.document ||
+                fullShipment.quote_data?.recipient?.document || '',
+      phone: fullShipment.quote_data?.addressData?.recipient?.phone || 
+             fullShipment.quote_data?.recipientData?.phone ||
+             fullShipment.quote_data?.recipient?.phone || '',
+      email: fullShipment.quote_data?.addressData?.recipient?.email || 
+             fullShipment.quote_data?.recipientData?.email ||
+             fullShipment.quote_data?.recipient?.email || ''
+    };
+
+    console.log('Shipment webhook dispatch - Sender personal data:', senderPersonalData);
+    console.log('Shipment webhook dispatch - Recipient personal data:', recipientPersonalData);
+
     // Get company branches data (required information)
     const { data: branches, error: branchesError } = await supabaseService
       .from('company_branches')
@@ -130,9 +158,9 @@ serve(async (req) => {
       
       remetente: {
         nome: fullShipment.sender_address?.name || '',
-        cpf_cnpj: shipmentData?.addressData?.sender?.document || '',
-        telefone: shipmentData?.addressData?.sender?.phone || '',
-        email: shipmentData?.addressData?.sender?.email || '',
+        cpf_cnpj: senderPersonalData.document,
+        telefone: senderPersonalData.phone,
+        email: senderPersonalData.email,
         endereco: {
           cep: fullShipment.sender_address?.cep || '',
           rua: fullShipment.sender_address?.street || '',
@@ -146,9 +174,9 @@ serve(async (req) => {
       
       destinatario: {
         nome: fullShipment.recipient_address?.name || '',
-        cpf_cnpj: shipmentData?.addressData?.recipient?.document || '',
-        telefone: shipmentData?.addressData?.recipient?.phone || '',
-        email: shipmentData?.addressData?.recipient?.email || '',
+        cpf_cnpj: recipientPersonalData.document,
+        telefone: recipientPersonalData.phone,
+        email: recipientPersonalData.email,
         endereco: {
           cep: fullShipment.recipient_address?.cep || '',
           rua: fullShipment.recipient_address?.street || '',
