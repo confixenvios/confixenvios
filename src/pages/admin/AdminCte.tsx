@@ -264,16 +264,16 @@ const AdminCte = () => {
                           {emission.remessa_id}
                         </Button>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="min-w-[400px]">
                         <div className="flex items-center space-x-2">
-                          <span className="font-mono text-sm">
-                            {truncateMiddle(emission.chave_cte)}
+                          <span className="font-mono text-xs break-all">
+                            {emission.chave_cte}
                           </span>
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => copyToClipboard(emission.chave_cte)}
-                            className="h-6 w-6"
+                            className="h-6 w-6 flex-shrink-0"
                           >
                             <Copy className="h-3 w-3" />
                           </Button>
