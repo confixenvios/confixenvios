@@ -275,38 +275,8 @@ const AdminIntegracoes = () => {
         body: {
           shipmentId: '3b69900c-748f-4e79-ba32-e80076c6adac', // ID2025CJULKS
           shipmentData: {
-            addressData: {
-              recipient: {
-                document: '54007348000130',
-                email: 'juriexpressgyn@gmail.com', 
-                phone: '(62) 99919-1433'
-              },
-              sender: {
-                document: '81746318104',
-                email: 'ksobrgo@gmail.com',
-                phone: '(62) 99919-1438'
-              }
-            },
-            deliveryDetails: {
-              shippingPrice: 1,
-              estimatedDays: 5
-            },
-            merchandiseDetails: {
-              totalValue: 125,
-              unitValue: 125
-            },
-            technicalData: {
-              quantity: 1
-            },
-            merchandiseDescription: 'Evelope de documentos',
-            documentType: 'declaration',
-            quoteData: {
-              totalMerchandiseValue: 125,
-              unitValue: 125,
-              shippingQuote: {
-                economicPrice: 1
-              }
-            }
+            event_type: 'manual_test_dispatch',
+            tracking_code: 'ID2025CJULKS'
           }
         }
       });
@@ -318,7 +288,7 @@ const AdminIntegracoes = () => {
 
       toast({
         title: "Sucesso",
-        description: "Webhook disparado manualmente para remessa ID2025CJULKS! Verifique os logs de webhook."
+        description: "Webhook disparado manualmente para remessa ID2025CJULKS com todos os dados das filiais!"
       });
 
       console.log('Webhook dispatch result:', data);
