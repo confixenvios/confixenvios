@@ -10,6 +10,7 @@ interface Profile {
   email: string | null;
   phone: string | null;
   document: string | null;
+  inscricao_estadual: string | null;
 }
 
 interface UserRole {

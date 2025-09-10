@@ -147,6 +147,16 @@ const ClientConta = () => {
             </div>
 
             <div className="flex items-center space-x-3">
+              <FileText className="w-4 h-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Inscrição Estadual</p>
+                <p className="text-sm text-muted-foreground">
+                  {profile?.inscricao_estadual || 'Não informado'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
               <Badge variant="secondary" className="mt-2">
                 {userRole?.role === 'admin' ? 'Administrador' : 'Cliente'}
               </Badge>

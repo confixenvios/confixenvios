@@ -33,6 +33,7 @@ interface ClientDetails {
   email: string | null;
   phone: string | null;
   document: string | null;
+  inscricao_estadual: string | null;
   created_at: string;
   shipment_count: number;
   total_value: number;
@@ -72,7 +73,8 @@ const AdminClienteDetalhes = () => {
     last_name: '',
     email: '',
     phone: '',
-    document: ''
+    document: '',
+    inscricao_estadual: ''
   });
 
   useEffect(() => {
@@ -144,7 +146,8 @@ const AdminClienteDetalhes = () => {
         last_name: profile.last_name || '',
         email: profile.email || '',
         phone: profile.phone || '',
-        document: profile.document || ''
+        document: profile.document || '',
+        inscricao_estadual: profile.inscricao_estadual || ''
       });
     } catch (error) {
       console.error('Error loading client details:', error);
@@ -425,6 +428,22 @@ const AdminClienteDetalhes = () => {
                     <div className="flex items-center space-x-2">
                       <FileText className="h-4 w-4 text-muted-foreground" />
                       <p className="text-sm text-muted-foreground">{client.document || 'Não informado'}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Inscrição Estadual</Label>
+                  {editing ? (
+                    <Input
+                      value={formData.inscricao_estadual}
+                      onChange={(e) => setFormData(prev => ({...prev, inscricao_estadual: e.target.value}))}
+                      placeholder="Inscrição Estadual"
+                    />
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">{client.inscricao_estadual || 'Não informado'}</p>
                     </div>
                   )}
                 </div>

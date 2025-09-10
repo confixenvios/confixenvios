@@ -33,6 +33,7 @@ interface ClientData {
   email: string | null;
   phone: string | null;
   document: string | null;
+  inscricao_estadual: string | null;
   created_at: string;
   updated_at: string;
   shipment_count: number;
@@ -162,6 +163,7 @@ const ActiveClients = () => {
           email,
           phone,
           document,
+          inscricao_estadual,
           created_at,
           updated_at
         `)
