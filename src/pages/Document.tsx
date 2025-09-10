@@ -23,15 +23,6 @@ const Document = () => {
   const [merchandiseDescription, setMerchandiseDescription] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   
-  // Campos específicos para declaração de conteúdo
-  const [declarationNumber, setDeclarationNumber] = useState<string>("01");
-  const [issueDate, setIssueDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [deliveryForecast, setDeliveryForecast] = useState<string>(() => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split('T')[0];
-  });
-  const [totalValue, setTotalValue] = useState<string>("");
 
   useEffect(() => {
     console.log('Document - Component montado');
@@ -51,7 +42,7 @@ const Document = () => {
     if (!documentType) return false;
     if (documentType === 'nfe' && !nfeKey) return false;
     if (documentType === 'declaration') {
-      return !!(merchandiseDescription && declarationNumber && issueDate && deliveryForecast && totalValue);
+      return !!merchandiseDescription;
     }
     return true;
   };
@@ -94,28 +85,11 @@ const Document = () => {
         nfeKey: documentType === 'nfe' ? nfeKey : null,
         merchandiseDescription: documentType === 'declaration' ? merchandiseDescription : null,
         
-        // Campos específicos para declaração de conteúdo
-        declarationData: documentType === 'declaration' ? {
-          documentNumber: declarationNumber,
-          issueDate: issueDate,
-          deliveryForecast: deliveryForecast,
-          totalValue: parseFloat(totalValue) || 0
-        } : null,
-        
         // Dados fiscais estruturados
         fiscalData: {
           type: documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo',
           nfeAccessKey: documentType === 'nfe' ? nfeKey : null,
           contentDescription: documentType === 'declaration' ? merchandiseDescription : null,
-          
-          // Dados da declaração
-          ...(documentType === 'declaration' && {
-            declarationNumber: declarationNumber,
-            issueDate: issueDate,
-            deliveryForecast: deliveryForecast,
-            totalValue: parseFloat(totalValue) || 0
-          }),
-          
           processedAt: new Date().toISOString()
         }
       };
@@ -259,59 +233,6 @@ const Document = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="declaration-number">Número do Documento *</Label>
-                        <Input
-                          id="declaration-number"
-                          value={declarationNumber}
-                          onChange={(e) => setDeclarationNumber(e.target.value)}
-                          placeholder="01"
-                          className="border-input-border focus:border-primary focus:ring-primary"
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="total-value">Valor Total *</Label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">R$</span>
-                          <Input
-                            id="total-value"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={totalValue}
-                            onChange={(e) => setTotalValue(e.target.value)}
-                            placeholder="1,00"
-                            className="pl-10 border-input-border focus:border-primary focus:ring-primary"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="issue-date">Data de Emissão *</Label>
-                        <Input
-                          id="issue-date"
-                          type="date"
-                          value={issueDate}
-                          onChange={(e) => setIssueDate(e.target.value)}
-                          className="border-input-border focus:border-primary focus:ring-primary"
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="delivery-forecast">Previsão de Entrega *</Label>
-                        <Input
-                          id="delivery-forecast"
-                          type="date"
-                          value={deliveryForecast}
-                          onChange={(e) => setDeliveryForecast(e.target.value)}
-                          min={new Date().toISOString().split('T')[0]}
-                          className="border-input-border focus:border-primary focus:ring-primary"
-                        />
-                      </div>
-                    </div>
-                    
                     <div className="space-y-2">
                       <Label htmlFor="merchandise-description">Descrição do conteúdo *</Label>
                       <Textarea
