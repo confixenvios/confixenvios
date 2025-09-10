@@ -51,7 +51,7 @@ const AdminCte = () => {
   const [emissions, setEmissions] = useState<CteEmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
   const [selectedPayload, setSelectedPayload] = useState<any>(null);
@@ -66,7 +66,7 @@ const AdminCte = () => {
         query = query.or(`chave_cte.ilike.%${searchTerm}%,uuid_cte::text.ilike.%${searchTerm}%,remessa_id.ilike.%${searchTerm}%`);
       }
 
-      if (statusFilter) {
+      if (statusFilter && statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
       }
 
@@ -139,7 +139,7 @@ const AdminCte = () => {
 
   const clearFilters = () => {
     setSearchTerm('');
-    setStatusFilter('');
+    setStatusFilter('all');
     setDateFrom('');
     setDateTo('');
   };
@@ -179,12 +179,12 @@ const AdminCte = () => {
               />
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter || 'all'} onValueChange={setStatusFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="Todos os status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os status</SelectItem>
+                <SelectItem value="all">Todos os status</SelectItem>
                 <SelectItem value="aprovado">Aprovado</SelectItem>
                 <SelectItem value="reprovado">Reprovado</SelectItem>
                 <SelectItem value="cancelado">Cancelado</SelectItem>
