@@ -260,11 +260,19 @@ const ActiveClients = () => {
 
           let totalValue = 0;
           if (allShipments) {
+            console.log(`Processing ${allShipments.length} shipments for client ${profile.email}`);
+            
             totalValue = allShipments.reduce((sum, shipment) => {
               const quoteData = shipment.quote_data as any;
               
               // Tentar diferentes caminhos para encontrar o preço
               let price = 0;
+              
+              // Debug: log da estrutura do quote_data
+              if (profile.email === 'ksabrigo@gmail.com') {
+                console.log('Quote data structure:', JSON.stringify(quoteData, null, 2));
+              }
+              
               if (quoteData?.selectedQuote?.price) {
                 price = parseFloat(quoteData.selectedQuote.price);
               } else if (quoteData?.totalPrice) {
@@ -273,10 +281,18 @@ const ActiveClients = () => {
                 price = parseFloat(quoteData.shippingQuote.economicPrice);
               } else if (quoteData?.shippingQuote?.expressPrice) {
                 price = parseFloat(quoteData.shippingQuote.expressPrice);
+              } else if (quoteData?.selectedOption?.price) {
+                price = parseFloat(quoteData.selectedOption.price);
+              } else if (quoteData?.price) {
+                price = parseFloat(quoteData.price);
+              } else if (quoteData?.finalPrice) {
+                price = parseFloat(quoteData.finalPrice);
               }
               
               return sum + (isNaN(price) ? 0 : price);
             }, 0);
+            
+            console.log(`Total value for client ${profile.email}: R$ ${totalValue}`);
           }
 
           return {
