@@ -547,12 +547,23 @@ const AdminRemessas = () => {
                                <Package className="w-3 h-3 mr-1" />
                                {shipment.weight}kg • {shipment.format}
                              </div>
-                             {shipment.pricing_table_name && (
-                               <div className="flex items-center text-xs text-muted-foreground mt-1">
-                                 <FileText className="w-3 h-3 mr-1" />
-                                 Tabela: {shipment.pricing_table_name}
-                               </div>
-                             )}
+                              {shipment.pricing_table_name && (
+                                <div className="flex items-center text-xs text-muted-foreground mt-1">
+                                  <FileText className="w-3 h-3 mr-1" />
+                                  Tabela: {shipment.pricing_table_name}
+                                </div>
+                              )}
+                              <div className="flex items-center text-xs mt-1">
+                                {shipment.label_pdf_url ? (
+                                  <Badge variant="success" className="text-xs">
+                                    Etiqueta Emitida
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="destructive" className="text-xs">
+                                    Etiqueta Pendente
+                                  </Badge>
+                                )}
+                              </div>
                            </div>
                         </div>
                       </div>
@@ -603,12 +614,22 @@ const AdminRemessas = () => {
                        <p className="text-muted-foreground">Opção de Coleta</p>
                        <p className="font-medium">{selectedShipmentDetails.pickup_option === 'dropoff' ? 'Entrega no Hub' : 'Coleta no Local'}</p>
                      </div>
-                     {selectedShipmentDetails.pricing_table_name && (
-                       <div>
-                         <p className="text-muted-foreground">Tabela de Preços</p>
-                         <p className="font-medium">{selectedShipmentDetails.pricing_table_name}</p>
-                       </div>
-                     )}
+                      {selectedShipmentDetails.pricing_table_name && (
+                        <div>
+                          <p className="text-muted-foreground">Tabela de Preços</p>
+                          <p className="font-medium">{selectedShipmentDetails.pricing_table_name}</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-muted-foreground">Status da Etiqueta</p>
+                        <div className="mt-1">
+                          {selectedShipmentDetails.label_pdf_url ? (
+                            <Badge variant="success">Etiqueta Emitida</Badge>
+                          ) : (
+                            <Badge variant="destructive">Etiqueta Pendente</Badge>
+                          )}
+                        </div>
+                      </div>
                      {selectedShipmentDetails.cte_key && (
                        <div>
                          <p className="text-muted-foreground">Chave CTE</p>
