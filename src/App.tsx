@@ -44,7 +44,7 @@ import AdminHistorico from "./pages/admin/AdminHistorico";
 import AdminIntegracoes from "./pages/admin/AdminIntegracoes";
 import AdminWebhooks from "./pages/admin/AdminWebhooks";
 import AdminWebhookLogs from "./pages/admin/AdminWebhookLogs";
-import AdminTestarTabela from "./pages/admin/AdminTestarTabela";
+
 import AdminTabelas from "./pages/admin/AdminTabelas";
 import AdminDocsIntegracao from "./pages/admin/AdminDocsIntegracao";
 import AdminCte from "./pages/admin/AdminCte";
@@ -124,7 +124,7 @@ const App = () => (
                       <Route path="docs-integracao" element={<AdminDocsIntegracao />} />
                       <Route path="webhooks/logs" element={<AdminWebhookLogs />} />
                       <Route path="historico" element={<AdminHistorico />} />
-                      <Route path="testar-tabela" element={<AdminTestarTabela />} />
+                      
                     </Routes>
                   </AdminLayout>
                 </ProtectedRoute>

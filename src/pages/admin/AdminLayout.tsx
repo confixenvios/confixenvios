@@ -69,7 +69,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'Docs TMS', href: '/admin/docs-integracao', icon: FileText },
     { name: 'Logs Webhooks', href: '/admin/webhooks/logs', icon: History },
     { name: 'Histórico', href: '/admin/historico', icon: History },
-    { name: 'Testar Tabelas', href: '/admin/testar-tabela', icon: Database },
+    
   ];
 
   const isActive = (path: string) => {
