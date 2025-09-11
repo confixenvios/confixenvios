@@ -168,6 +168,30 @@ const AdminRemessas = () => {
       console.log('🔄 [ADMIN REMESSAS] Carregando remessas...');
       const adminShipments = await getAdminShipments();
       console.log(`✅ [ADMIN REMESSAS] ${adminShipments.length} remessas carregadas`);
+      
+      // Debug: Mostrar detalhes das remessas do Kennedy
+      const kennedyShipments = adminShipments.filter(s => 
+        s.client_name.toLowerCase().includes('kennedy')
+      );
+      console.log('👤 [ADMIN REMESSAS] Remessas do Kennedy:', kennedyShipments.map(s => ({
+        id: s.id,
+        tracking_code: s.tracking_code,
+        created_at: s.created_at,
+        status: s.status,
+        client_name: s.client_name
+      })));
+      
+      // Debug: Mostrar a mais recente
+      const mostRecent = adminShipments.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )[0];
+      console.log('🕒 [ADMIN REMESSAS] Remessa mais recente:', {
+        id: mostRecent?.id,
+        tracking_code: mostRecent?.tracking_code,
+        created_at: mostRecent?.created_at,
+        client_name: mostRecent?.client_name
+      });
+      
       setShipments(adminShipments);
     } catch (error) {
       console.error('❌ [ADMIN REMESSAS] Erro ao carregar remessas:', error);

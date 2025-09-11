@@ -114,6 +114,8 @@ export const getClientShipments = async (userId: string): Promise<ClientShipment
  * Serviço para buscar remessas do portal do admin
  */
 export const getAdminShipments = async (): Promise<AdminShipment[]> => {
+  console.log('🔄 [ADMIN SHIPMENTS SERVICE] Iniciando busca de remessas admin...');
+  
   const { data, error } = await supabase
     .from('shipments')
     .select(`
@@ -160,7 +162,15 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
     `)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  console.log('📊 [ADMIN SHIPMENTS SERVICE] Resultado da query:', {
+    count: data?.length || 0,
+    error: error?.message || 'Sem erro'
+  });
+
+  if (error) {
+    console.error('❌ [ADMIN SHIPMENTS SERVICE] Erro na query:', error);
+    throw error;
+  }
 
   // Buscar informações dos clientes para cada remessa
   const shipmentsWithDetails = await Promise.all(
@@ -175,15 +185,36 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
         clientProfile = profile;
       }
 
-      return {
+      const result = {
         ...normalizeShipmentData(shipment),
         client_name: clientProfile 
           ? `${clientProfile.first_name || ''} ${clientProfile.last_name || ''}`.trim() || clientProfile.email || 'Cliente Anônimo'
           : 'Cliente Anônimo',
         motoristas: shipment.motoristas
       };
+
+      // Debug da remessa mais recente
+      if (shipment.tracking_code === 'ID20251VROOK') {
+        console.log('🔍 [ADMIN SHIPMENTS SERVICE] Remessa ID20251VROOK encontrada:', {
+          id: result.id,
+          tracking_code: result.tracking_code,
+          client_name: result.client_name,
+          created_at: result.created_at,
+          user_id: shipment.user_id,
+          profile: clientProfile
+        });
+      }
+
+      return result;
     })
   );
+
+  console.log('✅ [ADMIN SHIPMENTS SERVICE] Processamento concluído:', {
+    totalProcessed: shipmentsWithDetails.length,
+    kennedyShipments: shipmentsWithDetails.filter(s => 
+      s.client_name.toLowerCase().includes('kennedy')
+    ).length
+  });
 
   return shipmentsWithDetails;
 };
