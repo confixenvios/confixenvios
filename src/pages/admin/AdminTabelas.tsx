@@ -44,6 +44,7 @@ interface PricingTable {
   source_type: string;
   file_url?: string;
   google_sheets_url?: string;
+  sheet_name?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -76,14 +77,19 @@ const AdminTabelas = () => {
     company_branch_id: string;
     source_type: 'upload' | 'google_sheets';
     google_sheets_url: string;
+    sheet_name: string;
     file: File | null;
   }>({
     name: '',
     company_branch_id: '',
     source_type: 'upload',
     google_sheets_url: '',
+    sheet_name: '',
     file: null
   });
+
+  const [availableSheets, setAvailableSheets] = useState<string[]>([]);
+  const [isLoadingSheets, setIsLoadingSheets] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -211,6 +217,7 @@ const AdminTabelas = () => {
         source_type: formData.source_type,
         file_url: formData.source_type === 'upload' ? fileUrl : null,
         google_sheets_url: formData.source_type === 'google_sheets' ? formData.google_sheets_url : null,
+        sheet_name: formData.source_type === 'google_sheets' && formData.sheet_name ? formData.sheet_name : null,
         is_active: true,
         validation_status: 'pending'
       };
@@ -249,6 +256,26 @@ const AdminTabelas = () => {
     }
   };
 
+  const loadAvailableSheets = async (url: string) => {
+    if (!url || formData.source_type !== 'google_sheets') return;
+
+    setIsLoadingSheets(true);
+    try {
+      const { PricingTableService } = await import('@/services/pricingTableService');
+      const sheets = await PricingTableService.getSheetNames(url);
+      setAvailableSheets(sheets);
+    } catch (error) {
+      console.error('Erro ao carregar abas:', error);
+      toast({
+        title: "Aviso",
+        description: "Não foi possível carregar as abas da planilha",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingSheets(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir esta tabela?')) return;
 
@@ -283,6 +310,7 @@ const AdminTabelas = () => {
       company_branch_id: table.company_branch_id,
       source_type: (table.source_type === 'google_sheets' ? 'google_sheets' : 'upload') as 'upload' | 'google_sheets',
       google_sheets_url: table.google_sheets_url || '',
+      sheet_name: table.sheet_name || '',
       file: null
     });
     setIsDialogOpen(true);
@@ -294,9 +322,11 @@ const AdminTabelas = () => {
       company_branch_id: '',
       source_type: 'upload',
       google_sheets_url: '',
+      sheet_name: '',
       file: null
     });
     setEditingTable(null);
+    setAvailableSheets([]);
   };
 
   const getValidationBadge = (status: string) => {
@@ -393,17 +423,51 @@ const AdminTabelas = () => {
                 )}
 
                 {formData.source_type === 'google_sheets' && (
-                  <div>
-                    <Label htmlFor="sheets_url">URL do Google Planilhas</Label>
-                    <Textarea
-                      id="sheets_url"
-                      value={formData.google_sheets_url}
-                      onChange={(e) => setFormData({...formData, google_sheets_url: e.target.value})}
-                      placeholder="https://docs.google.com/spreadsheets/d/..."
-                      required
-                      rows={3}
-                    />
-                  </div>
+                  <>
+                    <div>
+                      <Label htmlFor="sheets_url">URL do Google Planilhas</Label>
+                      <Textarea
+                        id="sheets_url"
+                        value={formData.google_sheets_url}
+                        onChange={(e) => {
+                          setFormData({...formData, google_sheets_url: e.target.value});
+                          if (e.target.value) {
+                            loadAvailableSheets(e.target.value);
+                          }
+                        }}
+                        placeholder="https://docs.google.com/spreadsheets/d/..."
+                        required
+                        rows={3}
+                      />
+                    </div>
+
+                    {availableSheets.length > 0 && (
+                      <div>
+                        <Label htmlFor="sheet_name">Aba da Planilha (Opcional)</Label>
+                        <Select 
+                          value={formData.sheet_name} 
+                          onValueChange={(value) => setFormData({...formData, sheet_name: value})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma aba ou deixe em branco para usar a primeira" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Primeira aba (padrão)</SelectItem>
+                            {availableSheets.map((sheet) => (
+                              <SelectItem key={sheet} value={sheet}>
+                                {sheet}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {isLoadingSheets && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Carregando abas disponíveis...
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <div className="flex justify-end gap-2 pt-4">

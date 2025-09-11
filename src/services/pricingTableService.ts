@@ -114,16 +114,31 @@ export class PricingTableService {
     { destinyCep, weight, quantity }: { destinyCep: string; weight: number; quantity: number }
   ): Promise<PricingTableQuote | null> {
     try {
-      // Converter URL do Google Sheets para formato de export CSV
-      const csvUrl = this.convertGoogleSheetsUrl(table.google_sheets_url);
+      let csvUrl: string;
+      let workbook: any;
+      let worksheet: any;
+      let data: any[];
+
+      if (table.sheet_name) {
+        // Se tem nome de aba específico, obter GID e usar CSV específico
+        const gid = await this.getSheetGid(table.google_sheets_url, table.sheet_name);
+        if (gid === null) {
+          console.error(`Aba "${table.sheet_name}" não encontrada na planilha`);
+          return null;
+        }
+        csvUrl = this.convertGoogleSheetsUrl(table.google_sheets_url, gid);
+      } else {
+        // Usar primeira aba (comportamento padrão)
+        csvUrl = this.convertGoogleSheetsUrl(table.google_sheets_url);
+      }
       
       const response = await fetch(csvUrl);
       if (!response.ok) throw new Error('Erro ao acessar Google Sheets');
       
       const csvData = await response.text();
-      const workbook = XLSX.read(csvData, { type: 'string' });
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const data = XLSX.utils.sheet_to_json(worksheet);
+      workbook = XLSX.read(csvData, { type: 'string' });
+      worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      data = XLSX.utils.sheet_to_json(worksheet);
 
       return this.findPriceInData(data, table, { destinyCep, weight, quantity });
     } catch (error) {
@@ -231,12 +246,68 @@ export class PricingTableService {
   /**
    * Converte URL do Google Sheets para formato de export CSV
    */
-  private static convertGoogleSheetsUrl(url: string): string {
+  private static convertGoogleSheetsUrl(url: string, gid: string = '0'): string {
     const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
     if (!match) throw new Error('URL inválida do Google Sheets');
     
     const spreadsheetId = match[1];
-    return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=0`;
+    return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
+  }
+
+  /**
+   * Obtém lista de abas disponíveis na planilha Google Sheets
+   */
+  static async getSheetNames(googleSheetsUrl: string): Promise<string[]> {
+    try {
+      // Para obter os nomes das abas, precisamos fazer download como Excel
+      const match = googleSheetsUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      if (!match) throw new Error('URL inválida do Google Sheets');
+      
+      const spreadsheetId = match[1];
+      const xlsxUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=xlsx`;
+      
+      const response = await fetch(xlsxUrl);
+      if (!response.ok) throw new Error('Erro ao acessar Google Sheets');
+      
+      const arrayBuffer = await response.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer);
+      
+      return workbook.SheetNames;
+    } catch (error) {
+      console.error('Erro ao obter nomes das abas:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Obtém GID de uma aba específica pelo nome
+   */
+  static async getSheetGid(googleSheetsUrl: string, sheetName: string): Promise<string | null> {
+    try {
+      // Método para obter GID específico da aba
+      // Por limitações da API pública do Google Sheets, vamos usar uma abordagem alternativa
+      // Tentaremos GIDs comuns primeiro (0, 1, 2, etc.) e verificar qual corresponde ao nome
+      const match = googleSheetsUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      if (!match) throw new Error('URL inválida do Google Sheets');
+      
+      const spreadsheetId = match[1];
+      const xlsxUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=xlsx`;
+      
+      const response = await fetch(xlsxUrl);
+      if (!response.ok) throw new Error('Erro ao acessar Google Sheets');
+      
+      const arrayBuffer = await response.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer);
+      
+      const sheetIndex = workbook.SheetNames.indexOf(sheetName);
+      if (sheetIndex === -1) return null;
+      
+      // Retorna o índice como GID (padrão do Google Sheets)
+      return sheetIndex.toString();
+    } catch (error) {
+      console.error('Erro ao obter GID da aba:', error);
+      return null;
+    }
   }
 
   /**
@@ -258,11 +329,26 @@ export class PricingTableService {
 
       // Buscar dados da tabela
       if (table.source_type === 'google_sheets') {
-        const csvUrl = this.convertGoogleSheetsUrl(table.google_sheets_url);
+        let csvUrl: string;
+        let workbook: any;
+        let worksheet: any;
+
+        if (table.sheet_name) {
+          // Se tem nome de aba específico, obter GID e usar CSV específico
+          const gid = await this.getSheetGid(table.google_sheets_url, table.sheet_name);
+          if (gid === null) {
+            throw new Error(`Aba "${table.sheet_name}" não encontrada na planilha`);
+          }
+          csvUrl = this.convertGoogleSheetsUrl(table.google_sheets_url, gid);
+        } else {
+          // Usar primeira aba (comportamento padrão)
+          csvUrl = this.convertGoogleSheetsUrl(table.google_sheets_url);
+        }
+
         const response = await fetch(csvUrl);
         const csvData = await response.text();
-        const workbook = XLSX.read(csvData, { type: 'string' });
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        workbook = XLSX.read(csvData, { type: 'string' });
+        worksheet = workbook.Sheets[workbook.SheetNames[0]];
         data = XLSX.utils.sheet_to_json(worksheet);
       } else if (table.file_url) {
         const response = await fetch(table.file_url);

@@ -365,6 +365,7 @@ export type Database = {
           is_active: boolean
           last_validation_at: string | null
           name: string
+          sheet_name: string | null
           source_type: string
           updated_at: string
           validation_errors: Json | null
@@ -380,6 +381,7 @@ export type Database = {
           is_active?: boolean
           last_validation_at?: string | null
           name: string
+          sheet_name?: string | null
           source_type: string
           updated_at?: string
           validation_errors?: Json | null
@@ -395,6 +397,7 @@ export type Database = {
           is_active?: boolean
           last_validation_at?: string | null
           name?: string
+          sheet_name?: string | null
           source_type?: string
           updated_at?: string
           validation_errors?: Json | null
