@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ShipmentDetailsModal } from '@/components/admin/ShipmentDetailsModal';
+
 import { ShipmentOccurrencesModal } from '@/components/admin/ShipmentOccurrencesModal';
 
 interface Shipment {
@@ -824,12 +824,6 @@ const AdminRemessas = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Detalhes da Remessa - Novo Componente */}
-      <ShipmentDetailsModal
-        isOpen={detailsModalOpen}
-        onClose={() => setDetailsModalOpen(false)}
-        shipment={selectedShipmentDetails}
-      />
 
       {/* Modal de Ocorrências do Motorista */}
       <ShipmentOccurrencesModal
