@@ -13,7 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useAuth } from '@/hooks/useAuth';
 import { getAdminShipments, type AdminShipment } from '@/services/shipmentsService';
 
 import { ShipmentOccurrencesModal } from '@/components/admin/ShipmentOccurrencesModal';
@@ -78,7 +77,9 @@ interface Motorista {
 
 const AdminRemessas = () => {
   const { toast } = useToast();
-  const { user, isAdmin } = useAuth();
+  const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [shipments, setShipments] = useState<AdminShipment[]>([]);
@@ -90,32 +91,75 @@ const AdminRemessas = () => {
   const [selectedShipmentOccurrences, setSelectedShipmentOccurrences] = useState<AdminShipment | null>(null);
   const [cteData, setCteData] = useState<any>(null);
 
+  // Verificar autenticação e permissões diretamente
   useEffect(() => {
-    if (user && isAdmin) {
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session?.user) {
+          console.log('❌ [ADMIN REMESSAS] Usuário não autenticado');
+          setAuthLoading(false);
+          return;
+        }
+
+        setUser(session.user);
+
+        // Verificar se é admin
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id);
+
+        if (roleError) {
+          console.error('❌ [ADMIN REMESSAS] Erro ao verificar role:', roleError);
+          setAuthLoading(false);
+          return;
+        }
+
+        const hasAdminRole = roleData?.some(r => r.role === 'admin') || false;
+        setIsAdmin(hasAdminRole);
+        
+        console.log(`✅ [ADMIN REMESSAS] Usuário autenticado. Admin: ${hasAdminRole}`);
+        
+        if (!hasAdminRole) {
+          toast({
+            title: "Acesso Negado",
+            description: "Você não tem permissão para acessar esta página",
+            variant: "destructive"
+          });
+        }
+        
+        setAuthLoading(false);
+      } catch (error) {
+        console.error('❌ [ADMIN REMESSAS] Erro na verificação de auth:', error);
+        setAuthLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    if (!authLoading && user && isAdmin) {
       loadShipments();
-    } else if (user && !isAdmin) {
-      toast({
-        title: "Acesso Negado",
-        description: "Você não tem permissão para acessar esta página",
-        variant: "destructive"
-      });
     }
-  }, [user, isAdmin]);
+  }, [authLoading, user, isAdmin]);
 
   // Adicionar auto-refresh a cada 30 segundos
   useEffect(() => {
-    if (!user || !isAdmin) return;
+    if (!authLoading && !user || !isAdmin) return;
     
     const interval = setInterval(() => {
       loadShipments();
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [user, isAdmin]);
+  }, [authLoading, user, isAdmin]);
 
   const loadShipments = async () => {
-    if (!user || !isAdmin) {
-      console.log('Usuário não autenticado ou não é admin');
+    if (authLoading || !user || !isAdmin) {
+      console.log('🚫 [ADMIN REMESSAS] Carregamento bloqueado - Auth loading, usuário não autenticado ou não é admin');
       setLoading(false);
       return;
     }
@@ -135,7 +179,7 @@ const AdminRemessas = () => {
       
       // Tentar novamente após 2 segundos
       setTimeout(() => {
-        if (user && isAdmin) {
+        if (!authLoading && user && isAdmin) {
           loadShipments();
         }
       }, 2000);
