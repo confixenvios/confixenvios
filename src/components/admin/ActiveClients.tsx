@@ -265,13 +265,11 @@ const ActiveClients = () => {
             totalValue = allShipments.reduce((sum, shipment) => {
               const quoteData = shipment.quote_data as any;
               
+              // Log da estrutura completa para debug
+              console.log(`Quote data for ${profile.email}:`, JSON.stringify(quoteData, null, 2));
+              
               // Tentar diferentes caminhos para encontrar o preço
               let price = 0;
-              
-              // Debug: log da estrutura do quote_data
-              if (profile.email === 'ksabrigo@gmail.com') {
-                console.log('Quote data structure:', JSON.stringify(quoteData, null, 2));
-              }
               
               if (quoteData?.selectedQuote?.price) {
                 price = parseFloat(quoteData.selectedQuote.price);
@@ -289,6 +287,7 @@ const ActiveClients = () => {
                 price = parseFloat(quoteData.finalPrice);
               }
               
+              console.log(`Extracted price: ${price} for shipment`);
               return sum + (isNaN(price) ? 0 : price);
             }, 0);
             
