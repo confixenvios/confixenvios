@@ -66,8 +66,6 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'Gestão de Tabelas', href: '/admin/tabelas', icon: Database },
     { name: 'Integrações', href: '/admin/integracoes', icon: Puzzle },
     { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
-    { name: 'Docs TMS', href: '/admin/docs-integracao', icon: FileText },
-    { name: 'Logs Webhooks', href: '/admin/webhooks/logs', icon: History },
     
     
   ];

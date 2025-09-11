@@ -43,10 +43,10 @@ import AdminFaturamento from "./pages/admin/AdminFaturamento";
 
 import AdminIntegracoes from "./pages/admin/AdminIntegracoes";
 import AdminWebhooks from "./pages/admin/AdminWebhooks";
-import AdminWebhookLogs from "./pages/admin/AdminWebhookLogs";
+
 
 import AdminTabelas from "./pages/admin/AdminTabelas";
-import AdminDocsIntegracao from "./pages/admin/AdminDocsIntegracao";
+
 import AdminCte from "./pages/admin/AdminCte";
 import MotoristaAuth from "./pages/motorista/MotoristaAuth";
 import MotoristaRegistro from "./pages/motorista/MotoristaRegistro";
@@ -121,8 +121,6 @@ const App = () => (
                       <Route path="tabelas" element={<AdminTabelas />} />
                       <Route path="integracoes" element={<AdminIntegracoes />} />
                       <Route path="webhooks" element={<AdminWebhooks />} />
-                      <Route path="docs-integracao" element={<AdminDocsIntegracao />} />
-                      <Route path="webhooks/logs" element={<AdminWebhookLogs />} />
                       
                       
                     </Routes>
