@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useAuth } from '@/hooks/useAuth';
+import { getAdminShipments, type AdminShipment } from '@/services/shipmentsService';
 
 import { ShipmentOccurrencesModal } from '@/components/admin/ShipmentOccurrencesModal';
 
@@ -76,122 +78,67 @@ interface Motorista {
 
 const AdminRemessas = () => {
   const { toast } = useToast();
+  const { user, isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [shipments, setShipments] = useState<Shipment[]>([]);
+  const [shipments, setShipments] = useState<AdminShipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [motoristas, setMotoristas] = useState<Motorista[]>([]);
-  const [selectedShipmentDetails, setSelectedShipmentDetails] = useState<Shipment | null>(null);
+  const [selectedShipmentDetails, setSelectedShipmentDetails] = useState<AdminShipment | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [occurrencesModalOpen, setOccurrencesModalOpen] = useState(false);
-  const [selectedShipmentOccurrences, setSelectedShipmentOccurrences] = useState<Shipment | null>(null);
+  const [selectedShipmentOccurrences, setSelectedShipmentOccurrences] = useState<AdminShipment | null>(null);
   const [cteData, setCteData] = useState<any>(null);
 
   useEffect(() => {
-    loadShipments();
-  }, []);
-
-  const loadShipments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('shipments')
-        .select(`
-          id,
-          tracking_code,
-          weight,
-          length,
-          width,
-          height,
-          format,
-          selected_option,
-          pickup_option,
-          quote_data,
-          payment_data,
-          status,
-          created_at,
-          label_pdf_url,
-          cte_key,
-          user_id,
-          motorista_id,
-          pricing_table_name,
-          sender_address:addresses!shipments_sender_address_id_fkey(
-            name,
-            street,
-            number,
-            neighborhood,
-            city,
-            state,
-            cep,
-            complement,
-            reference
-          ),
-          recipient_address:addresses!shipments_recipient_address_id_fkey(
-            name,
-            street,
-            number,
-            neighborhood,
-            city,
-            state,
-            cep,
-            complement,
-            reference
-          ),
-          motoristas(nome, telefone, email)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Transform data to match expected format
-      const shipmentsWithDetails = await Promise.all(
-        (data || []).map(async (shipment) => {
-          // Get client profile if user_id exists
-          let clientProfile = null;
-          if (shipment.user_id) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('first_name, last_name, email')
-              .eq('id', shipment.user_id)
-              .maybeSingle();
-            clientProfile = profile;
-          }
-
-          return {
-            id: shipment.id,
-            tracking_code: shipment.tracking_code,
-            user_id: shipment.user_id,
-            pricing_table_name: shipment.pricing_table_name,
-            client_name: clientProfile 
-              ? `${clientProfile.first_name || ''} ${clientProfile.last_name || ''}`.trim() || clientProfile.email || 'Cliente Anônimo'
-              : 'Cliente Anônimo',
-            sender_address: shipment.sender_address,
-            recipient_address: shipment.recipient_address,
-            weight: shipment.weight,
-            length: shipment.length,
-            width: shipment.width,
-            height: shipment.height,
-            format: shipment.format,
-            selected_option: shipment.selected_option,
-            pickup_option: shipment.pickup_option,
-            quote_data: shipment.quote_data,
-            payment_data: shipment.payment_data,
-            status: shipment.status,
-            created_at: shipment.created_at,
-            label_pdf_url: shipment.label_pdf_url,
-            cte_key: shipment.cte_key,
-            motoristas: shipment.motoristas
-          };
-        })
-      );
-
-      setShipments(shipmentsWithDetails);
-    } catch (error) {
-      console.error('Error loading shipments:', error);
+    if (user && isAdmin) {
+      loadShipments();
+    } else if (user && !isAdmin) {
       toast({
-        title: "Erro",
-        description: "Erro ao carregar remessas",
+        title: "Acesso Negado",
+        description: "Você não tem permissão para acessar esta página",
         variant: "destructive"
       });
+    }
+  }, [user, isAdmin]);
+
+  // Adicionar auto-refresh a cada 30 segundos
+  useEffect(() => {
+    if (!user || !isAdmin) return;
+    
+    const interval = setInterval(() => {
+      loadShipments();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [user, isAdmin]);
+
+  const loadShipments = async () => {
+    if (!user || !isAdmin) {
+      console.log('Usuário não autenticado ou não é admin');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      console.log('🔄 [ADMIN REMESSAS] Carregando remessas...');
+      const adminShipments = await getAdminShipments();
+      console.log(`✅ [ADMIN REMESSAS] ${adminShipments.length} remessas carregadas`);
+      setShipments(adminShipments);
+    } catch (error) {
+      console.error('❌ [ADMIN REMESSAS] Erro ao carregar remessas:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar remessas. Tentando novamente...",
+        variant: "destructive"
+      });
+      
+      // Tentar novamente após 2 segundos
+      setTimeout(() => {
+        if (user && isAdmin) {
+          loadShipments();
+        }
+      }, 2000);
     } finally {
       setLoading(false);
     }
@@ -222,7 +169,7 @@ const AdminRemessas = () => {
     );
   };
 
-  const handleViewShipment = async (shipment: Shipment) => {
+  const handleViewShipment = async (shipment: AdminShipment) => {
     setSelectedShipmentDetails(shipment);
     setDetailsModalOpen(true);
     
@@ -250,7 +197,7 @@ const AdminRemessas = () => {
     }
   };
 
-  const handleViewOccurrences = (shipment: Shipment) => {
+  const handleViewOccurrences = (shipment: AdminShipment) => {
     setSelectedShipmentOccurrences(shipment);
     setOccurrencesModalOpen(true);
   };
@@ -290,7 +237,7 @@ const AdminRemessas = () => {
     return <Badge variant={config.variant as any}>{config.label}</Badge>;
   };
 
-  const handleDownloadLabel = (shipment: Shipment) => {
+  const handleDownloadLabel = (shipment: AdminShipment) => {
     toast({
       title: "Download iniciado",
       description: `Baixando etiqueta para ${shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}`,
@@ -298,7 +245,7 @@ const AdminRemessas = () => {
   };
 
 
-  const getQuoteValue = (shipment: Shipment) => {
+  const getQuoteValue = (shipment: AdminShipment) => {
     const paymentData = shipment.payment_data as any;
     const quoteData = shipment.quote_data as any;
     

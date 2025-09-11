@@ -32,6 +32,7 @@ export interface BaseShipment {
   cte_key?: string | null;
   sender_address: ShipmentAddress;
   recipient_address: ShipmentAddress;
+  pricing_table_name?: string;
 }
 
 export interface ClientShipment extends BaseShipment {
