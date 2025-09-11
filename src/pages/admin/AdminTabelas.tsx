@@ -71,13 +71,20 @@ const AdminTabelas = () => {
   const { toast } = useToast();
 
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    cnpj: string;
+    company_branch_id: string;
+    source_type: 'upload' | 'google_sheets';
+    google_sheets_url: string;
+    file: File | null;
+  }>({
     name: '',
     cnpj: '',
     company_branch_id: '',
-    source_type: 'upload' as 'upload' | 'google_sheets',
+    source_type: 'upload',
     google_sheets_url: '',
-    file: null as File | null
+    file: null
   });
 
   useEffect(() => {
@@ -116,6 +123,51 @@ const AdminTabelas = () => {
       toast({
         title: "Erro",
         description: "Erro ao carregar as tabelas de preços",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleValidateAllTables = async () => {
+    if (pricingTables.length === 0) {
+      toast({
+        title: "Aviso",
+        description: "Nenhuma tabela cadastrada para validar"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    let validatedCount = 0;
+    let errorCount = 0;
+
+    try {
+      // Validar cada tabela
+      for (const table of pricingTables) {
+        try {
+          const { PricingTableService } = await import('@/services/pricingTableService');
+          await PricingTableService.validatePricingTable(table.id);
+          validatedCount++;
+        } catch (error) {
+          console.error(`Erro ao validar tabela ${table.name}:`, error);
+          errorCount++;
+        }
+      }
+
+      toast({
+        title: "Validação Concluída",
+        description: `${validatedCount} tabelas validadas, ${errorCount} erros encontrados`
+      });
+
+      // Recarregar dados para mostrar status atualizado
+      fetchData();
+    } catch (error) {
+      console.error('Erro na validação:', error);
+      toast({
+        title: "Erro",
+        description: "Erro durante a validação das tabelas",
         variant: "destructive"
       });
     } finally {
@@ -232,7 +284,7 @@ const AdminTabelas = () => {
       name: table.name,
       cnpj: table.cnpj,
       company_branch_id: table.company_branch_id,
-      source_type: table.source_type,
+      source_type: (table.source_type === 'google_sheets' ? 'google_sheets' : 'upload') as 'upload' | 'google_sheets',
       google_sheets_url: table.google_sheets_url || '',
       file: null
     });
@@ -389,9 +441,19 @@ const AdminTabelas = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <FileSpreadsheet className="w-5 h-5 mr-2" />
-              Tabelas Cadastradas
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center">
+                <FileSpreadsheet className="w-5 h-5 mr-2" />
+                Tabelas Cadastradas
+              </div>
+              <Button 
+                variant="outline"
+                onClick={handleValidateAllTables}
+                disabled={isLoading}
+              >
+                <Database className="w-4 h-4 mr-2" />
+                Validar Todas
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent>
