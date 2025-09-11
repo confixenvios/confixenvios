@@ -54,28 +54,39 @@ export class PricingTableService {
         return await this.getFallbackQuote({ destinyCep, weight, quantity });
       }
 
-      const quotes: PricingTableQuote[] = [];
-
-      // Buscar cotações de cada tabela
-      for (const table of tables) {
+      // OTIMIZAÇÃO: Processar tabelas em paralelo com timeout
+      const quotePromises = tables.map(async (table) => {
         try {
-          const quote = await this.getQuoteFromTable(table, { destinyCep, weight, quantity });
-          if (quote) {
-            quotes.push(quote);
-          }
+          // Timeout de 8 segundos por tabela
+          return await Promise.race([
+            this.getQuoteFromTable(table, { destinyCep, weight, quantity }),
+            new Promise<null>((_, reject) => 
+              setTimeout(() => reject(new Error('Timeout')), 8000)
+            )
+          ]);
         } catch (error) {
           console.error(`Erro ao processar tabela ${table.name}:`, error);
-          // Continua para a próxima tabela
+          return null;
         }
-      }
+      });
 
-      if (quotes.length === 0) {
+      // Aguardar todas as cotações com timeout global de 15 segundos
+      const quotes = await Promise.race([
+        Promise.all(quotePromises),
+        new Promise<(PricingTableQuote | null)[]>((resolve) => 
+          setTimeout(() => resolve([]), 15000)
+        )
+      ]);
+
+      const validQuotes = quotes.filter((quote): quote is PricingTableQuote => quote !== null);
+
+      if (validQuotes.length === 0) {
         // Fallback para o sistema antigo se nenhuma tabela retornar cotação
         return await this.getFallbackQuote({ destinyCep, weight, quantity });
       }
 
       // Retorna a cotação com melhor preço econômico
-      return quotes.reduce((best, current) => 
+      return validQuotes.reduce((best, current) => 
         current.economicPrice < best.economicPrice ? current : best
       );
 
@@ -114,38 +125,63 @@ export class PricingTableService {
     { destinyCep, weight, quantity }: { destinyCep: string; weight: number; quantity: number }
   ): Promise<PricingTableQuote | null> {
     try {
-      // Obter todas as abas da planilha
-      const sheetNames = await this.getSheetNames(table.google_sheets_url);
+      // Timeout para operações do Google Sheets
+      const sheetsTimeout = 6000; // 6 segundos
+
+      // Obter todas as abas da planilha com timeout
+      const sheetNames = await Promise.race([
+        this.getSheetNames(table.google_sheets_url),
+        new Promise<string[]>((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout ao buscar abas')), sheetsTimeout)
+        )
+      ]);
+
       if (!sheetNames || sheetNames.length === 0) {
         console.error('Nenhuma aba encontrada na planilha');
         return null;
       }
 
-      const allSheetsData: { name: string; data: any[] }[] = [];
-
-      // Ler dados de todas as abas
-      for (const sheetName of sheetNames) {
+      // OTIMIZAÇÃO: Processar abas em paralelo (máximo 3 simultaneamente para não sobrecarregar)
+      const processSheet = async (sheetName: string): Promise<{ name: string; data: any[] } | null> => {
         try {
           const gid = await this.getSheetGid(table.google_sheets_url, sheetName);
-          if (gid === null) continue;
+          if (gid === null) return null;
 
           const csvUrl = this.convertGoogleSheetsUrl(table.google_sheets_url, gid);
-          const response = await fetch(csvUrl);
-          if (!response.ok) continue;
+          
+          // Timeout específico para cada requisição
+          const response = await Promise.race([
+            fetch(csvUrl),
+            new Promise<never>((_, reject) => 
+              setTimeout(() => reject(new Error('Timeout na requisição')), 4000)
+            )
+          ]);
+          
+          if (!response.ok) return null;
 
           const csvData = await response.text();
           const workbook = XLSX.read(csvData, { type: 'string' });
           const worksheet = workbook.Sheets[workbook.SheetNames[0]];
           const data = XLSX.utils.sheet_to_json(worksheet);
 
-          if (data && data.length > 0) {
-            allSheetsData.push({ name: sheetName, data });
-          }
+          return data && data.length > 0 ? { name: sheetName, data } : null;
         } catch (error) {
           console.error(`Erro ao processar aba ${sheetName}:`, error);
-          continue;
+          return null;
         }
+      };
+
+      // Processar até 3 abas em paralelo para não sobrecarregar
+      const results: ({ name: string; data: any[] } | null)[] = [];
+      for (let i = 0; i < sheetNames.length; i += 3) {
+        const batch = sheetNames.slice(i, i + 3);
+        const batchResults = await Promise.all(batch.map(processSheet));
+        results.push(...batchResults);
       }
+
+      const allSheetsData = results.filter((result): result is { name: string; data: any[] } => 
+        result !== null
+      );
 
       if (allSheetsData.length === 0) {
         console.error('Nenhuma aba válida encontrada');
@@ -390,7 +426,14 @@ export class PricingTableService {
       const spreadsheetId = match[1];
       const xlsxUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=xlsx`;
       
-      const response = await fetch(xlsxUrl);
+      // Timeout de 4 segundos para buscar abas
+      const response = await Promise.race([
+        fetch(xlsxUrl),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout ao acessar Google Sheets')), 4000)
+        )
+      ]);
+      
       if (!response.ok) throw new Error('Erro ao acessar Google Sheets');
       
       const arrayBuffer = await response.arrayBuffer();
