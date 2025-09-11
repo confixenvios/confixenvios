@@ -252,10 +252,15 @@ const ActiveClients = () => {
               return acc;
             }, []).slice(0, 5) : [];
 
-          // Calcular valor total dos envios
+          // Calcular valor total de TODAS as remessas do cliente
+          const { data: allShipments } = await supabase
+            .from('shipments')
+            .select('quote_data')
+            .eq('user_id', profile.id);
+
           let totalValue = 0;
-          if (recentShipments) {
-            totalValue = recentShipments.reduce((sum, shipment) => {
+          if (allShipments) {
+            totalValue = allShipments.reduce((sum, shipment) => {
               const quoteData = shipment.quote_data as any;
               
               // Tentar diferentes caminhos para encontrar o preço
@@ -266,9 +271,11 @@ const ActiveClients = () => {
                 price = parseFloat(quoteData.totalPrice);
               } else if (quoteData?.shippingQuote?.economicPrice) {
                 price = parseFloat(quoteData.shippingQuote.economicPrice);
+              } else if (quoteData?.shippingQuote?.expressPrice) {
+                price = parseFloat(quoteData.shippingQuote.expressPrice);
               }
               
-              return sum + price;
+              return sum + (isNaN(price) ? 0 : price);
             }, 0);
           }
 
