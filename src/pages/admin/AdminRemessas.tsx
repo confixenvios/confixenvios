@@ -85,6 +85,7 @@ const AdminRemessas = () => {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [occurrencesModalOpen, setOccurrencesModalOpen] = useState(false);
   const [selectedShipmentOccurrences, setSelectedShipmentOccurrences] = useState<Shipment | null>(null);
+  const [cteData, setCteData] = useState<any>(null);
 
   useEffect(() => {
     loadShipments();
@@ -221,9 +222,25 @@ const AdminRemessas = () => {
     );
   };
 
-  const handleViewShipment = (shipment: Shipment) => {
+  const handleViewShipment = async (shipment: Shipment) => {
     setSelectedShipmentDetails(shipment);
     setDetailsModalOpen(true);
+    
+    // Buscar dados do CTE se existir
+    if (shipment.id) {
+      try {
+        const { data: cte } = await supabase
+          .from('cte_emissoes')
+          .select('*')
+          .eq('shipment_id', shipment.id)
+          .single();
+        
+        setCteData(cte);
+      } catch (error) {
+        console.log('Nenhum CTE encontrado para esta remessa');
+        setCteData(null);
+      }
+    }
   };
 
   const handleViewOccurrences = (shipment: Shipment) => {
@@ -641,12 +658,40 @@ const AdminRemessas = () => {
                           )}
                         </div>
                       </div>
-                     {selectedShipmentDetails.cte_key && (
-                       <div>
-                         <p className="text-muted-foreground">Chave CTE</p>
-                         <p className="font-medium font-mono text-xs">{selectedShipmentDetails.cte_key}</p>
-                       </div>
-                    )}
+                      {/* Informações do CTE */}
+                      {(selectedShipmentDetails.cte_key || cteData) && (
+                        <div className="col-span-2">
+                          <p className="text-muted-foreground">Informações do CT-e</p>
+                          <div className="space-y-1">
+                            {(cteData?.chave_cte || selectedShipmentDetails.cte_key) && (
+                              <div>
+                                <span className="text-xs text-muted-foreground">Chave: </span>
+                                <span className="font-mono text-xs">{cteData?.chave_cte || selectedShipmentDetails.cte_key}</span>
+                              </div>
+                            )}
+                            {cteData?.numero_cte && (
+                              <div>
+                                <span className="text-xs text-muted-foreground">Número: </span>
+                                <span className="font-medium text-xs">{cteData.numero_cte}</span>
+                              </div>
+                            )}
+                            {cteData?.serie && (
+                              <div>
+                                <span className="text-xs text-muted-foreground">Série: </span>
+                                <span className="font-medium text-xs">{cteData.serie}</span>
+                              </div>
+                            )}
+                            {cteData?.status && (
+                              <div>
+                                <span className="text-xs text-muted-foreground">Status CT-e: </span>
+                                <Badge variant={cteData.status === 'Autorizado' ? 'success' : 'secondary'} className="text-xs">
+                                  {cteData.status}
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     <div>
                       <p className="text-muted-foreground">Cliente</p>
                       <p className="font-medium">{selectedShipmentDetails.client_name}</p>
