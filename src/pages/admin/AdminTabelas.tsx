@@ -206,6 +206,7 @@ const AdminTabelas = () => {
 
       const tableData = {
         name: formData.name,
+        cnpj: null,
         company_branch_id: formData.company_branch_id,
         source_type: formData.source_type,
         file_url: formData.source_type === 'upload' ? fileUrl : null,
@@ -296,11 +297,6 @@ const AdminTabelas = () => {
       file: null
     });
     setEditingTable(null);
-  };
-
-  const formatCNPJ = (cnpj: string) => {
-    const cleaned = cnpj.replace(/\D/g, '');
-    return cleaned.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
   };
 
   const getValidationBadge = (status: string) => {

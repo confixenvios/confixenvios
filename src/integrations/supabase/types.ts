@@ -356,7 +356,7 @@ export type Database = {
       }
       pricing_tables: {
         Row: {
-          cnpj: string
+          cnpj: string | null
           company_branch_id: string | null
           created_at: string
           file_url: string | null
@@ -371,7 +371,7 @@ export type Database = {
           validation_status: string | null
         }
         Insert: {
-          cnpj: string
+          cnpj?: string | null
           company_branch_id?: string | null
           created_at?: string
           file_url?: string | null
@@ -386,7 +386,7 @@ export type Database = {
           validation_status?: string | null
         }
         Update: {
-          cnpj?: string
+          cnpj?: string | null
           company_branch_id?: string | null
           created_at?: string
           file_url?: string | null
