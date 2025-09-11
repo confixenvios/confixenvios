@@ -14,7 +14,6 @@ import {
   MapPin,
   Phone,
   Mail,
-  TrendingUp,
   Filter,
   Eye,
   ChevronDown,
@@ -252,48 +251,6 @@ const ActiveClients = () => {
               return acc;
             }, []).slice(0, 5) : [];
 
-          // Calcular valor total de TODAS as remessas do cliente
-          const { data: allShipments } = await supabase
-            .from('shipments')
-            .select('quote_data')
-            .eq('user_id', profile.id);
-
-          let totalValue = 0;
-          if (allShipments) {
-            console.log(`Processing ${allShipments.length} shipments for client ${profile.email}`);
-            
-            totalValue = allShipments.reduce((sum, shipment) => {
-              const quoteData = shipment.quote_data as any;
-              
-              // Log da estrutura completa para debug
-              console.log(`Quote data for ${profile.email}:`, JSON.stringify(quoteData, null, 2));
-              
-              // Tentar diferentes caminhos para encontrar o preço
-              let price = 0;
-              
-              if (quoteData?.selectedQuote?.price) {
-                price = parseFloat(quoteData.selectedQuote.price);
-              } else if (quoteData?.totalPrice) {
-                price = parseFloat(quoteData.totalPrice);
-              } else if (quoteData?.shippingQuote?.economicPrice) {
-                price = parseFloat(quoteData.shippingQuote.economicPrice);
-              } else if (quoteData?.shippingQuote?.expressPrice) {
-                price = parseFloat(quoteData.shippingQuote.expressPrice);
-              } else if (quoteData?.selectedOption?.price) {
-                price = parseFloat(quoteData.selectedOption.price);
-              } else if (quoteData?.price) {
-                price = parseFloat(quoteData.price);
-              } else if (quoteData?.finalPrice) {
-                price = parseFloat(quoteData.finalPrice);
-              }
-              
-              console.log(`Extracted price: ${price} for shipment`);
-              return sum + (isNaN(price) ? 0 : price);
-            }, 0);
-            
-            console.log(`Total value for client ${profile.email}: R$ ${totalValue}`);
-          }
-
           return {
             ...profile,
             document: profile.document || null,
@@ -302,7 +259,7 @@ const ActiveClients = () => {
             successful_shipments: successfulCount || 0,
             pending_shipments: pendingCount || 0,
             last_shipment: lastShipment?.created_at || null,
-            total_value: totalValue,
+            total_value: 0, // Removido cálculo do valor total
             recent_shipments: recentShipments || [],
             addresses_used: uniqueAddresses
           };
@@ -466,7 +423,7 @@ const ActiveClients = () => {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-muted-foreground">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-muted-foreground">
                       {client.email && (
                         <div className="flex items-center space-x-1">
                           <Mail className="h-3 w-3" />
@@ -482,10 +439,6 @@ const ActiveClients = () => {
                       <div className="flex items-center space-x-1">
                         <Package className="h-3 w-3" />
                         <span>{client.shipment_count} envios</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <TrendingUp className="h-3 w-3" />
-                        <span>{formatCurrency(client.total_value)}</span>
                       </div>
                     </div>
 
