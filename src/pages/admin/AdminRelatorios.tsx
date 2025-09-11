@@ -14,9 +14,7 @@ import {
   Download, 
   Calendar, 
   Package, 
-  Users, 
-  DollarSign, 
-  Truck,
+  DollarSign,
   BarChart3,
   Filter,
   RefreshCw
@@ -27,8 +25,6 @@ interface ReportFilters {
   startDate: string;
   endDate: string;
   status?: string;
-  clientId?: string;
-  motoristaId?: string;
 }
 
 const AdminRelatorios = () => {
@@ -39,12 +35,9 @@ const AdminRelatorios = () => {
     endDate: format(endOfMonth(new Date()), 'yyyy-MM-dd'),
   });
   const [clients, setClients] = useState<any[]>([]);
-  const [motoristas, setMotoristas] = useState<any[]>([]);
   const [stats, setStats] = useState({
     totalShipments: 0,
     totalRevenue: 0,
-    totalClients: 0,
-    totalDrivers: 0,
     activeCTEs: 0
   });
 
@@ -62,14 +55,6 @@ const AdminRelatorios = () => {
         .order('first_name');
       
       if (clientsData) setClients(clientsData);
-
-      // Carregar motoristas
-      const { data: motoristasData } = await supabase
-        .from('motoristas')
-        .select('id, nome, email, status')
-        .order('nome');
-      
-      if (motoristasData) setMotoristas(motoristasData);
     } catch (error) {
       console.error('Erro ao carregar dados básicos:', error);
     }
@@ -87,17 +72,6 @@ const AdminRelatorios = () => {
         .gte('created_at', startDate)
         .lte('created_at', endDate);
 
-      // Total de clientes
-      const { count: clientsCount } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
-
-      // Total de motoristas
-      const { count: driversCount } = await supabase
-        .from('motoristas')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'ativo');
-
       // CTEs ativas
       const { count: ctesCount } = await supabase
         .from('cte_emissoes')
@@ -109,8 +83,6 @@ const AdminRelatorios = () => {
       setStats({
         totalShipments: shipmentsCount || 0,
         totalRevenue: 0, // Calcular depois com base nos dados de pagamento
-        totalClients: clientsCount || 0,
-        totalDrivers: driversCount || 0,
         activeCTEs: ctesCount || 0
       });
     } catch (error) {
@@ -222,14 +194,6 @@ const AdminRelatorios = () => {
 
       if (filters.status && filters.status !== 'all') {
         query = query.eq('status', filters.status);
-      }
-
-      if (filters.clientId && filters.clientId !== 'all') {
-        query = query.eq('user_id', filters.clientId);
-      }
-
-      if (filters.motoristaId && filters.motoristaId !== 'all') {
-        query = query.eq('motorista_id', filters.motoristaId);
       }
 
       const { data: shipments, error } = await query;
@@ -568,7 +532,7 @@ const AdminRelatorios = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="startDate">Data Inicial</Label>
               <Input
@@ -586,24 +550,6 @@ const AdminRelatorios = () => {
                 value={filters.endDate}
                 onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
               />
-            </div>
-            <div className="space-y-2">
-              <Label>Cliente</Label>
-              <Select value={filters.clientId || 'all'} onValueChange={(value) => 
-                setFilters(prev => ({ ...prev, clientId: value === 'all' ? undefined : value }))
-              }>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os clientes" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os clientes</SelectItem>
-                  {clients.map(client => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.first_name} {client.last_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
             <div className="space-y-2">
               <Label>Status</Label>
@@ -639,7 +585,7 @@ const AdminRelatorios = () => {
       </Card>
 
       {/* Estatísticas Gerais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -648,28 +594,6 @@ const AdminRelatorios = () => {
                 <p className="text-2xl font-bold">{stats.totalShipments}</p>
               </div>
               <Package className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Clientes</p>
-                <p className="text-2xl font-bold">{stats.totalClients}</p>
-              </div>
-              <Users className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Motoristas Ativos</p>
-                <p className="text-2xl font-bold">{stats.totalDrivers}</p>
-              </div>
-              <Truck className="h-8 w-8 text-orange-600" />
             </div>
           </CardContent>
         </Card>
@@ -699,12 +623,10 @@ const AdminRelatorios = () => {
 
       {/* Relatórios */}
       <Tabs defaultValue="faturamento" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="faturamento">Faturamento</TabsTrigger>
           <TabsTrigger value="remessas">Remessas</TabsTrigger>
           <TabsTrigger value="cte">CT-e</TabsTrigger>
-          <TabsTrigger value="clientes">Clientes</TabsTrigger>
-          <TabsTrigger value="motoristas">Motoristas</TabsTrigger>
         </TabsList>
 
         <TabsContent value="faturamento">
@@ -779,58 +701,6 @@ const AdminRelatorios = () => {
                 <Button onClick={exportCTEReport} disabled={loading} className="w-full sm:w-auto">
                   <Download className="h-4 w-4 mr-2" />
                   {loading ? 'Exportando...' : 'Exportar Relatório de CT-e'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="clientes">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Relatório de Clientes
-              </CardTitle>
-              <CardDescription>
-                Relatório completo da base de clientes com estatísticas de uso
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Relatório com dados dos clientes, total de remessas realizadas, 
-                  data da última remessa e informações de contato.
-                </p>
-                <Button onClick={exportClientesReport} disabled={loading} className="w-full sm:w-auto">
-                  <Download className="h-4 w-4 mr-2" />
-                  {loading ? 'Exportando...' : 'Exportar Relatório de Clientes'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="motoristas">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Truck className="h-5 w-5" />
-                Relatório de Motoristas
-              </CardTitle>
-              <CardDescription>
-                Relatório da equipe de motoristas com estatísticas de desempenho
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Relatório com dados dos motoristas cadastrados, status, 
-                  total de remessas atribuídas e última atividade.
-                </p>
-                <Button onClick={exportMotoristasReport} disabled={loading} className="w-full sm:w-auto">
-                  <Download className="h-4 w-4 mr-2" />
-                  {loading ? 'Exportando...' : 'Exportar Relatório de Motoristas'}
                 </Button>
               </div>
             </CardContent>
