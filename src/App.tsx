@@ -46,7 +46,7 @@ import AdminWebhooks from "./pages/admin/AdminWebhooks";
 
 
 import AdminTabelas from "./pages/admin/AdminTabelas";
-
+import AdminRelatorios from "./pages/admin/AdminRelatorios";
 import AdminCte from "./pages/admin/AdminCte";
 import MotoristaAuth from "./pages/motorista/MotoristaAuth";
 import MotoristaRegistro from "./pages/motorista/MotoristaRegistro";
@@ -118,8 +118,9 @@ const App = () => (
                       <Route path="faturamento" element={<AdminFaturamento />} />
                       <Route path="remessas" element={<AdminRemessas />} />
                       <Route path="cte" element={<AdminCte />} />
-                      <Route path="tabelas" element={<AdminTabelas />} />
-                      <Route path="integracoes" element={<AdminIntegracoes />} />
+                       <Route path="tabelas" element={<AdminTabelas />} />
+                       <Route path="relatorios" element={<AdminRelatorios />} />
+                       <Route path="integracoes" element={<AdminIntegracoes />} />
                       <Route path="webhooks" element={<AdminWebhooks />} />
                       
                       
