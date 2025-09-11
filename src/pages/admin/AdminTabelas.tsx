@@ -73,14 +73,12 @@ const AdminTabelas = () => {
   // Form state
   const [formData, setFormData] = useState<{
     name: string;
-    cnpj: string;
     company_branch_id: string;
     source_type: 'upload' | 'google_sheets';
     google_sheets_url: string;
     file: File | null;
   }>({
     name: '',
-    cnpj: '',
     company_branch_id: '',
     source_type: 'upload',
     google_sheets_url: '',
@@ -208,7 +206,6 @@ const AdminTabelas = () => {
 
       const tableData = {
         name: formData.name,
-        cnpj: formData.cnpj.replace(/\D/g, ''),
         company_branch_id: formData.company_branch_id,
         source_type: formData.source_type,
         file_url: formData.source_type === 'upload' ? fileUrl : null,
@@ -282,7 +279,6 @@ const AdminTabelas = () => {
     setEditingTable(table);
     setFormData({
       name: table.name,
-      cnpj: table.cnpj,
       company_branch_id: table.company_branch_id,
       source_type: (table.source_type === 'google_sheets' ? 'google_sheets' : 'upload') as 'upload' | 'google_sheets',
       google_sheets_url: table.google_sheets_url || '',
@@ -294,7 +290,6 @@ const AdminTabelas = () => {
   const resetForm = () => {
     setFormData({
       name: '',
-      cnpj: '',
       company_branch_id: '',
       source_type: 'upload',
       google_sheets_url: '',
@@ -355,17 +350,6 @@ const AdminTabelas = () => {
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                     placeholder="Ex: Magalog"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="cnpj">CNPJ da Transportadora</Label>
-                  <Input
-                    id="cnpj"
-                    value={formData.cnpj}
-                    onChange={(e) => setFormData({...formData, cnpj: e.target.value})}
-                    placeholder="00.000.000/0000-00"
                     required
                   />
                 </div>
@@ -471,7 +455,6 @@ const AdminTabelas = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nome</TableHead>
-                      <TableHead>CNPJ</TableHead>
                       <TableHead>Filial</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Status</TableHead>
@@ -483,7 +466,6 @@ const AdminTabelas = () => {
                     {pricingTables.map((table) => (
                       <TableRow key={table.id}>
                         <TableCell className="font-medium">{table.name}</TableCell>
-                        <TableCell>{formatCNPJ(table.cnpj)}</TableCell>
                         <TableCell>
                           {table.company_branches?.fantasy_name || table.company_branches?.name || '-'}
                         </TableCell>
