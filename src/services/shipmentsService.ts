@@ -85,8 +85,7 @@ export const getClientShipments = async (userId: string): Promise<ClientShipment
         state,
         cep,
         complement,
-        reference,
-        phone
+        reference
       ),
       recipient_address:addresses!recipient_address_id (
         name,
@@ -97,8 +96,7 @@ export const getClientShipments = async (userId: string): Promise<ClientShipment
         state,
         cep,
         complement,
-        reference,
-        phone
+        reference
       )
     `)
     .eq('user_id', userId)
@@ -145,8 +143,7 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
         state,
         cep,
         complement,
-        reference,
-        phone
+        reference
       ),
       recipient_address:addresses!shipments_recipient_address_id_fkey(
         name,
@@ -157,8 +154,7 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
         state,
         cep,
         complement,
-        reference,
-        phone
+        reference
       ),
       motoristas(nome, telefone, email)
     `)
