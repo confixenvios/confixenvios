@@ -354,6 +354,62 @@ export type Database = {
         }
         Relationships: []
       }
+      pricing_tables: {
+        Row: {
+          cnpj: string
+          company_branch_id: string | null
+          created_at: string
+          file_url: string | null
+          google_sheets_url: string | null
+          id: string
+          is_active: boolean
+          last_validation_at: string | null
+          name: string
+          source_type: string
+          updated_at: string
+          validation_errors: Json | null
+          validation_status: string | null
+        }
+        Insert: {
+          cnpj: string
+          company_branch_id?: string | null
+          created_at?: string
+          file_url?: string | null
+          google_sheets_url?: string | null
+          id?: string
+          is_active?: boolean
+          last_validation_at?: string | null
+          name: string
+          source_type: string
+          updated_at?: string
+          validation_errors?: Json | null
+          validation_status?: string | null
+        }
+        Update: {
+          cnpj?: string
+          company_branch_id?: string | null
+          created_at?: string
+          file_url?: string | null
+          google_sheets_url?: string | null
+          id?: string
+          is_active?: boolean
+          last_validation_at?: string | null
+          name?: string
+          source_type?: string
+          updated_at?: string
+          validation_errors?: Json | null
+          validation_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_tables_company_branch_id_fkey"
+            columns: ["company_branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -637,6 +693,8 @@ export type Database = {
           motorista_id: string | null
           payment_data: Json | null
           pickup_option: string
+          pricing_table_id: string | null
+          pricing_table_name: string | null
           quote_data: Json
           recipient_address_id: string
           selected_option: string
@@ -661,6 +719,8 @@ export type Database = {
           motorista_id?: string | null
           payment_data?: Json | null
           pickup_option: string
+          pricing_table_id?: string | null
+          pricing_table_name?: string | null
           quote_data: Json
           recipient_address_id: string
           selected_option: string
@@ -685,6 +745,8 @@ export type Database = {
           motorista_id?: string | null
           payment_data?: Json | null
           pickup_option?: string
+          pricing_table_id?: string | null
+          pricing_table_name?: string | null
           quote_data?: Json
           recipient_address_id?: string
           selected_option?: string
@@ -703,6 +765,13 @@ export type Database = {
             columns: ["motorista_id"]
             isOneToOne: false
             referencedRelation: "motoristas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipments_pricing_table_id_fkey"
+            columns: ["pricing_table_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_tables"
             referencedColumns: ["id"]
           },
           {

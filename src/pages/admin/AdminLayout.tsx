@@ -63,6 +63,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'Faturamento', href: '/admin/faturamento', icon: DollarSign },
     { name: 'Remessas', href: '/admin/remessas', icon: Package },
     { name: 'Cte', href: '/admin/cte', icon: FileText },
+    { name: 'Gestão de Tabelas', href: '/admin/tabelas', icon: Database },
     { name: 'Integrações', href: '/admin/integracoes', icon: Puzzle },
     { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
     { name: 'Docs TMS', href: '/admin/docs-integracao', icon: FileText },
