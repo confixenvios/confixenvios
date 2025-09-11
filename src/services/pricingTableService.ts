@@ -107,40 +107,63 @@ export class PricingTableService {
   }
 
   /**
-   * Processa tabela do Google Sheets
+   * Processa tabela do Google Sheets - lê todas as abas e combina informações
    */
   private static async processGoogleSheetsTable(
     table: any,
     { destinyCep, weight, quantity }: { destinyCep: string; weight: number; quantity: number }
   ): Promise<PricingTableQuote | null> {
     try {
-      let csvUrl: string;
-      let workbook: any;
-      let worksheet: any;
-      let data: any[];
-
-      if (table.sheet_name) {
-        // Se tem nome de aba específico, obter GID e usar CSV específico
-        const gid = await this.getSheetGid(table.google_sheets_url, table.sheet_name);
-        if (gid === null) {
-          console.error(`Aba "${table.sheet_name}" não encontrada na planilha`);
-          return null;
-        }
-        csvUrl = this.convertGoogleSheetsUrl(table.google_sheets_url, gid);
-      } else {
-        // Usar primeira aba (comportamento padrão)
-        csvUrl = this.convertGoogleSheetsUrl(table.google_sheets_url);
+      // Obter todas as abas da planilha
+      const sheetNames = await this.getSheetNames(table.google_sheets_url);
+      if (!sheetNames || sheetNames.length === 0) {
+        console.error('Nenhuma aba encontrada na planilha');
+        return null;
       }
-      
-      const response = await fetch(csvUrl);
-      if (!response.ok) throw new Error('Erro ao acessar Google Sheets');
-      
-      const csvData = await response.text();
-      workbook = XLSX.read(csvData, { type: 'string' });
-      worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      data = XLSX.utils.sheet_to_json(worksheet);
 
-      return this.findPriceInData(data, table, { destinyCep, weight, quantity });
+      const allSheetsData: { name: string; data: any[] }[] = [];
+
+      // Ler dados de todas as abas
+      for (const sheetName of sheetNames) {
+        try {
+          const gid = await this.getSheetGid(table.google_sheets_url, sheetName);
+          if (gid === null) continue;
+
+          const csvUrl = this.convertGoogleSheetsUrl(table.google_sheets_url, gid);
+          const response = await fetch(csvUrl);
+          if (!response.ok) continue;
+
+          const csvData = await response.text();
+          const workbook = XLSX.read(csvData, { type: 'string' });
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          const data = XLSX.utils.sheet_to_json(worksheet);
+
+          if (data && data.length > 0) {
+            allSheetsData.push({ name: sheetName, data });
+          }
+        } catch (error) {
+          console.error(`Erro ao processar aba ${sheetName}:`, error);
+          continue;
+        }
+      }
+
+      if (allSheetsData.length === 0) {
+        console.error('Nenhuma aba válida encontrada');
+        return null;
+      }
+
+      // Tentar encontrar preço em cada aba
+      for (const sheetData of allSheetsData) {
+        const quote = this.findPriceInData(sheetData.data, table, { destinyCep, weight, quantity });
+        if (quote) {
+          // Adicionar informação da aba utilizada
+          quote.zoneName = `${table.name} - ${sheetData.name}`;
+          return quote;
+        }
+      }
+
+      // Se não encontrou em nenhuma aba, tentar combinar dados (para casos especiais)
+      return this.combineSheetsData(allSheetsData, table, { destinyCep, weight, quantity });
     } catch (error) {
       console.error('Erro ao processar Google Sheets:', error);
       return null;
@@ -216,6 +239,82 @@ export class PricingTableService {
       tableName: table.name,
       cnpj: table.cnpj
     };
+  }
+
+  /**
+   * Combina dados de múltiplas abas quando necessário
+   */
+  private static combineSheetsData(
+    allSheetsData: { name: string; data: any[] }[],
+    table: any,
+    { destinyCep, weight, quantity }: { destinyCep: string; weight: number; quantity: number }
+  ): PricingTableQuote | null {
+    // Lógica para combinar dados de diferentes abas
+    // Por exemplo: uma aba com preços e outra com abrangência
+    const cleanCep = destinyCep.replace(/\D/g, '').padStart(8, '0');
+    
+    // Procurar por aba de abrangência/CEPs
+    const coverageSheet = allSheetsData.find(sheet => 
+      sheet.name.toLowerCase().includes('abrang') || 
+      sheet.name.toLowerCase().includes('cep') ||
+      sheet.data.some(row => row.CEP_INICIO || row.cep_inicio)
+    );
+    
+    // Procurar por aba de preços
+    const priceSheet = allSheetsData.find(sheet => 
+      sheet.name.toLowerCase().includes('prec') ||
+      sheet.name.toLowerCase().includes('peso') ||
+      sheet.data.some(row => row.PRECO || row.preco)
+    );
+    
+    if (!coverageSheet && !priceSheet) {
+      return null;
+    }
+    
+    // Se temos duas abas distintas, combinar informações
+    if (coverageSheet && priceSheet && coverageSheet !== priceSheet) {
+      // Buscar zona na aba de abrangência
+      const coverageRow = coverageSheet.data.find((row: any) => {
+        const cepStart = String(row.CEP_INICIO || row.cep_inicio || '').replace(/\D/g, '').padStart(8, '0');
+        const cepEnd = String(row.CEP_FIM || row.cep_fim || '').replace(/\D/g, '').padStart(8, '0');
+        return cleanCep >= cepStart && cleanCep <= cepEnd;
+      });
+      
+      if (!coverageRow) return null;
+      
+      const zone = coverageRow.ZONA || coverageRow.zona || coverageRow.REGIAO || coverageRow.regiao;
+      const days = Number(coverageRow.PRAZO || coverageRow.prazo || 5);
+      
+      // Buscar preço na aba de preços usando zona e peso
+      const priceRow = priceSheet.data.find((row: any) => {
+        const rowZone = row.ZONA || row.zona || row.REGIAO || row.regiao;
+        const weightMin = Number(row.PESO_MIN || row.peso_min || 0);
+        const weightMax = Number(row.PESO_MAX || row.peso_max || 99999);
+        
+        return rowZone === zone && weight >= weightMin && weight <= weightMax;
+      });
+      
+      if (!priceRow) return null;
+      
+      const basePrice = Number(priceRow.PRECO || priceRow.preco || 0);
+      if (basePrice <= 0) return null;
+      
+      const totalPrice = basePrice * quantity;
+      
+      return {
+        economicPrice: Number(totalPrice.toFixed(2)),
+        expressPrice: Number((totalPrice * 1.6).toFixed(2)),
+        economicDays: days,
+        expressDays: Math.max(1, days - 2),
+        zone: String(zone),
+        zoneName: `${table.name} - Zona ${zone}`,
+        tableId: table.id,
+        tableName: table.name,
+        cnpj: table.cnpj
+      };
+    }
+    
+    return null;
   }
 
   /**
@@ -311,7 +410,7 @@ export class PricingTableService {
   }
 
   /**
-   * Valida uma tabela de preços
+   * Valida uma tabela de preços - processa todas as abas quando necessário
    */
   static async validatePricingTable(tableId: string): Promise<ValidationResult> {
     try {
@@ -325,41 +424,50 @@ export class PricingTableService {
         throw new Error('Tabela não encontrada');
       }
 
-      let data: any[] = [];
+      let allData: any[] = [];
 
       // Buscar dados da tabela
       if (table.source_type === 'google_sheets') {
-        let csvUrl: string;
-        let workbook: any;
-        let worksheet: any;
-
-        if (table.sheet_name) {
-          // Se tem nome de aba específico, obter GID e usar CSV específico
-          const gid = await this.getSheetGid(table.google_sheets_url, table.sheet_name);
-          if (gid === null) {
-            throw new Error(`Aba "${table.sheet_name}" não encontrada na planilha`);
-          }
-          csvUrl = this.convertGoogleSheetsUrl(table.google_sheets_url, gid);
-        } else {
-          // Usar primeira aba (comportamento padrão)
-          csvUrl = this.convertGoogleSheetsUrl(table.google_sheets_url);
+        // Obter todas as abas da planilha
+        const sheetNames = await this.getSheetNames(table.google_sheets_url);
+        
+        if (!sheetNames || sheetNames.length === 0) {
+          throw new Error('Nenhuma aba encontrada na planilha');
         }
 
-        const response = await fetch(csvUrl);
-        const csvData = await response.text();
-        workbook = XLSX.read(csvData, { type: 'string' });
-        worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        data = XLSX.utils.sheet_to_json(worksheet);
+        // Processar todas as abas
+        for (const sheetName of sheetNames) {
+          try {
+            const gid = await this.getSheetGid(table.google_sheets_url, sheetName);
+            if (gid === null) continue;
+
+            const csvUrl = this.convertGoogleSheetsUrl(table.google_sheets_url, gid);
+            const response = await fetch(csvUrl);
+            if (!response.ok) continue;
+
+            const csvData = await response.text();
+            const workbook = XLSX.read(csvData, { type: 'string' });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const data = XLSX.utils.sheet_to_json(worksheet);
+
+            if (data && data.length > 0) {
+              allData = allData.concat(data);
+            }
+          } catch (error) {
+            console.error(`Erro ao processar aba ${sheetName}:`, error);
+            continue;
+          }
+        }
       } else if (table.file_url) {
         const response = await fetch(table.file_url);
         const arrayBuffer = await response.arrayBuffer();
         const workbook = XLSX.read(arrayBuffer);
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        data = XLSX.utils.sheet_to_json(worksheet);
+        allData = XLSX.utils.sheet_to_json(worksheet);
       }
 
-      // Validar estrutura dos dados
-      const result = this.validateTableData(data);
+      // Validar estrutura dos dados combinados
+      const result = this.validateTableData(allData);
 
       // Atualizar status da validação no banco
       const { error: updateError } = await supabase
