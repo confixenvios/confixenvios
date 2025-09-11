@@ -228,14 +228,21 @@ const AdminRemessas = () => {
     
     // Buscar dados do CTE se existir
     if (shipment.id) {
+      console.log('Buscando CTE para shipment:', shipment.id);
       try {
-        const { data: cte } = await supabase
+        const { data: cte, error } = await supabase
           .from('cte_emissoes')
           .select('*')
           .eq('shipment_id', shipment.id)
           .single();
         
-        setCteData(cte);
+        if (error) {
+          console.log('Erro ao buscar CTE:', error);
+          setCteData(null);
+        } else {
+          console.log('CTE encontrado:', cte);
+          setCteData(cte);
+        }
       } catch (error) {
         console.log('Nenhum CTE encontrado para esta remessa');
         setCteData(null);
@@ -896,8 +903,103 @@ const AdminRemessas = () => {
                    </div>
                  )}
 
-                 {/* Dados do CT-e */}
-                 {(selectedShipmentDetails.cte_key || cteData) && (
+                  {/* Dados do CT-e - DEBUG */}
+                  <div>
+                    <Separator />
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Debug CT-e</h3>
+                      <div className="text-sm space-y-2">
+                        <div>CTE Data: {cteData ? 'Encontrado' : 'Não encontrado'}</div>
+                        <div>CTE Key: {selectedShipmentDetails.cte_key || 'Não tem'}</div>
+                        <div>Shipment ID: {selectedShipmentDetails.id}</div>
+                        {cteData && (
+                          <div>
+                            <p>Chave: {cteData.chave_cte}</p>
+                            <p>Status: {cteData.status}</p>
+                            <p>Número: {cteData.numero_cte}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dados do CT-e */}
+                  {(selectedShipmentDetails.cte_key || cteData) && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3">Dados do CT-e</h3>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          {(cteData?.chave_cte || selectedShipmentDetails.cte_key) && (
+                            <div className="col-span-2">
+                              <p className="text-muted-foreground">Chave do CT-e</p>
+                              <p className="font-mono text-xs break-all">{cteData?.chave_cte || selectedShipmentDetails.cte_key}</p>
+                            </div>
+                          )}
+                          {cteData?.numero_cte && (
+                            <div>
+                              <p className="text-muted-foreground">Número</p>
+                              <p className="font-medium">{cteData.numero_cte}</p>
+                            </div>
+                          )}
+                          {cteData?.serie && (
+                            <div>
+                              <p className="text-muted-foreground">Série</p>
+                              <p className="font-medium">{cteData.serie}</p>
+                            </div>
+                          )}
+                          {cteData?.modelo && (
+                            <div>
+                              <p className="text-muted-foreground">Modelo</p>
+                              <p className="font-medium">{cteData.modelo}</p>
+                            </div>
+                          )}
+                          {cteData?.status && (
+                            <div>
+                              <p className="text-muted-foreground">Status</p>
+                              <Badge variant={cteData.status === 'Autorizado' || cteData.status === 'aprovado' ? 'success' : 'secondary'} className="text-xs">
+                                {cteData.status}
+                              </Badge>
+                            </div>
+                          )}
+                          {cteData?.created_at && (
+                            <div>
+                              <p className="text-muted-foreground">Data de Criação</p>
+                              <p className="font-medium">{formatDate(cteData.created_at)}</p>
+                            </div>
+                          )}
+                          {cteData?.xml_url && (
+                            <div className="col-span-2">
+                              <p className="text-muted-foreground">XML</p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(cteData.xml_url, '_blank')}
+                                className="h-8 px-3"
+                              >
+                                <Download className="w-3 h-3 mr-1" />
+                                Baixar XML
+                              </Button>
+                            </div>
+                          )}
+                          {cteData?.dacte_url && (
+                            <div className="col-span-2">
+                              <p className="text-muted-foreground">DACTE</p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(cteData.dacte_url, '_blank')}
+                                className="h-8 px-3"
+                              >
+                                <Download className="w-3 h-3 mr-1" />
+                                Baixar DACTE
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
                    <>
                      <Separator />
                      <div>
