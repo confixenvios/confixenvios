@@ -553,17 +553,28 @@ const AdminRemessas = () => {
                                   Tabela: {shipment.pricing_table_name}
                                 </div>
                               )}
-                              <div className="flex items-center text-xs mt-1">
-                                {shipment.label_pdf_url ? (
-                                  <Badge variant="success" className="text-xs">
-                                    Etiqueta Emitida
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="destructive" className="text-xs">
-                                    Etiqueta Pendente
-                                  </Badge>
-                                )}
-                              </div>
+                               <div className="flex items-center gap-2 text-xs mt-1">
+                                 {shipment.label_pdf_url ? (
+                                   <>
+                                     <Badge variant="success" className="text-xs">
+                                       Etiqueta Emitida
+                                     </Badge>
+                                     <Button
+                                       variant="outline"
+                                       size="sm"
+                                       onClick={() => window.open(shipment.label_pdf_url!, '_blank')}
+                                       className="h-6 px-2 text-xs"
+                                     >
+                                       <Download className="w-3 h-3 mr-1" />
+                                       Ver Etiqueta
+                                     </Button>
+                                   </>
+                                 ) : (
+                                   <Badge variant="destructive" className="text-xs">
+                                     Etiqueta Pendente
+                                   </Badge>
+                                 )}
+                               </div>
                            </div>
                         </div>
                       </div>
