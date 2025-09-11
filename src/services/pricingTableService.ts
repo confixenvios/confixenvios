@@ -249,54 +249,64 @@ export class PricingTableService {
     table: any,
     { destinyCep, weight, quantity }: { destinyCep: string; weight: number; quantity: number }
   ): PricingTableQuote | null {
-    // Lógica para combinar dados de diferentes abas
-    // Por exemplo: uma aba com preços e outra com abrangência
     const cleanCep = destinyCep.replace(/\D/g, '').padStart(8, '0');
     
-    // Procurar por aba de abrangência/CEPs
-    const coverageSheet = allSheetsData.find(sheet => 
-      sheet.name.toLowerCase().includes('abrang') || 
-      sheet.name.toLowerCase().includes('cep') ||
-      sheet.data.some(row => row.CEP_INICIO || row.cep_inicio)
-    );
-    
-    // Procurar por aba de preços
+    // Procurar aba de preços (contém PRECO e PESO)
     const priceSheet = allSheetsData.find(sheet => 
-      sheet.name.toLowerCase().includes('prec') ||
-      sheet.name.toLowerCase().includes('peso') ||
-      sheet.data.some(row => row.PRECO || row.preco)
+      sheet.data.some(row => 
+        (row.PRECO || row.preco) && 
+        (row.PESO_MIN || row.peso_min || row.PESO_MAX || row.peso_max)
+      )
     );
     
-    if (!coverageSheet && !priceSheet) {
+    // Procurar aba de prazos/abrangência (contém CEP e PRAZO)
+    const deliverySheet = allSheetsData.find(sheet => 
+      sheet.data.some(row => 
+        (row.CEP_INICIO || row.cep_inicio) && 
+        (row.PRAZO || row.prazo)
+      )
+    );
+    
+    if (!priceSheet || !deliverySheet) {
       return null;
     }
     
-    // Se temos duas abas distintas, combinar informações
-    if (coverageSheet && priceSheet && coverageSheet !== priceSheet) {
-      // Buscar zona na aba de abrangência
-      const coverageRow = coverageSheet.data.find((row: any) => {
-        const cepStart = String(row.CEP_INICIO || row.cep_inicio || '').replace(/\D/g, '').padStart(8, '0');
-        const cepEnd = String(row.CEP_FIM || row.cep_fim || '').replace(/\D/g, '').padStart(8, '0');
-        return cleanCep >= cepStart && cleanCep <= cepEnd;
-      });
+    // 1. Buscar informações de prazo e zona na aba de abrangência/prazo
+    const deliveryRow = deliverySheet.data.find((row: any) => {
+      const cepStart = String(row.CEP_INICIO || row.cep_inicio || '').replace(/\D/g, '').padStart(8, '0');
+      const cepEnd = String(row.CEP_FIM || row.cep_fim || '').replace(/\D/g, '').padStart(8, '0');
+      return cleanCep >= cepStart && cleanCep <= cepEnd;
+    });
+    
+    if (!deliveryRow) return null;
+    
+    const zone = deliveryRow.ZONA || deliveryRow.zona || deliveryRow.REGIAO || deliveryRow.regiao || 'PADRAO';
+    const days = Number(deliveryRow.PRAZO || deliveryRow.prazo || 5);
+    
+    // 2. Buscar preço na aba de preços usando zona e peso
+    const priceRow = priceSheet.data.find((row: any) => {
+      const rowZone = row.ZONA || row.zona || row.REGIAO || row.regiao || 'PADRAO';
+      const weightMin = Number(row.PESO_MIN || row.peso_min || 0);
+      const weightMax = Number(row.PESO_MAX || row.peso_max || 99999);
       
-      if (!coverageRow) return null;
-      
-      const zone = coverageRow.ZONA || coverageRow.zona || coverageRow.REGIAO || coverageRow.regiao;
-      const days = Number(coverageRow.PRAZO || coverageRow.prazo || 5);
-      
-      // Buscar preço na aba de preços usando zona e peso
-      const priceRow = priceSheet.data.find((row: any) => {
-        const rowZone = row.ZONA || row.zona || row.REGIAO || row.regiao;
+      return (
+        String(rowZone).toLowerCase() === String(zone).toLowerCase() && 
+        weight >= weightMin && 
+        weight <= weightMax
+      );
+    });
+    
+    if (!priceRow) {
+      // Fallback: buscar por peso apenas se não encontrar por zona
+      const fallbackPriceRow = priceSheet.data.find((row: any) => {
         const weightMin = Number(row.PESO_MIN || row.peso_min || 0);
         const weightMax = Number(row.PESO_MAX || row.peso_max || 99999);
-        
-        return rowZone === zone && weight >= weightMin && weight <= weightMax;
+        return weight >= weightMin && weight <= weightMax;
       });
       
-      if (!priceRow) return null;
+      if (!fallbackPriceRow) return null;
       
-      const basePrice = Number(priceRow.PRECO || priceRow.preco || 0);
+      const basePrice = Number(fallbackPriceRow.PRECO || fallbackPriceRow.preco || 0);
       if (basePrice <= 0) return null;
       
       const totalPrice = basePrice * quantity;
@@ -307,14 +317,29 @@ export class PricingTableService {
         economicDays: days,
         expressDays: Math.max(1, days - 2),
         zone: String(zone),
-        zoneName: `${table.name} - Zona ${zone}`,
+        zoneName: `${table.name} - Combinado (${priceSheet.name} + ${deliverySheet.name})`,
         tableId: table.id,
         tableName: table.name,
         cnpj: table.cnpj
       };
     }
     
-    return null;
+    const basePrice = Number(priceRow.PRECO || priceRow.preco || 0);
+    if (basePrice <= 0) return null;
+    
+    const totalPrice = basePrice * quantity;
+    
+    return {
+      economicPrice: Number(totalPrice.toFixed(2)),
+      expressPrice: Number((totalPrice * 1.6).toFixed(2)),
+      economicDays: days,
+      expressDays: Math.max(1, days - 2),
+      zone: String(zone),
+      zoneName: `${table.name} - Combinado (${priceSheet.name} + ${deliverySheet.name})`,
+      tableId: table.id,
+      tableName: table.name,
+      cnpj: table.cnpj
+    };
   }
 
   /**
