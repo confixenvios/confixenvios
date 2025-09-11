@@ -68,7 +68,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
     { name: 'Docs TMS', href: '/admin/docs-integracao', icon: FileText },
     { name: 'Logs Webhooks', href: '/admin/webhooks/logs', icon: History },
-    { name: 'Histórico', href: '/admin/historico', icon: History },
+    
     
   ];
 

@@ -40,7 +40,7 @@ import AdminMotoristas from "./pages/admin/AdminMotoristas";
 import AdminFiliais from "./pages/admin/AdminFiliais";
 import AdminRemessas from "./pages/admin/AdminRemessas";
 import AdminFaturamento from "./pages/admin/AdminFaturamento";
-import AdminHistorico from "./pages/admin/AdminHistorico";
+
 import AdminIntegracoes from "./pages/admin/AdminIntegracoes";
 import AdminWebhooks from "./pages/admin/AdminWebhooks";
 import AdminWebhookLogs from "./pages/admin/AdminWebhookLogs";
@@ -123,7 +123,7 @@ const App = () => (
                       <Route path="webhooks" element={<AdminWebhooks />} />
                       <Route path="docs-integracao" element={<AdminDocsIntegracao />} />
                       <Route path="webhooks/logs" element={<AdminWebhookLogs />} />
-                      <Route path="historico" element={<AdminHistorico />} />
+                      
                       
                     </Routes>
                   </AdminLayout>
