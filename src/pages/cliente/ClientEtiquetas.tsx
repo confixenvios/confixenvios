@@ -28,6 +28,7 @@ interface Shipment {
   label_pdf_url: string | null;
   created_at: string;
   weight: number;
+  pricing_table_name?: string;
   sender_address: {
     name: string;
     city: string;
@@ -71,6 +72,7 @@ const ClientEtiquetas = () => {
           created_at,
           weight,
           quote_data,
+          pricing_table_name,
           sender_address:addresses!sender_address_id(name, city, state),
           recipient_address:addresses!recipient_address_id(name, city, state)
         `)
@@ -350,6 +352,12 @@ const ClientEtiquetas = () => {
                             <Calendar className="w-3 h-3 mr-1" />
                             {new Date(shipment.created_at).toLocaleDateString('pt-BR')}
                           </p>
+                          {shipment.pricing_table_name && (
+                            <p className="flex items-center">
+                              <FileText className="w-3 h-3 mr-1" />
+                              <span className="text-xs">Tabela: {shipment.pricing_table_name}</span>
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>

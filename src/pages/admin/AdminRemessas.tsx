@@ -21,6 +21,7 @@ interface Shipment {
   tracking_code: string | null;
   client_name: string;
   user_id?: string;
+  pricing_table_name?: string;
   sender_address: {
     name: string;
     street: string;
@@ -111,6 +112,7 @@ const AdminRemessas = () => {
           cte_key,
           user_id,
           motorista_id,
+          pricing_table_name,
           sender_address:addresses!shipments_sender_address_id_fkey(
             name,
             street,
@@ -157,6 +159,7 @@ const AdminRemessas = () => {
             id: shipment.id,
             tracking_code: shipment.tracking_code,
             user_id: shipment.user_id,
+            pricing_table_name: shipment.pricing_table_name,
             client_name: clientProfile 
               ? `${clientProfile.first_name || ''} ${clientProfile.last_name || ''}`.trim() || clientProfile.email || 'Cliente Anônimo'
               : 'Cliente Anônimo',
@@ -536,15 +539,21 @@ const AdminRemessas = () => {
                             <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Valor</span>
                           </div>
-                          <div>
-                             <p className="font-bold text-lg text-primary">
-                               R$ {getQuoteValue(shipment).toFixed(2).replace('.', ',')}
-                             </p>
-                            <div className="flex items-center text-xs text-muted-foreground mt-1">
-                              <Package className="w-3 h-3 mr-1" />
-                              {shipment.weight}kg • {shipment.format}
-                            </div>
-                          </div>
+                           <div>
+                              <p className="font-bold text-lg text-primary">
+                                R$ {getQuoteValue(shipment).toFixed(2).replace('.', ',')}
+                              </p>
+                             <div className="flex items-center text-xs text-muted-foreground mt-1">
+                               <Package className="w-3 h-3 mr-1" />
+                               {shipment.weight}kg • {shipment.format}
+                             </div>
+                             {shipment.pricing_table_name && (
+                               <div className="flex items-center text-xs text-muted-foreground mt-1">
+                                 <FileText className="w-3 h-3 mr-1" />
+                                 Tabela: {shipment.pricing_table_name}
+                               </div>
+                             )}
+                           </div>
                         </div>
                       </div>
                     </div>
@@ -590,15 +599,21 @@ const AdminRemessas = () => {
                       <p className="text-muted-foreground">Tipo de Serviço</p>
                       <p className="font-medium">{selectedShipmentDetails.selected_option === 'standard' ? 'Econômico' : 'Expresso'}</p>
                     </div>
-                    <div>
-                      <p className="text-muted-foreground">Opção de Coleta</p>
-                      <p className="font-medium">{selectedShipmentDetails.pickup_option === 'dropoff' ? 'Entrega no Hub' : 'Coleta no Local'}</p>
-                    </div>
-                    {selectedShipmentDetails.cte_key && (
-                      <div>
-                        <p className="text-muted-foreground">Chave CTE</p>
-                        <p className="font-medium font-mono text-xs">{selectedShipmentDetails.cte_key}</p>
-                      </div>
+                     <div>
+                       <p className="text-muted-foreground">Opção de Coleta</p>
+                       <p className="font-medium">{selectedShipmentDetails.pickup_option === 'dropoff' ? 'Entrega no Hub' : 'Coleta no Local'}</p>
+                     </div>
+                     {selectedShipmentDetails.pricing_table_name && (
+                       <div>
+                         <p className="text-muted-foreground">Tabela de Preços</p>
+                         <p className="font-medium">{selectedShipmentDetails.pricing_table_name}</p>
+                       </div>
+                     )}
+                     {selectedShipmentDetails.cte_key && (
+                       <div>
+                         <p className="text-muted-foreground">Chave CTE</p>
+                         <p className="font-medium font-mono text-xs">{selectedShipmentDetails.cte_key}</p>
+                       </div>
                     )}
                     <div>
                       <p className="text-muted-foreground">Cliente</p>
