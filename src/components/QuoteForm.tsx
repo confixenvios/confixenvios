@@ -321,6 +321,12 @@ const QuoteForm = () => {
 
   // Função para processar o cálculo da cotação
   const processQuoteCalculation = async () => {
+    // Evitar múltiplas requisições simultâneas
+    if (isLoading) {
+      console.log('Cotação já sendo processada, ignorando nova requisição');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -355,6 +361,23 @@ const QuoteForm = () => {
       }
 
       const quantity = parseInt(formData.quantity) || 1;
+
+      console.log('Iniciando cálculo de cotação...', { 
+        cep: formData.destinyCep, 
+        weight, 
+        quantity 
+      });
+
+      // Limpar cache antigo se necessário (cache de mais de 10 minutos)
+      const lastCacheCheck = sessionStorage.getItem('last_cache_check');
+      const now = Date.now();
+      if (!lastCacheCheck || now - parseInt(lastCacheCheck) > 10 * 60 * 1000) {
+        console.log('Limpando cache antigo...');
+        // Importar e usar a função de limpeza
+        const { clearQuoteCache } = await import('@/services/shippingService');
+        clearQuoteCache();
+        sessionStorage.setItem('last_cache_check', now.toString());
+      }
 
       const shippingQuote = await calculateShippingQuote({
         destinyCep: formData.destinyCep,
@@ -391,17 +414,31 @@ const QuoteForm = () => {
       setCurrentStep(2);
       
       toast({
-        title: "Cotação calculada!",
-        description: "Escolha uma opção de coleta para continuar",
+        title: "Cotação calculada com sucesso!",
+        description: `Preço: R$ ${shippingQuote.economicPrice.toFixed(2)} - Escolha uma opção de coleta`,
       });
 
     } catch (error) {
       console.error('Erro ao calcular frete:', error);
+      
+      // Mensagens de erro mais específicas
+      let errorMessage = "Erro inesperado ao calcular o frete";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Erro no cálculo",
-        description: error instanceof Error ? error.message : "Erro inesperado ao calcular o frete",
+        description: errorMessage,
         variant: "destructive"
       });
+      
+      // Limpar cache se erro persistir
+      if (errorMessage.includes('timeout') || errorMessage.includes('Timeout')) {
+        const { clearQuoteCache } = await import('@/services/shippingService');
+        clearQuoteCache();
+      }
+      
     } finally {
       setIsLoading(false);
     }
@@ -796,12 +833,12 @@ const QuoteForm = () => {
                 <Button
                   onClick={handleStep1Submit}
                   disabled={!isStep1Valid || isLoading}
-                  className="w-full h-16 text-lg font-semibold bg-gradient-primary hover:shadow-primary transition-all duration-300 mt-8"
+                  className="w-full h-16 text-lg font-semibold bg-gradient-primary hover:shadow-primary transition-all duration-300 mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <div className="flex items-center space-x-3">
                       <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"></div>
-                      <span>Calculando...</span>
+                      <span>Calculando frete...</span>
                     </div>
                   ) : (
                     <>

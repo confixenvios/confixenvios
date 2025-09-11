@@ -40,28 +40,53 @@ export class PricingTableService {
     quantity?: number;
   }): Promise<PricingTableQuote | null> {
     try {
-      // Buscar todas as tabelas ativas
-      const { data: tables, error } = await supabase
-        .from('pricing_tables')
-        .select('*')
-        .eq('is_active', true)
-        .eq('validation_status', 'valid');
+      // OTIMIZAÇÃO: Cache para evitar chamadas repetidas desnecessárias
+      const cacheKey = 'active_pricing_tables';
+      const cachedTables = sessionStorage.getItem(cacheKey);
+      let tables: any[] = [];
 
-      if (error) throw error;
+      if (cachedTables) {
+        const { data, timestamp } = JSON.parse(cachedTables);
+        // Cache válido por 2 minutos
+        if (Date.now() - timestamp < 2 * 60 * 1000) {
+          tables = data;
+          console.log('Usando tabelas em cache');
+        }
+      }
 
-      if (!tables || tables.length === 0) {
-        // Fallback para o sistema antigo
+      // Se não há cache ou expirou, buscar do banco
+      if (tables.length === 0) {
+        console.log('Buscando tabelas ativas no banco...');
+        const { data, error } = await supabase
+          .from('pricing_tables')
+          .select('*')
+          .eq('is_active', true)
+          .eq('validation_status', 'valid');
+
+        if (error) throw error;
+
+        tables = data || [];
+        
+        // Cachear o resultado (incluindo arrays vazios)
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          data: tables,
+          timestamp: Date.now()
+        }));
+      }
+
+      if (tables.length === 0) {
+        console.log('Nenhuma tabela ativa encontrada, usando fallback imediatamente');
         return await this.getFallbackQuote({ destinyCep, weight, quantity });
       }
 
-      // OTIMIZAÇÃO: Processar tabelas em paralelo com timeout
+      // OTIMIZAÇÃO: Processar tabelas em paralelo com timeout reduzido
       const quotePromises = tables.map(async (table) => {
         try {
-          // Timeout de 8 segundos por tabela
+          // Timeout de 4 segundos por tabela
           return await Promise.race([
             this.getQuoteFromTable(table, { destinyCep, weight, quantity }),
             new Promise<null>((_, reject) => 
-              setTimeout(() => reject(new Error('Timeout')), 8000)
+              setTimeout(() => reject(new Error('Timeout')), 4000)
             )
           ]);
         } catch (error) {
@@ -70,18 +95,18 @@ export class PricingTableService {
         }
       });
 
-      // Aguardar todas as cotações com timeout global de 15 segundos
+      // Aguardar todas as cotações com timeout global de 8 segundos
       const quotes = await Promise.race([
         Promise.all(quotePromises),
         new Promise<(PricingTableQuote | null)[]>((resolve) => 
-          setTimeout(() => resolve([]), 15000)
+          setTimeout(() => resolve([]), 8000)
         )
       ]);
 
       const validQuotes = quotes.filter((quote): quote is PricingTableQuote => quote !== null);
 
       if (validQuotes.length === 0) {
-        // Fallback para o sistema antigo se nenhuma tabela retornar cotação
+        console.log('Nenhuma cotação válida encontrada, usando fallback');
         return await this.getFallbackQuote({ destinyCep, weight, quantity });
       }
 
