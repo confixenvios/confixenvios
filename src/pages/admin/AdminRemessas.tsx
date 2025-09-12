@@ -8,12 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Search, Package, Eye, Download, Filter, UserPlus, Truck, Calendar, MapPin, Clock, FileText, Send, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Search, Package, Eye, Download, Filter, UserPlus, Truck, Calendar as CalendarIcon, MapPin, Clock, FileText, Send, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getAdminShipments, type AdminShipment } from '@/services/shipmentsService';
+import { cn } from "@/lib/utils";
 
 import { ShipmentOccurrencesModal } from '@/components/admin/ShipmentOccurrencesModal';
 
@@ -92,6 +95,8 @@ const AdminRemessas = () => {
   const [cteData, setCteData] = useState<any>(null);
   const [webhookStatuses, setWebhookStatuses] = useState<Record<string, 'sent' | 'pending' | 'error'>>({});
   const [sendingWebhook, setSendingWebhook] = useState<Record<string, boolean>>({});
+  const [dateFrom, setDateFrom] = useState<Date>();
+  const [dateTo, setDateTo] = useState<Date>();
 
   // Verificar autenticação e permissões diretamente
   useEffect(() => {
@@ -241,6 +246,20 @@ const AdminRemessas = () => {
     try {
       console.log('🔄 [WEBHOOK MANUAL] Enviando webhook para remessa:', shipment.tracking_code);
       
+      // Buscar dados da tabela de preços se existir o nome da tabela
+      let pricingTableData = null;
+      if (shipment.pricing_table_name) {
+        const { data, error } = await supabase
+          .from('pricing_tables')
+          .select('*')
+          .eq('name', shipment.pricing_table_name)
+          .single();
+        
+        if (!error && data) {
+          pricingTableData = data;
+        }
+      }
+      
       const { data, error } = await supabase.functions.invoke('shipment-webhook-dispatch', {
         body: {
           shipmentId: shipment.id,
@@ -248,6 +267,9 @@ const AdminRemessas = () => {
             tracking_code: shipment.tracking_code,
             status: shipment.status,
             created_at: shipment.created_at,
+            // Incluir dados completos da tabela de preços
+            pricing_table_name: shipment.pricing_table_name,
+            pricing_table_data: pricingTableData,
             // Incluir todos os dados da remessa
             ...shipment
           }
@@ -445,7 +467,22 @@ const AdminRemessas = () => {
                           shipment.client_name.toLowerCase().includes(searchTerm.toLowerCase())) ?? false;
     const matchesStatus = statusFilter === "all" || shipment.status === statusFilter;
     
-    return matchesSearch && matchesStatus;
+    // Filtro por período
+    let matchesPeriod = true;
+    if (dateFrom || dateTo) {
+      const shipmentDate = new Date(shipment.created_at);
+      const fromDate = dateFrom ? new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate()) : null;
+      const toDate = dateTo ? new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), 23, 59, 59) : null;
+      
+      if (fromDate && shipmentDate < fromDate) {
+        matchesPeriod = false;
+      }
+      if (toDate && shipmentDate > toDate) {
+        matchesPeriod = false;
+      }
+    }
+    
+    return matchesSearch && matchesStatus && matchesPeriod;
   });
 
   return (
@@ -473,7 +510,7 @@ const AdminRemessas = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Buscar</label>
               <div className="relative">
@@ -507,12 +544,70 @@ const AdminRemessas = () => {
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Data Inicial</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dateFrom && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "Selecionar data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateFrom}
+                    onSelect={setDateFrom}
+                    disabled={(date) => date > new Date() || (dateTo && date > dateTo)}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Data Final</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dateTo && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateTo ? format(dateTo, "dd/MM/yyyy") : "Selecionar data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateTo}
+                    onSelect={setDateTo}
+                    disabled={(date) => date > new Date() || (dateFrom && date < dateFrom)}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
             <div className="flex items-end">
               <Button 
                 variant="outline" 
                 onClick={() => {
                   setSearchTerm("");
                   setStatusFilter("all");
+                  setDateFrom(undefined);
+                  setDateTo(undefined);
                 }}
                 className="w-full"
               >
@@ -770,7 +865,19 @@ const AdminRemessas = () => {
                     {selectedShipmentDetails.pricing_table_name && (
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Tabela de Preços</label>
-                        <p className="text-sm">{selectedShipmentDetails.pricing_table_name}</p>
+                        <div className="mt-1 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <FileText className="w-4 h-4 text-blue-600" />
+                            <span className="font-medium text-blue-800">{selectedShipmentDetails.pricing_table_name}</span>
+                          </div>
+                          <p className="text-xs text-blue-600">
+                            Esta remessa foi cotada utilizando a tabela de preços personalizada acima. 
+                            Os valores e prazos foram calculados com base nesta configuração específica.
+                          </p>
+                          <div className="mt-2 text-xs text-muted-foreground">
+                            ℹ️ Tabela aplicada automaticamente durante a cotação
+                          </div>
+                        </div>
                       </div>
                     )}
                   </CardContent>
