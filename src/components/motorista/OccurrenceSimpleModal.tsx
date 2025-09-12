@@ -131,6 +131,7 @@ export const OccurrenceSimpleModal = ({
     console.log('📦 Shipment ID:', shipmentId);
     console.log('🚛 Motorista ID:', motoristaId);
     
+    // Verificar se há anexos ANTES de tentar salvar
     if (photos.length === 0 && !audioUrl) {
       console.log('❌ [OCCURRENCE DEBUG] Nenhum anexo fornecido');
       toast({
@@ -144,30 +145,54 @@ export const OccurrenceSimpleModal = ({
     const supabase = createSecureSupabaseClient();
     
     try {
+      // TESTAR ACESSO À TABELA PRIMEIRO
+      console.log('🔍 [DEBUG] Testando acesso à tabela shipment_occurrences...');
+      const { data: testData, error: testError } = await supabase
+        .from('shipment_occurrences')
+        .select('count')
+        .limit(1);
+      
+      if (testError) {
+        console.error('❌ [DEBUG] Erro ao acessar tabela shipment_occurrences:', testError);
+        toast({
+          title: "Erro de permissão",
+          description: "Não foi possível acessar a tabela de ocorrências. Verifique as permissões.",
+          variant: "destructive"
+        });
+        return;
+      }
+      console.log('✅ [DEBUG] Acesso à tabela OK');
+      
       // Salvar fotos como ocorrências
       if (photos.length > 0) {
         console.log('📸 Fazendo upload e salvando fotos...');
         
         for (const photo of photos) {
+          console.log('📸 [UPLOAD] Iniciando upload da foto:', photo.name, photo.size);
+          
           // Upload da foto
           const fileName = `photo_${shipmentId}_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
           const filePath = `shipment-photos/${fileName}`;
           
-          const { error: uploadError } = await supabase.storage
+          const { error: uploadError, data: uploadData } = await supabase.storage
             .from('shipment-photos')
             .upload(filePath, photo, {
               contentType: 'image/jpeg',
               upsert: false
             });
           
+          console.log('📸 [UPLOAD] Resultado do upload:', { uploadError, uploadData });
+          
           if (!uploadError) {
             const { data: { publicUrl } } = supabase.storage
               .from('shipment-photos')
               .getPublicUrl(filePath);
+            
+            console.log('📸 [UPLOAD] URL pública gerada:', publicUrl);
               
             // Registrar foto como ocorrência
             console.log('💾 [PHOTO DEBUG] Tentando inserir ocorrência de foto...');
-            console.log('💾 [PHOTO DEBUG] Dados:', {
+            console.log('💾 [PHOTO DEBUG] Dados a serem inseridos:', {
               shipment_id: shipmentId,
               motorista_id: motoristaId,
               occurrence_type: 'foto',
@@ -186,14 +211,23 @@ export const OccurrenceSimpleModal = ({
               })
               .select();
               
+            console.log('💾 [PHOTO DEBUG] Resultado da inserção:', { photoData, photoError });
+              
             if (photoError) {
               console.error('❌ [PHOTO DEBUG] Erro ao registrar foto:', photoError);
               console.error('❌ [PHOTO DEBUG] Erro detalhes:', JSON.stringify(photoError, null, 2));
+              console.error('❌ [PHOTO DEBUG] Código do erro:', photoError.code);
+              console.error('❌ [PHOTO DEBUG] Mensagem:', photoError.message);
+              console.error('❌ [PHOTO DEBUG] Detalhes:', photoError.details);
+              console.error('❌ [PHOTO DEBUG] Hint:', photoError.hint);
+              
+              throw new Error(`Erro ao registrar foto: ${photoError.message}`);
             } else {
               console.log('📸 [PHOTO DEBUG] Foto registrada com sucesso:', photoData);
             }
           } else {
             console.error('❌ Erro no upload da foto:', uploadError);
+            throw new Error(`Erro no upload da foto: ${uploadError.message}`);
           }
         }
       }
