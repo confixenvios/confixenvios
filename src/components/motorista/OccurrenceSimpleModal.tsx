@@ -232,7 +232,7 @@ export const OccurrenceSimpleModal = ({
         }
       }
 
-      // Salvar áudio como ocorrência
+      // Salvar áudio como ocorrência (áudio já está no storage, só registrar a ocorrência)
       if (audioUrl) {
         console.log('🎵 [AUDIO DEBUG] Registrando áudio como ocorrência...');
         console.log('🎵 [AUDIO DEBUG] Dados:', {
