@@ -1322,6 +1322,16 @@ export type Database = {
         }
         Returns: Json
       }
+      test_insert_occurrence: {
+        Args: {
+          p_description?: string
+          p_file_url: string
+          p_motorista_id: string
+          p_occurrence_type: string
+          p_shipment_id: string
+        }
+        Returns: Json
+      }
       text_to_bytea: {
         Args: { data: string }
         Returns: string

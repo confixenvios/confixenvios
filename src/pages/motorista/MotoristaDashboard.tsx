@@ -10,6 +10,8 @@ import { ptBR } from 'date-fns/locale';
 import { RemessaDetalhes } from '@/components/motorista/RemessaDetalhes';
 import { RemessaVisualizacao } from '@/components/motorista/RemessaVisualizacao';
 import { OccurrenceSimpleModal } from '@/components/motorista/OccurrenceSimpleModal';
+import { OccurrenceTestModal } from '@/components/motorista/OccurrenceTestModal';
+import { OccurrenceForceModal } from '@/components/motorista/OccurrenceForceModal';
 import { getMotoristaShipments, getAvailableShipments, acceptShipment, type MotoristaShipment, type BaseShipment } from '@/services/shipmentsService';
 
 interface MotoristaSession {
@@ -29,6 +31,8 @@ const MotoristaDashboard = () => {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [occurrenceModalOpen, setOccurrenceModalOpen] = useState(false);
+  const [testModalOpen, setTestModalOpen] = useState(false);
+  const [forceModalOpen, setForceModalOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
 
@@ -486,18 +490,42 @@ const MotoristaDashboard = () => {
                                 Ver
                               </Button>
                               {remessa.motorista_id && ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'TENTATIVA_ENTREGA'].includes(remessa.status) && (
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedRemessa(remessa);
-                                    setOccurrenceModalOpen(true);
-                                  }}
-                                  className="bg-blue-600 hover:bg-blue-700"
-                                >
-                                  <Plus className="h-3 w-3 mr-1" />
-                                  Gerar Ocorrência
-                                </Button>
+                                <>
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedRemessa(remessa);
+                                      setOccurrenceModalOpen(true);
+                                    }}
+                                    className="bg-blue-600 hover:bg-blue-700"
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Gerar Ocorrência
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedRemessa(remessa);
+                                      setTestModalOpen(true);
+                                    }}
+                                    className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                                  >
+                                    🧪 Testar
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedRemessa(remessa);
+                                      setForceModalOpen(true);
+                                    }}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    🔥 Forçar
+                                  </Button>
+                                </>
                               )}
                             </div>
                           </div>
@@ -546,6 +574,40 @@ const MotoristaDashboard = () => {
               console.log('📊 Ocorrência criada com sucesso');
               console.log('🔍 [SESSION DEBUG] Motorista session:', motoristaSession);
               console.log('🔍 [SESSION DEBUG] Selected remessa:', selectedRemessa);
+              if (motoristaSession?.id) {
+                loadMinhasRemessas(motoristaSession.id);
+                loadRemessasDisponiveis();
+              }
+            }}
+          />
+        )}
+
+        {/* Test Modal */}
+        {selectedRemessa && motoristaSession?.id && (
+          <OccurrenceTestModal
+            isOpen={testModalOpen}
+            onClose={() => setTestModalOpen(false)}
+            shipmentId={selectedRemessa.id}
+            motoristaId={motoristaSession.id}
+            onSuccess={() => {
+              console.log('🧪 Teste concluído');
+              if (motoristaSession?.id) {
+                loadMinhasRemessas(motoristaSession.id);
+                loadRemessasDisponiveis();
+              }
+            }}
+          />
+        )}
+
+        {/* Force Modal */}
+        {selectedRemessa && motoristaSession?.id && (
+          <OccurrenceForceModal
+            isOpen={forceModalOpen}
+            onClose={() => setForceModalOpen(false)}
+            shipmentId={selectedRemessa.id}
+            motoristaId={motoristaSession.id}
+            onSuccess={() => {
+              console.log('🔥 Inserção forçada concluída');
               if (motoristaSession?.id) {
                 loadMinhasRemessas(motoristaSession.id);
                 loadRemessasDisponiveis();
