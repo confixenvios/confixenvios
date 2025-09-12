@@ -33,6 +33,7 @@ export interface BaseShipment {
   sender_address: ShipmentAddress;
   recipient_address: ShipmentAddress;
   pricing_table_name?: string;
+  pricing_table_id?: string;
   document_type?: string;
 }
 
@@ -137,6 +138,9 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
       cte_key,
       user_id,
       motorista_id,
+      pricing_table_id,
+      pricing_table_name,
+      document_type,
       sender_address:addresses!shipments_sender_address_id_fkey(
         name,
         street,
@@ -379,7 +383,9 @@ function normalizeShipmentData(shipment: any): BaseShipment {
     cte_key: shipment.cte_key,
     sender_address: senderAddress,
     recipient_address: recipientAddress,
-    pricing_table_name: shipment.pricing_table_name
+    pricing_table_name: shipment.pricing_table_name,
+    pricing_table_id: shipment.pricing_table_id,
+    document_type: shipment.document_type
   };
 }
 
