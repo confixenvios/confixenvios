@@ -730,9 +730,12 @@ const AdminRemessas = () => {
 
                 <Separator />
 
-                {/* Dados do Remetente */}
+                {/* Dados do Remetente - SEMPRE usando dados originais do formulário */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-3">Dados do Remetente</h3>
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    Dados do Remetente 
+                    <Badge variant="outline" className="text-xs">Dados Originais do Formulário</Badge>
+                  </h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Nome</p>
@@ -753,21 +756,22 @@ const AdminRemessas = () => {
                       <p className="text-muted-foreground">Bairro</p>
                       <p className="font-medium">{selectedShipmentDetails.sender_address?.neighborhood}</p>
                     </div>
-                     <div>
-                       <p className="text-muted-foreground">Cidade/Estado</p>
-                       <p className="font-medium">
-                         {selectedShipmentDetails.sender_address?.city && selectedShipmentDetails.sender_address?.city !== 'A definir' ? 
-                           `${selectedShipmentDetails.sender_address.city} - ${selectedShipmentDetails.sender_address.state}` : 
-                           selectedShipmentDetails.quote_data?.senderData?.city ? 
-                             `${selectedShipmentDetails.quote_data.senderData.city} - ${selectedShipmentDetails.quote_data.senderData.state}` :
-                             'Goiânia - GO'
-                         }
-                       </p>
-                     </div>
+                    <div>
+                      <p className="text-muted-foreground">Cidade/Estado</p>
+                      <p className="font-medium">
+                        {selectedShipmentDetails.sender_address?.city} - {selectedShipmentDetails.sender_address?.state}
+                      </p>
+                    </div>
                     {selectedShipmentDetails.sender_address?.reference && (
                       <div className="col-span-2">
                         <p className="text-muted-foreground">Referência</p>
                         <p className="font-medium">{selectedShipmentDetails.sender_address.reference}</p>
+                      </div>
+                    )}
+                    {selectedShipmentDetails.sender_address?.phone && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Telefone</p>
+                        <p className="font-medium">{selectedShipmentDetails.sender_address.phone}</p>
                       </div>
                     )}
                   </div>
@@ -775,9 +779,12 @@ const AdminRemessas = () => {
 
                 <Separator />
 
-                {/* Dados do Destinatário */}
+                {/* Dados do Destinatário - SEMPRE usando dados originais do formulário */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-3">Dados do Destinatário</h3>
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    Dados do Destinatário
+                    <Badge variant="outline" className="text-xs">Dados Originais do Formulário</Badge>
+                  </h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Nome</p>
@@ -798,27 +805,28 @@ const AdminRemessas = () => {
                       <p className="text-muted-foreground">Bairro</p>
                       <p className="font-medium">{selectedShipmentDetails.recipient_address?.neighborhood}</p>
                     </div>
-                     <div>
-                       <p className="text-muted-foreground">Cidade/Estado</p>
-                       <p className="font-medium">
-                         {selectedShipmentDetails.recipient_address?.city && selectedShipmentDetails.recipient_address?.city !== 'A definir' ? 
-                           `${selectedShipmentDetails.recipient_address.city} - ${selectedShipmentDetails.recipient_address.state}` : 
-                           selectedShipmentDetails.quote_data?.recipientData?.city ? 
-                             `${selectedShipmentDetails.quote_data.recipientData.city} - ${selectedShipmentDetails.quote_data.recipientData.state}` :
-                             selectedShipmentDetails.quote_data?.shippingQuote?.zoneName || 'N/A'
-                         }
-                       </p>
-                     </div>
+                    <div>
+                      <p className="text-muted-foreground">Cidade/Estado</p>
+                      <p className="font-medium">
+                        {selectedShipmentDetails.recipient_address?.city} - {selectedShipmentDetails.recipient_address?.state}
+                      </p>
+                    </div>
                     {selectedShipmentDetails.recipient_address?.reference && (
                       <div className="col-span-2">
                         <p className="text-muted-foreground">Referência</p>
                         <p className="font-medium">{selectedShipmentDetails.recipient_address.reference}</p>
                       </div>
                     )}
-                  </div>
-                </div>
+                    {selectedShipmentDetails.recipient_address?.phone && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Telefone</p>
+                        <p className="font-medium">{selectedShipmentDetails.recipient_address.phone}</p>
+                      </div>
+                     )}
+                   </div>
+                 </div>
 
-                <Separator />
+                 <Separator />
 
                 {/* Dados do Pacote */}
                 <div>

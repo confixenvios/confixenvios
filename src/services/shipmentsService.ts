@@ -311,8 +311,55 @@ export const getAvailableShipments = async (): Promise<BaseShipment[]> => {
 
 /**
  * Normaliza os dados de uma remessa para garantir consistência
+ * PRIORIZA os dados originais do formulário do usuário (quote_data.addressData)
  */
 function normalizeShipmentData(shipment: any): BaseShipment {
+  console.log('🔄 [NORMALIZE] Normalizando dados da remessa:', shipment.id);
+  
+  // Tentar usar dados originais do formulário (quote_data.addressData) primeiro
+  let senderAddress = shipment.sender_address || createEmptyAddress();
+  let recipientAddress = shipment.recipient_address || createEmptyAddress();
+  
+  // Se existem dados originais no quote_data, usar esses dados (SEMPRE CORRETOS)
+  if (shipment.quote_data?.addressData) {
+    console.log('✅ [NORMALIZE] Usando dados originais do formulário (quote_data.addressData)');
+    
+    if (shipment.quote_data.addressData.sender) {
+      senderAddress = {
+        name: shipment.quote_data.addressData.sender.name || senderAddress.name,
+        street: shipment.quote_data.addressData.sender.street || senderAddress.street,
+        number: shipment.quote_data.addressData.sender.number || senderAddress.number,
+        neighborhood: shipment.quote_data.addressData.sender.neighborhood || senderAddress.neighborhood,
+        city: shipment.quote_data.addressData.sender.city || senderAddress.city,
+        state: shipment.quote_data.addressData.sender.state || senderAddress.state,
+        cep: shipment.quote_data.addressData.sender.cep || senderAddress.cep,
+        complement: shipment.quote_data.addressData.sender.complement || senderAddress.complement,
+        reference: shipment.quote_data.addressData.sender.reference || senderAddress.reference,
+        phone: shipment.quote_data.addressData.sender.phone || senderAddress.phone,
+      };
+    }
+    
+    if (shipment.quote_data.addressData.recipient) {
+      recipientAddress = {
+        name: shipment.quote_data.addressData.recipient.name || recipientAddress.name,
+        street: shipment.quote_data.addressData.recipient.street || recipientAddress.street,
+        number: shipment.quote_data.addressData.recipient.number || recipientAddress.number,
+        neighborhood: shipment.quote_data.addressData.recipient.neighborhood || recipientAddress.neighborhood,
+        city: shipment.quote_data.addressData.recipient.city || recipientAddress.city,
+        state: shipment.quote_data.addressData.recipient.state || recipientAddress.state,
+        cep: shipment.quote_data.addressData.recipient.cep || recipientAddress.cep,
+        complement: shipment.quote_data.addressData.recipient.complement || recipientAddress.complement,
+        reference: shipment.quote_data.addressData.recipient.reference || recipientAddress.reference,
+        phone: shipment.quote_data.addressData.recipient.phone || recipientAddress.phone,
+      };
+    }
+  }
+  
+  console.log('📦 [NORMALIZE] Endereços finalizados:', {
+    sender: senderAddress.name + ' - ' + senderAddress.street + ', ' + senderAddress.number,
+    recipient: recipientAddress.name + ' - ' + recipientAddress.street + ', ' + recipientAddress.number
+  });
+
   return {
     id: shipment.id,
     tracking_code: shipment.tracking_code,
@@ -329,8 +376,9 @@ function normalizeShipmentData(shipment: any): BaseShipment {
     payment_data: shipment.payment_data,
     label_pdf_url: shipment.label_pdf_url,
     cte_key: shipment.cte_key,
-    sender_address: shipment.sender_address || createEmptyAddress(),
-    recipient_address: shipment.recipient_address || createEmptyAddress()
+    sender_address: senderAddress,
+    recipient_address: recipientAddress,
+    pricing_table_name: shipment.pricing_table_name
   };
 }
 
