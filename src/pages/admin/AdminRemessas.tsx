@@ -841,44 +841,144 @@ const AdminRemessas = () => {
                   <CardHeader>
                     <CardTitle className="text-base">Informações Gerais</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Código de Rastreio</label>
-                      <p className="text-sm font-mono">{selectedShipmentDetails.tracking_code || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Status</label>
-                      <div className="mt-1">{getStatusBadge(selectedShipmentDetails.status)}</div>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Data de Criação</label>
-                      <p className="text-sm">{format(new Date(selectedShipmentDetails.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Valor Total</label>
-                      <p className="text-lg font-bold text-primary">
-                        R$ {getQuoteValue(selectedShipmentDetails).toFixed(2).replace('.', ',')}
-                      </p>
-                    </div>
-                    {selectedShipmentDetails.pricing_table_name && (
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Tabela de Preços</label>
-                        <div className="mt-1 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <FileText className="w-4 h-4 text-blue-600" />
-                            <span className="font-medium text-blue-800">{selectedShipmentDetails.pricing_table_name}</span>
-                          </div>
-                          <p className="text-xs text-blue-600">
-                            Esta remessa foi cotada utilizando a tabela de preços personalizada acima. 
-                            Os valores e prazos foram calculados com base nesta configuração específica.
-                          </p>
-                          <div className="mt-2 text-xs text-muted-foreground">
-                            ℹ️ Tabela aplicada automaticamente durante a cotação
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
+                   <CardContent className="space-y-3">
+                     <div>
+                       <label className="text-sm font-medium text-muted-foreground">Código de Rastreio</label>
+                       <p className="text-sm font-mono">{selectedShipmentDetails.tracking_code || 'N/A'}</p>
+                     </div>
+                     <div>
+                       <label className="text-sm font-medium text-muted-foreground">Status</label>
+                       <div className="mt-1">{getStatusBadge(selectedShipmentDetails.status)}</div>
+                     </div>
+                     <div>
+                       <label className="text-sm font-medium text-muted-foreground">Data de Criação</label>
+                       <p className="text-sm">{format(new Date(selectedShipmentDetails.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</p>
+                     </div>
+                     <div>
+                       <label className="text-sm font-medium text-muted-foreground">Valor Total</label>
+                       <p className="text-lg font-bold text-primary">
+                         R$ {getQuoteValue(selectedShipmentDetails).toFixed(2).replace('.', ',')}
+                       </p>
+                     </div>
+
+                     {/* Tipo de Documento Fiscal */}
+                     <div>
+                       <label className="text-sm font-medium text-muted-foreground">Tipo de Documento Fiscal</label>
+                       <div className="mt-1">
+                         <Badge variant={selectedShipmentDetails.document_type === 'nota_fiscal_eletronica' ? 'default' : 'secondary'}>
+                           {selectedShipmentDetails.document_type === 'nota_fiscal_eletronica' ? 'Nota Fiscal Eletrônica' : 'Declaração de Conteúdo'}
+                         </Badge>
+                       </div>
+                     </div>
+
+                     {/* Forma de Pagamento */}
+                     {selectedShipmentDetails.payment_data && (
+                       <div>
+                         <label className="text-sm font-medium text-muted-foreground">Forma de Pagamento</label>
+                         <div className="mt-1 p-3 bg-green-50 border border-green-200 rounded-lg">
+                           <div className="flex items-center justify-between mb-2">
+                             <div className="flex items-center space-x-2">
+                               <CheckCircle className="w-4 h-4 text-green-600" />
+                               <span className="font-medium text-green-800 capitalize">
+                                 {selectedShipmentDetails.payment_data?.method === 'pix' ? 'PIX' : 
+                                  selectedShipmentDetails.payment_data?.method === 'credit_card' ? 'Cartão de Crédito' : 
+                                  selectedShipmentDetails.payment_data?.method || 'N/A'}
+                               </span>
+                             </div>
+                             <Badge className="bg-green-100 text-green-700">
+                               R$ {(selectedShipmentDetails.payment_data?.amount || 0).toFixed(2).replace('.', ',')}
+                             </Badge>
+                           </div>
+                           {selectedShipmentDetails.payment_data?.confirmed_at && (
+                             <p className="text-xs text-green-600">
+                               Confirmado em: {format(new Date(selectedShipmentDetails.payment_data.confirmed_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                             </p>
+                           )}
+                           {selectedShipmentDetails.payment_data?.payment_id && (
+                             <p className="text-xs text-muted-foreground mt-1">
+                               ID: {selectedShipmentDetails.payment_data.payment_id}
+                             </p>
+                           )}
+                         </div>
+                       </div>
+                     )}
+
+                     {/* Informações da Cotação Original */}
+                     {selectedShipmentDetails.quote_data && (
+                       <div>
+                         <label className="text-sm font-medium text-muted-foreground">Dados da Cotação Original</label>
+                         <div className="mt-1 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                           <div className="grid grid-cols-2 gap-4 text-xs">
+                             {selectedShipmentDetails.quote_data?.originalFormData && (
+                               <>
+                                 <div>
+                                   <span className="font-medium text-blue-800">CEP Origem:</span>
+                                   <p className="text-blue-600">{selectedShipmentDetails.quote_data.originalFormData.originCep || 'N/A'}</p>
+                                 </div>
+                                 <div>
+                                   <span className="font-medium text-blue-800">CEP Destino:</span>
+                                   <p className="text-blue-600">{selectedShipmentDetails.quote_data.originalFormData.destinyCep || 'N/A'}</p>
+                                 </div>
+                                 <div>
+                                   <span className="font-medium text-blue-800">Valor Unitário:</span>
+                                   <p className="text-blue-600">R$ {(selectedShipmentDetails.quote_data.originalFormData.unitValue || 0).toString().replace('.', ',')}</p>
+                                 </div>
+                                 <div>
+                                   <span className="font-medium text-blue-800">Quantidade:</span>
+                                   <p className="text-blue-600">{selectedShipmentDetails.quote_data.originalFormData.quantity || 'N/A'}</p>
+                                 </div>
+                               </>
+                             )}
+                             {selectedShipmentDetails.quote_data?.shippingQuote && (
+                               <>
+                                 <div>
+                                   <span className="font-medium text-blue-800">Zona:</span>
+                                   <p className="text-blue-600">{selectedShipmentDetails.quote_data.shippingQuote.zone || 'N/A'}</p>
+                                 </div>
+                                 <div>
+                                   <span className="font-medium text-blue-800">Nome da Zona:</span>
+                                   <p className="text-blue-600">{selectedShipmentDetails.quote_data.shippingQuote.zoneName || 'N/A'}</p>
+                                 </div>
+                                 <div>
+                                   <span className="font-medium text-blue-800">Prazo Econômico:</span>
+                                   <p className="text-blue-600">{selectedShipmentDetails.quote_data.shippingQuote.economicDays || 'N/A'} dias</p>
+                                 </div>
+                                 <div>
+                                   <span className="font-medium text-blue-800">Prazo Expresso:</span>
+                                   <p className="text-blue-600">{selectedShipmentDetails.quote_data.shippingQuote.expressDays || 'N/A'} dias</p>
+                                 </div>
+                               </>
+                             )}
+                           </div>
+                           {selectedShipmentDetails.quote_data?.merchandiseDescription && (
+                             <div>
+                               <span className="font-medium text-blue-800 text-xs">Descrição da Mercadoria:</span>
+                               <p className="text-blue-600 text-xs mt-1">{selectedShipmentDetails.quote_data.merchandiseDescription}</p>
+                             </div>
+                           )}
+                         </div>
+                       </div>
+                     )}
+
+                     {selectedShipmentDetails.pricing_table_name && (
+                       <div>
+                         <label className="text-sm font-medium text-muted-foreground">Tabela de Preços</label>
+                         <div className="mt-1 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                           <div className="flex items-center space-x-2 mb-2">
+                             <FileText className="w-4 h-4 text-blue-600" />
+                             <span className="font-medium text-blue-800">{selectedShipmentDetails.pricing_table_name}</span>
+                           </div>
+                           <p className="text-xs text-blue-600">
+                             Esta remessa foi cotada utilizando a tabela de preços personalizada acima. 
+                             Os valores e prazos foram calculados com base nesta configuração específica.
+                           </p>
+                           <div className="mt-2 text-xs text-muted-foreground">
+                             ℹ️ Tabela aplicada automaticamente durante a cotação
+                           </div>
+                         </div>
+                       </div>
+                     )}
+                   </CardContent>
                 </Card>
 
                 {/* Cliente */}

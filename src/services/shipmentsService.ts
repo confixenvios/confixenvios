@@ -33,6 +33,7 @@ export interface BaseShipment {
   sender_address: ShipmentAddress;
   recipient_address: ShipmentAddress;
   pricing_table_name?: string;
+  document_type?: string;
 }
 
 export interface ClientShipment extends BaseShipment {
