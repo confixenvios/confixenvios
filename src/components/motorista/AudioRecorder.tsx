@@ -175,6 +175,7 @@ export const AudioRecorder = ({
 
       console.log('🔗 Public URL gerada:', publicUrl);
 
+      console.log('🎵 [AUDIO RECORDER DEBUG] Executando onSave callback com URL:', publicUrl);
       onSave(publicUrl);
       
       toast({

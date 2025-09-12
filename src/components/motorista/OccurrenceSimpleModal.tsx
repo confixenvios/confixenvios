@@ -38,11 +38,18 @@ export const OccurrenceSimpleModal = ({
   }, [isOpen]);
 
   const handlePhotoSave = (photo: File) => {
-    setPhotos(prev => [...prev, photo]);
+    console.log('📸 [PHOTO SAVE DEBUG] Foto recebida:', photo.name, photo.size);
+    setPhotos(prev => {
+      console.log('📸 [PHOTO SAVE DEBUG] Fotos antes:', prev.length);
+      const newPhotos = [...prev, photo];
+      console.log('📸 [PHOTO SAVE DEBUG] Fotos depois:', newPhotos.length);
+      return newPhotos;
+    });
     setShowPhotoUpload(false);
   };
 
   const handleAudioSave = (savedAudioUrl: string) => {
+    console.log('🎵 [AUDIO SAVE DEBUG] URL do áudio recebida:', savedAudioUrl);
     setAudioUrl(savedAudioUrl);
     setShowAudioRecorder(false);
   };
@@ -234,7 +241,13 @@ export const OccurrenceSimpleModal = ({
               </Button>
               <Button
                 className="flex-1"
-                onClick={handleSaveOccurrence}
+                onClick={() => {
+                  console.log('🔥 [BUTTON DEBUG] Botão Salvar clicado!');
+                  console.log('🔥 [BUTTON DEBUG] Fotos atuais:', photos.length);
+                  console.log('🔥 [BUTTON DEBUG] Audio URL atual:', audioUrl);
+                  console.log('🔥 [BUTTON DEBUG] Botão desabilitado?', photos.length === 0 && !audioUrl);
+                  handleSaveOccurrence();
+                }}
                 disabled={photos.length === 0 && !audioUrl}
               >
                 Salvar

@@ -54,7 +54,13 @@ export const PhotoUpload = ({ isOpen, onClose, onSave, title = "Adicionar Foto" 
   };
 
   const handleSave = () => {
-    if (!selectedPhoto) return;
+    console.log('💾 [PHOTO UPLOAD DEBUG] handleSave chamado!');
+    console.log('💾 [PHOTO UPLOAD DEBUG] Selected photo:', selectedPhoto);
+    if (!selectedPhoto) {
+      console.log('❌ [PHOTO UPLOAD DEBUG] Nenhuma foto selecionada!');
+      return;
+    }
+    console.log('📸 [PHOTO UPLOAD DEBUG] Executando onSave callback...');
     onSave(selectedPhoto);
     clearPhoto();
     onClose();
