@@ -413,32 +413,6 @@ const AdminIntegracoes = () => {
         </CardContent>
       </Card>
 
-      {/* Teste Manual de Webhook */}
-      <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
-              <div className="space-y-2 text-sm">
-                <p className="font-medium text-orange-900 dark:text-orange-100">Teste Manual de Webhook</p>
-                <div className="text-orange-700 dark:text-orange-300 space-y-1">
-                  <p>A remessa <strong>ID2025CJULKS</strong> foi criada mas o webhook não foi disparado automaticamente.</p>
-                  <p>Use o botão ao lado para disparar manualmente o webhook com todos os dados incluindo informações das filiais.</p>
-                </div>
-              </div>
-            </div>
-            <Button 
-              onClick={handleDispatchShipmentWebhook}
-              disabled={loading}
-              className="bg-orange-600 hover:bg-orange-700 text-white"
-              size="sm"
-            >
-              <TestTube className="h-4 w-4 mr-2" />
-              {loading ? 'Disparando...' : 'Disparar Webhook ID2025CJULKS'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Integrations List */}
       {integrations.length === 0 ? (
