@@ -164,157 +164,144 @@ export const ShipmentOccurrencesModal = ({
                 <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent mx-auto"></div>
                 <p className="text-muted-foreground mt-2">Carregando dados...</p>
               </div>
-            ) : statusHistory.length === 0 && occurrences.length === 0 ? (
-              <div className="text-center py-12">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium mb-2">Nenhum registro encontrado</p>
-                <p className="text-sm text-muted-foreground">
-                  Este envio ainda não possui status ou ocorrências registradas pelo motorista
-                </p>
-              </div>
             ) : (
               <div className="space-y-6">
-                {/* Histórico de Status */}
-                {statusHistory.length > 0 && (
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-lg flex items-center gap-2">
-                      <Clock className="h-5 w-5" />
-                      Histórico de Status
-                    </h3>
-                    {statusHistory.map((history, index) => (
-                      <div key={history.id} className="relative">
-                        {index < statusHistory.length - 1 && (
-                          <div className="absolute left-6 top-16 w-px h-16 bg-border"></div>
-                        )}
-                        
-                        <div className="flex gap-4">
-                          <div className="flex-shrink-0 w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                            {getStatusIcon(history.status)}
-                          </div>
+                {/* Ocorrências (Fotos e Áudios) - PRIORIDADE */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg flex items-center gap-2 text-primary">
+                    <Camera className="h-5 w-5" />
+                    Ocorrências Registradas (Fotos e Áudios)
+                  </h3>
+                  
+                  {occurrences.length === 0 ? (
+                    <div className="text-center py-8 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/30">
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground mb-2">
+                        <Camera className="h-8 w-8" />
+                        <Mic className="h-8 w-8" />
+                      </div>
+                      <p className="font-medium mb-1">Nenhuma ocorrência registrada</p>
+                      <p className="text-sm text-muted-foreground">
+                        O motorista ainda não enviou fotos ou áudios para esta remessa
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {occurrences.map((occurrence, index) => (
+                        <div key={occurrence.id} className="relative">
+                          {index < occurrences.length - 1 && (
+                            <div className="absolute left-6 top-16 w-px h-16 bg-border"></div>
+                          )}
                           
-                          <div className="flex-1 min-w-0 space-y-3">
-                            <div className="flex items-center gap-3 flex-wrap">
-                              {getStatusBadge(history.status)}
-                              <span className="text-sm text-muted-foreground">
-                                {formatDate(history.created_at)}
-                              </span>
+                          <div className="flex gap-4">
+                            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center">
+                              {occurrence.occurrence_type === 'foto' ? (
+                                <Camera className="h-5 w-5 text-primary" />
+                              ) : (
+                                <Mic className="h-5 w-5 text-primary" />
+                              )}
                             </div>
                             
-                            {/* Observações */}
-                            {history.observacoes && (
-                              <div className="bg-muted/50 rounded-lg p-3">
-                                <p className="text-sm font-medium mb-1 flex items-center gap-2">
-                                  <FileText className="h-4 w-4" />
-                                  Observações:
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  {history.observacoes}
-                                </p>
+                            <div className="flex-1 min-w-0 space-y-3">
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <Badge variant={occurrence.occurrence_type === 'foto' ? 'default' : 'secondary'} className="font-medium">
+                                  {occurrence.occurrence_type === 'foto' ? '📷 Foto' : '🎤 Áudio'}
+                                </Badge>
+                                <span className="text-sm text-muted-foreground font-medium">
+                                  {formatDate(occurrence.created_at)}
+                                </span>
                               </div>
-                            )}
-
-                            {/* Status Description */}
-                            {history.status_description && (
-                              <div className="bg-muted/50 rounded-lg p-3">
-                                <p className="text-sm font-medium mb-1">Descrição:</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {history.status_description}
-                                </p>
-                              </div>
-                            )}
-
-                            {/* Dados de ocorrência adicionais */}
-                            {history.occurrence_data && (
-                              <div className="bg-muted/50 rounded-lg p-3">
-                                <p className="text-sm font-medium mb-2 flex items-center gap-2">
-                                  <FileText className="h-4 w-4" />
-                                  Detalhes da Mudança:
-                                </p>
-                                <div className="text-sm text-muted-foreground space-y-1">
-                                  {typeof history.occurrence_data === 'object' ? (
-                                    Object.entries(history.occurrence_data).map(([key, value]) => (
-                                      <div key={key}>
-                                        <span className="font-medium capitalize">{key.replace(/_/g, ' ')}:</span> {String(value)}
-                                      </div>
-                                    ))
-                                  ) : (
-                                    <p>{String(history.occurrence_data)}</p>
-                                  )}
+                              
+                              {/* Descrição da ocorrência */}
+                              {occurrence.description && (
+                                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                                  <p className="text-sm font-medium mb-1 text-primary">Observação do Motorista:</p>
+                                  <p className="text-sm">
+                                    {occurrence.description}
+                                  </p>
                                 </div>
-                              </div>
-                            )}
+                              )}
+
+                              {/* Conteúdo da ocorrência */}
+                              {occurrence.occurrence_type === 'foto' ? (
+                                <div className="space-y-2">
+                                  <img
+                                    src={occurrence.file_url}
+                                    alt="Foto da ocorrência"
+                                    className="w-40 h-40 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border-2 border-border hover:border-primary shadow-md"
+                                    onClick={() => window.open(occurrence.file_url, '_blank')}
+                                  />
+                                  <p className="text-xs text-muted-foreground">📷 Clique na foto para visualizar em tamanho completo</p>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                                    <AudioPlayer 
+                                      audioUrl={occurrence.file_url}
+                                      fileName={`audio_${shipment.tracking_code || shipment.id.slice(0,8)}_${format(new Date(occurrence.created_at), 'ddMMyyyy_HHmm')}.webm`}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Histórico de Status - SECUNDÁRIO */}
+                {statusHistory.length > 0 && (
+                  <div className="space-y-4 pt-6 border-t border-border">
+                    <h3 className="font-semibold text-base flex items-center gap-2 text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      Histórico de Status
+                    </h3>
+                    <div className="space-y-3">
+                      {statusHistory.map((history, index) => (
+                        <div key={history.id} className="relative">
+                          {index < statusHistory.length - 1 && (
+                            <div className="absolute left-5 top-12 w-px h-12 bg-border"></div>
+                          )}
+                          
+                          <div className="flex gap-3">
+                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                              {getStatusIcon(history.status)}
+                            </div>
+                            
+                            <div className="flex-1 min-w-0 space-y-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {getStatusBadge(history.status)}
+                                <span className="text-xs text-muted-foreground">
+                                  {formatDate(history.created_at)}
+                                </span>
+                              </div>
+                              
+                              {/* Observações */}
+                              {history.observacoes && (
+                                <div className="bg-muted/50 rounded p-2">
+                                  <p className="text-xs font-medium mb-1">Observações:</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {history.observacoes}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
-                {/* Ocorrências (Fotos e Áudios) */}
-                {occurrences.length > 0 && (
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-lg flex items-center gap-2">
-                      <Camera className="h-5 w-5" />
-                      Ocorrências Registradas
-                    </h3>
-                    {occurrences.map((occurrence, index) => (
-                      <div key={occurrence.id} className="relative">
-                        {index < occurrences.length - 1 && (
-                          <div className="absolute left-6 top-16 w-px h-16 bg-border"></div>
-                        )}
-                        
-                        <div className="flex gap-4">
-                          <div className="flex-shrink-0 w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                            {occurrence.occurrence_type === 'foto' ? (
-                              <Camera className="h-4 w-4 text-blue-600" />
-                            ) : (
-                              <Mic className="h-4 w-4 text-green-600" />
-                            )}
-                          </div>
-                          
-                          <div className="flex-1 min-w-0 space-y-3">
-                            <div className="flex items-center gap-3 flex-wrap">
-                              <Badge variant={occurrence.occurrence_type === 'foto' ? 'default' : 'secondary'}>
-                                {occurrence.occurrence_type === 'foto' ? 'Foto' : 'Áudio'}
-                              </Badge>
-                              <span className="text-sm text-muted-foreground">
-                                {formatDate(occurrence.created_at)}
-                              </span>
-                            </div>
-                            
-                            {/* Descrição da ocorrência */}
-                            {occurrence.description && (
-                              <div className="bg-muted/50 rounded-lg p-3">
-                                <p className="text-sm font-medium mb-1">Observação:</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {occurrence.description}
-                                </p>
-                              </div>
-                            )}
-
-                            {/* Conteúdo da ocorrência */}
-                            {occurrence.occurrence_type === 'foto' ? (
-                              <div className="space-y-2">
-                                <img
-                                  src={occurrence.file_url}
-                                  alt="Foto da ocorrência"
-                                  className="w-32 h-32 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border-2 border-border hover:border-primary"
-                                  onClick={() => window.open(occurrence.file_url, '_blank')}
-                                />
-                                <p className="text-xs text-muted-foreground">Clique na foto para visualizar em tamanho completo</p>
-                              </div>
-                            ) : (
-                              <div className="space-y-2">
-                                <AudioPlayer 
-                                  audioUrl={occurrence.file_url}
-                                  fileName={`audio_${shipment.tracking_code || shipment.id.slice(0,8)}_${format(new Date(occurrence.created_at), 'ddMMyyyy_HHmm')}.webm`}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                {/* Caso não tenha nenhum dado */}
+                {statusHistory.length === 0 && occurrences.length === 0 && (
+                  <div className="text-center py-12">
+                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">Nenhum registro encontrado</p>
+                    <p className="text-sm text-muted-foreground">
+                      Este envio ainda não possui ocorrências ou histórico registrado pelo motorista
+                    </p>
                   </div>
                 )}
               </div>
