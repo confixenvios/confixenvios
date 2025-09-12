@@ -237,8 +237,44 @@ const AdminRemessas = () => {
   useEffect(() => {
     if (!authLoading && user && isAdmin) {
       loadShipments();
+      // Auto-dispatch any pending webhooks when page loads
+      autoDispatchPendingWebhooks();
     }
   }, [authLoading, user, isAdmin]);
+
+  // Auto-dispatch function to process pending webhooks
+  const autoDispatchPendingWebhooks = async () => {
+    try {
+      console.log('🔄 [AUTO-DISPATCH] Checking for pending webhooks...');
+      
+      const { data, error } = await supabase.functions.invoke('auto-webhook-dispatcher', {
+        body: {}
+      });
+
+      if (error) {
+        console.error('❌ [AUTO-DISPATCH] Error:', error);
+        return;
+      }
+
+      if (data?.processed > 0) {
+        console.log(`✅ [AUTO-DISPATCH] Processed ${data.processed} webhooks (${data.successful} successful, ${data.errors} errors)`);
+        
+        if (data.successful > 0) {
+          toast({
+            title: "Webhooks Processados",
+            description: `${data.successful} webhooks enviados automaticamente`,
+          });
+          
+          // Reload shipments to update webhook status
+          setTimeout(loadShipments, 2000);
+        }
+      } else {
+        console.log('ℹ️ [AUTO-DISPATCH] No pending webhooks to process');
+      }
+    } catch (error) {
+      console.error('❌ [AUTO-DISPATCH] Unexpected error:', error);
+    }
+  };
 
   // Adicionar auto-refresh a cada 30 segundos
   useEffect(() => {
