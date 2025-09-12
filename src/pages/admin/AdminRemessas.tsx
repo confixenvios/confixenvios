@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Search, Package, Eye, Download, Filter, UserPlus, Truck, Calendar, MapPin, Clock, FileText } from "lucide-react";
+import { Search, Package, Eye, Download, Filter, UserPlus, Truck, Calendar, MapPin, Clock, FileText, Send, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -90,6 +90,8 @@ const AdminRemessas = () => {
   const [occurrencesModalOpen, setOccurrencesModalOpen] = useState(false);
   const [selectedShipmentOccurrences, setSelectedShipmentOccurrences] = useState<AdminShipment | null>(null);
   const [cteData, setCteData] = useState<any>(null);
+  const [webhookStatuses, setWebhookStatuses] = useState<Record<string, 'sent' | 'pending' | 'error'>>({});
+  const [sendingWebhook, setSendingWebhook] = useState<Record<string, boolean>>({});
 
   // Verificar autenticação e permissões diretamente
   useEffect(() => {
@@ -169,30 +171,10 @@ const AdminRemessas = () => {
       const adminShipments = await getAdminShipments();
       console.log(`✅ [ADMIN REMESSAS] ${adminShipments.length} remessas carregadas`);
       
-      // Debug: Mostrar detalhes das remessas do Kennedy
-      const kennedyShipments = adminShipments.filter(s => 
-        s.client_name.toLowerCase().includes('kennedy')
-      );
-      console.log('👤 [ADMIN REMESSAS] Remessas do Kennedy:', kennedyShipments.map(s => ({
-        id: s.id,
-        tracking_code: s.tracking_code,
-        created_at: s.created_at,
-        status: s.status,
-        client_name: s.client_name
-      })));
-      
-      // Debug: Mostrar a mais recente
-      const mostRecent = adminShipments.sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      )[0];
-      console.log('🕒 [ADMIN REMESSAS] Remessa mais recente:', {
-        id: mostRecent?.id,
-        tracking_code: mostRecent?.tracking_code,
-        created_at: mostRecent?.created_at,
-        client_name: mostRecent?.client_name
-      });
-      
       setShipments(adminShipments);
+      
+      // Verificar status dos webhooks para cada remessa
+      await checkWebhookStatuses(adminShipments);
     } catch (error) {
       console.error('❌ [ADMIN REMESSAS] Erro ao carregar remessas:', error);
       toast({
@@ -212,21 +194,146 @@ const AdminRemessas = () => {
     }
   };
 
+  // Função para verificar status dos webhooks das remessas
+  const checkWebhookStatuses = async (remessas: AdminShipment[]) => {
+    try {
+      const statuses: Record<string, 'sent' | 'pending' | 'error'> = {};
+      
+      for (const remessa of remessas) {
+        const { data: logs, error } = await supabase
+          .from('webhook_logs')
+          .select('event_type, response_status, created_at')
+          .eq('shipment_id', remessa.id)
+          .in('event_type', ['shipment_created_webhook_triggered', 'edge_function_called_success', 'shipment_webhook_dispatched'])
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (error) {
+          console.error('Erro ao verificar webhook logs:', error);
+          statuses[remessa.id] = 'pending';
+          continue;
+        }
+
+        if (logs && logs.length > 0) {
+          const latestLog = logs[0];
+          if (latestLog.event_type === 'edge_function_called_success' && latestLog.response_status === 200) {
+            statuses[remessa.id] = 'sent';
+          } else if (latestLog.response_status >= 400) {
+            statuses[remessa.id] = 'error';
+          } else {
+            statuses[remessa.id] = 'sent';
+          }
+        } else {
+          statuses[remessa.id] = 'pending';
+        }
+      }
+      
+      setWebhookStatuses(statuses);
+    } catch (error) {
+      console.error('Erro ao verificar status dos webhooks:', error);
+    }
+  };
+
+  // Função para enviar webhook manualmente
+  const handleSendWebhook = async (shipment: AdminShipment) => {
+    setSendingWebhook(prev => ({ ...prev, [shipment.id]: true }));
+    
+    try {
+      console.log('🔄 [WEBHOOK MANUAL] Enviando webhook para remessa:', shipment.tracking_code);
+      
+      const { data, error } = await supabase.functions.invoke('shipment-webhook-dispatch', {
+        body: {
+          shipmentId: shipment.id,
+          shipmentData: {
+            tracking_code: shipment.tracking_code,
+            status: shipment.status,
+            created_at: shipment.created_at,
+            // Incluir todos os dados da remessa
+            ...shipment
+          }
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('✅ [WEBHOOK MANUAL] Webhook enviado com sucesso:', data);
+      
+      // Atualizar status do webhook
+      setWebhookStatuses(prev => ({ 
+        ...prev, 
+        [shipment.id]: 'sent' 
+      }));
+
+      toast({
+        title: "Webhook Enviado",
+        description: `Webhook enviado com sucesso para ${shipment.tracking_code}`,
+        variant: "default"
+      });
+
+    } catch (error) {
+      console.error('❌ [WEBHOOK MANUAL] Erro ao enviar webhook:', error);
+      
+      setWebhookStatuses(prev => ({ 
+        ...prev, 
+        [shipment.id]: 'error' 
+      }));
+
+      toast({
+        title: "Erro ao Enviar Webhook",
+        description: `Erro ao enviar webhook para ${shipment.tracking_code}: ${error.message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setSendingWebhook(prev => ({ ...prev, [shipment.id]: false }));
+    }
+  };
+
+  // Função para obter badge do status do webhook
+  const getWebhookStatusBadge = (shipment: AdminShipment) => {
+    const status = webhookStatuses[shipment.id];
+    
+    switch (status) {
+      case 'sent':
+        return (
+          <Badge variant="default" className="bg-green-100 text-green-700 border-green-200">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Webhook Enviado
+          </Badge>
+        );
+      case 'error':
+        return (
+          <Badge variant="destructive" className="bg-red-100 text-red-700 border-red-200">
+            <XCircle className="w-3 h-3 mr-1" />
+            Erro no Webhook
+          </Badge>
+        );
+      case 'pending':
+      default:
+        return (
+          <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Webhook Pendente
+          </Badge>
+        );
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       'PENDING_LABEL': { label: 'Pendente', variant: 'secondary' as const },
       'PENDING_DOCUMENT': { label: 'Aguardando Documento', variant: 'destructive' as const },
       'PENDING_PAYMENT': { label: 'Aguardando Pagamento', variant: 'destructive' as const },
-      'PAYMENT_CONFIRMED': { label: 'Pagamento Confirmado', variant: 'success' as const },
-      'PAID': { label: 'Pago', variant: 'success' as const },
+      'PAYMENT_CONFIRMED': { label: 'Pagamento Confirmado', variant: 'default' as const },
+      'PAID': { label: 'Pago', variant: 'default' as const },
       'PAGO_AGUARDANDO_ETIQUETA': { label: 'Aguardando Etiqueta', variant: 'secondary' as const },
       'COLETA_ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
       'COLETA_FINALIZADA': { label: 'Coleta Finalizada', variant: 'default' as const },
-      'LABEL_AVAILABLE': { label: 'Etiqueta Disponível', variant: 'success' as const },
+      'LABEL_AVAILABLE': { label: 'Etiqueta Disponível', variant: 'default' as const },
       'IN_TRANSIT': { label: 'Em Trânsito', variant: 'default' as const },
-      'ENTREGA_FINALIZADA': { label: 'Entrega Finalizada', variant: 'success' as const },
-      'DELIVERED': { label: 'Entregue', variant: 'success' as const }
+      'ENTREGA_FINALIZADA': { label: 'Entrega Finalizada', variant: 'default' as const },
+      'DELIVERED': { label: 'Entregue', variant: 'default' as const }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'outline' as const };
@@ -284,34 +391,6 @@ const AdminRemessas = () => {
       currency: 'BRL'
     }).format(amount / 100);
   };
-
-  const getStatusBadgeForDetails = (status: string) => {
-    const statusConfig = {
-      'PENDING_LABEL': { variant: 'secondary', label: 'Pendente' },
-      'PENDING_DOCUMENT': { variant: 'destructive', label: 'Aguardando Documento' },
-      'PENDING_PAYMENT': { variant: 'destructive', label: 'Aguardando Pagamento' },
-      'PAYMENT_CONFIRMED': { variant: 'success', label: 'Pagamento Confirmado' },
-      'PAGO_AGUARDANDO_ETIQUETA': { variant: 'default', label: 'Aguardando Etiqueta' },
-      'LABEL_AVAILABLE': { variant: 'default', label: 'Etiqueta Disponível' },
-      'IN_TRANSIT': { variant: 'default', label: 'Em Trânsito' },
-      'DELIVERED': { variant: 'secondary', label: 'Entregue' },
-      'PAID': { variant: 'default', label: 'Pago' },
-      'COLETA_ACEITA': { variant: 'default', label: 'Coleta Aceita' },
-      'COLETA_FINALIZADA': { variant: 'default', label: 'Coleta Finalizada' },
-      'ENTREGA_FINALIZADA': { variant: 'secondary', label: 'Entrega Finalizada' }
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', label: status };
-    return <Badge variant={config.variant as any}>{config.label}</Badge>;
-  };
-
-  const handleDownloadLabel = (shipment: AdminShipment) => {
-    toast({
-      title: "Download iniciado",
-      description: `Baixando etiqueta para ${shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}`,
-    });
-  };
-
 
   const getQuoteValue = (shipment: AdminShipment) => {
     const paymentData = shipment.payment_data as any;
@@ -595,23 +674,49 @@ const AdminRemessas = () => {
                                <div className="flex items-center gap-2 text-xs mt-1">
                                  {shipment.label_pdf_url ? (
                                    <>
-                                     <Badge variant="success" className="text-xs">
+                                     <Badge variant="default" className="text-xs bg-green-100 text-green-700">
                                        Etiqueta Emitida
                                      </Badge>
                                      <Button
-                                       variant="outline"
+                                       variant="ghost"
                                        size="sm"
                                        onClick={() => window.open(shipment.label_pdf_url!, '_blank')}
-                                       className="h-6 px-2 text-xs"
+                                       className="h-6 px-2 text-xs hover:bg-primary/10"
                                      >
                                        <Download className="w-3 h-3 mr-1" />
-                                       Ver Etiqueta
+                                       PDF
                                      </Button>
                                    </>
                                  ) : (
-                                   <Badge variant="destructive" className="text-xs">
-                                     Etiqueta Pendente
+                                   <Badge variant="outline" className="text-xs">
+                                     Aguardando Etiqueta
                                    </Badge>
+                                 )}
+                               </div>
+                               
+                               {/* Status do Webhook e Botão Manual */}
+                               <div className="flex items-center gap-2 text-xs mt-2">
+                                 {getWebhookStatusBadge(shipment)}
+                                 {webhookStatuses[shipment.id] !== 'sent' && (
+                                   <Button
+                                     variant="outline"
+                                     size="sm"
+                                     onClick={() => handleSendWebhook(shipment)}
+                                     disabled={sendingWebhook[shipment.id]}
+                                     className="h-6 px-2 text-xs hover:bg-primary/10"
+                                   >
+                                     {sendingWebhook[shipment.id] ? (
+                                       <>
+                                         <div className="w-3 h-3 mr-1 animate-spin rounded-full border border-primary border-t-transparent" />
+                                         Enviando...
+                                       </>
+                                     ) : (
+                                       <>
+                                         <Send className="w-3 h-3 mr-1" />
+                                         Enviar Webhook
+                                       </>
+                                     )}
+                                   </Button>
                                  )}
                                </div>
                            </div>
@@ -626,489 +731,261 @@ const AdminRemessas = () => {
         </CardContent>
       </Card>
 
-
       {/* Modal de Detalhes da Remessa */}
       <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5" />
+            <DialogTitle>
               Detalhes da Remessa - {selectedShipmentDetails?.tracking_code || `ID${selectedShipmentDetails?.id.slice(0, 8).toUpperCase()}`}
             </DialogTitle>
           </DialogHeader>
           
-          <ScrollArea className="max-h-[60vh] pr-4">
-            {selectedShipmentDetails && (
-              <div className="space-y-6">
-                {/* Informações Gerais */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Informações Gerais</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+          {selectedShipmentDetails && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Coluna 1: Informações Gerais */}
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Informações Gerais</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
                     <div>
-                      <p className="text-muted-foreground">Código de Rastreamento</p>
-                      <p className="font-medium">{selectedShipmentDetails.tracking_code || `ID${selectedShipmentDetails.id.slice(0, 8).toUpperCase()}`}</p>
+                      <label className="text-sm font-medium text-muted-foreground">Código de Rastreio</label>
+                      <p className="text-sm font-mono">{selectedShipmentDetails.tracking_code || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Status</p>
-                      <div className="mt-1">{getStatusBadgeForDetails(selectedShipmentDetails.status)}</div>
+                      <label className="text-sm font-medium text-muted-foreground">Status</label>
+                      <div className="mt-1">{getStatusBadge(selectedShipmentDetails.status)}</div>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Data de Criação</p>
-                      <p className="font-medium">{formatDate(selectedShipmentDetails.created_at)}</p>
+                      <label className="text-sm font-medium text-muted-foreground">Data de Criação</label>
+                      <p className="text-sm">{format(new Date(selectedShipmentDetails.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Tipo de Serviço</p>
-                      <p className="font-medium">{selectedShipmentDetails.selected_option === 'standard' ? 'Econômico' : 'Expresso'}</p>
+                      <label className="text-sm font-medium text-muted-foreground">Valor Total</label>
+                      <p className="text-lg font-bold text-primary">
+                        R$ {getQuoteValue(selectedShipmentDetails).toFixed(2).replace('.', ',')}
+                      </p>
                     </div>
-                     <div>
-                       <p className="text-muted-foreground">Opção de Coleta</p>
-                       <p className="font-medium">{selectedShipmentDetails.pickup_option === 'dropoff' ? 'Entrega no Hub' : 'Coleta no Local'}</p>
-                     </div>
-                      {selectedShipmentDetails.pricing_table_name && (
-                        <div>
-                          <p className="text-muted-foreground">Tabela de Preços</p>
-                          <p className="font-medium">{selectedShipmentDetails.pricing_table_name}</p>
-                        </div>
-                      )}
+                    {selectedShipmentDetails.pricing_table_name && (
                       <div>
-                        <p className="text-muted-foreground">Status da Etiqueta</p>
-                        <div className="mt-1">
-                          {selectedShipmentDetails.label_pdf_url ? (
-                            <Badge variant="success">Etiqueta Emitida</Badge>
-                          ) : (
-                            <Badge variant="destructive">Etiqueta Pendente</Badge>
-                          )}
-                        </div>
-                      </div>
-                      {/* Informações do CTE */}
-                      {(selectedShipmentDetails.cte_key || cteData) && (
-                        <div className="col-span-2">
-                          <p className="text-muted-foreground">Informações do CT-e</p>
-                          <div className="space-y-1">
-                            {(cteData?.chave_cte || selectedShipmentDetails.cte_key) && (
-                              <div>
-                                <span className="text-xs text-muted-foreground">Chave: </span>
-                                <span className="font-mono text-xs">{cteData?.chave_cte || selectedShipmentDetails.cte_key}</span>
-                              </div>
-                            )}
-                            {cteData?.numero_cte && (
-                              <div>
-                                <span className="text-xs text-muted-foreground">Número: </span>
-                                <span className="font-medium text-xs">{cteData.numero_cte}</span>
-                              </div>
-                            )}
-                            {cteData?.serie && (
-                              <div>
-                                <span className="text-xs text-muted-foreground">Série: </span>
-                                <span className="font-medium text-xs">{cteData.serie}</span>
-                              </div>
-                            )}
-                            {cteData?.status && (
-                              <div>
-                                <span className="text-xs text-muted-foreground">Status CT-e: </span>
-                                <Badge variant={cteData.status === 'Autorizado' ? 'success' : 'secondary'} className="text-xs">
-                                  {cteData.status}
-                                </Badge>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    <div>
-                      <p className="text-muted-foreground">Cliente</p>
-                      <p className="font-medium">{selectedShipmentDetails.client_name}</p>
-                    </div>
-                    {selectedShipmentDetails.motoristas && (
-                      <div>
-                        <p className="text-muted-foreground">Motorista</p>
-                        <p className="font-medium">{selectedShipmentDetails.motoristas.nome}</p>
-                        <p className="text-xs text-muted-foreground">{selectedShipmentDetails.motoristas.telefone}</p>
+                        <label className="text-sm font-medium text-muted-foreground">Tabela de Preços</label>
+                        <p className="text-sm">{selectedShipmentDetails.pricing_table_name}</p>
                       </div>
                     )}
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
 
-                <Separator />
-
-                {/* Dados do Remetente - SEMPRE usando dados originais do formulário */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                    Dados do Remetente 
-                    <Badge variant="outline" className="text-xs">Dados Originais do Formulário</Badge>
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                {/* Cliente */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Cliente</CardTitle>
+                  </CardHeader>
+                  <CardContent>
                     <div>
-                      <p className="text-muted-foreground">Nome</p>
-                      <p className="font-medium">{selectedShipmentDetails.sender_address?.name}</p>
+                      <label className="text-sm font-medium text-muted-foreground">Nome</label>
+                      <p className="text-sm">{selectedShipmentDetails.client_name}</p>
+                    </div>
+                    <div className="mt-2">
+                      <label className="text-sm font-medium text-muted-foreground">Tipo</label>
+                      <p className="text-sm">{selectedShipmentDetails.user_id ? 'Cliente Cadastrado' : 'Cliente Anônimo'}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Dimensões e Peso */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Dimensões e Peso</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Peso</label>
+                        <p className="text-sm">{selectedShipmentDetails.weight} kg</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Formato</label>
+                        <p className="text-sm">{selectedShipmentDetails.format}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Comprimento</label>
+                        <p className="text-sm">{selectedShipmentDetails.length} cm</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Largura</label>
+                        <p className="text-sm">{selectedShipmentDetails.width} cm</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Altura</label>
+                        <p className="text-sm">{selectedShipmentDetails.height} cm</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Coluna 2: Endereços */}
+              <div className="space-y-4">
+                {/* Remetente */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center">
+                      <Badge className="bg-green-100 text-green-700 mr-2">Dados Originais do Formulário</Badge>
+                      Remetente
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Nome</label>
+                      <p className="text-sm">{selectedShipmentDetails.sender_address?.name || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">CEP</p>
-                      <p className="font-medium">{selectedShipmentDetails.sender_address?.cep}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-muted-foreground">Endereço</p>
-                      <p className="font-medium">
-                        {selectedShipmentDetails.sender_address?.street}, {selectedShipmentDetails.sender_address?.number}
+                      <label className="text-sm font-medium text-muted-foreground">Endereço</label>
+                      <p className="text-sm">
+                        {selectedShipmentDetails.sender_address?.street || 'N/A'}, {selectedShipmentDetails.sender_address?.number || 'N/A'}
                         {selectedShipmentDetails.sender_address?.complement && `, ${selectedShipmentDetails.sender_address.complement}`}
                       </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Bairro</p>
-                      <p className="font-medium">{selectedShipmentDetails.sender_address?.neighborhood}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Cidade/Estado</p>
-                      <p className="font-medium">
-                        {selectedShipmentDetails.sender_address?.city} - {selectedShipmentDetails.sender_address?.state}
+                      <p className="text-sm text-muted-foreground">
+                        {selectedShipmentDetails.sender_address?.neighborhood || 'N/A'} - {selectedShipmentDetails.sender_address?.city || 'N/A'}/{selectedShipmentDetails.sender_address?.state || 'N/A'}
                       </p>
+                      <p className="text-sm text-muted-foreground">CEP: {selectedShipmentDetails.sender_address?.cep || 'N/A'}</p>
                     </div>
-                    {selectedShipmentDetails.sender_address?.reference && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">Referência</p>
-                        <p className="font-medium">{selectedShipmentDetails.sender_address.reference}</p>
-                      </div>
-                    )}
-                    {selectedShipmentDetails.sender_address?.phone && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">Telefone</p>
-                        <p className="font-medium">{selectedShipmentDetails.sender_address.phone}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
 
-                <Separator />
-
-                {/* Dados do Destinatário - SEMPRE usando dados originais do formulário */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                    Dados do Destinatário
-                    <Badge variant="outline" className="text-xs">Dados Originais do Formulário</Badge>
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                {/* Destinatário */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center">
+                      <Badge className="bg-green-100 text-green-700 mr-2">Dados Originais do Formulário</Badge>
+                      Destinatário
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
                     <div>
-                      <p className="text-muted-foreground">Nome</p>
-                      <p className="font-medium">{selectedShipmentDetails.recipient_address?.name}</p>
+                      <label className="text-sm font-medium text-muted-foreground">Nome</label>
+                      <p className="text-sm">{selectedShipmentDetails.recipient_address?.name || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">CEP</p>
-                      <p className="font-medium">{selectedShipmentDetails.recipient_address?.cep}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-muted-foreground">Endereço</p>
-                      <p className="font-medium">
-                        {selectedShipmentDetails.recipient_address?.street}, {selectedShipmentDetails.recipient_address?.number}
+                      <label className="text-sm font-medium text-muted-foreground">Endereço</label>
+                      <p className="text-sm">
+                        {selectedShipmentDetails.recipient_address?.street || 'N/A'}, {selectedShipmentDetails.recipient_address?.number || 'N/A'}
                         {selectedShipmentDetails.recipient_address?.complement && `, ${selectedShipmentDetails.recipient_address.complement}`}
                       </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Bairro</p>
-                      <p className="font-medium">{selectedShipmentDetails.recipient_address?.neighborhood}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Cidade/Estado</p>
-                      <p className="font-medium">
-                        {selectedShipmentDetails.recipient_address?.city} - {selectedShipmentDetails.recipient_address?.state}
+                      <p className="text-sm text-muted-foreground">
+                        {selectedShipmentDetails.recipient_address?.neighborhood || 'N/A'} - {selectedShipmentDetails.recipient_address?.city || 'N/A'}/{selectedShipmentDetails.recipient_address?.state || 'N/A'}
                       </p>
+                      <p className="text-sm text-muted-foreground">CEP: {selectedShipmentDetails.recipient_address?.cep || 'N/A'}</p>
                     </div>
-                    {selectedShipmentDetails.recipient_address?.reference && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">Referência</p>
-                        <p className="font-medium">{selectedShipmentDetails.recipient_address.reference}</p>
+                  </CardContent>
+                </Card>
+
+                {/* Opções de Envio */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Opções de Envio</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Modalidade</label>
+                      <p className="text-sm">{selectedShipmentDetails.selected_option === 'express' ? 'Expresso' : 'Econômico'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Coleta</label>
+                      <p className="text-sm">{selectedShipmentDetails.pickup_option === 'pickup' ? 'Coleta Domiciliar' : 'Envio em Balcão'}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Motorista */}
+                {selectedShipmentDetails.motoristas && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Motorista Responsável</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Nome</label>
+                        <p className="text-sm">{selectedShipmentDetails.motoristas.nome}</p>
                       </div>
-                    )}
-                    {selectedShipmentDetails.recipient_address?.phone && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">Telefone</p>
-                        <p className="font-medium">{selectedShipmentDetails.recipient_address.phone}</p>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Telefone</label>
+                        <p className="text-sm">{selectedShipmentDetails.motoristas.telefone}</p>
                       </div>
-                     )}
-                   </div>
-                 </div>
-
-                 <Separator />
-
-                {/* Dados do Pacote */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Dados do Pacote</h3>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Peso</p>
-                      <p className="font-medium">{selectedShipmentDetails.weight}kg</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Comprimento</p>
-                      <p className="font-medium">{selectedShipmentDetails.length}cm</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Largura</p>
-                      <p className="font-medium">{selectedShipmentDetails.width}cm</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Altura</p>
-                      <p className="font-medium">{selectedShipmentDetails.height}cm</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Formato</p>
-                      <p className="font-medium capitalize">{selectedShipmentDetails.format}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Dados de Pagamento */}
-                {selectedShipmentDetails.payment_data && (
-                  <>
-                    <div>
-                      <h3 className="text-lg font-semibold mb-3">Dados de Pagamento</h3>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Método de Pagamento</p>
-                          <p className="font-medium">{selectedShipmentDetails.payment_data.method?.toUpperCase()}</p>
-                        </div>
-                        {selectedShipmentDetails.payment_data.amount && (
-                          <div>
-                            <p className="text-muted-foreground">Valor Pago</p>
-                            <p className="font-medium">{formatCurrency(selectedShipmentDetails.payment_data.amount)}</p>
-                          </div>
-                        )}
-                        {selectedShipmentDetails.payment_data.paidAt && (
-                          <div>
-                            <p className="text-muted-foreground">Data do Pagamento</p>
-                            <p className="font-medium">{formatDate(selectedShipmentDetails.payment_data.paidAt)}</p>
-                          </div>
-                        )}
-                        {selectedShipmentDetails.payment_data.status && (
-                          <div>
-                            <p className="text-muted-foreground">Status do Pagamento</p>
-                            <p className="font-medium">{selectedShipmentDetails.payment_data.status === 'paid' ? 'PAGO' : selectedShipmentDetails.payment_data.status}</p>
-                          </div>
-                        )}
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Email</label>
+                        <p className="text-sm">{selectedShipmentDetails.motoristas.email}</p>
                       </div>
-                    </div>
-                    <Separator />
-                  </>
+                    </CardContent>
+                  </Card>
                 )}
 
-                {/* Dados da Cotação */}
-                {selectedShipmentDetails.quote_data && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3">Dados da Cotação</h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      {selectedShipmentDetails.quote_data.shippingQuote && (
-                        <>
-                          <div>
-                            <p className="text-muted-foreground">Zona de Entrega</p>
-                            <p className="font-medium">{selectedShipmentDetails.quote_data.shippingQuote.zoneName} ({selectedShipmentDetails.quote_data.shippingQuote.zone})</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Prazo Econômico</p>
-                            <p className="font-medium">{selectedShipmentDetails.quote_data.shippingQuote.economicDays} dias</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Prazo Expresso</p>
-                            <p className="font-medium">{selectedShipmentDetails.quote_data.shippingQuote.expressDays} dias</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Preço Original</p>
-                            <p className="font-medium">R$ {selectedShipmentDetails.quote_data.shippingQuote.economicPrice.toFixed(2).replace('.', ',')}</p>
-                          </div>
-                        </>
-                      )}
-                      {selectedShipmentDetails.quote_data.totalMerchandiseValue && (
-                        <div>
-                          <p className="text-muted-foreground">Valor da Mercadoria</p>
-                          <p className="font-medium">R$ {selectedShipmentDetails.quote_data.totalMerchandiseValue.toFixed(2).replace('.', ',')}</p>
-                         </div>
-                       )}
-                     </div>
-                   </div>
-                 )}
-
-                  {/* Dados do CT-e - DEBUG */}
-                  <div>
-                    <Separator />
+                {/* Etiqueta e Documentos */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Documentos</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
                     <div>
-                      <h3 className="text-lg font-semibold mb-3">Debug CT-e</h3>
-                      <div className="text-sm space-y-2">
-                        <div>CTE Data: {cteData ? 'Encontrado' : 'Não encontrado'}</div>
-                        <div>CTE Key: {selectedShipmentDetails.cte_key || 'Não tem'}</div>
-                        <div>Shipment ID: {selectedShipmentDetails.id}</div>
-                        {cteData && (
-                          <div>
-                            <p>Chave: {cteData.chave_cte}</p>
-                            <p>Status: {cteData.status}</p>
-                            <p>Número: {cteData.numero_cte}</p>
-                          </div>
-                        )}
-                      </div>
+                      <label className="text-sm font-medium text-muted-foreground">Etiqueta</label>
+                      {selectedShipmentDetails.label_pdf_url ? (
+                        <div className="mt-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(selectedShipmentDetails.label_pdf_url!, '_blank')}
+                            className="h-8"
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Baixar Etiqueta PDF
+                          </Button>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Etiqueta não disponível</p>
+                      )}
                     </div>
-                  </div>
-
-                  {/* Dados do CT-e */}
-                  {(selectedShipmentDetails.cte_key || cteData) && (
-                    <>
-                      <Separator />
+                    
+                    {selectedShipmentDetails.cte_key && (
                       <div>
-                        <h3 className="text-lg font-semibold mb-3">Dados do CT-e</h3>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          {(cteData?.chave_cte || selectedShipmentDetails.cte_key) && (
-                            <div className="col-span-2">
-                              <p className="text-muted-foreground">Chave do CT-e</p>
-                              <p className="font-mono text-xs break-all">{cteData?.chave_cte || selectedShipmentDetails.cte_key}</p>
-                            </div>
-                          )}
-                          {cteData?.numero_cte && (
-                            <div>
-                              <p className="text-muted-foreground">Número</p>
-                              <p className="font-medium">{cteData.numero_cte}</p>
-                            </div>
-                          )}
-                          {cteData?.serie && (
-                            <div>
-                              <p className="text-muted-foreground">Série</p>
-                              <p className="font-medium">{cteData.serie}</p>
-                            </div>
-                          )}
-                          {cteData?.modelo && (
-                            <div>
-                              <p className="text-muted-foreground">Modelo</p>
-                              <p className="font-medium">{cteData.modelo}</p>
-                            </div>
-                          )}
-                          {cteData?.status && (
-                            <div>
-                              <p className="text-muted-foreground">Status</p>
-                              <Badge variant={cteData.status === 'Autorizado' || cteData.status === 'aprovado' ? 'success' : 'secondary'} className="text-xs">
-                                {cteData.status}
-                              </Badge>
-                            </div>
-                          )}
-                          {cteData?.created_at && (
-                            <div>
-                              <p className="text-muted-foreground">Data de Criação</p>
-                              <p className="font-medium">{formatDate(cteData.created_at)}</p>
-                            </div>
-                          )}
-                          {cteData?.xml_url && (
-                            <div className="col-span-2">
-                              <p className="text-muted-foreground">XML</p>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(cteData.xml_url, '_blank')}
-                                className="h-8 px-3"
-                              >
-                                <Download className="w-3 h-3 mr-1" />
-                                Baixar XML
-                              </Button>
-                            </div>
-                          )}
-                          {cteData?.dacte_url && (
-                            <div className="col-span-2">
-                              <p className="text-muted-foreground">DACTE</p>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(cteData.dacte_url, '_blank')}
-                                className="h-8 px-3"
-                              >
-                                <Download className="w-3 h-3 mr-1" />
-                                Baixar DACTE
-                              </Button>
-                            </div>
+                        <label className="text-sm font-medium text-muted-foreground">Chave do CT-e</label>
+                        <p className="text-sm font-mono text-xs break-all">{selectedShipmentDetails.cte_key}</p>
+                      </div>
+                    )}
+                    
+                    {cteData && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">CT-e</label>
+                        <div className="mt-1 p-2 bg-muted rounded text-xs">
+                          <p><strong>Número:</strong> {cteData.numero_cte}</p>
+                          <p><strong>Status:</strong> {cteData.status}</p>
+                          <p><strong>Série:</strong> {cteData.serie}</p>
+                          <p><strong>Modelo:</strong> {cteData.modelo}</p>
+                          {cteData.dacte_url && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => window.open(cteData.dacte_url, '_blank')}
+                              className="h-6 mt-2"
+                            >
+                              <Download className="w-3 h-3 mr-1" />
+                              DACTE
+                            </Button>
                           )}
                         </div>
                       </div>
-                    </>
-                   )}
-                   
-                   {/* CT-e Details Section */}
-                   {(cteData || selectedShipmentDetails.cte_key) && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h3 className="text-lg font-semibold mb-3">Dados do CT-e</h3>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          {(cteData?.chave_cte || selectedShipmentDetails.cte_key) && (
-                            <div className="col-span-2">
-                              <p className="text-muted-foreground">Chave do CT-e</p>
-                              <p className="font-mono text-xs break-all">{cteData?.chave_cte || selectedShipmentDetails.cte_key}</p>
-                            </div>
-                          )}
-                          {cteData?.numero_cte && (
-                            <div>
-                              <p className="text-muted-foreground">Número</p>
-                              <p className="font-medium">{cteData.numero_cte}</p>
-                            </div>
-                          )}
-                          {cteData?.serie && (
-                            <div>
-                              <p className="text-muted-foreground">Série</p>
-                              <p className="font-medium">{cteData.serie}</p>
-                            </div>
-                          )}
-                          {cteData?.modelo && (
-                            <div>
-                              <p className="text-muted-foreground">Modelo</p>
-                              <p className="font-medium">{cteData.modelo}</p>
-                            </div>
-                          )}
-                          {cteData?.status && (
-                            <div>
-                              <p className="text-muted-foreground">Status</p>
-                              <Badge variant={cteData.status === 'Autorizado' ? 'success' : 'secondary'} className="text-xs">
-                                {cteData.status}
-                              </Badge>
-                            </div>
-                          )}
-                          {cteData?.created_at && (
-                            <div>
-                              <p className="text-muted-foreground">Data de Criação</p>
-                              <p className="font-medium">{formatDate(cteData.created_at)}</p>
-                            </div>
-                          )}
-                          {cteData?.xml_url && (
-                            <div className="col-span-2">
-                              <p className="text-muted-foreground">XML</p>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(cteData.xml_url, '_blank')}
-                                className="h-8 px-3"
-                              >
-                                <Download className="w-3 h-3 mr-1" />
-                                Baixar XML
-                              </Button>
-                            </div>
-                          )}
-                          {cteData?.dacte_url && (
-                            <div className="col-span-2">
-                              <p className="text-muted-foreground">DACTE</p>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(cteData.dacte_url, '_blank')}
-                                className="h-8 px-3"
-                              >
-                                <Download className="w-3 h-3 mr-1" />
-                                Baixar DACTE
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                   )}
-               </div>
-             )}
-           </ScrollArea>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
-
-      {/* Modal de Ocorrências do Motorista */}
+      {/* Modal de Ocorrências */}
       <ShipmentOccurrencesModal
         isOpen={occurrencesModalOpen}
         onClose={() => setOccurrencesModalOpen(false)}
