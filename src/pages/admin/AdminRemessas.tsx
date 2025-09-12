@@ -960,24 +960,12 @@ const AdminRemessas = () => {
                        </div>
                      )}
 
-                     {selectedShipmentDetails.pricing_table_name && (
-                       <div>
-                         <label className="text-sm font-medium text-muted-foreground">Tabela de Preços</label>
-                         <div className="mt-1 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                           <div className="flex items-center space-x-2 mb-2">
-                             <FileText className="w-4 h-4 text-blue-600" />
-                             <span className="font-medium text-blue-800">{selectedShipmentDetails.pricing_table_name}</span>
-                           </div>
-                           <p className="text-xs text-blue-600">
-                             Esta remessa foi cotada utilizando a tabela de preços personalizada acima. 
-                             Os valores e prazos foram calculados com base nesta configuração específica.
-                           </p>
-                           <div className="mt-2 text-xs text-muted-foreground">
-                             ℹ️ Tabela aplicada automaticamente durante a cotação
-                           </div>
-                         </div>
-                       </div>
-                     )}
+                      {selectedShipmentDetails.pricing_table_name && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Tabela de Preços</label>
+                          <p className="text-sm mt-1">{selectedShipmentDetails.pricing_table_name}</p>
+                        </div>
+                      )}
                    </CardContent>
                 </Card>
 
