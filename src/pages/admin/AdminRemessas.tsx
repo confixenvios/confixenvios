@@ -104,11 +104,25 @@ const AdminRemessas = () => {
       const statuses: Record<string, 'sent' | 'pending' | 'error'> = {};
       
       for (const remessa of remessas) {
+        // Só verificar webhook para remessas que foram criadas/pagas (que deveriam ter webhook)
+        const shouldHaveWebhook = ['PAID', 'PAYMENT_CONFIRMED', 'LABEL_GENERATED', 'PAGO_AGUARDANDO_ETIQUETA'].includes(remessa.status);
+        
+        if (!shouldHaveWebhook) {
+          statuses[remessa.id] = 'sent'; // Não precisa webhook ainda
+          continue;
+        }
+
         const { data: logs, error } = await supabase
           .from('webhook_logs')
           .select('event_type, response_status, created_at')
           .eq('shipment_id', remessa.id)
-          .in('event_type', ['shipment_created_webhook_triggered', 'edge_function_called_success', 'shipment_webhook_dispatched'])
+          .in('event_type', [
+            'shipment_created_webhook_triggered', 
+            'edge_function_called_success',
+            'edge_function_called_success_with_pricing_table',
+            'shipment_webhook_dispatched',
+            'manual_webhook_dispatch_complete_data'
+          ])
           .order('created_at', { ascending: false })
           .limit(1);
 
@@ -120,7 +134,7 @@ const AdminRemessas = () => {
 
         if (logs && logs.length > 0) {
           const log = logs[0];
-          if (log.response_status === 200) {
+          if (log.response_status === 200 || log.response_status === 202) {
             statuses[remessa.id] = 'sent';
           } else {
             statuses[remessa.id] = 'error';
@@ -313,6 +327,12 @@ const AdminRemessas = () => {
   // Função para obter badge do status do webhook
   const getWebhookStatusBadge = (shipment: AdminShipment) => {
     const status = webhookStatuses[shipment.id];
+    const shouldHaveWebhook = ['PAID', 'PAYMENT_CONFIRMED', 'LABEL_GENERATED', 'PAGO_AGUARDANDO_ETIQUETA'].includes(shipment.status);
+    
+    // Se a remessa não deveria ter webhook ainda, não mostrar badge
+    if (!shouldHaveWebhook) {
+      return null;
+    }
     
     switch (status) {
       case 'sent':
@@ -816,30 +836,31 @@ const AdminRemessas = () => {
                                  )}
                                </div>
                                
-                               {/* Status do Webhook e Botão Manual */}
-                               <div className="flex items-center gap-2 text-xs mt-2">
-                                 {getWebhookStatusBadge(shipment)}
-                                 {webhookStatuses[shipment.id] !== 'sent' && (
-                                   <Button
-                                     variant="outline"
-                                     size="sm"
-                                     onClick={() => handleSendWebhook(shipment)}
-                                     disabled={sendingWebhook[shipment.id]}
-                                     className="h-6 px-2 text-xs hover:bg-primary/10"
-                                   >
-                                     {sendingWebhook[shipment.id] ? (
-                                       <>
-                                         <div className="w-3 h-3 mr-1 animate-spin rounded-full border border-primary border-t-transparent" />
-                                         Enviando...
-                                       </>
-                                     ) : (
-                                       <>
-                                         <Send className="w-3 h-3 mr-1" />
-                                         Enviar Webhook
-                                       </>
-                                     )}
-                                   </Button>
-                                 )}
+                                {/* Status do Webhook e Botão Manual */}
+                                <div className="flex items-center gap-2 text-xs mt-2">
+                                  {getWebhookStatusBadge(shipment)}
+                                  {(webhookStatuses[shipment.id] === 'pending' || webhookStatuses[shipment.id] === 'error') && 
+                                   ['PAID', 'PAYMENT_CONFIRMED', 'LABEL_GENERATED', 'PAGO_AGUARDANDO_ETIQUETA'].includes(shipment.status) && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleSendWebhook(shipment)}
+                                      disabled={sendingWebhook[shipment.id]}
+                                      className="h-6 px-2 text-xs hover:bg-primary/10"
+                                    >
+                                      {sendingWebhook[shipment.id] ? (
+                                        <>
+                                          <div className="w-3 h-3 mr-1 animate-spin rounded-full border border-primary border-t-transparent" />
+                                          Enviando...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Send className="w-3 h-3 mr-1" />
+                                          Enviar Webhook
+                                        </>
+                                      )}
+                                    </Button>
+                                  )}
                                </div>
                            </div>
                         </div>
