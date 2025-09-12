@@ -199,14 +199,15 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
       };
 
       // Debug da remessa mais recente
-      if (shipment.tracking_code === 'ID20251VROOK') {
-        console.log('🔍 [ADMIN SHIPMENTS SERVICE] Remessa ID20251VROOK encontrada:', {
+      if (shipment.tracking_code === 'ID2025XBVLXG') {
+        console.log('🔍 [ADMIN SHIPMENTS SERVICE] Remessa ID2025XBVLXG encontrada:', {
           id: result.id,
           tracking_code: result.tracking_code,
-          client_name: result.client_name,
-          created_at: result.created_at,
-          user_id: shipment.user_id,
-          profile: clientProfile
+          pricing_table_name: result.pricing_table_name,
+          pricing_table_id: result.pricing_table_id,
+          raw_pricing_table_name: shipment.pricing_table_name,
+          raw_pricing_table_id: shipment.pricing_table_id,
+          client_name: result.client_name
         });
       }
 
@@ -320,6 +321,10 @@ export const getAvailableShipments = async (): Promise<BaseShipment[]> => {
  */
 function normalizeShipmentData(shipment: any): BaseShipment {
   console.log('🔄 [NORMALIZE] Normalizando dados da remessa:', shipment.id);
+  console.log('🔄 [NORMALIZE] Pricing table data:', {
+    pricing_table_name: shipment.pricing_table_name,
+    pricing_table_id: shipment.pricing_table_id
+  });
   
   // Tentar usar dados originais do formulário (quote_data.addressData) primeiro
   let senderAddress = shipment.sender_address || createEmptyAddress();

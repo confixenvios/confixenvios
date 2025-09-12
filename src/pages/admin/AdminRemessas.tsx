@@ -365,6 +365,14 @@ const AdminRemessas = () => {
   };
 
   const handleViewShipment = async (shipment: AdminShipment) => {
+    console.log('🔍 [ADMIN REMESSAS] Abrindo detalhes da remessa:', {
+      id: shipment.id,
+      tracking_code: shipment.tracking_code,
+      pricing_table_name: shipment.pricing_table_name,
+      pricing_table_id: shipment.pricing_table_id,
+      full_shipment: shipment
+    });
+    
     setSelectedShipmentDetails(shipment);
     setDetailsModalOpen(true);
     
@@ -960,12 +968,14 @@ const AdminRemessas = () => {
                        </div>
                      )}
 
-                      {selectedShipmentDetails.pricing_table_name && (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Tabela de Preços</label>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Tabela de Preços</label>
+                        {selectedShipmentDetails.pricing_table_name ? (
                           <p className="text-sm mt-1">{selectedShipmentDetails.pricing_table_name}</p>
-                        </div>
-                      )}
+                        ) : (
+                          <p className="text-sm mt-1 text-muted-foreground">Tabela padrão do sistema</p>
+                        )}
+                      </div>
                    </CardContent>
                 </Card>
 
