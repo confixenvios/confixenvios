@@ -544,6 +544,8 @@ const MotoristaDashboard = () => {
             motoristaId={motoristaSession.id}
             onSuccess={() => {
               console.log('📊 Ocorrência criada com sucesso');
+              console.log('🔍 [SESSION DEBUG] Motorista session:', motoristaSession);
+              console.log('🔍 [SESSION DEBUG] Selected remessa:', selectedRemessa);
               if (motoristaSession?.id) {
                 loadMinhasRemessas(motoristaSession.id);
                 loadRemessasDisponiveis();

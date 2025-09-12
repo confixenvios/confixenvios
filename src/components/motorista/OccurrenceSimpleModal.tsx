@@ -48,7 +48,14 @@ export const OccurrenceSimpleModal = ({
   };
 
   const handleSaveOccurrence = async () => {
+    console.log('🔍 [OCCURRENCE DEBUG] Iniciando processo de salvamento...');
+    console.log('📸 Fotos:', photos.length);
+    console.log('🎵 Audio URL:', audioUrl ? 'presente' : 'ausente');
+    console.log('📦 Shipment ID:', shipmentId);
+    console.log('🚛 Motorista ID:', motoristaId);
+    
     if (photos.length === 0 && !audioUrl) {
+      console.log('❌ [OCCURRENCE DEBUG] Nenhum anexo fornecido');
       toast({
         title: "Nenhum anexo",
         description: "Adicione pelo menos uma foto ou áudio para registrar a ocorrência.",
@@ -82,7 +89,16 @@ export const OccurrenceSimpleModal = ({
               .getPublicUrl(filePath);
               
             // Registrar foto como ocorrência
-            const { error: photoError } = await supabase
+            console.log('💾 [PHOTO DEBUG] Tentando inserir ocorrência de foto...');
+            console.log('💾 [PHOTO DEBUG] Dados:', {
+              shipment_id: shipmentId,
+              motorista_id: motoristaId,
+              occurrence_type: 'foto',
+              file_url: publicUrl,
+              description: 'Foto registrada pelo motorista'
+            });
+            
+            const { data: photoData, error: photoError } = await supabase
               .from('shipment_occurrences')
               .insert({
                 shipment_id: shipmentId,
@@ -90,12 +106,14 @@ export const OccurrenceSimpleModal = ({
                 occurrence_type: 'foto',
                 file_url: publicUrl,
                 description: 'Foto registrada pelo motorista'
-              });
+              })
+              .select();
               
             if (photoError) {
-              console.error('❌ Erro ao registrar foto:', photoError);
+              console.error('❌ [PHOTO DEBUG] Erro ao registrar foto:', photoError);
+              console.error('❌ [PHOTO DEBUG] Erro detalhes:', JSON.stringify(photoError, null, 2));
             } else {
-              console.log('📸 Foto registrada como ocorrência:', publicUrl);
+              console.log('📸 [PHOTO DEBUG] Foto registrada com sucesso:', photoData);
             }
           } else {
             console.error('❌ Erro no upload da foto:', uploadError);
@@ -105,21 +123,31 @@ export const OccurrenceSimpleModal = ({
 
       // Salvar áudio como ocorrência
       if (audioUrl) {
-        console.log('🎵 Registrando áudio como ocorrência...');
-        const { error: audioError } = await supabase
+        console.log('🎵 [AUDIO DEBUG] Registrando áudio como ocorrência...');
+        console.log('🎵 [AUDIO DEBUG] Dados:', {
+          shipment_id: shipmentId,
+          motorista_id: motoristaId,
+          occurrence_type: 'audio',
+          file_url: audioUrl,
+          description: 'Áudio registrado pelo motorista'
+        });
+        
+        const { data: audioData, error: audioError } = await supabase
           .from('shipment_occurrences')
           .insert({
             shipment_id: shipmentId,
             motorista_id: motoristaId,
-            occurrence_type: 'audio',
+            occurrence_type: 'audio',  
             file_url: audioUrl,
             description: 'Áudio registrado pelo motorista'
-          });
+          })
+          .select();
           
         if (audioError) {
-          console.error('❌ Erro ao registrar áudio:', audioError);
+          console.error('❌ [AUDIO DEBUG] Erro ao registrar áudio:', audioError);
+          console.error('❌ [AUDIO DEBUG] Erro detalhes:', JSON.stringify(audioError, null, 2));
         } else {
-          console.log('🎵 Áudio registrado como ocorrência');
+          console.log('🎵 [AUDIO DEBUG] Áudio registrado com sucesso:', audioData);
         }
       }
       
@@ -137,10 +165,12 @@ export const OccurrenceSimpleModal = ({
       onSuccess();
       
     } catch (error: any) {
-      console.error('❌ Erro no processo:', error);
+      console.error('❌ [OCCURRENCE DEBUG] Erro no processo:', error);
+      console.error('❌ [OCCURRENCE DEBUG] Stack trace:', error.stack);
+      console.error('❌ [OCCURRENCE DEBUG] Error object:', JSON.stringify(error, null, 2));
       toast({
         title: "Erro", 
-        description: error.message,
+        description: error.message || 'Erro desconhecido',
         variant: "destructive"
       });
     }
