@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { AudioRecorder } from './AudioRecorder';
 import { PhotoUpload } from './PhotoUpload';
 import { AudioPlayer } from '@/components/AudioPlayer';
-import { X, PlayCircle, Image as ImageIcon } from 'lucide-react';
+import { X, PlayCircle, Image as ImageIcon, FileText, Plus } from 'lucide-react';
 import { createSecureSupabaseClient } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -30,6 +30,8 @@ export const OccurrenceSimpleModal = ({
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [existingOccurrences, setExistingOccurrences] = useState<any[]>([]);
+  const [loadingOccurrences, setLoadingOccurrences] = useState(false);
   const { toast } = useToast();
 
   // Reset attachments when modal opens/closes
@@ -42,8 +44,16 @@ export const OccurrenceSimpleModal = ({
         return [];
       });
       setAudioUrl(null);
+      setExistingOccurrences([]);
     }
   }, [isOpen]);
+
+  // Load existing occurrences when modal opens
+  React.useEffect(() => {
+    if (isOpen && shipmentId) {
+      loadExistingOccurrences();
+    }
+  }, [isOpen, shipmentId]);
 
   // Cleanup preview URLs when component unmounts
   React.useEffect(() => {
@@ -51,6 +61,32 @@ export const OccurrenceSimpleModal = ({
       photoPreviewUrls.forEach(url => URL.revokeObjectURL(url));
     };
   }, [photoPreviewUrls]);
+
+  const loadExistingOccurrences = async () => {
+    setLoadingOccurrences(true);
+    const supabase = createSecureSupabaseClient();
+    
+    try {
+      console.log('📋 Buscando ocorrências existentes para shipment:', shipmentId);
+      
+      const { data: occurrences, error } = await supabase
+        .from('shipment_occurrences')
+        .select('*')
+        .eq('shipment_id', shipmentId)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar ocorrências:', error);
+      } else {
+        console.log('📋 Ocorrências encontradas:', occurrences);
+        setExistingOccurrences(occurrences || []);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar ocorrências:', error);
+    } finally {
+      setLoadingOccurrences(false);
+    }
+  };
 
   const handlePhotoSave = (photo: File) => {
     console.log('📸 [PHOTO SAVE DEBUG] Foto recebida:', photo.name, photo.size);
@@ -209,6 +245,9 @@ export const OccurrenceSimpleModal = ({
       onClose();
       onSuccess();
       
+      // Reload existing occurrences to show the new ones
+      loadExistingOccurrences();
+      
     } catch (error: any) {
       console.error('❌ [OCCURRENCE DEBUG] Erro no processo:', error);
       console.error('❌ [OCCURRENCE DEBUG] Stack trace:', error.stack);
@@ -232,24 +271,96 @@ export const OccurrenceSimpleModal = ({
           </DialogHeader>
 
           <div className="space-y-4 p-4">
-            {/* Botões para anexos */}
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowPhotoUpload(true)}
-                className="h-16 flex flex-col items-center gap-2"
-              >
-                <Camera className="h-6 w-6" />
-                <span className="text-sm">Tirar Foto</span>
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowAudioRecorder(true)}
-                className="h-16 flex flex-col items-center gap-2"
-              >
-                <Mic className="h-6 w-6" />
-                <span className="text-sm">Gravar Áudio</span>
-              </Button>
+            {/* Histórico de Ocorrências Registradas */}
+            {existingOccurrences.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <FileText className="h-4 w-4" />
+                  Ocorrências Registradas ({existingOccurrences.length})
+                </div>
+                
+                <div className="max-h-48 overflow-y-auto space-y-2">
+                  {existingOccurrences.map((occurrence, index) => (
+                    <div key={occurrence.id} className="bg-muted/50 rounded-lg p-3">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          {occurrence.occurrence_type === 'foto' ? (
+                            <ImageIcon className="h-4 w-4 text-blue-600" />
+                          ) : (
+                            <PlayCircle className="h-4 w-4 text-green-600" />
+                          )}
+                          <span className="text-sm font-medium capitalize">
+                            {occurrence.occurrence_type === 'foto' ? 'Foto' : 'Áudio'} #{index + 1}
+                          </span>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {new Date(occurrence.created_at).toLocaleString('pt-BR')}
+                        </Badge>
+                      </div>
+                      
+                      {occurrence.occurrence_type === 'foto' ? (
+                        <div className="aspect-video bg-muted rounded overflow-hidden">
+                          <img
+                            src={occurrence.file_url}
+                            alt={`Foto ${index + 1}`}
+                            className="w-full h-full object-cover cursor-pointer"
+                            onClick={() => window.open(occurrence.file_url, '_blank')}
+                          />
+                        </div>
+                      ) : (
+                        <div className="bg-background rounded p-2">
+                          <AudioPlayer
+                            audioUrl={occurrence.file_url}
+                            fileName={`audio_${index + 1}.webm`}
+                            className="w-full"
+                          />
+                        </div>
+                      )}
+                      
+                      {occurrence.description && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {occurrence.description}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {loadingOccurrences && (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent"></div>
+                <span className="ml-2 text-sm text-muted-foreground">Carregando ocorrências...</span>
+              </div>
+            )}
+
+            {/* Adicionar Nova Ocorrência */}
+            <div className="border-t pt-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
+                <Plus className="h-4 w-4" />
+                Adicionar Nova Ocorrência
+              </div>
+            
+              {/* Botões para anexos */}
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPhotoUpload(true)}
+                  className="h-16 flex flex-col items-center gap-2"
+                >
+                  <Camera className="h-6 w-6" />
+                  <span className="text-sm">Tirar Foto</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAudioRecorder(true)}
+                  className="h-16 flex flex-col items-center gap-2"
+                >
+                  <Mic className="h-6 w-6" />
+                  <span className="text-sm">Gravar Áudio</span>
+                </Button>
+              </div>
             </div>
 
             {/* Pré-visualização das Fotos */}
