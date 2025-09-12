@@ -373,7 +373,28 @@ const AdminRemessas = () => {
       full_shipment: shipment
     });
     
-    setSelectedShipmentDetails(shipment);
+    // Se não tem pricing_table_name, buscar a tabela padrão
+    let finalShipment = { ...shipment };
+    if (!shipment.pricing_table_name) {
+      try {
+        const { data: defaultTable } = await supabase
+          .from('pricing_tables')
+          .select('name')
+          .eq('is_active', true)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        
+        if (defaultTable) {
+          finalShipment.pricing_table_name = defaultTable.name;
+          console.log('📋 [ADMIN REMESSAS] Tabela padrão encontrada:', defaultTable.name);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao buscar tabela padrão:', error);
+      }
+    }
+    
+    setSelectedShipmentDetails(finalShipment);
     setDetailsModalOpen(true);
     
     // Buscar dados do CTE se existir
