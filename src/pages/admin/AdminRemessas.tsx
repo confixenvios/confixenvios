@@ -657,7 +657,7 @@ const AdminRemessas = () => {
                             {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
                           </h3>
                           <div className="flex items-center text-xs text-muted-foreground mt-1">
-                            <Calendar className="w-3 h-3 mr-1" />
+                            <CalendarIcon className="w-3 h-3 mr-1" />
                             {format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                           </div>
                         </div>
