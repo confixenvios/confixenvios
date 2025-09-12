@@ -98,72 +98,6 @@ const AdminRemessas = () => {
   const [dateFrom, setDateFrom] = useState<Date>();
   const [dateTo, setDateTo] = useState<Date>();
 
-  // Verificar autenticação e permissões diretamente
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session?.user) {
-          console.log('❌ [ADMIN REMESSAS] Usuário não autenticado');
-          setAuthLoading(false);
-          return;
-        }
-
-        setUser(session.user);
-
-        // Verificar se é admin
-        const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id);
-
-        if (roleError) {
-          console.error('❌ [ADMIN REMESSAS] Erro ao verificar role:', roleError);
-          setAuthLoading(false);
-          return;
-        }
-
-        const hasAdminRole = roleData?.some(r => r.role === 'admin') || false;
-        setIsAdmin(hasAdminRole);
-        
-        console.log(`✅ [ADMIN REMESSAS] Usuário autenticado. Admin: ${hasAdminRole}`);
-        
-        if (!hasAdminRole) {
-          toast({
-            title: "Acesso Negado",
-            description: "Você não tem permissão para acessar esta página",
-            variant: "destructive"
-          });
-        }
-        
-        setAuthLoading(false);
-      } catch (error) {
-        console.error('❌ [ADMIN REMESSAS] Erro na verificação de auth:', error);
-        setAuthLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  useEffect(() => {
-    if (!authLoading && user && isAdmin) {
-      loadShipments();
-    }
-  }, [authLoading, user, isAdmin]);
-
-  // Adicionar auto-refresh a cada 30 segundos
-  useEffect(() => {
-    if (!authLoading && !user || !isAdmin) return;
-    
-    const interval = setInterval(() => {
-      loadShipments();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [authLoading, user, isAdmin]);
-
   // Função para verificar status dos webhooks das remessas
   const checkWebhookStatuses = async (remessas: AdminShipment[]) => {
     try {
@@ -236,6 +170,72 @@ const AdminRemessas = () => {
       setLoading(false);
     }
   };
+
+  // Verificar autenticação e permissões diretamente
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session?.user) {
+          console.log('❌ [ADMIN REMESSAS] Usuário não autenticado');
+          setAuthLoading(false);
+          return;
+        }
+
+        setUser(session.user);
+
+        // Verificar se é admin
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id);
+
+        if (roleError) {
+          console.error('❌ [ADMIN REMESSAS] Erro ao verificar role:', roleError);
+          setAuthLoading(false);
+          return;
+        }
+
+        const hasAdminRole = roleData?.some(r => r.role === 'admin') || false;
+        setIsAdmin(hasAdminRole);
+        
+        console.log(`✅ [ADMIN REMESSAS] Usuário autenticado. Admin: ${hasAdminRole}`);
+        
+        if (!hasAdminRole) {
+          toast({
+            title: "Acesso Negado",
+            description: "Você não tem permissão para acessar esta página",
+            variant: "destructive"
+          });
+        }
+        
+        setAuthLoading(false);
+      } catch (error) {
+        console.error('❌ [ADMIN REMESSAS] Erro na verificação de auth:', error);
+        setAuthLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    if (!authLoading && user && isAdmin) {
+      loadShipments();
+    }
+  }, [authLoading, user, isAdmin]);
+
+  // Adicionar auto-refresh a cada 30 segundos
+  useEffect(() => {
+    if (!authLoading && !user || !isAdmin) return;
+    
+    const interval = setInterval(() => {
+      loadShipments();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [authLoading, user, isAdmin]);
 
   // Função para enviar webhook manualmente
   const handleSendWebhook = async (shipment: AdminShipment) => {
