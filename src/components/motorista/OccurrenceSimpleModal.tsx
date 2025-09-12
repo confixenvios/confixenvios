@@ -269,6 +269,9 @@ export const OccurrenceSimpleModal = ({
         description: "Ocorrência registrada com sucesso!"
       });
 
+      // Reload existing occurrences to show the new ones immediately 
+      await loadExistingOccurrences();
+
       // Reset e fechar modal
       setPhotos([]);
       setPhotoPreviewUrls(prev => {
@@ -276,11 +279,8 @@ export const OccurrenceSimpleModal = ({
         return [];
       });
       setAudioUrl(null);
-      onClose();
       onSuccess();
       
-      // Reload existing occurrences to show the new ones
-      loadExistingOccurrences();
       
     } catch (error: any) {
       console.error('❌ [OCCURRENCE DEBUG] Erro no processo:', error);
