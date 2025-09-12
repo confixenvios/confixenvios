@@ -5,6 +5,8 @@ import { Camera, Mic } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { AudioRecorder } from './AudioRecorder';
 import { PhotoUpload } from './PhotoUpload';
+import { AudioPlayer } from '@/components/AudioPlayer';
+import { X, PlayCircle, Image as ImageIcon } from 'lucide-react';
 import { createSecureSupabaseClient } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -26,6 +28,7 @@ export const OccurrenceSimpleModal = ({
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [showPhotoUpload, setShowPhotoUpload] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
+  const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -33,19 +36,50 @@ export const OccurrenceSimpleModal = ({
   React.useEffect(() => {
     if (!isOpen) {
       setPhotos([]);
+      setPhotoPreviewUrls(prev => {
+        // Cleanup preview URLs to prevent memory leaks
+        prev.forEach(url => URL.revokeObjectURL(url));
+        return [];
+      });
       setAudioUrl(null);
     }
   }, [isOpen]);
 
+  // Cleanup preview URLs when component unmounts
+  React.useEffect(() => {
+    return () => {
+      photoPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [photoPreviewUrls]);
+
   const handlePhotoSave = (photo: File) => {
     console.log('📸 [PHOTO SAVE DEBUG] Foto recebida:', photo.name, photo.size);
+    
+    // Create preview URL for the photo
+    const previewUrl = URL.createObjectURL(photo);
+    
     setPhotos(prev => {
       console.log('📸 [PHOTO SAVE DEBUG] Fotos antes:', prev.length);
       const newPhotos = [...prev, photo];
       console.log('📸 [PHOTO SAVE DEBUG] Fotos depois:', newPhotos.length);
       return newPhotos;
     });
+    
+    setPhotoPreviewUrls(prev => [...prev, previewUrl]);
     setShowPhotoUpload(false);
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos(prev => prev.filter((_, i) => i !== index));
+    setPhotoPreviewUrls(prev => {
+      const urlToRemove = prev[index];
+      URL.revokeObjectURL(urlToRemove);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const removeAudio = () => {
+    setAudioUrl(null);
   };
 
   const handleAudioSave = (savedAudioUrl: string) => {
@@ -167,6 +201,10 @@ export const OccurrenceSimpleModal = ({
 
       // Reset e fechar modal
       setPhotos([]);
+      setPhotoPreviewUrls(prev => {
+        prev.forEach(url => URL.revokeObjectURL(url));
+        return [];
+      });
       setAudioUrl(null);
       onClose();
       onSuccess();
@@ -214,17 +252,83 @@ export const OccurrenceSimpleModal = ({
               </Button>
             </div>
 
-            {/* Status dos Anexos */}
+            {/* Pré-visualização das Fotos */}
+            {photoPreviewUrls.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Fotos Capturadas ({photoPreviewUrls.length})
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {photoPreviewUrls.map((url, index) => (
+                    <div key={index} className="relative aspect-square bg-muted rounded-lg overflow-hidden">
+                      <img
+                        src={url}
+                        alt={`Foto ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-1 right-1 h-6 w-6"
+                        onClick={() => removePhoto(index)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                      <Badge 
+                        variant="secondary" 
+                        className="absolute bottom-1 left-1 text-xs bg-black/60 text-white border-none"
+                      >
+                        Foto {index + 1}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Pré-visualização do Áudio */}
+            {audioUrl && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <PlayCircle className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Áudio Gravado
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={removeAudio}
+                    className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+                <div className="bg-muted rounded-lg p-3">
+                  <AudioPlayer
+                    audioUrl={audioUrl}
+                    fileName="audio_ocorrencia.webm"
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Status dos Anexos - Badge resumo */}
             {(photos.length > 0 || audioUrl) && (
-              <div className="flex gap-2 justify-center">
+              <div className="flex gap-2 justify-center pt-2 border-t">
                 {photos.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    {photos.length} foto{photos.length > 1 ? 's' : ''}
+                  <Badge variant="default" className="text-xs bg-green-100 text-green-700 border-green-300">
+                    ✓ {photos.length} foto{photos.length > 1 ? 's' : ''}
                   </Badge>
                 )}
                 {audioUrl && (
-                  <Badge variant="secondary" className="text-xs">
-                    Áudio gravado
+                  <Badge variant="default" className="text-xs bg-blue-100 text-blue-700 border-blue-300">
+                    ✓ Áudio gravado
                   </Badge>
                 )}
               </div>
