@@ -164,6 +164,44 @@ const AdminRemessas = () => {
     return () => clearInterval(interval);
   }, [authLoading, user, isAdmin]);
 
+  // Função para verificar status dos webhooks das remessas
+  const checkWebhookStatuses = async (remessas: AdminShipment[]) => {
+    try {
+      const statuses: Record<string, 'sent' | 'pending' | 'error'> = {};
+      
+      for (const remessa of remessas) {
+        const { data: logs, error } = await supabase
+          .from('webhook_logs')
+          .select('event_type, response_status, created_at')
+          .eq('shipment_id', remessa.id)
+          .in('event_type', ['shipment_created_webhook_triggered', 'edge_function_called_success', 'shipment_webhook_dispatched'])
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (error) {
+          console.warn(`⚠️ [ADMIN REMESSAS] Erro ao consultar webhook logs para remessa ${remessa.id}:`, error);
+          statuses[remessa.id] = 'error';
+          continue;
+        }
+
+        if (logs && logs.length > 0) {
+          const log = logs[0];
+          if (log.response_status === 200) {
+            statuses[remessa.id] = 'sent';
+          } else {
+            statuses[remessa.id] = 'error';
+          }
+        } else {
+          statuses[remessa.id] = 'pending';
+        }
+      }
+      
+      setWebhookStatuses(statuses);
+    } catch (error) {
+      console.error('❌ [ADMIN REMESSAS] Erro ao verificar status dos webhooks:', error);
+    }
+  };
+
   const loadShipments = async () => {
     if (authLoading || !user || !isAdmin) {
       console.log('🚫 [ADMIN REMESSAS] Carregamento bloqueado - Auth loading, usuário não autenticado ou não é admin');
@@ -196,46 +234,6 @@ const AdminRemessas = () => {
       }, 2000);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Função para verificar status dos webhooks das remessas
-  const checkWebhookStatuses = async (remessas: AdminShipment[]) => {
-    try {
-      const statuses: Record<string, 'sent' | 'pending' | 'error'> = {};
-      
-      for (const remessa of remessas) {
-        const { data: logs, error } = await supabase
-          .from('webhook_logs')
-          .select('event_type, response_status, created_at')
-          .eq('shipment_id', remessa.id)
-          .in('event_type', ['shipment_created_webhook_triggered', 'edge_function_called_success', 'shipment_webhook_dispatched'])
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (error) {
-          console.error('Erro ao verificar webhook logs:', error);
-          statuses[remessa.id] = 'pending';
-          continue;
-        }
-
-        if (logs && logs.length > 0) {
-          const latestLog = logs[0];
-          if (latestLog.event_type === 'edge_function_called_success' && latestLog.response_status === 200) {
-            statuses[remessa.id] = 'sent';
-          } else if (latestLog.response_status >= 400) {
-            statuses[remessa.id] = 'error';
-          } else {
-            statuses[remessa.id] = 'sent';
-          }
-        } else {
-          statuses[remessa.id] = 'pending';
-        }
-      }
-      
-      setWebhookStatuses(statuses);
-    } catch (error) {
-      console.error('Erro ao verificar status dos webhooks:', error);
     }
   };
 
