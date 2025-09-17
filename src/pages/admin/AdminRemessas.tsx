@@ -952,15 +952,43 @@ const AdminRemessas = () => {
                        </p>
                      </div>
 
-                      {/* Tipo de Documento Fiscal */}
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Tipo de Documento Fiscal</label>
-                        <div className="mt-1">
-                          <Badge variant={selectedShipmentDetails.document_type === 'nota_fiscal_eletronica' ? 'default' : 'secondary'}>
-                            {selectedShipmentDetails.document_type === 'nota_fiscal_eletronica' ? 'Nota Fiscal Eletrônica' : 'Declaração de Conteúdo'}
-                          </Badge>
-                        </div>
-                      </div>
+                       {/* Tipo de Documento Fiscal */}
+                       <div>
+                         <label className="text-sm font-medium text-muted-foreground">Tipo de Documento Fiscal</label>
+                         <div className="mt-1">
+                           <Badge variant={selectedShipmentDetails.document_type === 'nota_fiscal_eletronica' ? 'default' : 'secondary'}>
+                             {selectedShipmentDetails.document_type === 'nota_fiscal_eletronica' ? 'Nota Fiscal Eletrônica' : 'Declaração de Conteúdo'}
+                           </Badge>
+                         </div>
+                       </div>
+
+                       {/* Chave da NFe (apenas para NFe) */}
+                       {selectedShipmentDetails.document_type === 'nota_fiscal_eletronica' && (
+                         <div>
+                           <label className="text-sm font-medium text-muted-foreground">Chave da Nota Fiscal</label>
+                           <div className="mt-1 p-2 bg-gray-50 border border-gray-200 rounded-lg">
+                             <p className="text-sm font-mono text-gray-800 break-all">
+                               {selectedShipmentDetails.quote_data?.fiscalData?.nfeAccessKey || 
+                                selectedShipmentDetails.quote_data?.nfeKey ||
+                                selectedShipmentDetails.quote_data?.nfeChave ||
+                                selectedShipmentDetails.quote_data?.documentData?.nfeKey ||
+                                'Chave não encontrada'}
+                             </p>
+                           </div>
+                         </div>
+                       )}
+
+                       {/* Descrição da Mercadoria (apenas para Declaração) */}
+                       {selectedShipmentDetails.document_type === 'declaracao_conteudo' && selectedShipmentDetails.quote_data?.merchandiseDescription && (
+                         <div>
+                           <label className="text-sm font-medium text-muted-foreground">Descrição da Mercadoria</label>
+                           <div className="mt-1 p-2 bg-gray-50 border border-gray-200 rounded-lg">
+                             <p className="text-sm text-gray-800">
+                               {selectedShipmentDetails.quote_data.merchandiseDescription}
+                             </p>
+                           </div>
+                         </div>
+                       )}
 
                      {/* Forma de Pagamento */}
                      {selectedShipmentDetails.payment_data && (
