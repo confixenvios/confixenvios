@@ -126,6 +126,30 @@ export class SecureIntegrationsService {
   }
 
   /**
+   * Disable integration by name
+   */
+  static async disableIntegrationByName(name: string) {
+    const { error } = await supabase
+      .from('integrations')
+      .update({ active: false })
+      .eq('name', name);
+
+    if (error) throw error;
+  }
+
+  /**
+   * Enable integration by name
+   */
+  static async enableIntegrationByName(name: string) {
+    const { error } = await supabase
+      .from('integrations')
+      .update({ active: true })
+      .eq('name', name);
+
+    if (error) throw error;
+  }
+
+  /**
    * Delete an integration
    */
   static async deleteIntegration(id: string) {

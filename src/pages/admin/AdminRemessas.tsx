@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getAdminShipments, type AdminShipment } from '@/services/shipmentsService';
+import { SecureIntegrationsService } from '@/services/secureIntegrationsService';
 import { cn } from "@/lib/utils";
 
 import { ShipmentOccurrencesModal } from '@/components/admin/ShipmentOccurrencesModal';
@@ -237,10 +238,40 @@ const AdminRemessas = () => {
   useEffect(() => {
     if (!authLoading && user && isAdmin) {
       loadShipments();
+      // Configurar integrações na primeira carga
+      configureIntegrations();
       // Auto-dispatch any pending webhooks when page loads
       autoDispatchPendingWebhooks();
     }
   }, [authLoading, user, isAdmin]);
+
+  // Função para configurar integrações corretas
+  const configureIntegrations = async () => {
+    try {
+      console.log('🔄 Configurando integrações...');
+      
+      // Desativar integração antiga que está dando erro
+      await SecureIntegrationsService.disableIntegrationByName('N8n Production Webhook');
+      
+      // Garantir que sislogica está ativa
+      await SecureIntegrationsService.enableIntegrationByName('n8n sislogica');
+      
+      console.log('✅ Integrações configuradas com sucesso');
+      
+      toast({
+        title: "Integrações Configuradas",
+        description: "URL sislogica ativada, integração antiga desativada"
+      });
+      
+    } catch (error) {
+      console.error('❌ Erro ao configurar integrações:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao configurar integrações",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Auto-dispatch function to process pending webhooks
   const autoDispatchPendingWebhooks = async () => {
