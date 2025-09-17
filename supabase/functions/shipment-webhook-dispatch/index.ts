@@ -106,123 +106,157 @@ serve(async (req) => {
       throw new Error('No company branch configured - required for CTE dispatch');
     }
 
-    // Build payload in the exact format requested
-    const webhookPayload = {
-      event: "shipment_created",
-      shipmentId: fullShipment.tracking_code,
-      clienteId: fullShipment.user_id ? `CID${fullShipment.user_id.substring(0, 8)}` : 'GUEST',
-      status: "CRIADO",
-      
-      // Company branches data (required for CTE)
-      empresa: {
-        filial_principal: {
-          cnpj: mainBranch.cnpj,
-          razao_social: mainBranch.name,
-          nome_fantasia: mainBranch.fantasy_name || mainBranch.name,
-          endereco: {
-            cep: mainBranch.cep,
-            rua: mainBranch.street,
-            numero: mainBranch.number,
-            complemento: mainBranch.complement || '',
-            bairro: mainBranch.neighborhood,
-            cidade: mainBranch.city,
-            estado: mainBranch.state
-          },
-          contato: {
-            telefone: mainBranch.phone || '',
-            email: mainBranch.email || ''
-          }
-        },
-        filiais: branches?.map(branch => ({
-          id: branch.id,
-          cnpj: branch.cnpj,
-          razao_social: branch.name,
-          nome_fantasia: branch.fantasy_name || branch.name,
-          endereco: {
-            cep: branch.cep,
-            rua: branch.street,
-            numero: branch.number,
-            complemento: branch.complement || '',
-            bairro: branch.neighborhood,
-            cidade: branch.city,
-            estado: branch.state
-          },
-          contato: {
-            telefone: branch.phone || '',
-            email: branch.email || ''
-          },
-          is_matriz: branch.is_main_branch,
-          ativa: branch.active
-        })) || []
-      },
-      
-      remetente: {
-        nome: fullShipment.sender_address?.name || '',
-        cpf_cnpj: senderPersonalData.document,
-        telefone: senderPersonalData.phone,
-        email: senderPersonalData.email,
-        endereco: {
-          cep: fullShipment.sender_address?.cep || '',
-          rua: fullShipment.sender_address?.street || '',
-          numero: fullShipment.sender_address?.number || '',
-          bairro: fullShipment.sender_address?.neighborhood || '',
-          cidade: fullShipment.sender_address?.city || '',
-          estado: fullShipment.sender_address?.state || '',
-          complemento: fullShipment.sender_address?.complement || ''
-        }
-      },
-      
-      destinatario: {
-        nome: fullShipment.recipient_address?.name || '',
-        cpf_cnpj: recipientPersonalData.document,
-        telefone: recipientPersonalData.phone,
-        email: recipientPersonalData.email,
-        endereco: {
-          cep: fullShipment.recipient_address?.cep || '',
-          rua: fullShipment.recipient_address?.street || '',
-          numero: fullShipment.recipient_address?.number || '',
-          bairro: fullShipment.recipient_address?.neighborhood || '',
-          cidade: fullShipment.recipient_address?.city || '',
-          estado: fullShipment.recipient_address?.state || '',
-          complemento: fullShipment.recipient_address?.complement || ''
-        }
-      },
-      
-      coleta: {
-        tipo: fullShipment.pickup_option === 'dropoff' ? 'BALCÃO' : 'DOMICILIAR',
-        local_coleta: fullShipment.pickup_option === 'dropoff' 
-          ? 'Endereço do remetente' 
-          : `${fullShipment.sender_address?.street}, ${fullShipment.sender_address?.number}`
-      },
-      
-      mercadoria: {
-        quantidade: shipmentData?.technicalData?.quantity || 1,
-        valor_unitario: shipmentData?.merchandiseDetails?.unitValue || shipmentData?.quoteData?.unitValue || 0,
-        valor_total: shipmentData?.merchandiseDetails?.totalValue || shipmentData?.quoteData?.totalMerchandiseValue || 0,
-        descricao: shipmentData?.merchandiseDescription || shipmentData?.documentData?.merchandiseDescription || 'Mercadoria'
-      },
-      
-      pacote: {
-        peso: fullShipment.weight || 0,
-        dimensoes: {
-          comprimento: fullShipment.length || 0,
-          largura: fullShipment.width || 0,
-          altura: fullShipment.height || 0
-        },
-        formato: fullShipment.format || 'Caixa'
-      },
-      
-      documento_fiscal: {
-        tipo: shipmentData?.documentType === 'nfe' ? 'NOTA_FISCAL' : 'DECLARACAO',
-        chave_nfe: shipmentData?.nfeKey || shipmentData?.nfeChave || null,
-        valor_declarado: shipmentData?.merchandiseDetails?.totalValue || shipmentData?.quoteData?.totalMerchandiseValue || 0
-      },
-      
-      frete: {
-        tipo: fullShipment.selected_option === 'express' ? 'Expresso' : 'Econômico',
-        valor: shipmentData?.deliveryDetails?.shippingPrice || shipmentData?.quoteData?.shippingQuote?.economicPrice || 0,
-        prazo: shipmentData?.deliveryDetails?.estimatedDays ? `${shipmentData.deliveryDetails.estimatedDays} dias úteis` : 'A calcular'
+    // Extract data from fullShipment.quote_data
+    const quoteData = fullShipment.quote_data || {};
+    const addressData = quoteData.addressData || {};
+    const merchandiseDetails = quoteData.merchandiseDetails || {};
+    const deliveryDetails = quoteData.deliveryDetails || {};
+    
+    // Get NFe key from multiple possible locations
+    const nfeKey = quoteData.fiscalData?.nfeAccessKey || 
+                   quoteData.nfeKey || 
+                   quoteData.nfeChave || 
+                   quoteData.documentData?.nfeKey ||
+                   quoteData.documentData?.fiscalData?.nfeAccessKey || '';
+
+    // Helper function to extract document from different formats  
+    const extractDocument = (doc: string) => {
+      if (!doc) return '';
+      return doc.replace(/[^\d]/g, ''); // Remove formatting
+    };
+
+    // Helper function to format address for CTE
+    const formatAddress = (address: any, personalData: any) => ({
+      cpf: extractDocument(personalData.document || '').length === 11 ? extractDocument(personalData.document || '') : '',
+      cnpj: extractDocument(personalData.document || '').length === 14 ? extractDocument(personalData.document || '') : '',
+      inscricaoEstadual: '',
+      nome: address?.name || '',
+      razaoSocial: address?.name || '',
+      telefone: personalData.phone || '',
+      email: personalData.email || '',
+      Endereco: {
+        cep: address?.cep?.replace(/[^\d]/g, '') || '',
+        logradouro: address?.street || '',
+        numero: address?.number || '',
+        complemento: address?.complement || '',
+        pontoReferencia: address?.reference || '',
+        bairro: address?.neighborhood || '',
+        nomeCidade: address?.city || '',
+        siglaEstado: address?.state || '',
+        idCidadeIBGE: '',
+        pais: 'Brasil',
+        lat: '',
+        lng: ''
       }
+    });
+
+    // Build CTE payload in the exact format requested
+    const webhookPayload = {
+      idLote: fullShipment.tracking_code || '',
+      cnpjEmbarcadorOrigem: mainBranch.cnpj.replace(/[^\d]/g, ''),
+      cnpjTransportadorDestinto: mainBranch.cnpj.replace(/[^\d]/g, ''),
+      sincPLP: 0,
+      retornoEDI: true,
+      listaSolicitacoes: [
+        {
+          idSolicitacaoInterno: fullShipment.tracking_code || '',
+          idServico: fullShipment.selected_option === 'express' ? 1 : 2,
+          vlfrete: deliveryDetails.shippingPrice || quoteData.quoteData?.shippingQuote?.economicPrice || 0,
+          vlicms: 0,
+          vladvalorem: (merchandiseDetails.totalValue || quoteData.quoteData?.totalMerchandiseValue || 0) * 0.005, // 0.5% do valor
+          vlgris: 0,
+          vladicional: 0,
+          tpvalor: true,
+          veiculo: 'VAN001',
+          cpfmotorista: '00000000000',
+          nomemotorista: 'MOTORISTA CONFIX',
+          idcargaexterno: fullShipment.tracking_code || '',
+          nrordencargaexterno: 1,
+          QtCarga: 1,
+          tpgeramdfe: false,
+          dtPrazoInicio: new Date().toISOString(),
+          dtPrazoFim: new Date(Date.now() + (deliveryDetails.estimatedDays || 5) * 24 * 60 * 60 * 1000).toISOString(),
+          
+          // Tomador do Serviço (quem paga o frete - no caso, o remetente)
+          TomadorServico: formatAddress(fullShipment.sender_address, senderPersonalData),
+          
+          // Remetente
+          Remetente: formatAddress(fullShipment.sender_address, senderPersonalData),
+          
+          // Destinatário  
+          Destinatario: formatAddress(fullShipment.recipient_address, recipientPersonalData),
+          
+          // Recebedor (mesmo que destinatário)
+          Recebedor: formatAddress(fullShipment.recipient_address, recipientPersonalData),
+          
+          // Expedidor (mesmo que remetente)
+          Expedidor: formatAddress(fullShipment.sender_address, senderPersonalData),
+          
+          LogisticaReversa: {
+            flagColetaPortaria: fullShipment.pickup_option === 'dropoff',
+            flagColetaSemEmbalagem: false
+          },
+          
+          DadosAgendamento: {
+            dtAgendamento: new Date().toISOString().split('T')[0],
+            periodo: 1
+          },
+          
+          listaOperacoes: [
+            {
+              idTipoDocumento: fullShipment.document_type === 'nota_fiscal_eletronica' ? 1 : 2,
+              nroNotaFiscal: nfeKey ? parseInt(nfeKey.substring(25, 34)) : 0,
+              serieNotaFiscal: nfeKey ? parseInt(nfeKey.substring(22, 25)) : 1,
+              dtEmissaoNotaFiscal: new Date().toISOString(),
+              chaveNotaFiscal: nfeKey,
+              nroCarga: fullShipment.tracking_code || '',
+              nroPedido: fullShipment.tracking_code || '',
+              qtdeVolumes: 1,
+              qtdeItens: 1,
+              pesoTotal: fullShipment.weight || 0,
+              cubagemTotal: ((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000, // m³
+              valorMercadoria: merchandiseDetails.totalValue || quoteData.quoteData?.totalMerchandiseValue || 0,
+              valorICMS: 0,
+              valorPendenteCompra: 0,
+              
+              listaVolumes: [
+                {
+                  idVolume: 1,
+                  nroEtiqueta: fullShipment.tracking_code || '',
+                  codigoBarras: fullShipment.tracking_code || '',
+                  pesoVolume: fullShipment.weight || 0,
+                  cubagemVolume: ((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000,
+                  altura: (fullShipment.height || 0) / 100, // Convert cm to m
+                  largura: (fullShipment.width || 0) / 100,
+                  comprimento: (fullShipment.length || 0) / 100,
+                  conteudo: quoteData.merchandiseDescription || 
+                           quoteData.documentData?.merchandiseDescription || 
+                           quoteData.fiscalData?.contentDescription || 
+                           'Mercadoria diversa'
+                }
+              ],
+              
+              listaItens: [
+                {
+                  idItem: 1,
+                  nroEtiqueta: fullShipment.tracking_code || '',
+                  codigoItem: 'ITEM001',
+                  descricaoItem: quoteData.merchandiseDescription || 
+                                quoteData.documentData?.merchandiseDescription || 
+                                quoteData.fiscalData?.contentDescription || 
+                                'Mercadoria diversa',
+                  tipoItem: 'GERAL',
+                  qtde: '1'
+                }
+              ],
+              
+              chaveCTeAnterior: '',
+              linkCTe: '',
+              base64CTe: ''
+            }
+          ]
+        }
+      ]
     };
 
     console.log('Shipment webhook dispatch - Payload prepared:', JSON.stringify(webhookPayload, null, 2));
