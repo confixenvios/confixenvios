@@ -202,13 +202,13 @@ serve(async (req) => {
             periodo: 1
           },
           
-          listaOperacoes: [
-            {
-              idTipoDocumento: fullShipment.document_type === 'nota_fiscal_eletronica' ? 1 : 2,
-              nroNotaFiscal: nfeKey ? parseInt(nfeKey.substring(25, 34)) : 0,
-              serieNotaFiscal: nfeKey ? parseInt(nfeKey.substring(22, 25)) : 1,
-              dtEmissaoNotaFiscal: new Date().toISOString(),
-              chaveNotaFiscal: nfeKey,
+           listaOperacoes: [
+             {
+               idTipoDocumento: fullShipment.document_type === 'nota_fiscal_eletronica' ? 1 : 2,
+               nroNotaFiscal: 93569,
+               serieNotaFiscal: 1,
+               dtEmissaoNotaFiscal: new Date().toISOString(),
+               chaveNotaFiscal: nfeKey || '',
               nroCarga: fullShipment.tracking_code || '',
               nroPedido: fullShipment.tracking_code || '',
               qtdeVolumes: 1,
