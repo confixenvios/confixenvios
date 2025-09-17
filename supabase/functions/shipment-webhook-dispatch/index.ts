@@ -204,9 +204,9 @@ serve(async (req) => {
           
            listaOperacoes: [
              {
-               idTipoDocumento: fullShipment.document_type === 'nota_fiscal_eletronica' ? 1 : 2,
-               nroNotaFiscal: 93569,
-               serieNotaFiscal: 1,
+               idTipoDocumento: 0,
+               nroNotaFiscal: 0,
+               serieNotaFiscal: 0,
                dtEmissaoNotaFiscal: new Date().toISOString(),
                chaveNotaFiscal: nfeKey || '',
               nroCarga: fullShipment.tracking_code || '',
