@@ -326,6 +326,12 @@ function normalizeShipmentData(shipment: any): BaseShipment {
     pricing_table_id: shipment.pricing_table_id
   });
   
+  // Debug específico para remessa ID2025Y077F3
+  if (shipment.tracking_code === 'ID2025Y077F3') {
+    console.log('🐛 [DEBUG] Remessa ID2025Y077F3 - document_type:', shipment.document_type);
+    console.log('🐛 [DEBUG] Remessa ID2025Y077F3 - dados completos:', shipment);
+  }
+  
   // Tentar usar dados originais do formulário (quote_data.addressData) primeiro
   let senderAddress = shipment.sender_address || createEmptyAddress();
   let recipientAddress = shipment.recipient_address || createEmptyAddress();
@@ -370,7 +376,7 @@ function normalizeShipmentData(shipment: any): BaseShipment {
     recipient: recipientAddress.name + ' - ' + recipientAddress.street + ', ' + recipientAddress.number
   });
 
-  return {
+  const result = {
     id: shipment.id,
     tracking_code: shipment.tracking_code,
     status: shipment.status,
@@ -392,6 +398,13 @@ function normalizeShipmentData(shipment: any): BaseShipment {
     pricing_table_id: shipment.pricing_table_id,
     document_type: shipment.document_type
   };
+  
+  // Debug específico para remessa ID2025Y077F3
+  if (shipment.tracking_code === 'ID2025Y077F3') {
+    console.log('🐛 [DEBUG] Remessa ID2025Y077F3 - document_type final:', result.document_type);
+  }
+  
+  return result;
 }
 
 /**

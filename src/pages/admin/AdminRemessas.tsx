@@ -429,6 +429,11 @@ const AdminRemessas = () => {
       full_shipment: shipment
     });
     
+    // Debug específico para remessa ID2025Y077F3
+    if (shipment.tracking_code === 'ID2025Y077F3') {
+      console.log('🐛 [DEBUG AdminRemessas] ID2025Y077F3 document_type:', shipment.document_type);
+    }
+    
     // Se não tem pricing_table_name, buscar a tabela padrão
     let finalShipment = { ...shipment };
     if (!shipment.pricing_table_name) {
@@ -947,15 +952,15 @@ const AdminRemessas = () => {
                        </p>
                      </div>
 
-                     {/* Tipo de Documento Fiscal */}
-                     <div>
-                       <label className="text-sm font-medium text-muted-foreground">Tipo de Documento Fiscal</label>
-                       <div className="mt-1">
-                         <Badge variant={selectedShipmentDetails.document_type === 'nota_fiscal_eletronica' ? 'default' : 'secondary'}>
-                           {selectedShipmentDetails.document_type === 'nota_fiscal_eletronica' ? 'Nota Fiscal Eletrônica' : 'Declaração de Conteúdo'}
-                         </Badge>
-                       </div>
-                     </div>
+                      {/* Tipo de Documento Fiscal */}
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Tipo de Documento Fiscal</label>
+                        <div className="mt-1">
+                          <Badge variant={selectedShipmentDetails.document_type === 'nota_fiscal_eletronica' ? 'default' : 'secondary'}>
+                            {selectedShipmentDetails.document_type === 'nota_fiscal_eletronica' ? 'Nota Fiscal Eletrônica' : 'Declaração de Conteúdo'}
+                          </Badge>
+                        </div>
+                      </div>
 
                      {/* Forma de Pagamento */}
                      {selectedShipmentDetails.payment_data && (
