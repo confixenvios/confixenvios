@@ -166,7 +166,6 @@ serve(async (req) => {
           vlgris: 0,
           vladicional: 0,
           tpvalor: true,
-          veiculo: 'VAN001',
           nrordencargaexterno: 1,
           QtCarga: 1,
           tpgeramdfe: false,
