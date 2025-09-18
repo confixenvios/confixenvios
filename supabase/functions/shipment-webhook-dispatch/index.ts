@@ -160,10 +160,7 @@ serve(async (req) => {
         {
           idSolicitacaoInterno: fullShipment.tracking_code || '',
           idServico: fullShipment.selected_option === 'express' ? 1 : 2,
-          vlfrete: deliveryDetails.shippingPrice || quoteData.quoteData?.shippingQuote?.economicPrice || 0,
           vlicms: 0,
-          vladvalorem: (merchandiseDetails.totalValue || quoteData.quoteData?.totalMerchandiseValue || 0) * 0.005, // 0.5% do valor
-          vlgris: 0,
           vladicional: 0,
           tpvalor: true,
           nrordencargaexterno: 1,
@@ -221,13 +218,9 @@ serve(async (req) => {
                   codigoBarras: fullShipment.tracking_code || '',
                   pesoVolume: fullShipment.weight || 0,
                   cubagemVolume: ((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000,
-                  altura: (fullShipment.height || 0) / 100, // Convert cm to m
-                  largura: (fullShipment.width || 0) / 100,
-                  comprimento: (fullShipment.length || 0) / 100,
-                  conteudo: quoteData.merchandiseDescription || 
-                           quoteData.documentData?.merchandiseDescription || 
-                           quoteData.fiscalData?.contentDescription || 
-                           'Mercadoria diversa'
+                   altura: (fullShipment.height || 0) / 100, // Convert cm to m
+                   largura: (fullShipment.width || 0) / 100,
+                   comprimento: (fullShipment.length || 0) / 100
                 }
               ],
               
