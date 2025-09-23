@@ -277,7 +277,7 @@ const Index = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <Badge variant="secondary" className="mb-4">Sobre Nós</Badge>
-              <h2 className="text-3xl font-bold mb-6">GRUPO LOGÍSTICO</h2>
+              <h2 className="text-3xl font-bold mb-6">CONFIX ENVIOS</h2>
               
               <div className="flex flex-wrap gap-4 mb-6">
                 <Badge variant="outline">Agilidade</Badge>
