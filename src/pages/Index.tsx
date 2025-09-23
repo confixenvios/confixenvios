@@ -6,6 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+// Client logos
+import centauroLogo from "@/assets/clients/centauro-logo.png";
+import hankerLogo from "@/assets/clients/hanker-logo.webp";
+import cabanaLogo from "@/assets/clients/cabana-logo.webp";
+import netshoesLogo from "@/assets/clients/netshoes-logo.png";
+import avodahLogo from "@/assets/clients/avodah-logo.png";
+import magaluLogo from "@/assets/clients/magalu-logo.png";
+
 const Index = () => {
   const { user, loading } = useAuth();
 
@@ -125,18 +133,24 @@ const Index = () => {
             Prova da nossa capacidade em operações logísticas exigentes e de alto padrão.
           </p>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 items-center opacity-60">
-            <div className="h-16 bg-muted rounded-lg flex items-center justify-center">
-              <span className="text-muted-foreground font-medium">Magazine Luiza</span>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 items-center opacity-70">
+            <div className="h-16 flex items-center justify-center p-2">
+              <img src={magaluLogo} alt="Magazine Luiza" className="max-h-12 max-w-full object-contain" />
             </div>
-            <div className="h-16 bg-muted rounded-lg flex items-center justify-center">
-              <span className="text-muted-foreground font-medium">Hanker</span>
+            <div className="h-16 flex items-center justify-center p-2">
+              <img src={hankerLogo} alt="Hanker" className="max-h-12 max-w-full object-contain" />
             </div>
-            <div className="h-16 bg-muted rounded-lg flex items-center justify-center">
-              <span className="text-muted-foreground font-medium">Cabana Magazine</span>
+            <div className="h-16 flex items-center justify-center p-2">
+              <img src={cabanaLogo} alt="Cabana Magazine" className="max-h-12 max-w-full object-contain" />
             </div>
-            <div className="h-16 bg-muted rounded-lg flex items-center justify-center">
-              <span className="text-muted-foreground font-medium">Havodah</span>
+            <div className="h-16 flex items-center justify-center p-2">
+              <img src={avodahLogo} alt="Avodah" className="max-h-12 max-w-full object-contain" />
+            </div>
+            <div className="h-16 flex items-center justify-center p-2">
+              <img src={centauroLogo} alt="Centauro" className="max-h-12 max-w-full object-contain" />
+            </div>
+            <div className="h-16 flex items-center justify-center p-2">
+              <img src={netshoesLogo} alt="Netshoes" className="max-h-12 max-w-full object-contain" />
             </div>
           </div>
         </div>
