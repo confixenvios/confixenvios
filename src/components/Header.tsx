@@ -33,24 +33,40 @@ const Header = () => {
             <Link 
               to="#quemsomos" 
               className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base hidden md:block"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('quemsomos')?.scrollIntoView({ behavior: 'smooth' });
+              }}
             >
               Quem Somos
             </Link>
             <Link 
               to="#servicos" 
               className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base hidden md:block"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('servicos')?.scrollIntoView({ behavior: 'smooth' });
+              }}
             >
               Nossos Serviços
             </Link>
             <Link 
               to="#diferencial" 
               className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base hidden lg:block"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('diferencial')?.scrollIntoView({ behavior: 'smooth' });
+              }}
             >
               Nosso Diferencial
             </Link>
             <Link 
               to="#contato" 
               className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base hidden lg:block"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('contato')?.scrollIntoView({ behavior: 'smooth' });
+              }}
             >
               Fale com a gente
             </Link>
