@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Confix Envios Design System - Clean light theme with blue primary */
+/* Confix Envios Design System - Clean light theme with red primary */
 
 @layer base {
   :root {
@@ -18,15 +18,15 @@
     --popover: 0 0% 100%;
     --popover-foreground: 217 40% 13%;
     
-    /* Primary - Confix brand blue */
-    --primary: 217 100% 52%;             /* #0B5FFF - Primary blue */
-    --primary-foreground: 0 0% 100%;     /* White text on blue */
-    --primary-glow: 217 100% 62%;        /* Lighter blue for glows */
+    /* Primary - Confix brand red */
+    --primary: 1 100% 45%;               /* #E80300 - Primary red */
+    --primary-foreground: 0 0% 100%;     /* White text on red */
+    --primary-glow: 1 100% 55%;          /* Lighter red for glows */
     
-    /* Accent - Confix brand blue accent */
-    --accent: 217 100% 62%;              /* #3B82F6 - Blue accent */
-    --accent-foreground: 0 0% 100%;      /* White text on blue */
-    --accent-glow: 217 100% 72%;         /* Lighter blue for glows */
+    /* Accent - Confix brand red accent */
+    --accent: 1 100% 55%;                /* #FF1A0D - Red accent */
+    --accent-foreground: 0 0% 100%;      /* White text on red */
+    --accent-glow: 1 100% 65%;           /* Lighter red for glows */
     
     /* Muted tones */
     --muted: 220 14% 96%;                /* Light muted background */
@@ -43,29 +43,29 @@
     --warning: 38 92% 50%;               /* Amber warning */
     --warning-foreground: 0 0% 100%;
     
-    --destructive: 217 100% 52%;         /* #0B5FFF - Blue highlight */
+    --destructive: 1 100% 45%;           /* #E80300 - Red highlight */
     --destructive-foreground: 0 0% 100%;
     
     /* Input and border colors */
     --border: 220 13% 91%;               /* #E5E7EB - Light borders */
     --input: 0 0% 100%;                  /* White input background */
     --input-border: 220 13% 91%;         /* Light input borders */
-    --ring: 217 100% 52%;                /* Focus rings use primary blue */
+    --ring: 1 100% 45%;                  /* Focus rings use primary red */
     
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 100% 52%), hsl(217 100% 62%));
-    --gradient-accent: linear-gradient(135deg, hsl(217 100% 62%), hsl(217 100% 72%));
-    --gradient-mixed: linear-gradient(135deg, hsl(217 100% 52%), hsl(217 100% 62%));
+    --gradient-primary: linear-gradient(135deg, hsl(1 100% 45%), hsl(1 100% 55%));
+    --gradient-accent: linear-gradient(135deg, hsl(1 100% 55%), hsl(1 100% 65%));
+    --gradient-mixed: linear-gradient(135deg, hsl(1 100% 45%), hsl(1 100% 55%));
     --gradient-light: linear-gradient(180deg, hsl(0 0% 100%), hsl(220 14% 96%));
-    --gradient-glow: radial-gradient(circle at center, hsl(217 100% 52% / 0.1), transparent 70%);
-    --gradient-glow-blue: radial-gradient(circle at center, hsl(217 100% 62% / 0.1), transparent 70%);
+    --gradient-glow: radial-gradient(circle at center, hsl(1 100% 45% / 0.1), transparent 70%);
+    --gradient-glow-red: radial-gradient(circle at center, hsl(1 100% 55% / 0.1), transparent 70%);
     
     /* Shadows */
-    --shadow-primary: 0 10px 40px hsl(217 100% 52% / 0.15);
-    --shadow-accent: 0 10px 40px hsl(217 100% 62% / 0.15);
+    --shadow-primary: 0 10px 40px hsl(1 100% 45% / 0.15);
+    --shadow-accent: 0 10px 40px hsl(1 100% 55% / 0.15);
     --shadow-card: 0 4px 20px hsl(217 40% 13% / 0.1);
-    --shadow-glow: 0 0 60px hsl(217 100% 52% / 0.2);
-    --shadow-glow-blue: 0 0 60px hsl(217 100% 62% / 0.2);
+    --shadow-glow: 0 0 60px hsl(1 100% 45% / 0.2);
+    --shadow-glow-red: 0 0 60px hsl(1 100% 55% / 0.2);
     
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -87,7 +87,7 @@
 
     --sidebar-border: 220 13% 91%;
 
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 1 100% 45%;
   }
 
   /* Custom utility classes for Confix Envios */
@@ -124,11 +124,11 @@
     z-index: -1;
   }
 
-  .glow-effect-blue::before {
+  .glow-effect-red::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: var(--gradient-glow-blue);
+    background: var(--gradient-glow-red);
     border-radius: inherit;
     z-index: -1;
   }
