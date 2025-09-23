@@ -109,6 +109,98 @@ export type Database = {
         }
         Relationships: []
       }
+      api_keys: {
+        Row: {
+          api_key: string
+          company_cnpj: string | null
+          company_name: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          rate_limit_per_hour: number
+          updated_at: string
+          usage_count: number
+        }
+        Insert: {
+          api_key: string
+          company_cnpj?: string | null
+          company_name: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          rate_limit_per_hour?: number
+          updated_at?: string
+          usage_count?: number
+        }
+        Update: {
+          api_key?: string
+          company_cnpj?: string | null
+          company_name?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          rate_limit_per_hour?: number
+          updated_at?: string
+          usage_count?: number
+        }
+        Relationships: []
+      }
+      api_usage_logs: {
+        Row: {
+          api_key_id: string
+          created_at: string
+          endpoint: string
+          execution_time_ms: number | null
+          id: string
+          ip_address: string | null
+          method: string
+          request_body: Json | null
+          response_body: Json | null
+          response_status: number
+          user_agent: string | null
+        }
+        Insert: {
+          api_key_id: string
+          created_at?: string
+          endpoint: string
+          execution_time_ms?: number | null
+          id?: string
+          ip_address?: string | null
+          method: string
+          request_body?: Json | null
+          response_body?: Json | null
+          response_status: number
+          user_agent?: string | null
+        }
+        Update: {
+          api_key_id?: string
+          created_at?: string
+          endpoint?: string
+          execution_time_ms?: number | null
+          id?: string
+          ip_address?: string | null
+          method?: string
+          request_body?: Json | null
+          response_body?: Json | null
+          response_status?: number
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_logs_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_branches: {
         Row: {
           active: boolean | null
@@ -1109,6 +1201,10 @@ export type Database = {
         }
         Returns: string
       }
+      generate_api_key: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       generate_tracking_code: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1343,6 +1439,15 @@ export type Database = {
       validate_anonymous_session: {
         Args: { session_token: string }
         Returns: string
+      }
+      validate_api_key: {
+        Args: { p_api_key: string }
+        Returns: {
+          company_name: string
+          is_valid: boolean
+          key_id: string
+          rate_limit_per_hour: number
+        }[]
       }
       validate_input_security: {
         Args: { input_text: string }
