@@ -69,7 +69,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'Relatórios', href: '/admin/relatorios', icon: BarChart3 },
     { name: 'Integrações', href: '/admin/integracoes', icon: Puzzle },
     { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
-    { name: 'API Docs', href: '/admin/api-docs', icon: FileText },
+    { name: 'API Docs', href: '/api-docs', icon: FileText },
     { name: 'API Keys', href: '/admin/api-keys', icon: Key },
     
     

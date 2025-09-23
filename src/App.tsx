@@ -129,6 +129,7 @@ const App = () => (
                        <Route path="integracoes" element={<AdminIntegracoes />} />
                        <Route path="webhooks" element={<AdminWebhooks />} />
                        <Route path="api-keys" element={<AdminApiKeys />} />
+                       <Route path="api-docs" element={<Navigate to="/api-docs" replace />} />
                       
                       
                     </Routes>
