@@ -21,7 +21,7 @@ const Header = () => {
     <header className="border-b border-border bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-4">
         <div className="flex items-center justify-between">
-          <Link to="/cotacao" className="flex items-center space-x-2 group">
+          <Link to="/" className="flex items-center space-x-2 group">
             <img 
               src={logoConfixEnvios} 
               alt="Confix Envios" 
