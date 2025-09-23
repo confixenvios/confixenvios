@@ -34,9 +34,9 @@ const Index = () => {
           </Badge>
           
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-            Soluções logísticas para operações de
+            Envie Encomendas com a
             <span className="bg-gradient-primary bg-clip-text text-transparent block">
-              e-commerce
+              CONFIX ENVIOS
             </span>
           </h1>
           
