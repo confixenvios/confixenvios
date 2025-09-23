@@ -45,8 +45,8 @@ import AdminFaturamento from "./pages/admin/AdminFaturamento";
 
 import AdminIntegracoes from "./pages/admin/AdminIntegracoes";
 import AdminWebhooks from "./pages/admin/AdminWebhooks";
-import AdminApiDocs from "./pages/admin/AdminApiDocs";
 import AdminApiKeys from "./pages/admin/AdminApiKeys";
+import ApiDocs from "./pages/ApiDocs";
 
 
 import AdminTabelas from "./pages/admin/AdminTabelas";
@@ -85,6 +85,7 @@ const App = () => (
             <Route path="/rastreamento" element={<Tracking />} />
             <Route path="/rastreio" element={<Tracking />} />
             <Route path="/rastreio/:codigo" element={<Tracking />} />
+            <Route path="/api-docs" element={<ApiDocs />} />
 
             {/* Client Routes */}
             <Route 
@@ -127,7 +128,6 @@ const App = () => (
                        <Route path="relatorios" element={<AdminRelatorios />} />
                        <Route path="integracoes" element={<AdminIntegracoes />} />
                        <Route path="webhooks" element={<AdminWebhooks />} />
-                       <Route path="api-docs" element={<AdminApiDocs />} />
                        <Route path="api-keys" element={<AdminApiKeys />} />
                       
                       
