@@ -387,7 +387,7 @@ const Index = () => {
             <div className="col-span-1 md:col-span-2">
               <h3 className="text-2xl font-bold mb-4">Confix Envios</h3>
               <p className="text-primary-foreground/80 mb-6">
-                Soluções logísticas para operações B2B e B2C: transporte fracionado e dedicado.
+                Coletamos e enviamos para todo o Brasil
               </p>
               <div className="flex gap-4">
                 <Button variant="ghost" size="sm">Facebook</Button>
