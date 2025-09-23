@@ -62,6 +62,22 @@ const Index = () => {
 
           {/* Blocos de Serviços */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            {/* Envio Nacional */}
+            <Card className="text-center p-6 hover:shadow-lg transition-shadow border-primary/20">
+              <CardHeader>
+                <CardTitle className="text-xl mb-3 text-primary">Envio Nacional</CardTitle>
+                <p className="text-muted-foreground mb-4">Perfil de mercadorias de até 30 kg coletamos e enviamos</p>
+              </CardHeader>
+              <CardContent>
+                <Button size="lg" className="w-full" asChild>
+                  <Link to="/cotacao">
+                    <Package className="mr-2 h-4 w-4" />
+                    Fazer Cotação
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* Fracionado */}
             <Card className="text-center p-6 hover:shadow-lg transition-shadow">
               <CardHeader>
@@ -75,22 +91,6 @@ const Index = () => {
                   onClick={() => window.open('https://wa.me/5562999999999?text=Olá! Gostaria de saber mais sobre o serviço Fracionado.', '_blank')}
                 >
                   Falar no WhatsApp
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Envio Nacional */}
-            <Card className="text-center p-6 hover:shadow-lg transition-shadow border-primary/20">
-              <CardHeader>
-                <CardTitle className="text-xl mb-3 text-primary">Envio Nacional</CardTitle>
-                <p className="text-muted-foreground mb-4">Perfil de mercadorias de até 30 kg coletamos e enviamos</p>
-              </CardHeader>
-              <CardContent>
-                <Button size="lg" className="w-full" asChild>
-                  <Link to="/cotacao">
-                    <Package className="mr-2 h-4 w-4" />
-                    Fazer Cotação
-                  </Link>
                 </Button>
               </CardContent>
             </Card>
