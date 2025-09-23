@@ -48,15 +48,15 @@ const Index = () => {
           <div className="flex flex-wrap justify-center gap-6 mb-12">
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-primary" />
-              <span className="text-lg font-medium">Agilidade</span>
+              <span className="text-lg font-medium">Menor preço</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-primary" />
-              <span className="text-lg font-medium">Confiança</span>
+              <span className="text-lg font-medium">Menor prazo</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-primary" />
-              <span className="text-lg font-medium">Eficiência operacional</span>
+              <span className="text-lg font-medium">Maior Agilidade</span>
             </div>
           </div>
 
