@@ -13,6 +13,7 @@ import cabanaLogo from "@/assets/clients/cabana-logo.webp";
 import netshoesLogo from "@/assets/clients/netshoes-logo.png";
 import avodahLogo from "@/assets/clients/avodah-logo.png";
 import magaluLogo from "@/assets/clients/magalu-logo.png";
+import deliveryProfessional from "@/assets/delivery-professional.png";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -305,12 +306,12 @@ const Index = () => {
               </Button>
             </div>
             
-            <div className="bg-muted/50 rounded-2xl p-8 text-center">
-              <Users className="h-24 w-24 text-primary mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-4">Empresas do grupo e parceiros</h3>
-              <p className="text-muted-foreground">
-                Uma rede robusta de parceiros estratégicos para garantir a melhor cobertura logística do país.
-              </p>
+            <div className="flex justify-center">
+              <img 
+                src={deliveryProfessional} 
+                alt="Profissional de entrega da Confix Envios" 
+                className="rounded-2xl shadow-lg max-w-full h-auto"
+              />
             </div>
           </div>
         </div>
