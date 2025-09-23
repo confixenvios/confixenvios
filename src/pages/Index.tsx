@@ -1,5 +1,5 @@
 import Header from "@/components/Header";
-import { Truck, Zap, Package, Building, Globe, Shield, Users, CheckCircle, MapPin, Phone, Mail } from "lucide-react";
+import { Truck, Zap, Package, Building, Globe, Shield, Users, CheckCircle, MapPin, Phone, Mail, DollarSign, Clock, TrendingUp } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -47,15 +47,15 @@ const Index = () => {
           {/* Benefícios principais */}
           <div className="flex flex-wrap justify-center gap-6 mb-12">
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-primary" />
+              <DollarSign className="w-5 h-5 text-primary" />
               <span className="text-lg font-medium">Menor preço</span>
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-primary" />
+              <Clock className="w-5 h-5 text-primary" />
               <span className="text-lg font-medium">Menor prazo</span>
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-primary" />
+              <TrendingUp className="w-5 h-5 text-primary" />
               <span className="text-lg font-medium">Maior Agilidade</span>
             </div>
           </div>
