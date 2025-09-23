@@ -13,7 +13,7 @@ import cabanaLogo from "@/assets/clients/cabana-logo.webp";
 import netshoesLogo from "@/assets/clients/netshoes-logo.png";
 import avodahLogo from "@/assets/clients/avodah-logo.png";
 import magaluLogo from "@/assets/clients/magalu-logo.png";
-import deliveryProfessional from "@/assets/delivery-professional.png";
+import deliveryProfessional from "@/assets/delivery-professional.webp";
 
 const Index = () => {
   const { user, loading } = useAuth();
