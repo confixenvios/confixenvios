@@ -79,26 +79,10 @@ const Index = () => {
               </CardContent>
             </Card>
 
-            {/* Expresso GYN */}
+            {/* Envio Nacional */}
             <Card className="text-center p-6 hover:shadow-lg transition-shadow border-primary/20">
               <CardHeader>
-                <CardTitle className="text-xl mb-3 text-primary">Expresso GYN</CardTitle>
-                <p className="text-muted-foreground mb-4">Coleta e entrega rápida em Goiânia e região</p>
-              </CardHeader>
-              <CardContent>
-                <Button size="lg" className="w-full" asChild>
-                  <Link to="/cotacao-expresso">
-                    <Zap className="mr-2 h-4 w-4" />
-                    Cotação Expresso
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Envio Nacional */}
-            <Card className="text-center p-6 hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="text-xl mb-3">Envio Nacional</CardTitle>
+                <CardTitle className="text-xl mb-3 text-primary">Envio Nacional</CardTitle>
                 <p className="text-muted-foreground mb-4">Perfil de mercadorias de até 30 kg coletamos e enviamos</p>
               </CardHeader>
               <CardContent>
@@ -106,6 +90,22 @@ const Index = () => {
                   <Link to="/cotacao">
                     <Package className="mr-2 h-4 w-4" />
                     Fazer Cotação
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Expresso GYN */}
+            <Card className="text-center p-6 hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <CardTitle className="text-xl mb-3">Expresso GYN</CardTitle>
+                <p className="text-muted-foreground mb-4">Coleta e entrega rápida em Goiânia e região</p>
+              </CardHeader>
+              <CardContent>
+                <Button size="lg" className="w-full" asChild>
+                  <Link to="/cotacao-expresso">
+                    <Zap className="mr-2 h-4 w-4" />
+                    Cotação Expresso
                   </Link>
                 </Button>
               </CardContent>
