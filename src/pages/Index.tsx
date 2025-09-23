@@ -38,16 +38,11 @@ const Index = () => {
         <div className="absolute inset-0 bg-gradient-glow opacity-30"></div>
         
         <div className="container mx-auto text-center relative">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-            Envie Encomendas com a
-            <span className="bg-gradient-primary bg-clip-text text-transparent block">
-              CONFIX ENVIOS
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-12 leading-tight">
+            <span className="bg-gradient-primary bg-clip-text text-transparent">
+              Coletamos e entregamos em todo Brasil
             </span>
           </h1>
-          
-          <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-12 max-w-4xl mx-auto">
-            Reduza Custos de Frete - Coleta e Entrega em Todo BR
-          </p>
           
           {/* Benefícios principais */}
           <div className="flex flex-wrap justify-center gap-6 mb-12">
