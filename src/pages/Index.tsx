@@ -126,11 +126,10 @@ const Index = () => {
       <section className="py-16 px-4 bg-card/30">
         <div className="container mx-auto text-center">
           <h2 className="text-2xl font-semibold text-primary mb-4">
-            Conheça alguns dos nossos clientes
+            Empresas que confiam em nosso trabalho
           </h2>
           <p className="text-muted-foreground mb-12 max-w-3xl mx-auto">
-            Atendemos empresas de renome nacional como Magazine Luiza, Hanker, Cabana Magazine e Havodah. 
-            Prova da nossa capacidade em operações logísticas exigentes e de alto padrão.
+            Grandes marcas como Magalu, Petlove, Privalia, Avodah, Centauro e Netshoes já confiam em nossas soluções, comprovando nossa capacidade em operações logísticas exigentes e de alto padrão.
           </p>
           
           <div className="overflow-hidden">
