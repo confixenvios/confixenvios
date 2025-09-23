@@ -132,6 +132,11 @@
     border-radius: inherit;
     z-index: -1;
   }
+
+  /* Marquee animation utilities */
+  .pause-marquee:hover {
+    animation-play-state: paused;
+  }
 }
 
 @layer base {
