@@ -32,15 +32,39 @@ const Header = () => {
           <nav className="flex items-center space-x-2 sm:space-x-6">
             <Link 
               to="/cotacao" 
-              className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base hidden md:block"
+              className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base"
             >
               Cotação
             </Link>
             <Link 
               to="/rastreio" 
-              className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base hidden md:block"
+              className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base"
             >
               Rastreio
+            </Link>
+            <Link 
+              to="#quemsomos" 
+              className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base hidden md:block"
+            >
+              Quem Somos
+            </Link>
+            <Link 
+              to="#servicos" 
+              className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base hidden md:block"
+            >
+              Nossos Serviços
+            </Link>
+            <Link 
+              to="#diferencial" 
+              className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base hidden lg:block"
+            >
+              Nosso Diferencial
+            </Link>
+            <Link 
+              to="#contato" 
+              className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base hidden lg:block"
+            >
+              Fale com a gente
             </Link>
             
             {!loading && (
@@ -95,10 +119,10 @@ const Header = () => {
                     </DropdownMenu>
                   </div>
                 ) : (
-                  <Button asChild size="sm" className="text-xs sm:text-sm px-2 sm:px-4">
+                  <Button asChild size="sm" className="text-xs sm:text-sm px-3 sm:px-4">
                     <Link to="/auth">
                       <LogIn className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      <span className="sm:inline">Entrar</span>
+                      <span>Entrar</span>
                     </Link>
                   </Button>
                 )}
