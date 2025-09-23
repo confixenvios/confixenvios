@@ -37,10 +37,6 @@ const Index = () => {
         <div className="absolute inset-0 bg-gradient-glow opacity-30"></div>
         
         <div className="container mx-auto text-center relative">
-          <Badge variant="secondary" className="mb-4 text-sm font-medium">
-            CONFIX ENVIOS
-          </Badge>
-          
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
             Envie Encomendas com a
             <span className="bg-gradient-primary bg-clip-text text-transparent block">
