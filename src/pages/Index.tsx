@@ -392,12 +392,12 @@ const Index = () => {
               <div className="flex gap-4">
                 <Button variant="ghost" size="sm" asChild>
                   <a href="https://www.facebook.com/confixenvios/" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
-                    <Facebook className="h-4 w-4" />
+                    <Facebook className="h-5 w-5" />
                   </a>
                 </Button>
                 <Button variant="ghost" size="sm" asChild>
                   <a href="https://www.instagram.com/confixenvios/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-                    <Instagram className="h-4 w-4" />
+                    <Instagram className="h-5 w-5" />
                   </a>
                 </Button>
               </div>
