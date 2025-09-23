@@ -1,5 +1,5 @@
 import Header from "@/components/Header";
-import { Truck, Zap, Package, Building, Globe, Shield, Users, CheckCircle, MapPin, Phone, Mail, DollarSign, Clock, TrendingUp } from "lucide-react";
+import { Truck, Zap, Package, Building, Globe, Shield, Users, CheckCircle, MapPin, Phone, Mail, DollarSign, Clock, TrendingUp, Instagram, Facebook } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -390,8 +390,18 @@ const Index = () => {
                 Coletamos e enviamos para todo o Brasil
               </p>
               <div className="flex gap-4">
-                <Button variant="ghost" size="sm">Facebook</Button>
-                <Button variant="ghost" size="sm">Instagram</Button>
+                <Button variant="ghost" size="sm" asChild>
+                  <a href="https://www.facebook.com/confixenvios/" target="_blank" rel="noopener noreferrer">
+                    <Facebook className="mr-2 h-4 w-4" />
+                    Facebook
+                  </a>
+                </Button>
+                <Button variant="ghost" size="sm" asChild>
+                  <a href="https://www.instagram.com/confixenvios/" target="_blank" rel="noopener noreferrer">
+                    <Instagram className="mr-2 h-4 w-4" />
+                    Instagram
+                  </a>
+                </Button>
               </div>
             </div>
 
