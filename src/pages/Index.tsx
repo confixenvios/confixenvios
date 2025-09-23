@@ -82,7 +82,7 @@ const Index = () => {
             <Card className="text-center p-6 hover:shadow-lg transition-shadow border-primary/20">
               <CardHeader>
                 <CardTitle className="text-xl mb-3 text-primary">Envio Nacional</CardTitle>
-                <p className="text-muted-foreground mb-4">Perfil de mercadorias de até 30 kg coletamos e enviamos</p>
+                <p className="text-muted-foreground mb-4">Perfil de mercadorias de e-commerce, coletamos e enviamos</p>
               </CardHeader>
               <CardContent>
                 <Button size="lg" className="w-full" asChild>
