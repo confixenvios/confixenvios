@@ -45,6 +45,8 @@ import AdminFaturamento from "./pages/admin/AdminFaturamento";
 
 import AdminIntegracoes from "./pages/admin/AdminIntegracoes";
 import AdminWebhooks from "./pages/admin/AdminWebhooks";
+import AdminApiDocs from "./pages/admin/AdminApiDocs";
+import AdminApiKeys from "./pages/admin/AdminApiKeys";
 
 
 import AdminTabelas from "./pages/admin/AdminTabelas";
@@ -124,7 +126,9 @@ const App = () => (
                        <Route path="tabelas" element={<AdminTabelas />} />
                        <Route path="relatorios" element={<AdminRelatorios />} />
                        <Route path="integracoes" element={<AdminIntegracoes />} />
-                      <Route path="webhooks" element={<AdminWebhooks />} />
+                       <Route path="webhooks" element={<AdminWebhooks />} />
+                       <Route path="api-docs" element={<AdminApiDocs />} />
+                       <Route path="api-keys" element={<AdminApiKeys />} />
                       
                       
                     </Routes>

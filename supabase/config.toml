@@ -1,5 +1,8 @@
 project_id = "dhznyjtisfdxzbnzinab"
 
+[functions.api-v1-etiquetas]
+verify_jwt = false
+
 [functions.company-branch-webhook-dispatch]
 verify_jwt = false
 

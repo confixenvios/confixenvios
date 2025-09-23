@@ -20,7 +20,8 @@ import {
   DollarSign,
   Truck,
   Building2,
-  BarChart3
+  BarChart3,
+  Key
 } from "lucide-react";
 import { NavLink, useLocation } from 'react-router-dom';
 
@@ -68,6 +69,8 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'Relatórios', href: '/admin/relatorios', icon: BarChart3 },
     { name: 'Integrações', href: '/admin/integracoes', icon: Puzzle },
     { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
+    { name: 'API Docs', href: '/admin/api-docs', icon: FileText },
+    { name: 'API Keys', href: '/admin/api-keys', icon: Key },
     
     
   ];
