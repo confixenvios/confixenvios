@@ -41,7 +41,7 @@ const Index = () => {
           </h1>
           
           <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-12 max-w-4xl mx-auto">
-            Atendemos com agilidade e eficiência operacional em todo Brasil
+            Reduza Custos de Frete - Coleta e Entrega em Todo BR
           </p>
           
           {/* Benefícios principais */}
