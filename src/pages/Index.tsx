@@ -341,72 +341,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Regiões Atendidas */}
-      <section id="atendidas" className="py-16 px-4 bg-card/30">
-        <div className="container mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-4">Regiões Atendidas</h2>
-          <p className="text-center text-muted-foreground mb-12">
-            Veja todas as cidades que temos rotas em cada estado
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  Goiás - Polo ANP
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm">
-                  <li>• Nerópolis</li>
-                  <li>• Terezópolis</li>
-                  <li>• Goianápolis</li>
-                  <li>• Petrolina de Goiás</li>
-                  <li>• São Francisco de Goiás</li>
-                  <li>• Jardim Paulista</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  Goiás - Polo GYN
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm">
-                  <li>• Goiânia</li>
-                  <li>• Aparecida de Goiânia</li>
-                  <li>• Anápolis</li>
-                  <li>• Bela Vista de Goiás</li>
-                  <li>• Hidrolândia</li>
-                  <li>• Abadia de Goiás</li>
-                  <li>• Senador Canedo</li>
-                  <li>• Santo Antônio de Goiás</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  Outras Regiões
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Atendemos todo o Brasil com nossa rede de parceiros e frota própria. 
-                  Entre em contato para verificar disponibilidade na sua região.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
 
       {/* Footer */}
       <footer id="contato" className="bg-primary text-primary-foreground py-16">
@@ -454,7 +388,7 @@ const Index = () => {
                 <nav className="space-y-1 text-sm">
                   <Link to="#quemsomos" className="block hover:underline">Quem somos</Link>
                   <Link to="#servicos" className="block hover:underline">Nossos Serviços</Link>
-                  <Link to="#atendidas" className="block hover:underline">Regiões Atendidas</Link>
+                  
                   <Link to="#diferencial" className="block hover:underline">Nosso Diferencial</Link>
                   <Link to="/motorista/registro" className="block hover:underline">Seja um Motorista</Link>
                 </nav>
