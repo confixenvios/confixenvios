@@ -60,20 +60,56 @@ const Index = () => {
             </div>
           </div>
 
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" asChild className="text-lg px-8 py-4">
-              <Link to="/cotacao">
-                <Package className="mr-2 h-5 w-5" />
-                Faça sua cotação online!
-              </Link>
-            </Button>
-            <Button variant="outline" size="lg" asChild className="text-lg px-8 py-4">
-              <Link to="/rastreio">
-                <Truck className="mr-2 h-5 w-5" />
-                Rastreie sua mercadoria
-              </Link>
-            </Button>
+          {/* Blocos de Serviços */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            {/* Fracionado */}
+            <Card className="text-center p-6 hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <CardTitle className="text-xl mb-3">Fracionado</CardTitle>
+                <p className="text-muted-foreground mb-4">GO / BA / SP / MT</p>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  size="lg" 
+                  className="w-full"
+                  onClick={() => window.open('https://wa.me/5562999999999?text=Olá! Gostaria de saber mais sobre o serviço Fracionado.', '_blank')}
+                >
+                  Falar no WhatsApp
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Expresso GYN */}
+            <Card className="text-center p-6 hover:shadow-lg transition-shadow border-primary/20">
+              <CardHeader>
+                <CardTitle className="text-xl mb-3 text-primary">Expresso GYN</CardTitle>
+                <p className="text-muted-foreground mb-4">Coleta e entrega rápida em Goiânia e região</p>
+              </CardHeader>
+              <CardContent>
+                <Button size="lg" className="w-full" asChild>
+                  <Link to="/cotacao-expresso">
+                    <Zap className="mr-2 h-4 w-4" />
+                    Cotação Expresso
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Envio Nacional */}
+            <Card className="text-center p-6 hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <CardTitle className="text-xl mb-3">Envio Nacional</CardTitle>
+                <p className="text-muted-foreground mb-4">Perfil de mercadorias de até 30 kg coletamos e enviamos</p>
+              </CardHeader>
+              <CardContent>
+                <Button size="lg" className="w-full" asChild>
+                  <Link to="/cotacao">
+                    <Package className="mr-2 h-4 w-4" />
+                    Fazer Cotação
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
