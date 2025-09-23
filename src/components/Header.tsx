@@ -31,18 +31,6 @@ const Header = () => {
           
           <nav className="flex items-center space-x-2 sm:space-x-6">
             <Link 
-              to="/cotacao" 
-              className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base"
-            >
-              Cotação
-            </Link>
-            <Link 
-              to="/rastreio" 
-              className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base"
-            >
-              Rastreio
-            </Link>
-            <Link 
               to="#quemsomos" 
               className="text-muted-foreground hover:text-foreground transition-colors font-medium text-sm sm:text-base hidden md:block"
             >
