@@ -66,7 +66,7 @@ const Index = () => {
             <Card className="text-center p-6 hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="text-xl mb-3">Expresso GYN</CardTitle>
-                <p className="text-muted-foreground mb-4">Coleta e entrega rápida em Goiânia e região</p>
+                <p className="text-muted-foreground mb-4">Coleta e entrega no mesmo dia em Goiânia e Região</p>
               </CardHeader>
               <CardContent>
                 <Button size="lg" className="w-full" asChild>
