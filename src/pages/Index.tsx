@@ -62,19 +62,18 @@ const Index = () => {
 
           {/* Blocos de Serviços */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {/* Fracionado */}
+            {/* Expresso GYN */}
             <Card className="text-center p-6 hover:shadow-lg transition-shadow">
               <CardHeader>
-                <CardTitle className="text-xl mb-3">Fracionado</CardTitle>
-                <p className="text-muted-foreground mb-4">GO / BA / SP / MT</p>
+                <CardTitle className="text-xl mb-3">Expresso GYN</CardTitle>
+                <p className="text-muted-foreground mb-4">Coleta e entrega rápida em Goiânia e região</p>
               </CardHeader>
               <CardContent>
-                <Button 
-                  size="lg" 
-                  className="w-full"
-                  onClick={() => window.open('https://wa.me/5562999999999?text=Olá! Gostaria de saber mais sobre o serviço Fracionado.', '_blank')}
-                >
-                  Falar no WhatsApp
+                <Button size="lg" className="w-full" asChild>
+                  <Link to="/cotacao-expresso">
+                    <Zap className="mr-2 h-4 w-4" />
+                    Cotação Expresso
+                  </Link>
                 </Button>
               </CardContent>
             </Card>
@@ -95,18 +94,19 @@ const Index = () => {
               </CardContent>
             </Card>
 
-            {/* Expresso GYN */}
+            {/* Fracionado */}
             <Card className="text-center p-6 hover:shadow-lg transition-shadow">
               <CardHeader>
-                <CardTitle className="text-xl mb-3">Expresso GYN</CardTitle>
-                <p className="text-muted-foreground mb-4">Coleta e entrega rápida em Goiânia e região</p>
+                <CardTitle className="text-xl mb-3">Fracionado</CardTitle>
+                <p className="text-muted-foreground mb-4">GO / BA / SP / MT</p>
               </CardHeader>
               <CardContent>
-                <Button size="lg" className="w-full" asChild>
-                  <Link to="/cotacao-expresso">
-                    <Zap className="mr-2 h-4 w-4" />
-                    Cotação Expresso
-                  </Link>
+                <Button 
+                  size="lg" 
+                  className="w-full"
+                  onClick={() => window.open('https://wa.me/5562999999999?text=Olá! Gostaria de saber mais sobre o serviço Fracionado.', '_blank')}
+                >
+                  Falar no WhatsApp
                 </Button>
               </CardContent>
             </Card>
