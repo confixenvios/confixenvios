@@ -461,7 +461,7 @@ const Index = () => {
           </div>
           
           <div className="border-t border-primary-foreground/20 mt-12 pt-8 text-center text-sm text-primary-foreground/60">
-            <p>© 2025 – Confix Grupo Logístico | Todos os Direitos Reservados</p>
+            <p>© 2025 – Confix Envios | Todos os Direitos Reservados</p>
           </div>
         </div>
       </footer>
