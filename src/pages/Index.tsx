@@ -424,11 +424,37 @@ const Index = () => {
               <div className="mt-6">
                 <h5 className="font-medium mb-2">Links Úteis</h5>
                 <nav className="space-y-1 text-sm">
-                  <Link to="#quemsomos" className="block hover:underline">Quem somos</Link>
-                  <Link to="#servicos" className="block hover:underline">Nossos Serviços</Link>
-                  
-                  <Link to="#diferencial" className="block hover:underline">Nosso Diferencial</Link>
-                  <Link to="/motorista/registro" className="block hover:underline">Seja um Motorista</Link>
+                  <a 
+                    href="#quemsomos" 
+                    className="block hover:underline transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document.getElementById('quemsomos')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
+                    Quem somos
+                  </a>
+                  <a 
+                    href="#servicos" 
+                    className="block hover:underline transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document.getElementById('servicos')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
+                    Nossos Serviços
+                  </a>
+                  <a 
+                    href="#diferencial" 
+                    className="block hover:underline transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document.getElementById('diferencial')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
+                    Nosso Diferencial
+                  </a>
+                  <Link to="/motorista/registro" className="block hover:underline transition-colors">Seja um Motorista</Link>
                 </nav>
               </div>
             </div>
