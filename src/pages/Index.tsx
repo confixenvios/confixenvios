@@ -61,8 +61,8 @@ const Index = () => {
           {/* Blocos de Serviços */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {/* Expresso GYN */}
-            <Card className="text-center p-6 hover:shadow-lg transition-shadow">
-              <CardHeader>
+            <Card className="text-center p-6 hover:shadow-lg transition-shadow flex flex-col">
+              <CardHeader className="flex-1">
                 <CardTitle className="text-xl mb-3">Expresso</CardTitle>
                 <p className="text-muted-foreground mb-4">Coleta e entrega no mesmo dia em Goiânia e Região</p>
               </CardHeader>
@@ -77,8 +77,8 @@ const Index = () => {
             </Card>
 
             {/* Envio Nacional */}
-            <Card className="text-center p-6 hover:shadow-lg transition-shadow border-primary/20">
-              <CardHeader>
+            <Card className="text-center p-6 hover:shadow-lg transition-shadow border-primary/20 flex flex-col">
+              <CardHeader className="flex-1">
                 <CardTitle className="text-xl mb-3 text-primary">Envio Nacional</CardTitle>
                 <p className="text-muted-foreground mb-4">Perfil de mercadorias de e-commerce, coletamos e enviamos</p>
               </CardHeader>
@@ -93,8 +93,8 @@ const Index = () => {
             </Card>
 
             {/* Fracionado */}
-            <Card className="text-center p-6 hover:shadow-lg transition-shadow">
-              <CardHeader>
+            <Card className="text-center p-6 hover:shadow-lg transition-shadow flex flex-col">
+              <CardHeader className="flex-1">
                 <CardTitle className="text-xl mb-3">Fracionado</CardTitle>
                 <p className="text-muted-foreground mb-4">GO / BA / SP / MT</p>
               </CardHeader>
