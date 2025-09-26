@@ -417,7 +417,7 @@ const Index = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4" />
-                  <span>grupoconfix@gmail.com</span>
+                  <span>confix@grupoconfix.com</span>
                 </div>
               </div>
               
