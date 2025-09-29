@@ -232,7 +232,7 @@ const Index = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  Processamos mais de 5 mil pacotes e realizamos em média 3 mil entregas diariamente, com performance de 98,4%.
+                  Processamos mais de 5 mil pacotes e realizamos em média 3 mil entregas diariamente, com performance de 99,5%.
                 </p>
               </CardContent>
             </Card>
