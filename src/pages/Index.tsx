@@ -382,7 +382,7 @@ const Index = () => {
             {/* Logo e descrição */}
             <div className="col-span-1 md:col-span-2">
               <h3 className="text-2xl font-bold mb-4">Confix Envios</h3>
-              <p className="text-primary-foreground/80 mb-6">
+              <p className="text-primary-foreground/80 mb-6 text-base">
                 Coletamos e enviamos para todo o Brasil
               </p>
               <div className="flex gap-4">
@@ -402,7 +402,7 @@ const Index = () => {
             {/* Sede */}
             <div>
               <h4 className="font-semibold mb-4">Sede</h4>
-              <p className="text-sm text-primary-foreground/80">
+              <p className="text-base text-primary-foreground/80">
                 Av. primeira avenida s/n Qd. 5 B Lt.1 e 3<br />
                 Cidade vera cruz Condomínio Empresarial Village<br />
                 Cep: 74934-600<br />
@@ -413,7 +413,7 @@ const Index = () => {
             {/* Contato */}
             <div>
               <h4 className="font-semibold mb-4">Contato</h4>
-              <div className="space-y-2 text-sm">
+              <div className="space-y-2 text-base">
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
                   <span>+55 62 9873-3276</span>
@@ -426,7 +426,7 @@ const Index = () => {
               
               <div className="mt-6">
                 <h5 className="font-medium mb-2">Links Úteis</h5>
-                <nav className="space-y-1 text-sm">
+                <nav className="space-y-1 text-base">
                   <a 
                     href="#quemsomos" 
                     className="block hover:underline transition-colors"
@@ -463,7 +463,7 @@ const Index = () => {
             </div>
           </div>
           
-          <div className="border-t border-primary-foreground/20 mt-12 pt-8 text-center text-sm text-primary-foreground/60">
+          <div className="border-t border-primary-foreground/20 mt-12 pt-8 text-center text-base text-primary-foreground/60">
             <p>© 2025 – Confix Envios | Todos os Direitos Reservados</p>
           </div>
         </div>
