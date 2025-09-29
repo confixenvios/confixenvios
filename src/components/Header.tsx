@@ -25,7 +25,7 @@ const Header = () => {
             <img 
               src={logoConfixEnvios} 
               alt="Confix Envios" 
-              className="h-12 sm:h-16 md:h-20 w-auto group-hover:scale-105 transition-transform duration-200"
+              className="h-16 sm:h-20 md:h-24 w-auto group-hover:scale-105 transition-transform duration-200"
             />
           </Link>
           
