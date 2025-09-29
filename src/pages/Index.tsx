@@ -14,7 +14,7 @@ import netshoesLogo from "@/assets/clients/netshoes-logo.png";
 import avodahLogo from "@/assets/clients/avodah-logo.png";
 import magaluLogo from "@/assets/clients/magalu-logo.png";
 import deliveryProfessional from "@/assets/delivery-professional.webp";
-import heroBanner from "@/assets/hero-banner.jpg";
+import heroBackground from "@/assets/hero-background.jpg";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -34,41 +34,33 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-light">
       <Header />
       
-      {/* Hero Banner */}
-      <section className="relative w-full h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden">
-        <img 
-          src={heroBanner} 
-          alt="Banner Principal Confix Envios" 
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/50 flex items-center justify-center">
-          <div className="text-center text-white px-4">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 drop-shadow-lg">
-              Coletamos e entregamos em todo <span className="text-primary">Brasil</span>
-            </h1>
-            <div className="flex flex-wrap justify-center gap-6 mt-8">
-              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                <DollarSign className="w-5 h-5" />
-                <span className="text-lg font-medium">Menor preço</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                <Clock className="w-5 h-5" />
-                <span className="text-lg font-medium">Menor prazo</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                <TrendingUp className="w-5 h-5" />
-                <span className="text-lg font-medium">Maior Agilidade</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-      
       {/* Hero Section */}
       <section className="relative py-12 sm:py-16 md:py-20 px-2 sm:px-4 overflow-hidden">
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20" style={{ backgroundImage: `url(${heroBackground})` }}></div>
+        <div className="absolute inset-0 bg-gradient-glow opacity-30"></div>
         <div className="absolute inset-0 bg-gradient-glow opacity-30"></div>
         
         <div className="container mx-auto text-center relative">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-12 leading-tight text-foreground">
+            Coletamos e entregamos em todo <span className="bg-gradient-primary bg-clip-text text-transparent">Brasil</span>
+          </h1>
+          
+          {/* Benefícios principais */}
+          <div className="flex flex-wrap justify-center gap-6 mb-12">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-primary" />
+              <span className="text-lg font-medium">Menor preço</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary" />
+              <span className="text-lg font-medium">Menor prazo</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              <span className="text-lg font-medium">Maior Agilidade</span>
+            </div>
+          </div>
+
           {/* Blocos de Serviços */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {/* Expresso GYN */}
