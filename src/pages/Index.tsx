@@ -42,7 +42,7 @@ const Index = () => {
         
         <div className="container mx-auto text-center relative">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-12 leading-tight text-foreground">
-            Coletamos E Entregamos Em Todo <span className="bg-gradient-primary bg-clip-text text-transparent">Brasil</span>
+            Coletamos e Entregamos em todo <span className="bg-gradient-primary bg-clip-text text-transparent">Brasil</span>
           </h1>
           
           {/* Benefícios principais */}
