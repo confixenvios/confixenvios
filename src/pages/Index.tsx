@@ -36,8 +36,8 @@ const Index = () => {
       
       {/* Hero Section */}
       <section className="relative py-12 sm:py-16 md:py-20 px-2 sm:px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20" style={{ backgroundImage: `url(${heroBackground})` }}></div>
-        <div className="absolute inset-0 bg-gradient-glow opacity-30"></div>
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-50" style={{ backgroundImage: `url(${heroBackground})` }}></div>
+        <div className="absolute inset-0 bg-black/40"></div>
         <div className="absolute inset-0 bg-gradient-glow opacity-30"></div>
         
         <div className="container mx-auto text-center relative">
