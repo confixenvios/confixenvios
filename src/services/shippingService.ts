@@ -148,18 +148,9 @@ const calculateLegacyShippingQuote = async ({
   }
 
   if (!pricing || pricing.length === 0) {
-    // Busca faixas disponíveis para debug
-    const { data: availableRanges } = await supabase
-      .from('shipping_pricing')
-      .select('weight_min, weight_max')
-      .eq('zone_code', zone.zone_code)
-      .order('weight_min');
-
-    const ranges = availableRanges?.map(r => `${r.weight_min}-${r.weight_max}kg`).join(', ') || 'nenhuma';
-    
     throw new Error(
-      `Não há preço configurado para peso ${weight}kg na zona ${zone.zone_code} (${zone.state} ${zone.zone_type === 'CAP' ? 'Capital' : 'Interior'}). ` +
-      `Faixas disponíveis: ${ranges}. Entre em contato conosco para este peso específico.`
+      `Peso ${weight}kg não encontrado na tabela padrão para ${zone.state} ${zone.zone_type === 'CAP' ? 'Capital' : 'Interior'}. ` +
+      `Entre em contato conosco ou consulte nossas tabelas especiais de preço.`
     );
   }
 
