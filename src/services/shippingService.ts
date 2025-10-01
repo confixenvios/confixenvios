@@ -17,6 +17,10 @@ export interface QuoteRequest {
   destinyCep: string;
   weight: number;
   quantity: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  merchandiseValue?: number;
 }
 
 // Aparecida de Goiânia é sempre nossa origem
@@ -25,7 +29,11 @@ const ORIGIN_CEP = "74900000";
 export const calculateShippingQuote = async ({
   destinyCep,
   weight,
-  quantity = 1
+  quantity = 1,
+  length,
+  width,
+  height,
+  merchandiseValue
 }: QuoteRequest): Promise<ShippingQuote> => {
   try {
     console.log(`Iniciando cálculo de frete - CEP: ${destinyCep}, Peso: ${weight}kg, Qtd: ${quantity}`);
@@ -49,7 +57,15 @@ export const calculateShippingQuote = async ({
     try {
       console.log('Tentando cotação via tabelas de preços...');
       multiTableQuote = await Promise.race([
-        PricingTableService.getMultiTableQuote({ destinyCep, weight, quantity }),
+        PricingTableService.getMultiTableQuote({ 
+          destinyCep, 
+          weight, 
+          quantity, 
+          length, 
+          width, 
+          height, 
+          merchandiseValue 
+        }),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)) // 3 segundos máximo
       ]);
     } catch (error) {

@@ -531,10 +531,21 @@ const QuoteForm = () => {
         sessionStorage.setItem('last_cache_check', now.toString());
       }
 
+      // Pegar dimensões do primeiro volume (ou maior volume) para o cálculo
+      const firstVolume = formData.volumes[0];
+      const length = parseFloat(firstVolume?.length) || undefined;
+      const width = parseFloat(firstVolume?.width) || undefined;
+      const height = parseFloat(firstVolume?.height) || undefined;
+      const merchandiseValue = getTotalMerchandiseValue();
+
       const shippingQuote = await calculateShippingQuote({
         destinyCep: formData.destinyCep,
         weight: consideredWeight,
-        quantity: quantity
+        quantity: quantity,
+        length,
+        width,
+        height,
+        merchandiseValue: merchandiseValue > 0 ? merchandiseValue : undefined
       });
 
       // Salvar todos os dados da cotação completa
