@@ -209,6 +209,16 @@ const QuoteForm = () => {
     }, 0);
   };
 
+  const calculateTotalCubicMeters = (): number => {
+    return formData.volumes.reduce((total, volume) => {
+      const length = parseFloat(volume.length) || 0;
+      const width = parseFloat(volume.width) || 0;
+      const height = parseFloat(volume.height) || 0;
+      // Convert cm³ to m³: (cm * cm * cm) / 1000000
+      return total + (length * width * height) / 1000000;
+    }, 0);
+  };
+
   const getConsideredWeight = (): number => {
     const totalWeight = calculateTotalWeight();
     const totalCubicWeight = calculateTotalCubicWeight();
@@ -1050,7 +1060,7 @@ const QuoteForm = () => {
                       <CardTitle className="text-base font-semibold">Resumo dos Volumes</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-3 gap-4">
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">Quantidade de Volumes</p>
                           <p className="text-2xl font-bold text-primary">{formData.volumes.length}</p>
@@ -1060,17 +1070,10 @@ const QuoteForm = () => {
                           <p className="text-2xl font-bold">{calculateTotalWeight().toFixed(2)} kg</p>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Peso Cúbico Total</p>
-                          <p className="text-2xl font-bold">{calculateTotalCubicWeight().toFixed(2)} kg</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Peso Considerado</p>
-                          <p className="text-2xl font-bold text-primary">{getConsideredWeight().toFixed(2)} kg</p>
+                          <p className="text-xs text-muted-foreground">Volume Total</p>
+                          <p className="text-2xl font-bold">{calculateTotalCubicMeters().toFixed(4)} m³</p>
                         </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-3">
-                        * O peso considerado para cálculo do frete é o maior entre o peso total e o peso cúbico total
-                      </p>
                     </CardContent>
                   </Card>
                 </div>
