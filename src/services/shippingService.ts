@@ -147,20 +147,48 @@ const calculateLegacyShippingQuote = async ({
     throw new Error(`Erro ao consultar tabela de preços: ${priceError.message}`);
   }
 
-  if (!pricing || pricing.length === 0) {
-    throw new Error(
-      `Peso ${weight}kg não encontrado na tabela padrão para ${zone.state} ${zone.zone_type === 'CAP' ? 'Capital' : 'Interior'}. ` +
-      `Entre em contato conosco ou consulte nossas tabelas especiais de preço.`
-    );
-  }
+  let basePrice: number;
+  let excessWeightCharge = 0;
+  const EXCESS_WEIGHT_THRESHOLD = 30; // kg
+  const EXCESS_WEIGHT_CHARGE_PER_KG = 10; // R$/kg
 
-  const basePrice = pricing[0].price;
-  console.log(`Preço base encontrado: R$ ${basePrice}`);
+  if (!pricing || pricing.length === 0) {
+    // Se não encontrou faixa exata, buscar a maior faixa disponível para aplicar excesso
+    console.log(`⚠️ Peso ${weight}kg excede faixas disponíveis. Buscando maior faixa...`);
+    
+    const { data: maxWeightPricing, error: maxError } = await supabase
+      .from('shipping_pricing')
+      .select('*')
+      .eq('zone_code', zone.zone_code)
+      .order('weight_max', { ascending: false })
+      .limit(1);
+
+    if (maxError || !maxWeightPricing || maxWeightPricing.length === 0) {
+      throw new Error(
+        `Peso ${weight}kg não encontrado na tabela padrão para ${zone.state} ${zone.zone_type === 'CAP' ? 'Capital' : 'Interior'}. ` +
+        `Entre em contato conosco ou consulte nossas tabelas especiais de preço.`
+      );
+    }
+
+    basePrice = maxWeightPricing[0].price;
+    
+    // Aplicar cargo de excesso se o peso ultrapassar o limite
+    if (weight > EXCESS_WEIGHT_THRESHOLD) {
+      const excessWeight = weight - EXCESS_WEIGHT_THRESHOLD;
+      excessWeightCharge = excessWeight * EXCESS_WEIGHT_CHARGE_PER_KG;
+      console.log(`💰 Peso excedente: ${excessWeight}kg × R$${EXCESS_WEIGHT_CHARGE_PER_KG} = R$${excessWeightCharge.toFixed(2)}`);
+    }
+    
+    console.log(`✅ Usando maior faixa disponível: até ${maxWeightPricing[0].weight_max}kg - Base: R$${basePrice} + Excesso: R$${excessWeightCharge.toFixed(2)}`);
+  } else {
+    basePrice = pricing[0].price;
+    console.log(`Preço base encontrado: R$ ${basePrice}`);
+  }
   
-  // Multiplica o preço base pela quantidade de pacotes
-  const basePriceWithQuantity = basePrice * quantity;
+  // Multiplica o preço base pela quantidade de pacotes e adiciona cargo de excesso
+  const basePriceWithQuantity = (basePrice + excessWeightCharge) * quantity;
   
-  // Preço econômico é o preço base multiplicado pela quantidade
+  // Preço econômico é o preço base + excesso, multiplicado pela quantidade
   const economicPrice = basePriceWithQuantity;
   
   // Preço expresso tem 60% de acréscimo
