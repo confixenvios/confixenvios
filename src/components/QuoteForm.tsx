@@ -895,7 +895,7 @@ const QuoteForm = () => {
                     <span>Detalhes da Mercadoria</span>
                   </Label>
                   
-                  <div className="grid grid-cols-1 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-3">
                       <Label htmlFor="quantity" className="text-base font-medium">Quantidade</Label>
                       <Input
@@ -905,6 +905,20 @@ const QuoteForm = () => {
                         placeholder="1"
                         value={formData.quantity}
                         onChange={(e) => handleQuantityChange(e.target.value)}
+                        className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
+                      />
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Label htmlFor="totalValue" className="text-base font-medium">Valor Total (R$)</Label>
+                      <Input
+                        id="totalValue"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="100.00"
+                        value={formData.unitValue}
+                        onChange={(e) => handleInputChange("unitValue", e.target.value)}
                         className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
                       />
                     </div>
