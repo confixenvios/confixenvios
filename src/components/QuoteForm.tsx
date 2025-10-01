@@ -771,7 +771,7 @@ const QuoteForm = () => {
 
   const isStep1Valid = (): boolean => {
     // Validar campos básicos
-    if (!formData.destinyCep || !formData.quantity || !formData.unitValue) {
+    if (!formData.destinyCep || !formData.quantity) {
       return false;
     }
     
@@ -895,7 +895,7 @@ const QuoteForm = () => {
                     <span>Detalhes da Mercadoria</span>
                   </Label>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 gap-6">
                     <div className="space-y-3">
                       <Label htmlFor="quantity" className="text-base font-medium">Quantidade</Label>
                       <Input
@@ -907,27 +907,6 @@ const QuoteForm = () => {
                         onChange={(e) => handleQuantityChange(e.target.value)}
                         className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
                       />
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <Label htmlFor="unitValue" className="text-base font-medium">Valor Unitário (R$)</Label>
-                      <Input
-                        id="unitValue"
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        placeholder="100.00"
-                        value={formData.unitValue}
-                        onChange={(e) => handleInputChange("unitValue", e.target.value)}
-                        className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
-                      />
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <Label className="text-base font-medium">Valor Total</Label>
-                      <div className="h-14 flex items-center px-4 py-2 rounded-md border border-input-border text-foreground font-semibold text-lg">
-                        R$ {getTotalMerchandiseValue().toFixed(2)}
-                      </div>
                     </div>
                   </div>
                 </div>
