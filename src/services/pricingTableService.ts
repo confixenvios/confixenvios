@@ -306,6 +306,22 @@ export class PricingTableService {
       merchandiseValue?: number;
     }
   ): PricingTableQuote | null {
+    // Validar dimensões máximas da tabela ANTES de calcular
+    if (length && width && height) {
+      if (table.max_length_cm && length > table.max_length_cm) {
+        console.log(`Dimensão excedida: Comprimento ${length}cm > ${table.max_length_cm}cm (tabela ${table.name})`);
+        return null;
+      }
+      if (table.max_width_cm && width > table.max_width_cm) {
+        console.log(`Dimensão excedida: Largura ${width}cm > ${table.max_width_cm}cm (tabela ${table.name})`);
+        return null;
+      }
+      if (table.max_height_cm && height > table.max_height_cm) {
+        console.log(`Dimensão excedida: Altura ${height}cm > ${table.max_height_cm}cm (tabela ${table.name})`);
+        return null;
+      }
+    }
+    
     const cleanCep = destinyCep.replace(/\D/g, '').padStart(8, '0');
     
     // Calcular peso cubado se houver dimensões e regra configurada
@@ -399,6 +415,22 @@ export class PricingTableService {
       merchandiseValue?: number;
     }
   ): PricingTableQuote | null {
+    // Validar dimensões máximas da tabela ANTES de processar
+    if (length && width && height) {
+      if (table.max_length_cm && length > table.max_length_cm) {
+        console.log(`Dimensão excedida: Comprimento ${length}cm > ${table.max_length_cm}cm (tabela ${table.name})`);
+        return null;
+      }
+      if (table.max_width_cm && width > table.max_width_cm) {
+        console.log(`Dimensão excedida: Largura ${width}cm > ${table.max_width_cm}cm (tabela ${table.name})`);
+        return null;
+      }
+      if (table.max_height_cm && height > table.max_height_cm) {
+        console.log(`Dimensão excedida: Altura ${height}cm > ${table.max_height_cm}cm (tabela ${table.name})`);
+        return null;
+      }
+    }
+    
     const cleanCep = destinyCep.replace(/\D/g, '').padStart(8, '0');
     
     // Procurar aba de preços (contém PRECO e PESO)

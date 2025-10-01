@@ -54,6 +54,9 @@ interface PricingTable {
   ad_valorem_percentage?: number;
   gris_percentage?: number;
   cubic_meter_kg_equivalent?: number;
+  max_length_cm?: number;
+  max_width_cm?: number;
+  max_height_cm?: number;
   company_branches?: {
     name: string;
     fantasy_name: string;
@@ -85,6 +88,9 @@ const AdminTabelas = () => {
     ad_valorem_percentage: number;
     gris_percentage: number;
     cubic_meter_kg_equivalent: number;
+    max_length_cm: number | null;
+    max_width_cm: number | null;
+    max_height_cm: number | null;
   }>({
     name: '',
     company_branch_id: '',
@@ -94,7 +100,10 @@ const AdminTabelas = () => {
     file: null,
     ad_valorem_percentage: 0.30,
     gris_percentage: 0.30,
-    cubic_meter_kg_equivalent: 167
+    cubic_meter_kg_equivalent: 167,
+    max_length_cm: null,
+    max_width_cm: null,
+    max_height_cm: null
   });
 
   const [availableSheets, setAvailableSheets] = useState<string[]>([]);
@@ -231,7 +240,10 @@ const AdminTabelas = () => {
         validation_status: 'pending',
         ad_valorem_percentage: formData.ad_valorem_percentage,
         gris_percentage: formData.gris_percentage,
-        cubic_meter_kg_equivalent: formData.cubic_meter_kg_equivalent
+        cubic_meter_kg_equivalent: formData.cubic_meter_kg_equivalent,
+        max_length_cm: formData.max_length_cm,
+        max_width_cm: formData.max_width_cm,
+        max_height_cm: formData.max_height_cm
       };
 
       let error;
@@ -326,7 +338,10 @@ const AdminTabelas = () => {
       file: null,
       ad_valorem_percentage: table.ad_valorem_percentage ?? 0.30,
       gris_percentage: table.gris_percentage ?? 0.30,
-      cubic_meter_kg_equivalent: table.cubic_meter_kg_equivalent ?? 167
+      cubic_meter_kg_equivalent: table.cubic_meter_kg_equivalent ?? 167,
+      max_length_cm: table.max_length_cm ?? null,
+      max_width_cm: table.max_width_cm ?? null,
+      max_height_cm: table.max_height_cm ?? null
     });
     setIsDialogOpen(true);
   };
@@ -341,7 +356,10 @@ const AdminTabelas = () => {
       file: null,
       ad_valorem_percentage: 0.30,
       gris_percentage: 0.30,
-      cubic_meter_kg_equivalent: 167
+      cubic_meter_kg_equivalent: 167,
+      max_length_cm: null,
+      max_width_cm: null,
+      max_height_cm: null
     });
     setEditingTable(null);
     setAvailableSheets([]);
@@ -538,6 +556,54 @@ const AdminTabelas = () => {
                         <p className="text-xs text-muted-foreground mt-1">
                           Quantos kg equivalem a 1 metro cúbico (ex: 167 significa que 1m³ = 167kg)
                         </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="font-semibold text-sm">Restrições de Dimensões</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Se alguma dimensão exceder os limites, o frete não será calculado
+                    </p>
+                    
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="max_length">Comprimento Máx. (cm)</Label>
+                        <Input
+                          id="max_length"
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={formData.max_length_cm || ''}
+                          onChange={(e) => setFormData({...formData, max_length_cm: e.target.value ? parseFloat(e.target.value) : null})}
+                          placeholder="200"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="max_width">Largura Máx. (cm)</Label>
+                        <Input
+                          id="max_width"
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={formData.max_width_cm || ''}
+                          onChange={(e) => setFormData({...formData, max_width_cm: e.target.value ? parseFloat(e.target.value) : null})}
+                          placeholder="200"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="max_height">Altura Máx. (cm)</Label>
+                        <Input
+                          id="max_height"
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={formData.max_height_cm || ''}
+                          onChange={(e) => setFormData({...formData, max_height_cm: e.target.value ? parseFloat(e.target.value) : null})}
+                          placeholder="200"
+                        />
                       </div>
                     </div>
                   </div>
