@@ -38,11 +38,6 @@ export const calculateShippingQuote = async ({
   try {
     console.log(`Iniciando cálculo de frete - CEP: ${destinyCep}, Peso: ${weight}kg, Qtd: ${quantity}`);
     
-    // Validar peso máximo primeiro
-    if (weight > 30) {
-      throw new Error(`Não atendemos envios acima de 30kg. Peso informado: ${weight}kg. Para cargas maiores, entre em contato conosco.`);
-    }
-
     // OTIMIZAÇÃO: Verificar cache local primeiro (evita chamadas repetidas)
     const cacheKey = `pricing_tables_${Date.now()}`;
     const cachedResult = sessionStorage.getItem('pricing_fallback_' + destinyCep + '_' + weight);
