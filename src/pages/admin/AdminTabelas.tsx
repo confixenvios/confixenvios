@@ -51,6 +51,9 @@ interface PricingTable {
   validation_status: string;
   validation_errors?: any;
   last_validation_at?: string;
+  ad_valorem_percentage?: number;
+  gris_percentage?: number;
+  cubic_meter_kg_equivalent?: number;
   company_branches?: {
     name: string;
     fantasy_name: string;
@@ -79,13 +82,19 @@ const AdminTabelas = () => {
     google_sheets_url: string;
     sheet_name: string;
     file: File | null;
+    ad_valorem_percentage: number;
+    gris_percentage: number;
+    cubic_meter_kg_equivalent: number;
   }>({
     name: '',
     company_branch_id: '',
     source_type: 'upload',
     google_sheets_url: '',
     sheet_name: '',
-    file: null
+    file: null,
+    ad_valorem_percentage: 0.30,
+    gris_percentage: 0.30,
+    cubic_meter_kg_equivalent: 167
   });
 
   const [availableSheets, setAvailableSheets] = useState<string[]>([]);
@@ -219,7 +228,10 @@ const AdminTabelas = () => {
         google_sheets_url: formData.source_type === 'google_sheets' ? formData.google_sheets_url : null,
         sheet_name: formData.source_type === 'google_sheets' && formData.sheet_name ? formData.sheet_name : null,
         is_active: true,
-        validation_status: 'pending'
+        validation_status: 'pending',
+        ad_valorem_percentage: formData.ad_valorem_percentage,
+        gris_percentage: formData.gris_percentage,
+        cubic_meter_kg_equivalent: formData.cubic_meter_kg_equivalent
       };
 
       let error;
@@ -311,7 +323,10 @@ const AdminTabelas = () => {
       source_type: (table.source_type === 'google_sheets' ? 'google_sheets' : 'upload') as 'upload' | 'google_sheets',
       google_sheets_url: table.google_sheets_url || '',
       sheet_name: table.sheet_name || '',
-      file: null
+      file: null,
+      ad_valorem_percentage: table.ad_valorem_percentage ?? 0.30,
+      gris_percentage: table.gris_percentage ?? 0.30,
+      cubic_meter_kg_equivalent: table.cubic_meter_kg_equivalent ?? 167
     });
     setIsDialogOpen(true);
   };
@@ -323,7 +338,10 @@ const AdminTabelas = () => {
       source_type: 'upload',
       google_sheets_url: '',
       sheet_name: '',
-      file: null
+      file: null,
+      ad_valorem_percentage: 0.30,
+      gris_percentage: 0.30,
+      cubic_meter_kg_equivalent: 167
     });
     setEditingTable(null);
     setAvailableSheets([]);
@@ -467,10 +485,64 @@ const AdminTabelas = () => {
                         )}
                       </div>
                     )}
-                  </>
-                )}
+                    </>
+                  )}
 
-                <div className="flex justify-end gap-2 pt-4">
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="font-semibold text-sm">Regras de Precificação</h3>
+                    
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <Label htmlFor="ad_valorem">Ad Valorem (%)</Label>
+                        <Input
+                          id="ad_valorem"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.ad_valorem_percentage}
+                          onChange={(e) => setFormData({...formData, ad_valorem_percentage: parseFloat(e.target.value) || 0})}
+                          placeholder="0.30"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Percentual aplicado sobre o valor da mercadoria (ex: 0.30 = 0,30%)
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="gris">GRIS (%)</Label>
+                        <Input
+                          id="gris"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.gris_percentage}
+                          onChange={(e) => setFormData({...formData, gris_percentage: parseFloat(e.target.value) || 0})}
+                          placeholder="0.30"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Percentual de Gerenciamento de Risco sobre o valor da mercadoria
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="cubic_meter">Equivalência Cúbica (kg/m³)</Label>
+                        <Input
+                          id="cubic_meter"
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={formData.cubic_meter_kg_equivalent}
+                          onChange={(e) => setFormData({...formData, cubic_meter_kg_equivalent: parseFloat(e.target.value) || 0})}
+                          placeholder="167"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Quantos kg equivalem a 1 metro cúbico (ex: 167 significa que 1m³ = 167kg)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancelar
                   </Button>

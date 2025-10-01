@@ -11,6 +11,10 @@ export interface PricingTableQuote {
   tableId: string;
   tableName: string;
   cnpj: string;
+  adValoremValue?: number;
+  grisValue?: number;
+  cubicWeight?: number;
+  appliedWeight?: number;
 }
 
 export interface ValidationResult {
@@ -33,11 +37,19 @@ export class PricingTableService {
   static async getMultiTableQuote({
     destinyCep,
     weight,
-    quantity = 1
+    quantity = 1,
+    length,
+    width,
+    height,
+    merchandiseValue
   }: {
     destinyCep: string;
     weight: number;
     quantity?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    merchandiseValue?: number;
   }): Promise<PricingTableQuote | null> {
     try {
       // OTIMIZAÇÃO: Cache para evitar chamadas repetidas desnecessárias
@@ -84,7 +96,7 @@ export class PricingTableService {
         try {
           // Timeout de 4 segundos por tabela
           return await Promise.race([
-            this.getQuoteFromTable(table, { destinyCep, weight, quantity }),
+            this.getQuoteFromTable(table, { destinyCep, weight, quantity, length, width, height, merchandiseValue }),
             new Promise<null>((_, reject) => 
               setTimeout(() => reject(new Error('Timeout')), 4000)
             )
@@ -127,16 +139,24 @@ export class PricingTableService {
    */
   private static async getQuoteFromTable(
     table: any, 
-    { destinyCep, weight, quantity }: { destinyCep: string; weight: number; quantity: number }
+    { destinyCep, weight, quantity, length, width, height, merchandiseValue }: { 
+      destinyCep: string; 
+      weight: number; 
+      quantity: number;
+      length?: number;
+      width?: number;
+      height?: number;
+      merchandiseValue?: number;
+    }
   ): Promise<PricingTableQuote | null> {
     // Para tabelas do Google Sheets, fazer requisição para buscar dados
     if (table.source_type === 'google_sheets') {
-      return await this.processGoogleSheetsTable(table, { destinyCep, weight, quantity });
+      return await this.processGoogleSheetsTable(table, { destinyCep, weight, quantity, length, width, height, merchandiseValue });
     }
     
     // Para arquivos upload, processar arquivo
     if (table.source_type === 'upload' && table.file_url) {
-      return await this.processUploadedTable(table, { destinyCep, weight, quantity });
+      return await this.processUploadedTable(table, { destinyCep, weight, quantity, length, width, height, merchandiseValue });
     }
 
     return null;
@@ -147,7 +167,15 @@ export class PricingTableService {
    */
   private static async processGoogleSheetsTable(
     table: any,
-    { destinyCep, weight, quantity }: { destinyCep: string; weight: number; quantity: number }
+    { destinyCep, weight, quantity, length, width, height, merchandiseValue }: { 
+      destinyCep: string; 
+      weight: number; 
+      quantity: number;
+      length?: number;
+      width?: number;
+      height?: number;
+      merchandiseValue?: number;
+    }
   ): Promise<PricingTableQuote | null> {
     try {
       // Timeout para operações do Google Sheets
@@ -215,7 +243,7 @@ export class PricingTableService {
 
       // Tentar encontrar preço em cada aba
       for (const sheetData of allSheetsData) {
-        const quote = this.findPriceInData(sheetData.data, table, { destinyCep, weight, quantity });
+        const quote = this.findPriceInData(sheetData.data, table, { destinyCep, weight, quantity, length, width, height, merchandiseValue });
         if (quote) {
           // Adicionar informação da aba utilizada
           quote.zoneName = `${table.name} - ${sheetData.name}`;
@@ -224,7 +252,7 @@ export class PricingTableService {
       }
 
       // Se não encontrou em nenhuma aba, tentar combinar dados (para casos especiais)
-      return this.combineSheetsData(allSheetsData, table, { destinyCep, weight, quantity });
+      return this.combineSheetsData(allSheetsData, table, { destinyCep, weight, quantity, length, width, height, merchandiseValue });
     } catch (error) {
       console.error('Erro ao processar Google Sheets:', error);
       return null;
@@ -236,7 +264,15 @@ export class PricingTableService {
    */
   private static async processUploadedTable(
     table: any,
-    { destinyCep, weight, quantity }: { destinyCep: string; weight: number; quantity: number }
+    { destinyCep, weight, quantity, length, width, height, merchandiseValue }: { 
+      destinyCep: string; 
+      weight: number; 
+      quantity: number;
+      length?: number;
+      width?: number;
+      height?: number;
+      merchandiseValue?: number;
+    }
   ): Promise<PricingTableQuote | null> {
     try {
       const response = await fetch(table.file_url);
@@ -247,7 +283,7 @@ export class PricingTableService {
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const data = XLSX.utils.sheet_to_json(worksheet);
 
-      return this.findPriceInData(data, table, { destinyCep, weight, quantity });
+      return this.findPriceInData(data, table, { destinyCep, weight, quantity, length, width, height, merchandiseValue });
     } catch (error) {
       console.error('Erro ao processar arquivo:', error);
       return null;
@@ -260,9 +296,32 @@ export class PricingTableService {
   private static findPriceInData(
     data: any[],
     table: any,
-    { destinyCep, weight, quantity }: { destinyCep: string; weight: number; quantity: number }
+    { destinyCep, weight, quantity, length, width, height, merchandiseValue }: { 
+      destinyCep: string; 
+      weight: number; 
+      quantity: number;
+      length?: number;
+      width?: number;
+      height?: number;
+      merchandiseValue?: number;
+    }
   ): PricingTableQuote | null {
     const cleanCep = destinyCep.replace(/\D/g, '').padStart(8, '0');
+    
+    // Calcular peso cubado se houver dimensões e regra configurada
+    let cubicWeight: number | undefined;
+    let appliedWeight = weight;
+    
+    if (length && width && height && table.cubic_meter_kg_equivalent) {
+      // Converter dimensões de cm para metros e calcular volume em m³
+      const volumeM3 = (length / 100) * (width / 100) * (height / 100);
+      cubicWeight = volumeM3 * table.cubic_meter_kg_equivalent;
+      
+      // Usar o maior peso entre real e cubado
+      appliedWeight = Math.max(weight, cubicWeight);
+      
+      console.log(`Peso real: ${weight}kg | Peso cubado: ${cubicWeight.toFixed(2)}kg | Aplicado: ${appliedWeight.toFixed(2)}kg`);
+    }
     
     // Buscar linha correspondente ao CEP e peso
     // Assumindo estrutura: CEP_INICIO, CEP_FIM, PESO_MIN, PESO_MAX, PRECO, PRAZO
@@ -275,8 +334,8 @@ export class PricingTableService {
       return (
         cleanCep >= cepStart &&
         cleanCep <= cepEnd &&
-        weight >= weightMin &&
-        weight <= weightMax
+        appliedWeight >= weightMin &&
+        appliedWeight <= weightMax
       );
     });
 
@@ -287,7 +346,25 @@ export class PricingTableService {
     
     if (basePrice <= 0) return null;
 
-    const totalPrice = basePrice * quantity;
+    let totalPrice = basePrice * quantity;
+    
+    // Aplicar Ad Valorem e GRIS se houver valor da mercadoria e percentuais configurados
+    let adValoremValue: number | undefined;
+    let grisValue: number | undefined;
+    
+    if (merchandiseValue && merchandiseValue > 0) {
+      if (table.ad_valorem_percentage && table.ad_valorem_percentage > 0) {
+        adValoremValue = (merchandiseValue * table.ad_valorem_percentage) / 100;
+        totalPrice += adValoremValue;
+        console.log(`Ad Valorem (${table.ad_valorem_percentage}%): R$ ${adValoremValue.toFixed(2)}`);
+      }
+      
+      if (table.gris_percentage && table.gris_percentage > 0) {
+        grisValue = (merchandiseValue * table.gris_percentage) / 100;
+        totalPrice += grisValue;
+        console.log(`GRIS (${table.gris_percentage}%): R$ ${grisValue.toFixed(2)}`);
+      }
+    }
 
     return {
       economicPrice: Number(totalPrice.toFixed(2)),
@@ -298,7 +375,11 @@ export class PricingTableService {
       zoneName: `${table.name} - Zona ${matchingRow.ZONA || 'AUTO'}`,
       tableId: table.id,
       tableName: table.name,
-      cnpj: table.cnpj
+      cnpj: table.cnpj,
+      adValoremValue,
+      grisValue,
+      cubicWeight,
+      appliedWeight
     };
   }
 
@@ -308,7 +389,15 @@ export class PricingTableService {
   private static combineSheetsData(
     allSheetsData: { name: string; data: any[] }[],
     table: any,
-    { destinyCep, weight, quantity }: { destinyCep: string; weight: number; quantity: number }
+    { destinyCep, weight, quantity, length, width, height, merchandiseValue }: { 
+      destinyCep: string; 
+      weight: number; 
+      quantity: number;
+      length?: number;
+      width?: number;
+      height?: number;
+      merchandiseValue?: number;
+    }
   ): PricingTableQuote | null {
     const cleanCep = destinyCep.replace(/\D/g, '').padStart(8, '0');
     
@@ -344,6 +433,16 @@ export class PricingTableService {
     const zone = deliveryRow.ZONA || deliveryRow.zona || deliveryRow.REGIAO || deliveryRow.regiao || 'PADRAO';
     const days = Number(deliveryRow.PRAZO || deliveryRow.prazo || 5);
     
+    // Calcular peso cubado se aplicável
+    let appliedWeight = weight;
+    let cubicWeight: number | undefined;
+    
+    if (length && width && height && table.cubic_meter_kg_equivalent) {
+      const volumeM3 = (length / 100) * (width / 100) * (height / 100);
+      cubicWeight = volumeM3 * table.cubic_meter_kg_equivalent;
+      appliedWeight = Math.max(weight, cubicWeight);
+    }
+    
     // 2. Buscar preço na aba de preços usando zona e peso
     const priceRow = priceSheet.data.find((row: any) => {
       const rowZone = row.ZONA || row.zona || row.REGIAO || row.regiao || 'PADRAO';
@@ -352,8 +451,8 @@ export class PricingTableService {
       
       return (
         String(rowZone).toLowerCase() === String(zone).toLowerCase() && 
-        weight >= weightMin && 
-        weight <= weightMax
+        appliedWeight >= weightMin && 
+        appliedWeight <= weightMax
       );
     });
     
@@ -388,7 +487,23 @@ export class PricingTableService {
     const basePrice = Number(priceRow.PRECO || priceRow.preco || 0);
     if (basePrice <= 0) return null;
     
-    const totalPrice = basePrice * quantity;
+    let totalPrice = basePrice * quantity;
+    
+    // Aplicar Ad Valorem e GRIS
+    let adValoremValue: number | undefined;
+    let grisValue: number | undefined;
+    
+    if (merchandiseValue && merchandiseValue > 0) {
+      if (table.ad_valorem_percentage && table.ad_valorem_percentage > 0) {
+        adValoremValue = (merchandiseValue * table.ad_valorem_percentage) / 100;
+        totalPrice += adValoremValue;
+      }
+      
+      if (table.gris_percentage && table.gris_percentage > 0) {
+        grisValue = (merchandiseValue * table.gris_percentage) / 100;
+        totalPrice += grisValue;
+      }
+    }
     
     return {
       economicPrice: Number(totalPrice.toFixed(2)),
@@ -399,7 +514,11 @@ export class PricingTableService {
       zoneName: `${table.name} - Combinado (${priceSheet.name} + ${deliverySheet.name})`,
       tableId: table.id,
       tableName: table.name,
-      cnpj: table.cnpj
+      cnpj: table.cnpj,
+      adValoremValue,
+      grisValue,
+      cubicWeight,
+      appliedWeight
     };
   }
 
