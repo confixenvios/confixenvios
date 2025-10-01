@@ -88,9 +88,9 @@ const AdminTabelas = () => {
     ad_valorem_percentage: number;
     gris_percentage: number;
     cubic_meter_kg_equivalent: number;
-    max_length_cm: number | null;
-    max_width_cm: number | null;
-    max_height_cm: number | null;
+    max_length_cm: number;
+    max_width_cm: number;
+    max_height_cm: number;
   }>({
     name: '',
     company_branch_id: '',
@@ -101,9 +101,9 @@ const AdminTabelas = () => {
     ad_valorem_percentage: 0.30,
     gris_percentage: 0.30,
     cubic_meter_kg_equivalent: 167,
-    max_length_cm: null,
-    max_width_cm: null,
-    max_height_cm: null
+    max_length_cm: 200,
+    max_width_cm: 200,
+    max_height_cm: 200
   });
 
   const [availableSheets, setAvailableSheets] = useState<string[]>([]);
@@ -241,9 +241,9 @@ const AdminTabelas = () => {
         ad_valorem_percentage: formData.ad_valorem_percentage,
         gris_percentage: formData.gris_percentage,
         cubic_meter_kg_equivalent: formData.cubic_meter_kg_equivalent,
-        max_length_cm: formData.max_length_cm,
-        max_width_cm: formData.max_width_cm,
-        max_height_cm: formData.max_height_cm
+        max_length_cm: formData.max_length_cm > 0 ? formData.max_length_cm : null,
+        max_width_cm: formData.max_width_cm > 0 ? formData.max_width_cm : null,
+        max_height_cm: formData.max_height_cm > 0 ? formData.max_height_cm : null
       };
 
       let error;
@@ -339,9 +339,9 @@ const AdminTabelas = () => {
       ad_valorem_percentage: table.ad_valorem_percentage ?? 0.30,
       gris_percentage: table.gris_percentage ?? 0.30,
       cubic_meter_kg_equivalent: table.cubic_meter_kg_equivalent ?? 167,
-      max_length_cm: table.max_length_cm ?? null,
-      max_width_cm: table.max_width_cm ?? null,
-      max_height_cm: table.max_height_cm ?? null
+      max_length_cm: table.max_length_cm ?? 200,
+      max_width_cm: table.max_width_cm ?? 200,
+      max_height_cm: table.max_height_cm ?? 200
     });
     setIsDialogOpen(true);
   };
@@ -357,9 +357,9 @@ const AdminTabelas = () => {
       ad_valorem_percentage: 0.30,
       gris_percentage: 0.30,
       cubic_meter_kg_equivalent: 167,
-      max_length_cm: null,
-      max_width_cm: null,
-      max_height_cm: null
+      max_length_cm: 200,
+      max_width_cm: 200,
+      max_height_cm: 200
     });
     setEditingTable(null);
     setAvailableSheets([]);
@@ -574,8 +574,8 @@ const AdminTabelas = () => {
                           type="number"
                           step="1"
                           min="0"
-                          value={formData.max_length_cm || ''}
-                          onChange={(e) => setFormData({...formData, max_length_cm: e.target.value ? parseFloat(e.target.value) : null})}
+                          value={formData.max_length_cm}
+                          onChange={(e) => setFormData({...formData, max_length_cm: parseFloat(e.target.value) || 0})}
                           placeholder="200"
                         />
                       </div>
@@ -587,8 +587,8 @@ const AdminTabelas = () => {
                           type="number"
                           step="1"
                           min="0"
-                          value={formData.max_width_cm || ''}
-                          onChange={(e) => setFormData({...formData, max_width_cm: e.target.value ? parseFloat(e.target.value) : null})}
+                          value={formData.max_width_cm}
+                          onChange={(e) => setFormData({...formData, max_width_cm: parseFloat(e.target.value) || 0})}
                           placeholder="200"
                         />
                       </div>
@@ -600,8 +600,8 @@ const AdminTabelas = () => {
                           type="number"
                           step="1"
                           min="0"
-                          value={formData.max_height_cm || ''}
-                          onChange={(e) => setFormData({...formData, max_height_cm: e.target.value ? parseFloat(e.target.value) : null})}
+                          value={formData.max_height_cm}
+                          onChange={(e) => setFormData({...formData, max_height_cm: parseFloat(e.target.value) || 0})}
                           placeholder="200"
                         />
                       </div>
