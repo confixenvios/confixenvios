@@ -384,13 +384,13 @@ export class PricingTableService {
     
     if (basePrice <= 0) return null;
 
-    // Apply excess weight charge if applicable
+    // Apply excess weight charge if applicable (sempre sobre o peso REAL, não cubado)
     let excessWeightCharge = 0;
     if (table.excess_weight_threshold_kg && table.excess_weight_charge_per_kg && 
         weight > table.excess_weight_threshold_kg) {
       const excessWeight = weight - table.excess_weight_threshold_kg;
       excessWeightCharge = excessWeight * table.excess_weight_charge_per_kg;
-      console.log(`💰 Excess weight charge: ${excessWeight}kg × R$${table.excess_weight_charge_per_kg} = R$${excessWeightCharge.toFixed(2)}`);
+      console.log(`💰 [findPriceInData] Cobrança de excedente: ${excessWeight}kg (${weight}kg - ${table.excess_weight_threshold_kg}kg) × R$${table.excess_weight_charge_per_kg} = R$${excessWeightCharge.toFixed(2)}`);
     }
 
     let totalPrice = basePrice * quantity;
@@ -574,13 +574,13 @@ export class PricingTableService {
     const basePrice = Number(priceRow.PRECO || priceRow.preco || 0);
     if (basePrice <= 0) return null;
     
-    // Apply excess weight charge if applicable
+    // Apply excess weight charge if applicable (sempre sobre o peso REAL, não cubado)
     let excessWeightCharge = 0;
     if (table.excess_weight_threshold_kg && table.excess_weight_charge_per_kg && 
         weight > table.excess_weight_threshold_kg) {
       const excessWeight = weight - table.excess_weight_threshold_kg;
       excessWeightCharge = excessWeight * table.excess_weight_charge_per_kg;
-      console.log(`💰 [combineSheetsData] Excess weight charge: ${excessWeight}kg × R$${table.excess_weight_charge_per_kg} = R$${excessWeightCharge.toFixed(2)}`);
+      console.log(`💰 [combineSheetsData] Cobrança de excedente: ${excessWeight}kg (${weight}kg - ${table.excess_weight_threshold_kg}kg) × R$${table.excess_weight_charge_per_kg} = R$${excessWeightCharge.toFixed(2)}`);
     }
     
     let totalPrice = basePrice * quantity;
