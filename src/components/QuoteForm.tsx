@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { Calculator, MapPin, Package, Truck, User, CheckCircle, Circle, DollarSign, Clock, FileText } from "lucide-react";
+import { Calculator, MapPin, Package, Truck, User, CheckCircle, Circle, DollarSign, Clock, FileText, Plus, Trash2, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { calculateShippingQuote, validateCep, formatCep } from "@/services/shippingService";
@@ -20,6 +20,15 @@ import AuthModal from "@/components/AuthModal";
 import { SessionManager } from "@/utils/sessionManager";
 import SavedAddressManager from "@/components/SavedAddressManager";
 
+interface Volume {
+  id: string;
+  weight: string;
+  length: string;
+  width: string;
+  height: string;
+  merchandiseType: string;
+}
+
 interface QuoteFormData {
   originCep: string;
   destinyCep: string;
@@ -30,6 +39,7 @@ interface QuoteFormData {
   format: string;
   quantity: string;
   unitValue: string;
+  volumes: Volume[];
 }
 
 interface AddressData {
@@ -65,7 +75,15 @@ const QuoteForm = () => {
     height: "",
     format: "",
     quantity: "1",
-    unitValue: ""
+    unitValue: "",
+    volumes: [{
+      id: "1",
+      weight: "",
+      length: "",
+      width: "",
+      height: "",
+      merchandiseType: ""
+    }]
   });
   
   // Step 2: Resultados e opções
@@ -122,6 +140,85 @@ const QuoteForm = () => {
     const quantity = parseInt(formData.quantity) || 0;
     const unitValue = parseFloat(formData.unitValue) || 0;
     return quantity * unitValue;
+  };
+
+  // Funções para gerenciar volumes
+  const addVolume = () => {
+    const newVolume: Volume = {
+      id: Date.now().toString(),
+      weight: "",
+      length: "",
+      width: "",
+      height: "",
+      merchandiseType: ""
+    };
+    setFormData(prev => ({
+      ...prev,
+      volumes: [...prev.volumes, newVolume]
+    }));
+  };
+
+  const removeVolume = (id: string) => {
+    if (formData.volumes.length === 1) {
+      toast({
+        title: "Atenção",
+        description: "Deve haver pelo menos um volume",
+        variant: "destructive"
+      });
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      volumes: prev.volumes.filter(v => v.id !== id)
+    }));
+  };
+
+  const updateVolume = (id: string, field: keyof Volume, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      volumes: prev.volumes.map(v =>
+        v.id === id ? { ...v, [field]: sanitizeTextInput(value) } : v
+      )
+    }));
+  };
+
+  const applyMerchandiseTypeToAll = (type: string) => {
+    setFormData(prev => ({
+      ...prev,
+      volumes: prev.volumes.map(v => ({ ...v, merchandiseType: type }))
+    }));
+  };
+
+  // Cálculos de peso
+  const calculateTotalWeight = (): number => {
+    return formData.volumes.reduce((total, volume) => {
+      return total + (parseFloat(volume.weight) || 0);
+    }, 0);
+  };
+
+  const calculateCubicWeight = (length: number, width: number, height: number): number => {
+    return (length * width * height) / 6000;
+  };
+
+  const calculateTotalCubicWeight = (): number => {
+    return formData.volumes.reduce((total, volume) => {
+      const length = parseFloat(volume.length) || 0;
+      const width = parseFloat(volume.width) || 0;
+      const height = parseFloat(volume.height) || 0;
+      return total + calculateCubicWeight(length, width, height);
+    }, 0);
+  };
+
+  const getConsideredWeight = (): number => {
+    const totalWeight = calculateTotalWeight();
+    const totalCubicWeight = calculateTotalCubicWeight();
+    return Math.max(totalWeight, totalCubicWeight);
+  };
+
+  const hasDangerousMerchandise = (): boolean => {
+    return formData.volumes.some(v => 
+      ['quimico', 'inflamavel'].includes(v.merchandiseType)
+    );
   };
 
   const getTotalPrice = () => {
@@ -217,10 +314,10 @@ const QuoteForm = () => {
 
     // Check for suspicious patterns in string inputs
     const suspiciousPatterns = [/<script/i, /javascript:/i, /on\w+=/i, /eval\(/i];
-    const stringFields = [formData.format];
     
-    for (const field of stringFields) {
-      if (field && suspiciousPatterns.some(pattern => pattern.test(field))) {
+    // Validate merchandise types
+    for (const volume of formData.volumes) {
+      if (volume.merchandiseType && suspiciousPatterns.some(pattern => pattern.test(volume.merchandiseType))) {
         return "Dados inválidos detectados. Por favor, revise suas informações.";
       }
     }
@@ -350,11 +447,11 @@ const QuoteForm = () => {
         return;
       }
 
-      const weight = parseFloat(formData.weight);
-      if (weight <= 0) {
+      const consideredWeight = getConsideredWeight();
+      if (consideredWeight <= 0) {
         toast({
           title: "Peso inválido", 
-          description: "Digite um peso válido maior que 0",
+          description: "Digite um peso válido maior que 0 para pelo menos um volume",
           variant: "destructive"
         });
         return;
@@ -364,7 +461,9 @@ const QuoteForm = () => {
 
       console.log('Iniciando cálculo de cotação...', { 
         cep: formData.destinyCep, 
-        weight, 
+        consideredWeight, 
+        totalWeight: calculateTotalWeight(),
+        cubicWeight: calculateTotalCubicWeight(),
         quantity 
       });
 
@@ -381,7 +480,7 @@ const QuoteForm = () => {
 
       const shippingQuote = await calculateShippingQuote({
         destinyCep: formData.destinyCep,
-        weight: weight,
+        weight: consideredWeight,
         quantity: quantity
       });
 
@@ -390,11 +489,11 @@ const QuoteForm = () => {
         // Dados da cotação original
         originCep: formData.originCep,
         destinyCep: formData.destinyCep,
-        weight: formData.weight,
-        length: formData.length,
-        width: formData.width,
-        height: formData.height,
-        format: formData.format,
+        weight: consideredWeight.toString(),
+        totalWeight: calculateTotalWeight(),
+        cubicWeight: calculateTotalCubicWeight(),
+        consideredWeight: consideredWeight,
+        volumes: formData.volumes,
         quantity: formData.quantity,
         unitValue: formData.unitValue,
         totalMerchandiseValue: getTotalMerchandiseValue(),
@@ -497,6 +596,11 @@ const QuoteForm = () => {
         console.log('QuoteForm - Anonymous session ID:', sessionId);
       }
 
+      // Calcular pesos
+      const totalWeight = calculateTotalWeight();
+      const cubicWeight = calculateTotalCubicWeight();
+      const consideredWeight = getConsideredWeight();
+
       // Preparar dados COMPLETOS para as próximas etapas (sem salvar no banco ainda)
       const completeShipmentData = {
         // === DADOS DA COTAÇÃO ORIGINAL ===
@@ -504,11 +608,11 @@ const QuoteForm = () => {
         originalFormData: {
           originCep: formData.originCep,
           destinyCep: formData.destinyCep,
-          weight: formData.weight,
-          length: formData.length,
-          width: formData.width,
-          height: formData.height,
-          format: formData.format,
+          weight: consideredWeight.toString(),
+          totalWeight: totalWeight,
+          cubicWeight: cubicWeight,
+          consideredWeight: consideredWeight,
+          volumes: formData.volumes,
           quantity: formData.quantity,
           unitValue: formData.unitValue,
           totalMerchandiseValue: getTotalMerchandiseValue()
@@ -519,13 +623,22 @@ const QuoteForm = () => {
           quantity: parseInt(formData.quantity),
           unitValue: parseFloat(formData.unitValue),
           totalValue: getTotalMerchandiseValue(),
-          description: `Mercadoria - Formato: ${formData.format}`,
-          weight: parseFloat(formData.weight),
-          dimensions: {
-            length: parseFloat(formData.length),
-            width: parseFloat(formData.width),
-            height: parseFloat(formData.height)
-          }
+          description: `Mercadoria - ${formData.volumes.length} volume(s)`,
+          weight: consideredWeight,
+          totalWeight: totalWeight,
+          cubicWeight: cubicWeight,
+          volumes: formData.volumes.map(v => ({
+            weight: parseFloat(v.weight),
+            length: parseFloat(v.length),
+            width: parseFloat(v.width),
+            height: parseFloat(v.height),
+            merchandiseType: v.merchandiseType,
+            cubicWeight: calculateCubicWeight(
+              parseFloat(v.length) || 0,
+              parseFloat(v.width) || 0,
+              parseFloat(v.height) || 0
+            )
+          }))
         },
         
         // === DADOS DE ENTREGA E COLETA ===
@@ -557,12 +670,10 @@ const QuoteForm = () => {
         
         // === DADOS TÉCNICOS ===
         technicalData: {
-          weight: parseFloat(formData.weight),
-          length: parseFloat(formData.length),
-          width: parseFloat(formData.width),
-          height: parseFloat(formData.height),
-          format: formData.format,
-          cubicWeight: (parseFloat(formData.length) * parseFloat(formData.width) * parseFloat(formData.height)) / 5000
+          weight: consideredWeight,
+          totalWeight: totalWeight,
+          cubicWeight: cubicWeight,
+          volumes: formData.volumes
         },
         
         // === METADADOS E CONTROLE ===
@@ -605,7 +716,21 @@ const QuoteForm = () => {
     }
   };
 
-  const isStep1Valid = Object.values(formData).every(value => value.trim() !== "");
+  const isStep1Valid = (): boolean => {
+    // Validar campos básicos
+    if (!formData.destinyCep || !formData.quantity || !formData.unitValue) {
+      return false;
+    }
+    
+    // Validar que todos os volumes estão preenchidos
+    return formData.volumes.every(volume => 
+      volume.weight && 
+      volume.length && 
+      volume.width && 
+      volume.height && 
+      volume.merchandiseType
+    );
+  };
 
   const renderStepIndicator = () => (
     <div className="mb-6 sm:mb-8">
@@ -754,85 +879,205 @@ const QuoteForm = () => {
                   </div>
                 </div>
 
-                {/* Package Details */}
+                {/* Volumes Dinâmicos */}
                 <div className="space-y-6">
-                  <Label className="flex items-center space-x-2 text-lg font-semibold">
-                    <Package className="h-5 w-5 text-primary" />
-                    <span>Detalhes do Pacote</span>
-                  </Label>
-                  
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                    <div className="space-y-3">
-                      <Label htmlFor="weight" className="text-base font-medium">Peso (kg)</Label>
-                      <Input
-                        id="weight"
-                        type="number"
-                        step="0.1"
-                        placeholder="0.5"
-                        value={formData.weight}
-                        onChange={(e) => handleInputChange("weight", e.target.value)}
-                        className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
-                      />
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <Label htmlFor="length" className="text-base font-medium">Comp. (cm)</Label>
-                      <Input
-                        id="length"
-                        type="number"
-                        placeholder="20"
-                        value={formData.length}
-                        onChange={(e) => handleInputChange("length", e.target.value)}
-                        className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
-                      />
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <Label htmlFor="width" className="text-base font-medium">Larg. (cm)</Label>
-                      <Input
-                        id="width"
-                        type="number"
-                        placeholder="15"
-                        value={formData.width}
-                        onChange={(e) => handleInputChange("width", e.target.value)}
-                        className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
-                      />
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <Label htmlFor="height" className="text-base font-medium">Alt. (cm)</Label>
-                      <Input
-                        id="height"
-                        type="number"
-                        placeholder="10"
-                        value={formData.height}
-                        onChange={(e) => handleInputChange("height", e.target.value)}
-                        className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
-                      />
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center space-x-2 text-lg font-semibold">
+                      <Package className="h-5 w-5 text-primary" />
+                      <span>Volumes</span>
+                    </Label>
+                    <Button
+                      type="button"
+                      onClick={addVolume}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center space-x-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Adicionar Volume</span>
+                    </Button>
                   </div>
 
-                  <div className="space-y-3 max-w-sm">
-                    <Label htmlFor="format" className="text-base font-medium">Formato</Label>
-                    <Select onValueChange={(value) => handleInputChange("format", value)}>
-                      <SelectTrigger className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg">
-                        <SelectValue placeholder="Selecione o formato" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="caixa">Caixa</SelectItem>
-                        <SelectItem value="pacote">Pacote</SelectItem>
-                        <SelectItem value="rolo">Rolo</SelectItem>
-                        <SelectItem value="cilindro">Cilindro</SelectItem>
-                        <SelectItem value="esfera">Esfera</SelectItem>
-                        <SelectItem value="envelope">Envelope</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  {/* Tipo de mercadoria geral */}
+                  <Card className="bg-accent/10 border-border/50">
+                    <CardContent className="pt-4 pb-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                        <Label className="text-sm font-medium whitespace-nowrap">
+                          Aplicar tipo de mercadoria para todos:
+                        </Label>
+                        <Select onValueChange={applyMerchandiseTypeToAll}>
+                          <SelectTrigger className="w-full sm:w-64 h-10">
+                            <SelectValue placeholder="Selecione um tipo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="normal">Normal</SelectItem>
+                            <SelectItem value="liquido">Líquido</SelectItem>
+                            <SelectItem value="quimico">Químico</SelectItem>
+                            <SelectItem value="inflamavel">Inflamável</SelectItem>
+                            <SelectItem value="vidro">Vidro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Lista de volumes */}
+                  <div className="space-y-4">
+                    {formData.volumes.map((volume, index) => (
+                      <Card key={volume.id} className="border-border/50">
+                        <CardHeader className="pb-3 pt-4 px-4">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-base font-semibold">
+                              Volume {index + 1}
+                            </CardTitle>
+                            {formData.volumes.length > 1 && (
+                              <Button
+                                type="button"
+                                onClick={() => removeVolume(volume.id)}
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </CardHeader>
+                        <CardContent className="px-4 pb-4">
+                          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Peso (kg)</Label>
+                              <Input
+                                type="number"
+                                step="0.1"
+                                placeholder="0.5"
+                                value={volume.weight}
+                                onChange={(e) => updateVolume(volume.id, "weight", e.target.value)}
+                                className="h-12"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Comp. (cm)</Label>
+                              <Input
+                                type="number"
+                                placeholder="20"
+                                value={volume.length}
+                                onChange={(e) => updateVolume(volume.id, "length", e.target.value)}
+                                className="h-12"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Larg. (cm)</Label>
+                              <Input
+                                type="number"
+                                placeholder="15"
+                                value={volume.width}
+                                onChange={(e) => updateVolume(volume.id, "width", e.target.value)}
+                                className="h-12"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Alt. (cm)</Label>
+                              <Input
+                                type="number"
+                                placeholder="10"
+                                value={volume.height}
+                                onChange={(e) => updateVolume(volume.id, "height", e.target.value)}
+                                className="h-12"
+                              />
+                            </div>
+
+                            <div className="space-y-2 col-span-2 lg:col-span-1">
+                              <Label className="text-sm font-medium">Tipo de Mercadoria *</Label>
+                              <Select
+                                value={volume.merchandiseType}
+                                onValueChange={(value) => updateVolume(volume.id, "merchandiseType", value)}
+                              >
+                                <SelectTrigger className="h-12">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="normal">Normal</SelectItem>
+                                  <SelectItem value="liquido">Líquido</SelectItem>
+                                  <SelectItem value="quimico">Químico</SelectItem>
+                                  <SelectItem value="inflamavel">Inflamável</SelectItem>
+                                  <SelectItem value="vidro">Vidro</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          {/* Mostrar peso cúbico individual */}
+                          <div className="mt-3 text-sm text-muted-foreground">
+                            Peso cúbico deste volume:{" "}
+                            <span className="font-medium text-foreground">
+                              {calculateCubicWeight(
+                                parseFloat(volume.length) || 0,
+                                parseFloat(volume.width) || 0,
+                                parseFloat(volume.height) || 0
+                              ).toFixed(2)} kg
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
+
+                  {/* Alerta para mercadorias perigosas */}
+                  {hasDangerousMerchandise() && (
+                    <Card className="border-warning bg-warning/10">
+                      <CardContent className="pt-4 pb-4">
+                        <div className="flex items-start space-x-3">
+                          <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-semibold text-warning">Atenção especial necessária</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Você selecionou um tipo de mercadoria que requer cuidados especiais no transporte.
+                              Certifique-se de embalar adequadamente.
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Resumo dos volumes */}
+                  <Card className="bg-primary/5 border-primary/20">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base font-semibold">Resumo dos Volumes</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Quantidade de Volumes</p>
+                          <p className="text-2xl font-bold text-primary">{formData.volumes.length}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Peso Total</p>
+                          <p className="text-2xl font-bold">{calculateTotalWeight().toFixed(2)} kg</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Peso Cúbico Total</p>
+                          <p className="text-2xl font-bold">{calculateTotalCubicWeight().toFixed(2)} kg</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Peso Considerado</p>
+                          <p className="text-2xl font-bold text-primary">{getConsideredWeight().toFixed(2)} kg</p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-3">
+                        * O peso considerado para cálculo do frete é o maior entre o peso total e o peso cúbico total
+                      </p>
+                    </CardContent>
+                  </Card>
                 </div>
 
                 <Button
                   onClick={handleStep1Submit}
-                  disabled={!isStep1Valid || isLoading}
+                  disabled={!isStep1Valid() || isLoading}
                   className="w-full h-16 text-lg font-semibold bg-gradient-primary hover:shadow-primary transition-all duration-300 mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
