@@ -341,7 +341,7 @@ export class PricingTableService {
     
     // Buscar linha correspondente ao CEP e peso
     // Assumindo estrutura: CEP_INICIO, CEP_FIM, PESO_MIN, PESO_MAX, PRECO, PRAZO
-    const matchingRow = data.find((row: any) => {
+    let matchingRow = data.find((row: any) => {
       const cepStart = String(row.CEP_INICIO || row.cep_inicio || '').replace(/\D/g, '').padStart(8, '0');
       const cepEnd = String(row.CEP_FIM || row.cep_fim || '').replace(/\D/g, '').padStart(8, '0');
       const weightMin = Number(row.PESO_MIN || row.peso_min || 0);
@@ -354,6 +354,28 @@ export class PricingTableService {
         appliedWeight <= weightMax
       );
     });
+
+    // Se não encontrou faixa exata e há configuração de peso excedente, buscar a maior faixa disponível no CEP
+    if (!matchingRow && table.excess_weight_threshold_kg && table.excess_weight_charge_per_kg) {
+      console.log(`🔍 [findPriceInData] Peso ${appliedWeight}kg excede faixas. Buscando maior faixa disponível no CEP...`);
+      
+      const rowsInCepRange = data.filter((row: any) => {
+        const cepStart = String(row.CEP_INICIO || row.cep_inicio || '').replace(/\D/g, '').padStart(8, '0');
+        const cepEnd = String(row.CEP_FIM || row.cep_fim || '').replace(/\D/g, '').padStart(8, '0');
+        return cleanCep >= cepStart && cleanCep <= cepEnd;
+      });
+      
+      if (rowsInCepRange.length > 0) {
+        // Encontrar a linha com o maior PESO_MAX
+        matchingRow = rowsInCepRange.reduce((max: any, row: any) => {
+          const maxWeight = Number(max?.PESO_MAX || max?.peso_max || 0);
+          const rowWeight = Number(row.PESO_MAX || row.peso_max || 0);
+          return rowWeight > maxWeight ? row : max;
+        }, rowsInCepRange[0]);
+        
+        console.log(`✅ [findPriceInData] Usando maior faixa disponível: até ${matchingRow.PESO_MAX || matchingRow.peso_max}kg`);
+      }
+    }
 
     if (!matchingRow) return null;
 
@@ -488,7 +510,7 @@ export class PricingTableService {
     }
     
     // 2. Buscar preço na aba de preços usando zona e peso
-    const priceRow = priceSheet.data.find((row: any) => {
+    let priceRow = priceSheet.data.find((row: any) => {
       const rowZone = row.ZONA || row.zona || row.REGIAO || row.regiao || 'PADRAO';
       const weightMin = Number(row.PESO_MIN || row.peso_min || 0);
       const weightMax = Number(row.PESO_MAX || row.peso_max || 99999);
@@ -499,6 +521,27 @@ export class PricingTableService {
         appliedWeight <= weightMax
       );
     });
+    
+    // Se não encontrou faixa exata e há configuração de peso excedente, buscar a maior faixa disponível para a zona
+    if (!priceRow && table.excess_weight_threshold_kg && table.excess_weight_charge_per_kg) {
+      console.log(`🔍 [combineSheetsData] Peso ${appliedWeight}kg excede faixas. Buscando maior faixa na zona ${zone}...`);
+      
+      const rowsInZone = priceSheet.data.filter((row: any) => {
+        const rowZone = row.ZONA || row.zona || row.REGIAO || row.regiao || 'PADRAO';
+        return String(rowZone).toLowerCase() === String(zone).toLowerCase();
+      });
+      
+      if (rowsInZone.length > 0) {
+        // Encontrar a linha com o maior PESO_MAX
+        priceRow = rowsInZone.reduce((max: any, row: any) => {
+          const maxWeight = Number(max?.PESO_MAX || max?.peso_max || 0);
+          const rowWeight = Number(row.PESO_MAX || row.peso_max || 0);
+          return rowWeight > maxWeight ? row : max;
+        }, rowsInZone[0]);
+        
+        console.log(`✅ [combineSheetsData] Usando maior faixa: até ${priceRow.PESO_MAX || priceRow.peso_max}kg`);
+      }
+    }
     
     if (!priceRow) {
       // Fallback: buscar por peso apenas se não encontrar por zona
