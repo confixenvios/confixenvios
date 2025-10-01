@@ -453,6 +453,8 @@ export type Database = {
           company_branch_id: string | null
           created_at: string
           cubic_meter_kg_equivalent: number | null
+          excess_weight_charge_per_kg: number | null
+          excess_weight_threshold_kg: number | null
           file_url: string | null
           google_sheets_url: string | null
           gris_percentage: number | null
@@ -475,6 +477,8 @@ export type Database = {
           company_branch_id?: string | null
           created_at?: string
           cubic_meter_kg_equivalent?: number | null
+          excess_weight_charge_per_kg?: number | null
+          excess_weight_threshold_kg?: number | null
           file_url?: string | null
           google_sheets_url?: string | null
           gris_percentage?: number | null
@@ -497,6 +501,8 @@ export type Database = {
           company_branch_id?: string | null
           created_at?: string
           cubic_meter_kg_equivalent?: number | null
+          excess_weight_charge_per_kg?: number | null
+          excess_weight_threshold_kg?: number | null
           file_url?: string | null
           google_sheets_url?: string | null
           gris_percentage?: number | null

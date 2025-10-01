@@ -57,6 +57,8 @@ interface PricingTable {
   max_length_cm?: number;
   max_width_cm?: number;
   max_height_cm?: number;
+  excess_weight_threshold_kg?: number;
+  excess_weight_charge_per_kg?: number;
   company_branches?: {
     name: string;
     fantasy_name: string;
@@ -91,6 +93,8 @@ const AdminTabelas = () => {
     max_length_cm: number;
     max_width_cm: number;
     max_height_cm: number;
+    excess_weight_threshold_kg: number;
+    excess_weight_charge_per_kg: number;
   }>({
     name: '',
     company_branch_id: '',
@@ -103,7 +107,9 @@ const AdminTabelas = () => {
     cubic_meter_kg_equivalent: 167,
     max_length_cm: 200,
     max_width_cm: 200,
-    max_height_cm: 200
+    max_height_cm: 200,
+    excess_weight_threshold_kg: 30,
+    excess_weight_charge_per_kg: 10.00
   });
 
   const [availableSheets, setAvailableSheets] = useState<string[]>([]);
@@ -243,7 +249,9 @@ const AdminTabelas = () => {
         cubic_meter_kg_equivalent: formData.cubic_meter_kg_equivalent,
         max_length_cm: formData.max_length_cm > 0 ? formData.max_length_cm : null,
         max_width_cm: formData.max_width_cm > 0 ? formData.max_width_cm : null,
-        max_height_cm: formData.max_height_cm > 0 ? formData.max_height_cm : null
+        max_height_cm: formData.max_height_cm > 0 ? formData.max_height_cm : null,
+        excess_weight_threshold_kg: formData.excess_weight_threshold_kg > 0 ? formData.excess_weight_threshold_kg : null,
+        excess_weight_charge_per_kg: formData.excess_weight_charge_per_kg > 0 ? formData.excess_weight_charge_per_kg : null
       };
 
       let error;
@@ -341,7 +349,9 @@ const AdminTabelas = () => {
       cubic_meter_kg_equivalent: table.cubic_meter_kg_equivalent ?? 167,
       max_length_cm: table.max_length_cm ?? 200,
       max_width_cm: table.max_width_cm ?? 200,
-      max_height_cm: table.max_height_cm ?? 200
+      max_height_cm: table.max_height_cm ?? 200,
+      excess_weight_threshold_kg: table.excess_weight_threshold_kg ?? 30,
+      excess_weight_charge_per_kg: table.excess_weight_charge_per_kg ?? 10.00
     });
     setIsDialogOpen(true);
   };
@@ -359,7 +369,9 @@ const AdminTabelas = () => {
       cubic_meter_kg_equivalent: 167,
       max_length_cm: 200,
       max_width_cm: 200,
-      max_height_cm: 200
+      max_height_cm: 200,
+      excess_weight_threshold_kg: 30,
+      excess_weight_charge_per_kg: 10.00
     });
     setEditingTable(null);
     setAvailableSheets([]);
@@ -604,6 +616,47 @@ const AdminTabelas = () => {
                           onChange={(e) => setFormData({...formData, max_height_cm: parseFloat(e.target.value) || 0})}
                           placeholder="200"
                         />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="font-semibold text-sm">Peso Excedente</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Configure cobrança adicional para pesos acima do limite
+                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="excess_weight_threshold_kg">Limite de Peso (kg)</Label>
+                        <Input
+                          id="excess_weight_threshold_kg"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.excess_weight_threshold_kg}
+                          onChange={(e) => setFormData({...formData, excess_weight_threshold_kg: parseFloat(e.target.value) || 0})}
+                          placeholder="30"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Peso máximo antes de aplicar cobrança extra
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="excess_weight_charge_per_kg">Valor por kg Excedente (R$)</Label>
+                        <Input
+                          id="excess_weight_charge_per_kg"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.excess_weight_charge_per_kg}
+                          onChange={(e) => setFormData({...formData, excess_weight_charge_per_kg: parseFloat(e.target.value) || 0})}
+                          placeholder="10.00"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Valor cobrado por cada kg acima do limite
+                        </p>
                       </div>
                     </div>
                   </div>

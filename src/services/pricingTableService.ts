@@ -362,6 +362,15 @@ export class PricingTableService {
     
     if (basePrice <= 0) return null;
 
+    // Apply excess weight charge if applicable
+    let excessWeightCharge = 0;
+    if (table.excess_weight_threshold_kg && table.excess_weight_charge_per_kg && 
+        weight > table.excess_weight_threshold_kg) {
+      const excessWeight = weight - table.excess_weight_threshold_kg;
+      excessWeightCharge = excessWeight * table.excess_weight_charge_per_kg;
+      console.log(`💰 Excess weight charge: ${excessWeight}kg × R$${table.excess_weight_charge_per_kg} = R$${excessWeightCharge.toFixed(2)}`);
+    }
+
     let totalPrice = basePrice * quantity;
     
     // Aplicar Ad Valorem e GRIS se houver valor da mercadoria e percentuais configurados
@@ -381,6 +390,9 @@ export class PricingTableService {
         console.log(`GRIS (${table.gris_percentage}%): R$ ${grisValue.toFixed(2)}`);
       }
     }
+
+    // Add excess weight charge to total
+    totalPrice += excessWeightCharge;
 
     return {
       economicPrice: Number(totalPrice.toFixed(2)),
@@ -519,6 +531,15 @@ export class PricingTableService {
     const basePrice = Number(priceRow.PRECO || priceRow.preco || 0);
     if (basePrice <= 0) return null;
     
+    // Apply excess weight charge if applicable
+    let excessWeightCharge = 0;
+    if (table.excess_weight_threshold_kg && table.excess_weight_charge_per_kg && 
+        weight > table.excess_weight_threshold_kg) {
+      const excessWeight = weight - table.excess_weight_threshold_kg;
+      excessWeightCharge = excessWeight * table.excess_weight_charge_per_kg;
+      console.log(`💰 [combineSheetsData] Excess weight charge: ${excessWeight}kg × R$${table.excess_weight_charge_per_kg} = R$${excessWeightCharge.toFixed(2)}`);
+    }
+    
     let totalPrice = basePrice * quantity;
     
     // Aplicar Ad Valorem e GRIS
@@ -536,6 +557,9 @@ export class PricingTableService {
         totalPrice += grisValue;
       }
     }
+    
+    // Add excess weight charge to total
+    totalPrice += excessWeightCharge;
     
     return {
       economicPrice: Number(totalPrice.toFixed(2)),
