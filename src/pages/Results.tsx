@@ -172,6 +172,40 @@ const Results = () => {
                       </div>
                     </div>
                   </div>
+                  
+                  {/* Detalhamento do valor */}
+                  {(quoteData.shippingQuote.adValoremValue || quoteData.shippingQuote.grisValue || quoteData.weight > 30) && (
+                    <div className="mt-4 pt-4 border-t space-y-2 text-sm">
+                      <div className="font-medium text-muted-foreground mb-2">Composição do valor:</div>
+                      
+                      {quoteData.shippingQuote.adValoremValue && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Ad Valorem (0,3%)</span>
+                          <span>R$ {quoteData.shippingQuote.adValoremValue.toFixed(2)}</span>
+                        </div>
+                      )}
+                      
+                      {quoteData.shippingQuote.grisValue && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">GRIS (0,3%)</span>
+                          <span>R$ {quoteData.shippingQuote.grisValue.toFixed(2)}</span>
+                        </div>
+                      )}
+                      
+                      {quoteData.weight > 30 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Peso excedente ({(quoteData.weight - 30).toFixed(1)}kg × R$10)</span>
+                          <span>R$ {((quoteData.weight - 30) * 10).toFixed(2)}</span>
+                        </div>
+                      )}
+                      
+                      {quoteData.shippingQuote.cubicWeight && quoteData.shippingQuote.cubicWeight > quoteData.weight && (
+                        <div className="text-xs text-muted-foreground pt-2 border-t">
+                          * Peso cubado aplicado: {quoteData.shippingQuote.cubicWeight.toFixed(2)}kg
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
