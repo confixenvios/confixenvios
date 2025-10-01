@@ -544,31 +544,53 @@ export class PricingTableService {
     }
     
     if (!priceRow) {
-      // Fallback: buscar por peso apenas se não encontrar por zona
-      const fallbackPriceRow = priceSheet.data.find((row: any) => {
-        const weightMin = Number(row.PESO_MIN || row.peso_min || 0);
-        const weightMax = Number(row.PESO_MAX || row.peso_max || 99999);
-        return weight >= weightMin && weight <= weightMax;
-      });
+      // Fallback: buscar maior faixa disponível se peso exceder e houver config de excesso
+      if (table.excess_weight_threshold_kg && table.excess_weight_charge_per_kg) {
+        console.log(`🔍 [combineSheetsData FALLBACK] Buscando maior faixa disponível para aplicar excesso...`);
+        
+        const allRows = priceSheet.data.filter((row: any) => {
+          const weightMax = Number(row.PESO_MAX || row.peso_max || 0);
+          return weightMax > 0;
+        });
+        
+        if (allRows.length > 0) {
+          priceRow = allRows.reduce((max: any, row: any) => {
+            const maxWeight = Number(max?.PESO_MAX || max?.peso_max || 0);
+            const rowWeight = Number(row.PESO_MAX || row.peso_max || 0);
+            return rowWeight > maxWeight ? row : max;
+          }, allRows[0]);
+          
+          console.log(`✅ [combineSheetsData FALLBACK] Usando maior faixa: até ${priceRow.PESO_MAX || priceRow.peso_max}kg`);
+        }
+      } else {
+        // Fallback tradicional: buscar por peso apenas se não encontrar por zona
+        const fallbackPriceRow = priceSheet.data.find((row: any) => {
+          const weightMin = Number(row.PESO_MIN || row.peso_min || 0);
+          const weightMax = Number(row.PESO_MAX || row.peso_max || 99999);
+          return weight >= weightMin && weight <= weightMax;
+        });
+        
+        if (!fallbackPriceRow) return null;
+        
+        const basePrice = Number(fallbackPriceRow.PRECO || fallbackPriceRow.preco || 0);
+        if (basePrice <= 0) return null;
+        
+        const totalPrice = basePrice * quantity;
+        
+        return {
+          economicPrice: Number(totalPrice.toFixed(2)),
+          expressPrice: Number((totalPrice * 1.6).toFixed(2)),
+          economicDays: days,
+          expressDays: Math.max(1, days - 2),
+          zone: String(zone),
+          zoneName: `${table.name} - Combinado (${priceSheet.name} + ${deliverySheet.name})`,
+          tableId: table.id,
+          tableName: table.name,
+          cnpj: table.cnpj
+        };
+      }
       
-      if (!fallbackPriceRow) return null;
-      
-      const basePrice = Number(fallbackPriceRow.PRECO || fallbackPriceRow.preco || 0);
-      if (basePrice <= 0) return null;
-      
-      const totalPrice = basePrice * quantity;
-      
-      return {
-        economicPrice: Number(totalPrice.toFixed(2)),
-        expressPrice: Number((totalPrice * 1.6).toFixed(2)),
-        economicDays: days,
-        expressDays: Math.max(1, days - 2),
-        zone: String(zone),
-        zoneName: `${table.name} - Combinado (${priceSheet.name} + ${deliverySheet.name})`,
-        tableId: table.id,
-        tableName: table.name,
-        cnpj: table.cnpj
-      };
+      if (!priceRow) return null;
     }
     
     const basePrice = Number(priceRow.PRECO || priceRow.preco || 0);
