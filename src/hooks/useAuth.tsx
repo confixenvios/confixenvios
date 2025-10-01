@@ -62,15 +62,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .select('role')
         .eq('user_id', userId);
 
+      console.log('🔐 [AUTH] Loading user profile for:', userId);
+      console.log('🔐 [AUTH] Profile data:', profileData);
+      console.log('🔐 [AUTH] Role data:', roleData);
+
       if (profileData) setProfile(profileData);
       if (roleData && roleData.length > 0) {
         // Check if user has admin role
         const hasAdminRole = roleData.some(r => r.role === 'admin');
         const primaryRole = hasAdminRole ? 'admin' : roleData[0]?.role || 'user';
+        console.log('🔐 [AUTH] Setting user role:', primaryRole, 'hasAdmin:', hasAdminRole);
         setUserRole({ role: primaryRole });
+      } else {
+        // No role found, set default as 'user'
+        console.log('🔐 [AUTH] No role found, setting default as user');
+        setUserRole({ role: 'user' });
       }
     } catch (error) {
       console.error('Error loading user data:', error);
+      // Set default role on error
+      setUserRole({ role: 'user' });
     }
   };
 

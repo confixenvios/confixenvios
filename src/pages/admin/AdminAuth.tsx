@@ -25,17 +25,22 @@ const AdminAuth = () => {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (user && !loading) {
-      if (userRole !== null) {
-        if (isAdmin) {
-          navigate('/admin/dashboard');
-        } else {
-          // Non-admin users should go to client area
-          navigate('/cliente/dashboard');
-        }
+    if (user && !loading && userRole !== null) {
+      console.log('AdminAuth - Checking redirect:', { isAdmin, userRole });
+      if (isAdmin) {
+        console.log('AdminAuth - Redirecting to admin dashboard');
+        navigate('/admin/dashboard', { replace: true });
+      } else {
+        console.log('AdminAuth - User is not admin, redirecting to client area');
+        toast({
+          title: "Acesso negado",
+          description: "Você não tem permissão de administrador",
+          variant: "destructive"
+        });
+        navigate('/cliente/dashboard', { replace: true });
       }
     }
-  }, [user, loading, userRole, isAdmin, navigate]);
+  }, [user, loading, userRole, isAdmin, navigate, toast]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,15 +64,17 @@ const AdminAuth = () => {
         } else {
           setError(error.message);
         }
+        setIsLoading(false);
       } else {
         toast({
           title: "Login administrativo realizado com sucesso!",
           description: "Redirecionando para o painel admin...",
         });
+        // Wait for user role to be loaded, then redirect
+        // useEffect will handle the actual redirect
       }
     } catch (error: any) {
       setError('Erro inesperado. Tente novamente.');
-    } finally {
       setIsLoading(false);
     }
   };
