@@ -162,7 +162,7 @@ const B2BDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.pending_shipments || 0}</div>
-            <p className="text-xs text-muted-foreground">aguardando coleta</p>
+            <p className="text-xs text-muted-foreground">aguardando</p>
           </CardContent>
         </Card>
 
