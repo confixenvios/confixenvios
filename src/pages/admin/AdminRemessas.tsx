@@ -866,16 +866,21 @@ const AdminRemessas = () => {
                                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Carga</span>
                               </div>
                               <div>
+                                {shipment.quote_data?.delivery_date && (
+                                  <div className="flex items-center mb-2 px-2 py-1 bg-orange-100 border border-orange-200 rounded-md">
+                                    <Clock className="w-4 h-4 mr-2 text-orange-600" />
+                                    <div>
+                                      <div className="text-[10px] text-orange-600 font-medium uppercase">Entrega</div>
+                                      <div className="text-sm font-bold text-orange-700">
+                                        {format(new Date(shipment.quote_data.delivery_date), 'dd/MM/yyyy', { locale: ptBR })}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                                 {shipment.quote_data?.volume_count && (
                                   <div className="flex items-center text-xs text-muted-foreground mb-1">
                                     <Package className="w-3 h-3 mr-1" />
                                     {shipment.quote_data.volume_count} {shipment.quote_data.volume_count === 1 ? 'volume' : 'volumes'}
-                                  </div>
-                                )}
-                                {shipment.quote_data?.delivery_date && (
-                                  <div className="flex items-center text-xs text-muted-foreground mb-1">
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    {format(new Date(shipment.quote_data.delivery_date), 'dd/MM/yyyy', { locale: ptBR })}
                                   </div>
                                 )}
                                 {shipment.format && (
