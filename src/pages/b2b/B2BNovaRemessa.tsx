@@ -21,6 +21,9 @@ const B2BNovaRemessa = () => {
   const [formData, setFormData] = useState({
     volume_count: '',
     delivery_date: '',
+    vehicle_type: '',
+    unique_ceps: '1',
+    delivery_ceps: [''],
   });
 
   useEffect(() => {
@@ -67,6 +70,10 @@ const B2BNovaRemessa = () => {
           volume_count: parseInt(formData.volume_count),
           delivery_date: formData.delivery_date,
           status: 'PENDENTE',
+          observations: JSON.stringify({
+            vehicle_type: formData.vehicle_type,
+            delivery_ceps: formData.delivery_ceps.filter(cep => cep.trim() !== '')
+          })
         });
 
       if (error) throw error;
@@ -81,7 +88,34 @@ const B2BNovaRemessa = () => {
   };
 
   const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'volume_count') {
+      const volumeCount = parseInt(value) || 0;
+      const uniqueCeps = parseInt(formData.unique_ceps) || 1;
+      const cepCount = Math.min(volumeCount, uniqueCeps);
+      setFormData(prev => ({
+        ...prev,
+        [field]: value,
+        delivery_ceps: Array(cepCount).fill('').map((_, i) => prev.delivery_ceps[i] || '')
+      }));
+    } else if (field === 'unique_ceps') {
+      const uniqueCeps = parseInt(value) || 1;
+      const volumeCount = parseInt(formData.volume_count) || 0;
+      const cepCount = Math.min(volumeCount, uniqueCeps);
+      setFormData(prev => ({
+        ...prev,
+        [field]: value,
+        delivery_ceps: Array(cepCount).fill('').map((_, i) => prev.delivery_ceps[i] || '')
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
+  };
+
+  const handleCepChange = (index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      delivery_ceps: prev.delivery_ceps.map((cep, i) => i === index ? value : cep)
+    }));
   };
 
   return (
@@ -129,6 +163,66 @@ const B2BNovaRemessa = () => {
                   Quando os volumes devem ser entregues?
                 </p>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="vehicle_type">Tipo de Veículo para Coleta *</Label>
+                <Select
+                  value={formData.vehicle_type}
+                  onValueChange={(value) => handleChange('vehicle_type', value)}
+                  required
+                >
+                  <SelectTrigger id="vehicle_type">
+                    <SelectValue placeholder="Selecione o tipo de veículo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="moto">Moto</SelectItem>
+                    <SelectItem value="carro">Carro Utilitário</SelectItem>
+                    <SelectItem value="caminhao">Caminhão</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Qual veículo será necessário para coleta e entrega?
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="unique_ceps">CEPs de Entrega Diferentes *</Label>
+                <Input
+                  id="unique_ceps"
+                  type="number"
+                  min="1"
+                  max={formData.volume_count || '1'}
+                  value={formData.unique_ceps}
+                  onChange={(e) => handleChange('unique_ceps', e.target.value)}
+                  required
+                  placeholder="Quantos CEPs diferentes?"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Se todos os volumes vão para o mesmo CEP, informe 1
+                </p>
+              </div>
+
+              {formData.delivery_ceps.map((cep, index) => (
+                <div key={index} className="space-y-2">
+                  <Label htmlFor={`cep_${index}`}>
+                    CEP de Entrega {formData.delivery_ceps.length > 1 ? `${index + 1}` : ''} *
+                  </Label>
+                  <Input
+                    id={`cep_${index}`}
+                    type="text"
+                    value={cep}
+                    onChange={(e) => handleCepChange(index, e.target.value)}
+                    required
+                    placeholder="00000-000"
+                    maxLength={9}
+                  />
+                  {formData.delivery_ceps.length === 1 && (
+                    <p className="text-xs text-muted-foreground">
+                      Todos os {formData.volume_count || '0'} volumes serão entregues neste CEP
+                    </p>
+                  )}
+                </div>
+              ))}
             </div>
 
             <Button type="submit" className="w-full" size="lg" disabled={loading}>
