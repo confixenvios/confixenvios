@@ -840,15 +840,17 @@ const AdminRemessas = () => {
                             <div className="space-y-2">
                               <div className="flex items-center space-x-2">
                                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Rota</span>
+                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Abrangência</span>
                               </div>
                               <div>
                                 <div className="text-sm font-medium">
                                   Goiânia e Região
                                 </div>
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  <span className="font-medium">{shipment.recipient_address?.name || 'N/A'}</span>
-                                </div>
+                                {shipment.recipient_address?.name && (
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    <span className="font-medium">{shipment.recipient_address.name}</span>
+                                  </div>
+                                )}
                                 {shipment.recipient_address?.cep && (
                                   <div className="text-xs text-muted-foreground">
                                     CEP: {shipment.recipient_address.cep}
