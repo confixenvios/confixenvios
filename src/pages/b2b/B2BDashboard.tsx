@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Package, Plus, TrendingUp, Clock, CheckCircle, LogOut } from 'lucide-react';
+import { Package, Plus, TrendingUp, Clock, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -95,11 +95,6 @@ const B2BDashboard = () => {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/b2b-expresso');
-  };
-
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline', label: string }> = {
       PENDENTE: { variant: 'secondary', label: 'Pendente' },
@@ -127,24 +122,7 @@ const B2BDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-      <header className="bg-card border-b">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <Package className="h-6 w-6 text-primary" />
-            <div>
-              <h1 className="text-xl font-bold">B2B Expresso</h1>
-              <p className="text-sm text-muted-foreground">{client?.company_name}</p>
-            </div>
-          </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Sair
-          </Button>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8">
+    <div className="p-6 space-y-6">
         <div className="grid gap-6 md:grid-cols-4 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -242,7 +220,6 @@ const B2BDashboard = () => {
             )}
           </CardContent>
         </Card>
-      </main>
     </div>
   );
 };

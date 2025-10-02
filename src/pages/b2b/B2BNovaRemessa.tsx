@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Package, ArrowLeft, Loader2 } from 'lucide-react';
+import { Package, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import InputMask from 'react-input-mask';
 
@@ -119,17 +119,7 @@ const B2BNovaRemessa = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-      <header className="bg-card border-b">
-        <div className="container mx-auto px-4 py-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/b2b-expresso/dashboard')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="p-6 max-w-2xl mx-auto">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3 mb-2">
@@ -313,7 +303,6 @@ const B2BNovaRemessa = () => {
             </form>
           </CardContent>
         </Card>
-      </main>
     </div>
   );
 };

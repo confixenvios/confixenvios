@@ -58,8 +58,10 @@ import MotoristaRegistro from "./pages/motorista/MotoristaRegistro";
 import MotoristaDashboard from "./pages/motorista/MotoristaDashboard";
 import MotoristaRelatorios from "./pages/motorista/MotoristaRelatorios";
 import B2BAuth from "./pages/b2b/B2BAuth";
+import B2BLayout from "./pages/b2b/B2BLayout";
 import B2BDashboard from "./pages/b2b/B2BDashboard";
 import B2BNovaRemessa from "./pages/b2b/B2BNovaRemessa";
+import B2BRelatorios from "./pages/b2b/B2BRelatorios";
 
 const queryClient = new QueryClient();
 
@@ -152,8 +154,11 @@ const App = () => (
 
             {/* B2B Expresso Routes */}
             <Route path="/b2b-expresso" element={<B2BAuth />} />
-            <Route path="/b2b-expresso/dashboard" element={<B2BDashboard />} />
-            <Route path="/b2b-expresso/nova-remessa" element={<B2BNovaRemessa />} />
+            <Route path="/b2b-expresso/*" element={<B2BLayout />}>
+              <Route path="dashboard" element={<B2BDashboard />} />
+              <Route path="nova-remessa" element={<B2BNovaRemessa />} />
+              <Route path="relatorios" element={<B2BRelatorios />} />
+            </Route>
 
             {/* Legacy redirects */}
             <Route path="/dashboard/*" element={<Navigate to="/cliente" replace />} />
