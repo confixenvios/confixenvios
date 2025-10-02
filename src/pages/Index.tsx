@@ -105,9 +105,11 @@ const Index = () => {
                 <Button 
                   size="lg" 
                   className="w-full"
-                  onClick={() => window.open('https://wa.me/5562999999999?text=Olá! Gostaria de saber mais sobre o serviço Fracionado.', '_blank')}
+                  asChild
                 >
-                  Falar no WhatsApp
+                  <Link to="/cotacao">
+                    Falar no WhatsApp
+                  </Link>
                 </Button>
               </CardContent>
             </Card>
