@@ -262,62 +262,71 @@ export type Database = {
         Row: {
           b2b_client_id: string
           created_at: string | null
-          delivery_type: string
+          delivery_date: string | null
+          delivery_type: string | null
           id: string
           observations: string | null
-          recipient_cep: string
-          recipient_city: string
+          pickup_requested_at: string | null
+          recipient_cep: string | null
+          recipient_city: string | null
           recipient_complement: string | null
-          recipient_name: string
-          recipient_neighborhood: string
-          recipient_number: string
-          recipient_phone: string
-          recipient_state: string
-          recipient_street: string
+          recipient_name: string | null
+          recipient_neighborhood: string | null
+          recipient_number: string | null
+          recipient_phone: string | null
+          recipient_state: string | null
+          recipient_street: string | null
           shipment_id: string | null
           status: string
           tracking_code: string | null
           updated_at: string | null
+          volume_count: number | null
         }
         Insert: {
           b2b_client_id: string
           created_at?: string | null
-          delivery_type: string
+          delivery_date?: string | null
+          delivery_type?: string | null
           id?: string
           observations?: string | null
-          recipient_cep: string
-          recipient_city: string
+          pickup_requested_at?: string | null
+          recipient_cep?: string | null
+          recipient_city?: string | null
           recipient_complement?: string | null
-          recipient_name: string
-          recipient_neighborhood: string
-          recipient_number: string
-          recipient_phone: string
-          recipient_state: string
-          recipient_street: string
+          recipient_name?: string | null
+          recipient_neighborhood?: string | null
+          recipient_number?: string | null
+          recipient_phone?: string | null
+          recipient_state?: string | null
+          recipient_street?: string | null
           shipment_id?: string | null
           status?: string
           tracking_code?: string | null
           updated_at?: string | null
+          volume_count?: number | null
         }
         Update: {
           b2b_client_id?: string
           created_at?: string | null
-          delivery_type?: string
+          delivery_date?: string | null
+          delivery_type?: string | null
           id?: string
           observations?: string | null
-          recipient_cep?: string
-          recipient_city?: string
+          pickup_requested_at?: string | null
+          recipient_cep?: string | null
+          recipient_city?: string | null
           recipient_complement?: string | null
-          recipient_name?: string
-          recipient_neighborhood?: string
-          recipient_number?: string
-          recipient_phone?: string
-          recipient_state?: string
-          recipient_street?: string
+          recipient_name?: string | null
+          recipient_neighborhood?: string | null
+          recipient_number?: string | null
+          recipient_phone?: string | null
+          recipient_state?: string | null
+          recipient_street?: string | null
           shipment_id?: string | null
           status?: string
           tracking_code?: string | null
           updated_at?: string | null
+          volume_count?: number | null
         }
         Relationships: [
           {

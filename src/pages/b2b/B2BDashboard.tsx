@@ -126,12 +126,12 @@ const B2BDashboard = () => {
         <div className="grid gap-6 md:grid-cols-4 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.total_shipments || 0}</div>
-              <p className="text-xs text-muted-foreground">remessas cadastradas</p>
+          <CardTitle className="text-sm font-medium">Total</CardTitle>
+          <Package className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats?.total_shipments || 0}</div>
+          <p className="text-xs text-muted-foreground">envios cadastrados</p>
             </CardContent>
           </Card>
 
@@ -159,12 +159,12 @@ const B2BDashboard = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Este Mês</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.month_shipments || 0}</div>
-              <p className="text-xs text-muted-foreground">remessas no mês</p>
+          <CardTitle className="text-sm font-medium">Este Mês</CardTitle>
+          <CheckCircle className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats?.month_shipments || 0}</div>
+          <p className="text-xs text-muted-foreground">envios no mês</p>
             </CardContent>
           </Card>
         </div>
@@ -173,25 +173,25 @@ const B2BDashboard = () => {
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
-                <CardTitle>Remessas Recentes</CardTitle>
-                <CardDescription>Suas últimas remessas cadastradas</CardDescription>
+                <CardTitle>Envios Recentes</CardTitle>
+                <CardDescription>Suas últimas solicitações de coleta</CardDescription>
               </div>
-              <Button onClick={() => navigate('/b2b-expresso/nova-remessa')}>
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Remessa
-              </Button>
+          <Button onClick={() => navigate('/b2b-expresso/nova-remessa')}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Envio
+          </Button>
             </div>
           </CardHeader>
           <CardContent>
-            {shipments.length === 0 ? (
-              <div className="text-center py-12">
-                <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground mb-4">Nenhuma remessa cadastrada ainda</p>
-                <Button onClick={() => navigate('/b2b-expresso/nova-remessa')}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Cadastrar Primeira Remessa
-                </Button>
-              </div>
+        {shipments.length === 0 ? (
+          <div className="text-center py-12">
+            <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <p className="text-muted-foreground mb-4">Nenhum envio cadastrado ainda</p>
+            <Button onClick={() => navigate('/b2b-expresso/nova-remessa')}>
+              <Plus className="mr-2 h-4 w-4" />
+              Cadastrar Primeiro Envio
+            </Button>
+          </div>
             ) : (
               <div className="space-y-4">
                 {shipments.map((shipment) => (

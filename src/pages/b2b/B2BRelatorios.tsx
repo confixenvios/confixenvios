@@ -76,7 +76,7 @@ const B2BRelatorios = () => {
       setShipments(shipmentsData || []);
       setFilteredShipments(shipmentsData || []);
     } catch (error: any) {
-      toast.error('Erro ao carregar remessas');
+      toast.error('Erro ao carregar envios');
       console.error(error);
     } finally {
       setLoading(false);
@@ -87,20 +87,24 @@ const B2BRelatorios = () => {
     const exportData = filteredShipments.map(shipment => ({
       'Código de Rastreio': shipment.tracking_code,
       'Data': format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm'),
-      'Destinatário': shipment.recipient_name,
-      'Telefone': shipment.recipient_phone,
-      'Endereço': `${shipment.recipient_street}, ${shipment.recipient_number} - ${shipment.recipient_neighborhood}`,
-      'Cidade': shipment.recipient_city,
-      'Estado': shipment.recipient_state,
-      'Tipo de Entrega': shipment.delivery_type === 'mesmo_dia' ? 'Mesmo Dia' : 'Próximo Dia',
+      'Destinatário': shipment.recipient_name || '-',
+      'Telefone': shipment.recipient_phone || '-',
+      'Endereço': shipment.recipient_street 
+        ? `${shipment.recipient_street}, ${shipment.recipient_number} - ${shipment.recipient_neighborhood}`
+        : '-',
+      'Cidade': shipment.recipient_city || '-',
+      'Estado': shipment.recipient_state || '-',
+      'Tipo de Entrega': shipment.delivery_type 
+        ? (shipment.delivery_type === 'mesmo_dia' ? 'Mesmo Dia' : 'Próximo Dia')
+        : '-',
       'Status': getStatusLabel(shipment.status),
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Remessas');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Envios');
     
-    const fileName = `relatorio-remessas-${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+    const fileName = `relatorio-envios-${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
     XLSX.writeFile(workbook, fileName);
     
     toast.success('Relatório exportado com sucesso!');
@@ -147,7 +151,7 @@ const B2BRelatorios = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Relatórios</h1>
-          <p className="text-muted-foreground">Visualize e exporte suas remessas</p>
+          <p className="text-muted-foreground">Visualize e exporte seus envios</p>
         </div>
         <Button onClick={exportToExcel} disabled={filteredShipments.length === 0}>
           <FileDown className="mr-2 h-4 w-4" />
@@ -156,14 +160,14 @@ const B2BRelatorios = () => {
       </div>
 
       <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Todas as Remessas</CardTitle>
-              <CardDescription>
-                {filteredShipments.length} remessa(s) encontrada(s)
-              </CardDescription>
-            </div>
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle>Todos os Envios</CardTitle>
+            <CardDescription>
+              {filteredShipments.length} envio(s) encontrado(s)
+            </CardDescription>
+          </div>
             <div className="w-64">
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -178,13 +182,13 @@ const B2BRelatorios = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredShipments.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground">
-                {searchTerm ? 'Nenhuma remessa encontrada' : 'Nenhuma remessa cadastrada ainda'}
-              </p>
-            </div>
+        {filteredShipments.length === 0 ? (
+          <div className="text-center py-12">
+            <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <p className="text-muted-foreground">
+              {searchTerm ? 'Nenhum envio encontrado' : 'Nenhum envio cadastrado ainda'}
+            </p>
+          </div>
           ) : (
             <div className="space-y-4">
               {filteredShipments.map((shipment) => (
