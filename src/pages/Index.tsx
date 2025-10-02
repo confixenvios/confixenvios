@@ -1,5 +1,5 @@
 import Header from "@/components/Header";
-import { Truck, Package, Building, Globe, Shield, Users, CheckCircle, MapPin, Phone, Mail, DollarSign, Clock, TrendingUp, Instagram, Facebook } from "lucide-react";
+import { Truck, Zap, Package, Building, Globe, Shield, Users, CheckCircle, MapPin, Phone, Mail, DollarSign, Clock, TrendingUp, Instagram, Facebook } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -62,7 +62,23 @@ const Index = () => {
           </div>
 
           {/* Blocos de Serviços */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            {/* Expresso GYN */}
+            <Card className="text-center p-6 hover:shadow-lg transition-shadow flex flex-col">
+              <CardHeader className="flex-1">
+                <CardTitle className="text-xl mb-3">Expresso</CardTitle>
+                <p className="text-muted-foreground mb-4">Coleta e entrega no mesmo dia em Goiânia e Região</p>
+              </CardHeader>
+              <CardContent>
+                <Button size="lg" className="w-full" asChild>
+                  <Link to="/auth">
+                    <Zap className="mr-2 h-4 w-4" />
+                    Cotação Expresso
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* Envio Nacional */}
             <Card className="text-center p-6 hover:shadow-lg transition-shadow border-primary/20 flex flex-col">
               <CardHeader className="flex-1">
