@@ -66,7 +66,7 @@ const Index = () => {
             {/* Expresso GYN */}
             <Card className="text-center p-6 hover:shadow-lg transition-shadow flex flex-col">
               <CardHeader className="flex-1">
-                <CardTitle className="text-xl mb-3">Envios Expresso</CardTitle>
+                <CardTitle className="text-xl mb-3">Expresso</CardTitle>
                 <p className="text-muted-foreground mb-4">Coleta e entrega no mesmo dia em Goiânia e Região</p>
               </CardHeader>
               <CardContent>
