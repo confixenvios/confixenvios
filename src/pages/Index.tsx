@@ -108,7 +108,7 @@ const Index = () => {
                   asChild
                 >
                   <Link to="/cotacao">
-                    Falar no WhatsApp
+                    Cotar Fracionado
                   </Link>
                 </Button>
               </CardContent>
