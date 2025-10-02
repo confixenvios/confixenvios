@@ -26,6 +26,7 @@ interface B2BShipment {
   recipient_phone: string | null;
   volume_count: number | null;
   delivery_date: string | null;
+  package_type: string | null;
 }
 
 const B2BRelatorios = () => {
@@ -89,6 +90,7 @@ const B2BRelatorios = () => {
     const exportData = filteredShipments.map(shipment => ({
       'Código de Rastreio': shipment.tracking_code,
       'Data': format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm'),
+      'Tipo de Envio': shipment.package_type ? getPackageTypeLabel(shipment.package_type) : '-',
       'Volumes': shipment.volume_count || '-',
       'Data de Entrega': shipment.delivery_date ? format(new Date(shipment.delivery_date), 'dd/MM/yyyy') : '-',
       'Destinatário': shipment.recipient_name || '-',
@@ -134,6 +136,22 @@ const B2BRelatorios = () => {
   const getDeliveryTypeLabel = (type: string | null) => {
     if (!type) return null;
     return type === 'mesmo_dia' ? 'Mesmo Dia' : 'Próximo Dia';
+  };
+
+  const getPackageTypeLabel = (type: string | null) => {
+    if (!type) return '-';
+    const labels: Record<string, string> = {
+      envelope: 'Envelope',
+      documento: 'Documento',
+      caixa_pequena: 'Caixa Pequena',
+      caixa_media: 'Caixa Média',
+      caixa_grande: 'Caixa Grande',
+      peca: 'Peça',
+      eletronico: 'Eletrônico',
+      medicamento: 'Medicamento',
+      fragil: 'Frágil',
+    };
+    return labels[type] || type;
   };
 
   if (loading) {
@@ -204,6 +222,11 @@ const B2BRelatorios = () => {
                       {shipment.volume_count && (
                         <Badge variant="outline" className="text-xs">
                           {shipment.volume_count} volume(s)
+                        </Badge>
+                      )}
+                      {getPackageTypeLabel(shipment.package_type) && (
+                        <Badge variant="secondary" className="text-xs">
+                          {getPackageTypeLabel(shipment.package_type)}
                         </Badge>
                       )}
                       {getDeliveryTypeLabel(shipment.delivery_type) && (

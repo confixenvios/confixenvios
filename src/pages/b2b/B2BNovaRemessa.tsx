@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -20,6 +21,7 @@ const B2BNovaRemessa = () => {
   const [formData, setFormData] = useState({
     volume_count: '',
     delivery_date: '',
+    package_type: '',
   });
 
   useEffect(() => {
@@ -65,6 +67,7 @@ const B2BNovaRemessa = () => {
           b2b_client_id: client.id,
           volume_count: parseInt(formData.volume_count),
           delivery_date: formData.delivery_date,
+          package_type: formData.package_type,
           status: 'PENDENTE',
         });
 
@@ -98,6 +101,33 @@ const B2BNovaRemessa = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="package_type">Tipo de Envio *</Label>
+                <Select
+                  value={formData.package_type}
+                  onValueChange={(value) => handleChange('package_type', value)}
+                  required
+                >
+                  <SelectTrigger id="package_type">
+                    <SelectValue placeholder="Selecione o tipo de envio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="envelope">Envelope</SelectItem>
+                    <SelectItem value="documento">Documento</SelectItem>
+                    <SelectItem value="caixa_pequena">Caixa Pequena</SelectItem>
+                    <SelectItem value="caixa_media">Caixa Média</SelectItem>
+                    <SelectItem value="caixa_grande">Caixa Grande</SelectItem>
+                    <SelectItem value="peca">Peça</SelectItem>
+                    <SelectItem value="eletronico">Eletrônico</SelectItem>
+                    <SelectItem value="medicamento">Medicamento</SelectItem>
+                    <SelectItem value="fragil">Frágil</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Selecione o tipo de item que será enviado
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="volume_count">Número de Volumes *</Label>
                 <Input

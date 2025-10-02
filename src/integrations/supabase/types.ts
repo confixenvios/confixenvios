@@ -266,6 +266,7 @@ export type Database = {
           delivery_type: string | null
           id: string
           observations: string | null
+          package_type: string | null
           pickup_requested_at: string | null
           recipient_cep: string | null
           recipient_city: string | null
@@ -289,6 +290,7 @@ export type Database = {
           delivery_type?: string | null
           id?: string
           observations?: string | null
+          package_type?: string | null
           pickup_requested_at?: string | null
           recipient_cep?: string | null
           recipient_city?: string | null
@@ -312,6 +314,7 @@ export type Database = {
           delivery_type?: string | null
           id?: string
           observations?: string | null
+          package_type?: string | null
           pickup_requested_at?: string | null
           recipient_cep?: string | null
           recipient_city?: string | null

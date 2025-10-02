@@ -26,6 +26,7 @@ interface B2BShipment {
   created_at: string;
   volume_count: number | null;
   delivery_date: string | null;
+  package_type: string | null;
 }
 
 interface Stats {
@@ -111,6 +112,22 @@ const B2BDashboard = () => {
   const getDeliveryTypeLabel = (type: string | null) => {
     if (!type) return '-';
     return type === 'mesmo_dia' ? 'Mesmo Dia' : 'Próximo Dia';
+  };
+
+  const getPackageTypeLabel = (type: string | null) => {
+    if (!type) return null;
+    const labels: Record<string, string> = {
+      envelope: 'Envelope',
+      documento: 'Documento',
+      caixa_pequena: 'Caixa Pequena',
+      caixa_media: 'Caixa Média',
+      caixa_grande: 'Caixa Grande',
+      peca: 'Peça',
+      eletronico: 'Eletrônico',
+      medicamento: 'Medicamento',
+      fragil: 'Frágil',
+    };
+    return labels[type] || type;
   };
 
   if (loading) {
@@ -209,6 +226,11 @@ const B2BDashboard = () => {
                       {shipment.volume_count && (
                         <Badge variant="outline" className="text-xs">
                           {shipment.volume_count} volume(s)
+                        </Badge>
+                      )}
+                      {getPackageTypeLabel(shipment.package_type) && (
+                        <Badge variant="secondary" className="text-xs">
+                          {getPackageTypeLabel(shipment.package_type)}
                         </Badge>
                       )}
                     </div>
