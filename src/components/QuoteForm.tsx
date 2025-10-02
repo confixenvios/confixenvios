@@ -244,6 +244,35 @@ const QuoteForm = () => {
     setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
   };
 
+  const formatCurrency = (value: string): string => {
+    // Remove tudo que não é dígito
+    const numbers = value.replace(/\D/g, '');
+    if (!numbers) return '';
+    
+    // Converte para número com centavos
+    const amount = parseFloat(numbers) / 100;
+    
+    // Formata como moeda brasileira
+    return amount.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
+  const handleCurrencyChange = (value: string) => {
+    // Remove tudo que não é dígito
+    const numbers = value.replace(/\D/g, '');
+    
+    // Armazena apenas os números (em centavos)
+    const amount = numbers ? (parseFloat(numbers) / 100).toString() : '';
+    setFormData(prev => ({ ...prev, unitValue: amount }));
+  };
+
+  const getCurrencyDisplayValue = (): string => {
+    if (!formData.unitValue) return '';
+    return formatCurrency((parseFloat(formData.unitValue) * 100).toString());
+  };
+
   const handleQuantityChange = (value: string) => {
     const sanitizedValue = sanitizeTextInput(value);
     const quantity = parseInt(sanitizedValue) || 0;
@@ -922,16 +951,19 @@ const QuoteForm = () => {
                     
                     <div className="space-y-3">
                       <Label htmlFor="totalValue" className="text-base font-medium">Valor Total (R$)</Label>
-                      <Input
-                        id="totalValue"
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        placeholder="100.00"
-                        value={formData.unitValue}
-                        onChange={(e) => handleInputChange("unitValue", e.target.value)}
-                        className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
-                      />
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium text-muted-foreground">
+                          R$
+                        </span>
+                        <Input
+                          id="totalValue"
+                          type="text"
+                          placeholder="0,00"
+                          value={getCurrencyDisplayValue()}
+                          onChange={(e) => handleCurrencyChange(e.target.value)}
+                          className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg pl-12"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
