@@ -56,17 +56,6 @@ const B2BNovaRemessa = () => {
     e.preventDefault();
     if (!client) return;
 
-    // Validação
-    if (!formData.volume_count || parseInt(formData.volume_count) <= 0) {
-      toast.error('Informe um número de volumes válido');
-      return;
-    }
-
-    if (!formData.delivery_date) {
-      toast.error('Informe a data de entrega');
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -84,7 +73,7 @@ const B2BNovaRemessa = () => {
       toast.success('Solicitação de coleta enviada com sucesso!');
       navigate('/b2b-expresso/dashboard');
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao enviar solicitação');
+      toast.error(error.message || 'Erro ao solicitar coleta');
     } finally {
       setLoading(false);
     }
@@ -96,19 +85,19 @@ const B2BNovaRemessa = () => {
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <Package className="h-6 w-6 text-primary" />
-              <div>
-                <CardTitle>Novo Envio</CardTitle>
-                <CardDescription>Solicite a coleta de volumes para entrega</CardDescription>
-              </div>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3 mb-2">
+            <Package className="h-6 w-6 text-primary" />
+            <div>
+              <CardTitle>Novo Envio</CardTitle>
+              <CardDescription>Solicite a coleta de volumes para entrega</CardDescription>
             </div>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Número de Volumes */}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="volume_count">Número de Volumes *</Label>
                 <Input
@@ -118,14 +107,13 @@ const B2BNovaRemessa = () => {
                   value={formData.volume_count}
                   onChange={(e) => handleChange('volume_count', e.target.value)}
                   required
-                  placeholder="Ex: 5"
+                  placeholder="Quantos volumes serão coletados?"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Quantos volumes você deseja enviar?
+                  Informe quantos volumes precisam ser coletados
                 </p>
               </div>
 
-              {/* Data de Entrega */}
               <div className="space-y-2">
                 <Label htmlFor="delivery_date">Data para Entrega *</Label>
                 <Input
@@ -137,26 +125,27 @@ const B2BNovaRemessa = () => {
                   min={new Date().toISOString().split('T')[0]}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Qual a data prevista para a entrega dos volumes?
+                  Quando os volumes devem ser entregues?
                 </p>
               </div>
+            </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <Package className="mr-2 h-4 w-4" />
-                    Solicitar Coleta
-                  </>
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            <Button type="submit" className="w-full" size="lg" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Solicitando coleta...
+                </>
+              ) : (
+                <>
+                  <Package className="mr-2 h-4 w-4" />
+                  Solicitar Coleta
+                </>
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -14,16 +14,18 @@ import * as XLSX from 'xlsx';
 interface B2BShipment {
   id: string;
   tracking_code: string;
-  recipient_name: string;
-  recipient_city: string;
-  recipient_state: string;
-  delivery_type: string;
+  recipient_name: string | null;
+  recipient_city: string | null;
+  recipient_state: string | null;
+  delivery_type: string | null;
   status: string;
   created_at: string;
-  recipient_street: string;
-  recipient_number: string;
-  recipient_neighborhood: string;
-  recipient_phone: string;
+  recipient_street: string | null;
+  recipient_number: string | null;
+  recipient_neighborhood: string | null;
+  recipient_phone: string | null;
+  volume_count: number | null;
+  delivery_date: string | null;
 }
 
 const B2BRelatorios = () => {
@@ -40,8 +42,8 @@ const B2BRelatorios = () => {
   useEffect(() => {
     const filtered = shipments.filter(shipment =>
       shipment.tracking_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      shipment.recipient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      shipment.recipient_city.toLowerCase().includes(searchTerm.toLowerCase())
+      (shipment.recipient_name && shipment.recipient_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (shipment.recipient_city && shipment.recipient_city.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     setFilteredShipments(filtered);
   }, [searchTerm, shipments]);
@@ -87,16 +89,14 @@ const B2BRelatorios = () => {
     const exportData = filteredShipments.map(shipment => ({
       'Código de Rastreio': shipment.tracking_code,
       'Data': format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm'),
+      'Volumes': shipment.volume_count || '-',
+      'Data de Entrega': shipment.delivery_date ? format(new Date(shipment.delivery_date), 'dd/MM/yyyy') : '-',
       'Destinatário': shipment.recipient_name || '-',
       'Telefone': shipment.recipient_phone || '-',
-      'Endereço': shipment.recipient_street 
-        ? `${shipment.recipient_street}, ${shipment.recipient_number} - ${shipment.recipient_neighborhood}`
-        : '-',
+      'Endereço': shipment.recipient_street ? `${shipment.recipient_street}, ${shipment.recipient_number} - ${shipment.recipient_neighborhood}` : '-',
       'Cidade': shipment.recipient_city || '-',
       'Estado': shipment.recipient_state || '-',
-      'Tipo de Entrega': shipment.delivery_type 
-        ? (shipment.delivery_type === 'mesmo_dia' ? 'Mesmo Dia' : 'Próximo Dia')
-        : '-',
+      'Tipo de Entrega': shipment.delivery_type ? (shipment.delivery_type === 'mesmo_dia' ? 'Mesmo Dia' : 'Próximo Dia') : '-',
       'Status': getStatusLabel(shipment.status),
     }));
 
@@ -131,7 +131,8 @@ const B2BRelatorios = () => {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const getDeliveryTypeLabel = (type: string) => {
+  const getDeliveryTypeLabel = (type: string | null) => {
+    if (!type) return null;
     return type === 'mesmo_dia' ? 'Mesmo Dia' : 'Próximo Dia';
   };
 
@@ -160,14 +161,14 @@ const B2BRelatorios = () => {
       </div>
 
       <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle>Todos os Envios</CardTitle>
-            <CardDescription>
-              {filteredShipments.length} envio(s) encontrado(s)
-            </CardDescription>
-          </div>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Todos os Envios</CardTitle>
+              <CardDescription>
+                {filteredShipments.length} envio(s) encontrado(s)
+              </CardDescription>
+            </div>
             <div className="w-64">
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -182,13 +183,13 @@ const B2BRelatorios = () => {
           </div>
         </CardHeader>
         <CardContent>
-        {filteredShipments.length === 0 ? (
-          <div className="text-center py-12">
-            <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <p className="text-muted-foreground">
-              {searchTerm ? 'Nenhum envio encontrado' : 'Nenhum envio cadastrado ainda'}
-            </p>
-          </div>
+          {filteredShipments.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground">
+                {searchTerm ? 'Nenhum envio encontrado' : 'Nenhum envio cadastrado ainda'}
+              </p>
+            </div>
           ) : (
             <div className="space-y-4">
               {filteredShipments.map((shipment) => (
@@ -200,12 +201,28 @@ const B2BRelatorios = () => {
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-mono text-sm font-semibold">{shipment.tracking_code}</p>
                       {getStatusBadge(shipment.status)}
-                      <Badge variant="outline" className="text-xs">
-                        {getDeliveryTypeLabel(shipment.delivery_type)}
-                      </Badge>
+                      {shipment.volume_count && (
+                        <Badge variant="outline" className="text-xs">
+                          {shipment.volume_count} volume(s)
+                        </Badge>
+                      )}
+                      {getDeliveryTypeLabel(shipment.delivery_type) && (
+                        <Badge variant="outline" className="text-xs">
+                          {getDeliveryTypeLabel(shipment.delivery_type)}
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      <strong>{shipment.recipient_name}</strong> - {shipment.recipient_city}/{shipment.recipient_state}
+                      {shipment.recipient_name ? (
+                        <>
+                          <strong>{shipment.recipient_name}</strong> - {shipment.recipient_city}/{shipment.recipient_state}
+                        </>
+                      ) : (
+                        <>
+                          {shipment.volume_count && `${shipment.volume_count} volume(s)`}
+                          {shipment.delivery_date && ` - Entrega: ${format(new Date(shipment.delivery_date), 'dd/MM/yyyy')}`}
+                        </>
+                      )}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {format(new Date(shipment.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
