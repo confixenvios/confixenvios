@@ -201,6 +201,141 @@ export type Database = {
           },
         ]
       }
+      b2b_clients: {
+        Row: {
+          cnpj: string | null
+          company_name: string
+          created_at: string | null
+          default_pickup_cep: string | null
+          default_pickup_city: string | null
+          default_pickup_complement: string | null
+          default_pickup_neighborhood: string | null
+          default_pickup_number: string | null
+          default_pickup_state: string | null
+          default_pickup_street: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          phone: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          cnpj?: string | null
+          company_name: string
+          created_at?: string | null
+          default_pickup_cep?: string | null
+          default_pickup_city?: string | null
+          default_pickup_complement?: string | null
+          default_pickup_neighborhood?: string | null
+          default_pickup_number?: string | null
+          default_pickup_state?: string | null
+          default_pickup_street?: string | null
+          email: string
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          cnpj?: string | null
+          company_name?: string
+          created_at?: string | null
+          default_pickup_cep?: string | null
+          default_pickup_city?: string | null
+          default_pickup_complement?: string | null
+          default_pickup_neighborhood?: string | null
+          default_pickup_number?: string | null
+          default_pickup_state?: string | null
+          default_pickup_street?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      b2b_shipments: {
+        Row: {
+          b2b_client_id: string
+          created_at: string | null
+          delivery_type: string
+          id: string
+          observations: string | null
+          recipient_cep: string
+          recipient_city: string
+          recipient_complement: string | null
+          recipient_name: string
+          recipient_neighborhood: string
+          recipient_number: string
+          recipient_phone: string
+          recipient_state: string
+          recipient_street: string
+          shipment_id: string | null
+          status: string
+          tracking_code: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          b2b_client_id: string
+          created_at?: string | null
+          delivery_type: string
+          id?: string
+          observations?: string | null
+          recipient_cep: string
+          recipient_city: string
+          recipient_complement?: string | null
+          recipient_name: string
+          recipient_neighborhood: string
+          recipient_number: string
+          recipient_phone: string
+          recipient_state: string
+          recipient_street: string
+          shipment_id?: string | null
+          status?: string
+          tracking_code?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          b2b_client_id?: string
+          created_at?: string | null
+          delivery_type?: string
+          id?: string
+          observations?: string | null
+          recipient_cep?: string
+          recipient_city?: string
+          recipient_complement?: string | null
+          recipient_name?: string
+          recipient_neighborhood?: string
+          recipient_number?: string
+          recipient_phone?: string
+          recipient_state?: string
+          recipient_street?: string
+          shipment_id?: string | null
+          status?: string
+          tracking_code?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "b2b_shipments_b2b_client_id_fkey"
+            columns: ["b2b_client_id"]
+            isOneToOne: false
+            referencedRelation: "b2b_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "b2b_shipments_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_branches: {
         Row: {
           active: boolean | null
@@ -539,6 +674,7 @@ export type Database = {
           inscricao_estadual: string | null
           last_name: string | null
           phone: string | null
+          tipo_cliente: string | null
           updated_at: string | null
         }
         Insert: {
@@ -550,6 +686,7 @@ export type Database = {
           inscricao_estadual?: string | null
           last_name?: string | null
           phone?: string | null
+          tipo_cliente?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -561,6 +698,7 @@ export type Database = {
           inscricao_estadual?: string | null
           last_name?: string | null
           phone?: string | null
+          tipo_cliente?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -810,6 +948,7 @@ export type Database = {
           label_pdf_url: string | null
           length: number
           motorista_id: string | null
+          origem: string | null
           payment_data: Json | null
           pickup_option: string
           pricing_table_id: string | null
@@ -836,6 +975,7 @@ export type Database = {
           label_pdf_url?: string | null
           length: number
           motorista_id?: string | null
+          origem?: string | null
           payment_data?: Json | null
           pickup_option: string
           pricing_table_id?: string | null
@@ -862,6 +1002,7 @@ export type Database = {
           label_pdf_url?: string | null
           length?: number
           motorista_id?: string | null
+          origem?: string | null
           payment_data?: Json | null
           pickup_option?: string
           pricing_table_id?: string | null
@@ -1229,6 +1370,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      generate_b2b_tracking_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       generate_tracking_code: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1253,6 +1398,16 @@ export type Database = {
           tracking_code: string
           weight: number
           width: number
+        }[]
+      }
+      get_b2b_client_stats: {
+        Args: { client_id: string }
+        Returns: {
+          completed_shipments: number
+          in_transit_shipments: number
+          month_shipments: number
+          pending_shipments: number
+          total_shipments: number
         }[]
       }
       get_current_session_id: {

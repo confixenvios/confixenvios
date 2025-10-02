@@ -60,6 +60,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const navigation = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Clientes', href: '/admin/clientes', icon: Users },
+    { name: 'Clientes B2B', href: '/admin/clientes-b2b', icon: Building2 },
     { name: 'Motoristas', href: '/admin/motoristas', icon: Truck },
     { name: 'Filiais', href: '/admin/filiais', icon: Building2 },
     { name: 'Faturamento', href: '/admin/faturamento', icon: DollarSign },
@@ -71,8 +72,6 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
     { name: 'API Docs', href: '/api-docs', icon: FileText },
     { name: 'API Keys', href: '/admin/api-keys', icon: Key },
-    
-    
   ];
 
   const isActive = (path: string) => {

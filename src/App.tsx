@@ -42,6 +42,7 @@ import AdminMotoristas from "./pages/admin/AdminMotoristas";
 import AdminFiliais from "./pages/admin/AdminFiliais";
 import AdminRemessas from "./pages/admin/AdminRemessas";
 import AdminFaturamento from "./pages/admin/AdminFaturamento";
+import AdminClientesB2B from "./pages/admin/AdminClientesB2B";
 
 import AdminIntegracoes from "./pages/admin/AdminIntegracoes";
 import AdminWebhooks from "./pages/admin/AdminWebhooks";
@@ -56,6 +57,9 @@ import MotoristaAuth from "./pages/motorista/MotoristaAuth";
 import MotoristaRegistro from "./pages/motorista/MotoristaRegistro";
 import MotoristaDashboard from "./pages/motorista/MotoristaDashboard";
 import MotoristaRelatorios from "./pages/motorista/MotoristaRelatorios";
+import B2BAuth from "./pages/b2b/B2BAuth";
+import B2BDashboard from "./pages/b2b/B2BDashboard";
+import B2BNovaRemessa from "./pages/b2b/B2BNovaRemessa";
 
 const queryClient = new QueryClient();
 
@@ -119,6 +123,7 @@ const App = () => (
                       <Route path="dashboard" element={<AdminDashboardEnhanced />} />
                       <Route path="clientes" element={<AdminClientes />} />
                       <Route path="clientes/:id" element={<AdminClienteDetalhes />} />
+                      <Route path="clientes-b2b" element={<AdminClientesB2B />} />
                       <Route path="motoristas" element={<AdminMotoristas />} />
                       <Route path="filiais" element={<AdminFiliais />} />
                       <Route path="faturamento" element={<AdminFaturamento />} />
@@ -144,6 +149,11 @@ const App = () => (
             <Route path="/motorista" element={<MotoristaDashboard />} />
             <Route path="/motorista/dashboard" element={<MotoristaDashboard />} />
             <Route path="/motorista/relatorios" element={<MotoristaRelatorios />} />
+
+            {/* B2B Expresso Routes */}
+            <Route path="/b2b-expresso" element={<B2BAuth />} />
+            <Route path="/b2b-expresso/dashboard" element={<B2BDashboard />} />
+            <Route path="/b2b-expresso/nova-remessa" element={<B2BNovaRemessa />} />
 
             {/* Legacy redirects */}
             <Route path="/dashboard/*" element={<Navigate to="/cliente" replace />} />
