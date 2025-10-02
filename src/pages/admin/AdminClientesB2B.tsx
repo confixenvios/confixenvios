@@ -125,8 +125,8 @@ const AdminClientesB2B = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Clientes B2B Expresso</h1>
-          <p className="text-muted-foreground">Gerencie os clientes do módulo B2B</p>
+          <h1 className="text-3xl font-bold">Clientes Expresso</h1>
+          <p className="text-muted-foreground">Gerencie os clientes do módulo Expresso</p>
         </div>
         <Button onClick={exportToExcel}>
           <FileDown className="mr-2 h-4 w-4" />
