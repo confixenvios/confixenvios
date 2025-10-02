@@ -795,16 +795,16 @@ const AdminRemessas = () => {
                         </div>
                         <div className="flex items-center space-x-2">
                           {getStatusBadge(shipment.status)}
-                          <div className="flex space-x-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleViewShipment(shipment)}
-                              className="h-8 w-8 p-0 hover:bg-primary/10"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            {!isB2BExpresso && (
+                          {!isB2BExpresso && (
+                            <div className="flex space-x-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewShipment(shipment)}
+                                className="h-8 w-8 p-0 hover:bg-primary/10"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="ghost" 
                                 size="sm"
@@ -814,8 +814,8 @@ const AdminRemessas = () => {
                               >
                                 <FileText className="h-4 w-4" />
                               </Button>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 
