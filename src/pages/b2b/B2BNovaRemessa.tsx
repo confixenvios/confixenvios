@@ -102,14 +102,14 @@ const B2BNovaRemessa = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="package_type">Tipo de Envio *</Label>
+                <Label htmlFor="package_type">Tipo de Mercadoria *</Label>
                 <Select
                   value={formData.package_type}
                   onValueChange={(value) => handleChange('package_type', value)}
                   required
                 >
                   <SelectTrigger id="package_type">
-                    <SelectValue placeholder="Selecione o tipo de envio" />
+                    <SelectValue placeholder="Selecione o tipo de mercadoria" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="envelope">Envelope</SelectItem>
