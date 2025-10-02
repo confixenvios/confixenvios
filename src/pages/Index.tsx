@@ -73,7 +73,7 @@ const Index = () => {
                 <Button size="lg" className="w-full" asChild>
                   <Link to="/auth">
                     <Zap className="mr-2 h-4 w-4" />
-                    Cotação Expresso
+                    Envios Expresso
                   </Link>
                 </Button>
               </CardContent>
