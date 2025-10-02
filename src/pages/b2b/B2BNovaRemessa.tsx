@@ -164,12 +164,12 @@ const B2BNovaRemessa = () => {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Solicitando coleta...
+                  Solicitando envio...
                 </>
               ) : (
                 <>
                   <Package className="mr-2 h-4 w-4" />
-                  Solicitar Coleta
+                  Solicitar Envio
                 </>
               )}
             </Button>
