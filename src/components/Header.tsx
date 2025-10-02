@@ -1,6 +1,7 @@
-import { Package, User, LogIn } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Package, User, LogIn, Building2 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from '@/hooks/useAuth';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -11,11 +12,20 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { LayoutDashboard, Shield, RefreshCw, LogOut } from 'lucide-react';
 import logoConfixEnvios from '@/assets/logo-confix-envios.png';
 
 const Header = () => {
   const { user, loading, signOut, isAdmin, refreshUserData } = useAuth();
+  const navigate = useNavigate();
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
 
   return (
     <header className="border-b border-border bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
@@ -123,11 +133,13 @@ const Header = () => {
                     </DropdownMenu>
                   </div>
                 ) : (
-                  <Button asChild size="sm" className="text-xs sm:text-sm px-3 sm:px-4">
-                    <Link to="/auth">
-                      <LogIn className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      <span>Entrar</span>
-                    </Link>
+                  <Button 
+                    size="sm" 
+                    className="text-xs sm:text-sm px-3 sm:px-4"
+                    onClick={() => setLoginModalOpen(true)}
+                  >
+                    <LogIn className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span>Entrar</span>
                   </Button>
                 )}
               </>
@@ -135,6 +147,50 @@ const Header = () => {
           </nav>
         </div>
       </div>
+
+      {/* Modal de Escolha de Login */}
+      <Dialog open={loginModalOpen} onOpenChange={setLoginModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl text-center">Escolha o tipo de acesso</DialogTitle>
+            <DialogDescription className="text-center">
+              Selecione como deseja entrar no sistema
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Button
+              size="lg"
+              className="h-auto py-6 flex flex-col gap-2"
+              onClick={() => {
+                setLoginModalOpen(false);
+                navigate('/auth');
+              }}
+            >
+              <User className="h-8 w-8" />
+              <div className="text-center">
+                <div className="font-semibold text-lg">Login Normal</div>
+                <div className="text-xs opacity-90">Acesso para clientes e usuários gerais</div>
+              </div>
+            </Button>
+
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-auto py-6 flex flex-col gap-2 border-2 border-primary hover:bg-primary/10"
+              onClick={() => {
+                setLoginModalOpen(false);
+                navigate('/b2b-expresso');
+              }}
+            >
+              <Building2 className="h-8 w-8 text-primary" />
+              <div className="text-center">
+                <div className="font-semibold text-lg text-primary">B2B Expresso</div>
+                <div className="text-xs opacity-70">Acesso exclusivo para clientes B2B</div>
+              </div>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 };
