@@ -883,11 +883,6 @@ const AdminRemessas = () => {
                                     {shipment.quote_data.volume_count} {shipment.quote_data.volume_count === 1 ? 'volume' : 'volumes'}
                                   </div>
                                 )}
-                                {shipment.format && (
-                                  <div className="text-xs text-muted-foreground">
-                                    <span className="font-medium capitalize">{shipment.format}</span>
-                                  </div>
-                                )}
                               </div>
                             </div>
 
