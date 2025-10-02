@@ -137,7 +137,7 @@ const B2BNovaRemessa = () => {
                   value={formData.volume_count}
                   onChange={(e) => handleChange('volume_count', e.target.value)}
                   required
-                  placeholder="Quantos volumes serão coletados?"
+                  placeholder="Quantos volumes serão enviados?"
                 />
                 <p className="text-xs text-muted-foreground">
                   Informe quantos volumes precisam ser coletados
