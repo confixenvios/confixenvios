@@ -108,6 +108,7 @@ const Index = () => {
                   asChild
                 >
                   <Link to="/cotacao">
+                    <Package className="mr-2 h-4 w-4" />
                     Cotar Fracionado
                   </Link>
                 </Button>
