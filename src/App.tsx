@@ -9,7 +9,6 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 // Public pages
 import Index from "./pages/Index";
 import Cotacao from "./pages/Cotacao";
-import CotacaoExpresso from "./pages/CotacaoExpresso";
 import Results from "./pages/Results";
 import Label from "./pages/Label";
 import Document from "./pages/Document";
@@ -75,7 +74,6 @@ const App = () => (
             {/* Public Routes */}
             <Route path="/" element={<Index />} />
             <Route path="/cotacao" element={<Cotacao />} />
-            <Route path="/cotacao-expresso" element={<CotacaoExpresso />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin/auth" element={<AdminAuth />} />
             <Route path="/login" element={<Navigate to="/auth" replace />} />
