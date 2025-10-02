@@ -836,19 +836,15 @@ const AdminRemessas = () => {
                               </div>
                             </div>
 
-                            {/* Destino */}
+                            {/* Região */}
                             <div className="space-y-2">
                               <div className="flex items-center space-x-2">
                                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Rota</span>
                               </div>
                               <div>
-                                <div className="flex items-center space-x-2 text-xs">
-                                  <span className="font-medium">Goiânia - GO</span>
-                                  <MapPin className="w-3 h-3 text-muted-foreground" />
-                                  <span className="font-medium">
-                                    {shipment.recipient_address?.city || 'N/A'} - {shipment.recipient_address?.state || 'N/A'}
-                                  </span>
+                                <div className="text-sm font-medium">
+                                  Goiânia e Região
                                 </div>
                                 <div className="text-xs text-muted-foreground mt-1">
                                   <span className="font-medium">{shipment.recipient_address?.name || 'N/A'}</span>
