@@ -823,7 +823,7 @@ const AdminRemessas = () => {
                       <div className="p-4">
                         {isB2BExpresso ? (
                           /* Layout simplificado para B2B Expresso */
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             {/* Cliente B2B */}
                             <div className="space-y-2">
                               <div className="flex items-center space-x-2">
@@ -854,6 +854,33 @@ const AdminRemessas = () => {
                                 {shipment.recipient_address?.cep && (
                                   <div className="text-xs text-muted-foreground">
                                     CEP: {shipment.recipient_address.cep}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Informações da Carga */}
+                            <div className="space-y-2">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Carga</span>
+                              </div>
+                              <div>
+                                {shipment.quote_data?.volume_count && (
+                                  <div className="flex items-center text-xs text-muted-foreground mb-1">
+                                    <Package className="w-3 h-3 mr-1" />
+                                    {shipment.quote_data.volume_count} {shipment.quote_data.volume_count === 1 ? 'volume' : 'volumes'}
+                                  </div>
+                                )}
+                                {shipment.quote_data?.delivery_date && (
+                                  <div className="flex items-center text-xs text-muted-foreground mb-1">
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    {format(new Date(shipment.quote_data.delivery_date), 'dd/MM/yyyy', { locale: ptBR })}
+                                  </div>
+                                )}
+                                {shipment.format && (
+                                  <div className="text-xs text-muted-foreground">
+                                    <span className="font-medium capitalize">{shipment.format}</span>
                                   </div>
                                 )}
                               </div>
