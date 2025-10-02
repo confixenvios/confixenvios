@@ -118,6 +118,7 @@ export const getClientShipments = async (userId: string): Promise<ClientShipment
 export const getAdminShipments = async (): Promise<AdminShipment[]> => {
   console.log('🔄 [ADMIN SHIPMENTS SERVICE] Iniciando busca de remessas admin...');
   
+  // Buscar remessas normais
   const { data, error } = await supabase
     .from('shipments')
     .select(`
@@ -167,7 +168,7 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
     `)
     .order('created_at', { ascending: false });
 
-  console.log('📊 [ADMIN SHIPMENTS SERVICE] Resultado da query:', {
+  console.log('📊 [ADMIN SHIPMENTS SERVICE] Resultado da query remessas normais:', {
     count: data?.length || 0,
     error: error?.message || 'Sem erro'
   });
@@ -177,7 +178,44 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
     throw error;
   }
 
-  // Buscar informações dos clientes para cada remessa
+  // Buscar remessas B2B
+  const { data: b2bData, error: b2bError } = await supabase
+    .from('b2b_shipments')
+    .select(`
+      id,
+      tracking_code,
+      status,
+      created_at,
+      updated_at,
+      recipient_name,
+      recipient_phone,
+      recipient_cep,
+      recipient_street,
+      recipient_number,
+      recipient_complement,
+      recipient_neighborhood,
+      recipient_city,
+      recipient_state,
+      observations,
+      package_type,
+      volume_count,
+      delivery_type,
+      delivery_date,
+      b2b_client_id,
+      b2b_clients(company_name, email, phone, cnpj)
+    `)
+    .order('created_at', { ascending: false });
+
+  console.log('📊 [ADMIN SHIPMENTS SERVICE] Resultado da query remessas B2B:', {
+    count: b2bData?.length || 0,
+    error: b2bError?.message || 'Sem erro'
+  });
+
+  if (b2bError) {
+    console.error('❌ [ADMIN SHIPMENTS SERVICE] Erro na query B2B:', b2bError);
+  }
+
+  // Buscar informações dos clientes para cada remessa normal
   const shipmentsWithDetails = await Promise.all(
     (data || []).map(async (shipment) => {
       let clientProfile = null;
@@ -198,31 +236,83 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
         motoristas: shipment.motoristas
       };
 
-      // Debug da remessa mais recente
-      if (shipment.tracking_code === 'ID2025XBVLXG') {
-        console.log('🔍 [ADMIN SHIPMENTS SERVICE] Remessa ID2025XBVLXG encontrada:', {
-          id: result.id,
-          tracking_code: result.tracking_code,
-          pricing_table_name: result.pricing_table_name,
-          pricing_table_id: result.pricing_table_id,
-          raw_pricing_table_name: shipment.pricing_table_name,
-          raw_pricing_table_id: shipment.pricing_table_id,
-          client_name: result.client_name
-        });
-      }
-
       return result;
     })
   );
 
-  console.log('✅ [ADMIN SHIPMENTS SERVICE] Processamento concluído:', {
-    totalProcessed: shipmentsWithDetails.length,
-    kennedyShipments: shipmentsWithDetails.filter(s => 
-      s.client_name.toLowerCase().includes('kennedy')
-    ).length
+  // Normalizar remessas B2B para o mesmo formato
+  const b2bShipmentsWithDetails: AdminShipment[] = (b2bData || []).map((b2bShipment) => {
+    const b2bClient = Array.isArray(b2bShipment.b2b_clients) 
+      ? b2bShipment.b2b_clients[0] 
+      : b2bShipment.b2b_clients;
+
+    return {
+      id: b2bShipment.id,
+      tracking_code: b2bShipment.tracking_code || '',
+      status: b2bShipment.status,
+      weight: 0, // B2B não tem peso individual
+      length: 0,
+      width: 0,
+      height: 0,
+      format: b2bShipment.package_type || 'caixa',
+      selected_option: b2bShipment.delivery_type || 'economico',
+      pickup_option: 'pickup',
+      quote_data: {
+        observations: b2bShipment.observations,
+        volume_count: b2bShipment.volume_count,
+        delivery_date: b2bShipment.delivery_date
+      },
+      payment_data: null,
+      created_at: b2bShipment.created_at,
+      label_pdf_url: null,
+      cte_key: null,
+      user_id: undefined,
+      motorista_id: undefined,
+      pricing_table_id: undefined,
+      pricing_table_name: undefined,
+      document_type: 'declaracao_conteudo',
+      client_name: `${b2bClient?.company_name || 'Cliente B2B'} (Expresso)`,
+      sender_address: {
+        name: b2bClient?.company_name || 'Cliente B2B',
+        street: '',
+        number: '',
+        neighborhood: '',
+        city: '',
+        state: '',
+        cep: '',
+        complement: null,
+        reference: null
+      },
+      recipient_address: {
+        name: b2bShipment.recipient_name || '',
+        street: b2bShipment.recipient_street || '',
+        number: b2bShipment.recipient_number || '',
+        neighborhood: b2bShipment.recipient_neighborhood || '',
+        city: b2bShipment.recipient_city || '',
+        state: b2bShipment.recipient_state || '',
+        cep: b2bShipment.recipient_cep || '',
+        complement: b2bShipment.recipient_complement || null,
+        reference: null
+      },
+      motoristas: undefined
+    };
   });
 
-  return shipmentsWithDetails;
+  // Combinar remessas normais e B2B
+  const allShipments = [...shipmentsWithDetails, ...b2bShipmentsWithDetails];
+  
+  // Ordenar por data de criação (mais recente primeiro)
+  allShipments.sort((a, b) => {
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  console.log('✅ [ADMIN SHIPMENTS SERVICE] Processamento concluído:', {
+    totalProcessed: allShipments.length,
+    normalShipments: shipmentsWithDetails.length,
+    b2bShipments: b2bShipmentsWithDetails.length
+  });
+
+  return allShipments;
 };
 
 /**
