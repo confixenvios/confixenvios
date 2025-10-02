@@ -43,6 +43,7 @@ import AdminFiliais from "./pages/admin/AdminFiliais";
 import AdminRemessas from "./pages/admin/AdminRemessas";
 import AdminFaturamento from "./pages/admin/AdminFaturamento";
 import AdminClientesB2B from "./pages/admin/AdminClientesB2B";
+import AdminCadastroClienteB2B from "./pages/admin/AdminCadastroClienteB2B";
 
 import AdminIntegracoes from "./pages/admin/AdminIntegracoes";
 import AdminWebhooks from "./pages/admin/AdminWebhooks";
@@ -124,6 +125,7 @@ const App = () => (
                       <Route path="clientes" element={<AdminClientes />} />
                       <Route path="clientes/:id" element={<AdminClienteDetalhes />} />
                       <Route path="clientes-b2b" element={<AdminClientesB2B />} />
+                      <Route path="clientes-b2b/novo" element={<AdminCadastroClienteB2B />} />
                       <Route path="motoristas" element={<AdminMotoristas />} />
                       <Route path="filiais" element={<AdminFiliais />} />
                       <Route path="faturamento" element={<AdminFaturamento />} />

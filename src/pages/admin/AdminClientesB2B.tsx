@@ -177,15 +177,23 @@ const AdminClientesB2B = () => {
       {/* Search */}
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Clientes</CardTitle>
-          <CardDescription>
-            <Input
-              placeholder="Buscar por nome, e-mail ou CNPJ..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md"
-            />
-          </CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Lista de Clientes</CardTitle>
+              <CardDescription>
+                <Input
+                  placeholder="Buscar por nome, e-mail ou CNPJ..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-md"
+                />
+              </CardDescription>
+            </div>
+            <Button onClick={() => window.location.href = '/admin/clientes-b2b/novo'}>
+              <Building2 className="mr-2 h-4 w-4" />
+              Novo Cliente B2B
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {filteredClients.length === 0 ? (
