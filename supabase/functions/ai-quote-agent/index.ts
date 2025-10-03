@@ -99,43 +99,87 @@ serve(async (req) => {
       throw new Error('OPENAI_API_KEY não configurada');
     }
 
-    const aiPrompt = `Você é um agente especialista em cotações de frete. Analise os dados abaixo e determine qual tabela de preços oferece a melhor opção baseado na prioridade definida.
+    const aiPrompt = `Você é um agente de IA especializado em cotação de fretes que trabalha para o site Confix Envios.
+Sua função é calcular e comparar fretes de diferentes transportadoras a partir de tabelas fornecidas.
 
-Dados da Cotação:
+REGRAS DE CÁLCULO (SIGA ESTRITAMENTE):
+
+1. PESO TARIFÁVEL:
+   - Sempre considere o peso tarifável como o MAIOR entre:
+     * Peso informado (peso real em kg): ${total_weight} kg
+     * Peso cubado: volume total em cm³ dividido pelo divisor de cubagem da transportadora
+     * Peso mínimo tarifável definido na transportadora
+   - Volume total informado: ${total_volume} m³ (${total_volume * 1000000} cm³)
+
+2. CÁLCULO DO FRETE BASE:
+   - Use a tabela de faixas de peso da transportadora
+   - Se o peso tarifável estiver dentro de uma faixa, use o preço fixo dessa faixa
+   - Se ultrapassar o peso-limite definido em generalidades, cobrar o valor por kg excedente multiplicado pelos quilos acima do limite
+
+3. VALIDAÇÃO DE DIMENSÕES:
+   - Verifique se há limite máximo da maior dimensão ou limite da soma das dimensões
+   - Se exceder o limite, RECUSE a cotação (status: "recusado")
+
+4. AD VALOREM E GRIS:
+   - Percentual informado nas generalidades (ad_valorem_percentage e gris_percentage)
+   - Aplicar sobre o valor da mercadoria declarada
+   - Somar ao frete
+
+5. PREÇO FINAL:
+   frete_base + excedente (se houver) + ad_valorem + gris + outros adicionais
+
+DADOS DA COTAÇÃO:
 - CEP Origem: ${origin_cep}
 - CEP Destino: ${destination_cep}
-- Peso Total: ${total_weight} kg
-- Volume Total: ${total_volume} m³
+- Peso Real: ${total_weight} kg
+- Volume Total: ${total_volume} m³ (${total_volume * 1000000} cm³)
 - Prioridade: ${config.priority_mode} (lowest_price = menor preço, fastest_delivery = menor prazo, balanced = equilíbrio)
 
-Tabelas Disponíveis:
+TABELAS DISPONÍVEIS:
 ${JSON.stringify(pricingTables, null, 2)}
 
-Adicionais a Aplicar:
+ADICIONAIS:
 ${JSON.stringify(additionals || [], null, 2)}
 
-Regras Adicionais: ${config.additional_rules || 'Nenhuma'}
+REGRAS ADICIONAIS: ${config.additional_rules || 'Nenhuma'}
 
-IMPORTANTE:
-1. Analise cada tabela e calcule o preço base estimado
-2. Aplique os adicionais relevantes (ad_valorem, gris, insurance, weight_fee, etc.)
-3. Considere a prioridade definida
-4. Retorne APENAS um objeto JSON válido (sem markdown) com esta estrutura:
+SAÍDA ESPERADA:
+Retorne APENAS um objeto JSON válido (sem markdown) com esta estrutura DETALHADA:
 {
   "selected_table_id": "uuid-da-tabela",
   "selected_table_name": "nome-da-tabela",
+  "peso_informado": ${total_weight},
+  "peso_cubado": 0.00,
+  "peso_tarifavel": 0.00,
   "base_price": 100.00,
+  "excedente_kg": 0,
+  "valor_excedente": 0.00,
   "delivery_days": 5,
   "additionals_applied": [
     {
       "name": "Ad Valorem",
       "type": "ad_valorem",
+      "percentage": 0.30,
+      "value": 10.00
+    },
+    {
+      "name": "GRIS",
+      "type": "gris",
+      "percentage": 0.30,
       "value": 10.00
     }
   ],
-  "final_price": 110.00,
-  "reasoning": "Explicação breve da escolha"
-}`;
+  "final_price": 120.00,
+  "status": "ok",
+  "reasoning": "Explicação detalhada: peso tarifável calculado, faixas aplicadas, adicionais incluídos, motivo da escolha"
+}
+
+IMPORTANTE:
+- Nunca ignore regras de generalidades
+- Sempre priorize o MAIOR peso (real ou cubado)
+- SEMPRE inclua ad valorem e gris no cálculo
+- Se houver múltiplas tabelas, ordene por total_final menor (primeiro critério) e menor prazo (segundo critério)
+- Retorne valores em R$ com 2 casas decimais`;
 
     console.log('[AI Quote Agent] Calling OpenAI GPT-5...');
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
