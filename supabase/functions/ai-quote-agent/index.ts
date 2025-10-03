@@ -66,6 +66,51 @@ serve(async (req) => {
       );
     }
 
+    // Buscar dados reais das tabelas (Google Sheets ou arquivo)
+    const tablesWithData = await Promise.all(
+      pricingTables.map(async (table) => {
+        try {
+          let tableData: any[] = [];
+          
+          if (table.source_type === 'google_sheets' && table.google_sheets_url) {
+            // Converter URL do Google Sheets para CSV
+            const csvUrl = table.google_sheets_url
+              .replace('/edit#gid=', '/export?format=csv&gid=')
+              .replace('/edit?usp=sharing', '/export?format=csv');
+            
+            const response = await fetch(csvUrl);
+            const csvText = await response.text();
+            
+            // Parse CSV (formato simples)
+            const lines = csvText.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            
+            tableData = lines.slice(1)
+              .filter(line => line.trim())
+              .map(line => {
+                const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+                const row: any = {};
+                headers.forEach((header, index) => {
+                  row[header] = values[index];
+                });
+                return row;
+              });
+          }
+          
+          return {
+            ...table,
+            pricing_data: tableData,
+          };
+        } catch (error) {
+          console.error(`[AI Quote Agent] Error fetching data for table ${table.name}:`, error);
+          return {
+            ...table,
+            pricing_data: [],
+          };
+        }
+      })
+    );
+
     // Buscar adicionais ativos
     const { data: additionals } = await supabaseClient
       .from('freight_additionals')
@@ -77,7 +122,7 @@ serve(async (req) => {
       return acc + ((vol.length * vol.width * vol.height) / 1000000);
     }, 0);
 
-    // Preparar contexto para a IA
+    // Preparar contexto para a IA com dados completos
     const aiContext = {
       origin_cep,
       destination_cep,
@@ -85,10 +130,20 @@ serve(async (req) => {
       total_volume,
       priority_mode: config.priority_mode,
       additional_rules: config.additional_rules,
-      pricing_tables: pricingTables.map(t => ({
+      pricing_tables: tablesWithData.map(t => ({
         id: t.id,
         name: t.name,
+        cnpj: t.cnpj,
         source_type: t.source_type,
+        ad_valorem_percentage: t.ad_valorem_percentage,
+        gris_percentage: t.gris_percentage,
+        cubic_meter_kg_equivalent: t.cubic_meter_kg_equivalent,
+        excess_weight_threshold_kg: t.excess_weight_threshold_kg,
+        excess_weight_charge_per_kg: t.excess_weight_charge_per_kg,
+        max_length_cm: t.max_length_cm,
+        max_width_cm: t.max_width_cm,
+        max_height_cm: t.max_height_cm,
+        pricing_data: t.pricing_data, // Dados reais da tabela
       })),
       additionals: additionals || [],
     };
@@ -112,9 +167,11 @@ REGRAS DE CÁLCULO (SIGA ESTRITAMENTE):
    - Volume total informado: ${total_volume} m³ (${total_volume * 1000000} cm³)
 
 2. CÁLCULO DO FRETE BASE:
-   - Use a tabela de faixas de peso da transportadora
-   - Se o peso tarifável estiver dentro de uma faixa, use o preço fixo dessa faixa
-   - Se ultrapassar o peso-limite definido em generalidades, cobrar o valor por kg excedente multiplicado pelos quilos acima do limite
+   - Use os dados reais em 'pricing_data' de cada tabela
+   - Encontre a faixa de CEP de destino que corresponde ao CEP ${destination_cep}
+   - Dentro dessa faixa, encontre o valor para o peso tarifável
+   - As colunas geralmente são: CEP_INICIO, CEP_FIM, PESO_1, PESO_2, PESO_3, etc.
+   - Se ultrapassar o peso máximo da tabela (excess_weight_threshold_kg), cobrar o valor por kg excedente (excess_weight_charge_per_kg) multiplicado pelos quilos acima do limite
 
 3. VALIDAÇÃO DE DIMENSÕES:
    - Verifique se há limite máximo da maior dimensão ou limite da soma das dimensões
@@ -135,8 +192,8 @@ DADOS DA COTAÇÃO:
 - Volume Total: ${total_volume} m³ (${total_volume * 1000000} cm³)
 - Prioridade: ${config.priority_mode} (lowest_price = menor preço, fastest_delivery = menor prazo, balanced = equilíbrio)
 
-TABELAS DISPONÍVEIS:
-${JSON.stringify(pricingTables, null, 2)}
+TABELAS DISPONÍVEIS (com dados reais de preços):
+${JSON.stringify(aiContext.pricing_tables, null, 2)}
 
 ADICIONAIS:
 ${JSON.stringify(additionals || [], null, 2)}
@@ -250,7 +307,7 @@ IMPORTANTE:
         delivery_days: aiResult.delivery_days,
         priority_used: config.priority_mode,
         all_options_analyzed: {
-          tables_analyzed: pricingTables.length,
+          tables_analyzed: tablesWithData.length,
           reasoning: aiResult.reasoning,
         },
       }]);
