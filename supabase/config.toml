@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.cte-webhook]
 verify_jwt = false
+
+[functions.ai-quote-agent]
+verify_jwt = false

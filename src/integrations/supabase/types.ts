@@ -79,6 +79,104 @@ export type Database = {
           },
         ]
       }
+      ai_quote_config: {
+        Row: {
+          additional_rules: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          preferred_carriers: Json | null
+          priority_mode: string
+          updated_at: string
+        }
+        Insert: {
+          additional_rules?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          preferred_carriers?: Json | null
+          priority_mode?: string
+          updated_at?: string
+        }
+        Update: {
+          additional_rules?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          preferred_carriers?: Json | null
+          priority_mode?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_quote_logs: {
+        Row: {
+          additionals_applied: Json | null
+          all_options_analyzed: Json | null
+          base_price: number
+          created_at: string
+          delivery_days: number
+          destination_cep: string
+          final_price: number
+          id: string
+          origin_cep: string
+          priority_used: string
+          selected_pricing_table_id: string | null
+          selected_pricing_table_name: string | null
+          session_id: string | null
+          total_volume: number
+          total_weight: number
+          user_id: string | null
+          volumes_data: Json
+        }
+        Insert: {
+          additionals_applied?: Json | null
+          all_options_analyzed?: Json | null
+          base_price: number
+          created_at?: string
+          delivery_days: number
+          destination_cep: string
+          final_price: number
+          id?: string
+          origin_cep: string
+          priority_used: string
+          selected_pricing_table_id?: string | null
+          selected_pricing_table_name?: string | null
+          session_id?: string | null
+          total_volume: number
+          total_weight: number
+          user_id?: string | null
+          volumes_data: Json
+        }
+        Update: {
+          additionals_applied?: Json | null
+          all_options_analyzed?: Json | null
+          base_price?: number
+          created_at?: string
+          delivery_days?: number
+          destination_cep?: string
+          final_price?: number
+          id?: string
+          origin_cep?: string
+          priority_used?: string
+          selected_pricing_table_id?: string | null
+          selected_pricing_table_name?: string | null
+          session_id?: string | null
+          total_volume?: number
+          total_weight?: number
+          user_id?: string | null
+          volumes_data?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_quote_logs_selected_pricing_table_id_fkey"
+            columns: ["selected_pricing_table_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       anonymous_sessions: {
         Row: {
           client_fingerprint: string | null
@@ -490,6 +588,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      freight_additionals: {
+        Row: {
+          calculation_method: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          type: string
+          updated_at: string
+          value: number
+          weight_range_max: number | null
+          weight_range_min: number | null
+        }
+        Insert: {
+          calculation_method: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          type: string
+          updated_at?: string
+          value: number
+          weight_range_max?: number | null
+          weight_range_min?: number | null
+        }
+        Update: {
+          calculation_method?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          type?: string
+          updated_at?: string
+          value?: number
+          weight_range_max?: number | null
+          weight_range_min?: number | null
+        }
+        Relationships: []
       }
       integration_audit_logs: {
         Row: {

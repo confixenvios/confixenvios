@@ -21,7 +21,8 @@ import {
   Truck,
   Building2,
   BarChart3,
-  Key
+  Key,
+  Bot
 } from "lucide-react";
 import { NavLink, useLocation } from 'react-router-dom';
 
@@ -67,6 +68,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'Remessas', href: '/admin/remessas', icon: Package },
     { name: 'Cte', href: '/admin/cte', icon: FileText },
     { name: 'Gestão de Tabelas', href: '/admin/tabelas', icon: Database },
+    { name: 'Agente IA de Cotação', href: '/admin/agente-ia', icon: Bot },
     { name: 'Relatórios', href: '/admin/relatorios', icon: BarChart3 },
     { name: 'Integrações', href: '/admin/integracoes', icon: Puzzle },
     { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },

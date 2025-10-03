@@ -48,6 +48,7 @@ import AdminIntegracoes from "./pages/admin/AdminIntegracoes";
 import AdminWebhooks from "./pages/admin/AdminWebhooks";
 import AdminApiKeys from "./pages/admin/AdminApiKeys";
 import ApiDocs from "./pages/ApiDocs";
+import AdminAgenteIA from "./pages/admin/AdminAgenteIA";
 
 
 import AdminTabelas from "./pages/admin/AdminTabelas";
@@ -137,6 +138,7 @@ const App = () => (
                        <Route path="webhooks" element={<AdminWebhooks />} />
                        <Route path="api-keys" element={<AdminApiKeys />} />
                        <Route path="api-docs" element={<Navigate to="/api-docs" replace />} />
+                       <Route path="agente-ia" element={<AdminAgenteIA />} />
                       
                       
                     </Routes>
