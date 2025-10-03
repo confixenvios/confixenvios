@@ -1139,14 +1139,18 @@ const QuoteForm = () => {
                       <CardTitle className="text-base font-semibold">Resumo dos Volumes</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">Quantidade de Volumes</p>
                           <p className="text-2xl font-bold text-primary">{formData.volumes.length}</p>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Peso Total</p>
+                          <p className="text-xs text-muted-foreground">Peso Total Declarado</p>
                           <p className="text-2xl font-bold">{calculateTotalWeight().toFixed(2)} kg</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Peso Total Cubado</p>
+                          <p className="text-2xl font-bold">{calculateTotalCubicWeight().toFixed(2)} kg</p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">Volume Total</p>
