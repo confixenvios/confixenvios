@@ -93,10 +93,10 @@ serve(async (req) => {
       additionals: additionals || [],
     };
 
-    // Chamar Lovable AI para analisar e selecionar a melhor tabela
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY não configurada');
+    // Chamar OpenAI GPT-5 para analisar e selecionar a melhor tabela
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY não configurada');
     }
 
     const aiPrompt = `Você é um agente especialista em cotações de frete. Analise os dados abaixo e determine qual tabela de preços oferece a melhor opção baseado na prioridade definida.
@@ -137,14 +137,15 @@ IMPORTANTE:
   "reasoning": "Explicação breve da escolha"
 }`;
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    console.log('[AI Quote Agent] Calling OpenAI GPT-5...');
+    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'gpt-5-2025-08-07',
         messages: [
           { 
             role: 'system', 
@@ -152,7 +153,8 @@ IMPORTANTE:
           },
           { role: 'user', content: aiPrompt }
         ],
-        temperature: 0.3,
+        max_completion_tokens: 2000,
+        response_format: { type: "json_object" }
       }),
     });
 
