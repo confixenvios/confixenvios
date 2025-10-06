@@ -400,17 +400,18 @@ export class PricingTableService {
     let grisValue: number | undefined;
     
     if (merchandiseValue && merchandiseValue > 0) {
-      if (table.ad_valorem_percentage && table.ad_valorem_percentage > 0) {
-        adValoremValue = (merchandiseValue * table.ad_valorem_percentage) / 100;
-        totalPrice += adValoremValue;
-        console.log(`Ad Valorem (${table.ad_valorem_percentage}%): R$ ${adValoremValue.toFixed(2)}`);
-      }
+      // Valores padrão: 0.003 (0.3%) cada
+      const adValoremPercentage = table.ad_valorem_percentage || 0.003;
+      const grisPercentage = table.gris_percentage || 0.003;
       
-      if (table.gris_percentage && table.gris_percentage > 0) {
-        grisValue = (merchandiseValue * table.gris_percentage) / 100;
-        totalPrice += grisValue;
-        console.log(`GRIS (${table.gris_percentage}%): R$ ${grisValue.toFixed(2)}`);
-      }
+      // Aplicar diretamente (valores já estão em decimal: 0.003 = 0.3%)
+      adValoremValue = merchandiseValue * adValoremPercentage;
+      totalPrice += adValoremValue;
+      console.log(`Ad Valorem (${(adValoremPercentage * 100).toFixed(2)}%): R$ ${adValoremValue.toFixed(2)}`);
+      
+      grisValue = merchandiseValue * grisPercentage;
+      totalPrice += grisValue;
+      console.log(`GRIS (${(grisPercentage * 100).toFixed(2)}%): R$ ${grisValue.toFixed(2)}`);
     }
 
     // Add excess weight charge to total
@@ -612,15 +613,18 @@ export class PricingTableService {
     let grisValue: number | undefined;
     
     if (merchandiseValue && merchandiseValue > 0) {
-      if (table.ad_valorem_percentage && table.ad_valorem_percentage > 0) {
-        adValoremValue = (merchandiseValue * table.ad_valorem_percentage) / 100;
-        totalPrice += adValoremValue;
-      }
+      // Valores padrão: 0.003 (0.3%) cada
+      const adValoremPercentage = table.ad_valorem_percentage || 0.003;
+      const grisPercentage = table.gris_percentage || 0.003;
       
-      if (table.gris_percentage && table.gris_percentage > 0) {
-        grisValue = (merchandiseValue * table.gris_percentage) / 100;
-        totalPrice += grisValue;
-      }
+      // Aplicar diretamente (valores já estão em decimal: 0.003 = 0.3%)
+      adValoremValue = merchandiseValue * adValoremPercentage;
+      totalPrice += adValoremValue;
+      console.log(`[combineSheetsData] Ad Valorem (${(adValoremPercentage * 100).toFixed(2)}%): R$ ${adValoremValue.toFixed(2)}`);
+      
+      grisValue = merchandiseValue * grisPercentage;
+      totalPrice += grisValue;
+      console.log(`[combineSheetsData] GRIS (${(grisPercentage * 100).toFixed(2)}%): R$ ${grisValue.toFixed(2)}`);
     }
     
     // Add excess weight charge to total
