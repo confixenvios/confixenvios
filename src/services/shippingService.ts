@@ -39,8 +39,8 @@ export const calculateShippingQuote = async ({
     console.log(`Iniciando cálculo de frete - CEP: ${destinyCep}, Peso: ${weight}kg, Qtd: ${quantity}`);
     
     // OTIMIZAÇÃO: Verificar cache local primeiro (evita chamadas repetidas)
-    const cacheKey = `pricing_tables_${Date.now()}`;
-    const cachedResult = sessionStorage.getItem('pricing_fallback_' + destinyCep + '_' + weight);
+    const cacheKey = `pricing_fallback_${destinyCep}_${weight}_${merchandiseValue || 0}`;
+    const cachedResult = sessionStorage.getItem(cacheKey);
     
     if (cachedResult) {
       console.log('Usando resultado em cache');
@@ -71,7 +71,7 @@ export const calculateShippingQuote = async ({
     if (multiTableQuote) {
       console.log('Cotação encontrada via tabelas:', multiTableQuote);
       // Cache por 5 minutos
-      sessionStorage.setItem('pricing_fallback_' + destinyCep + '_' + weight, JSON.stringify(multiTableQuote));
+      sessionStorage.setItem(cacheKey, JSON.stringify(multiTableQuote));
       return multiTableQuote;
     }
 
@@ -88,7 +88,7 @@ export const calculateShippingQuote = async ({
     });
     
     // Cache o resultado do fallback por 2 minutos
-    sessionStorage.setItem('pricing_fallback_' + destinyCep + '_' + weight, JSON.stringify(legacyQuote));
+    sessionStorage.setItem(cacheKey, JSON.stringify(legacyQuote));
     
     return legacyQuote;
     
