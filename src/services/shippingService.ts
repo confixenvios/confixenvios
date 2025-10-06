@@ -197,6 +197,8 @@ const calculateLegacyShippingQuote = async ({
   // Multiplica o preço base pela quantidade de pacotes e adiciona cargo de excesso
   const basePriceWithQuantity = (basePrice + excessWeightCharge) * quantity;
   
+  console.log(`📦 Cálculo base: R$${basePrice.toFixed(2)} + R$${excessWeightCharge.toFixed(2)} (excesso) × ${quantity} (qtd) = R$${basePriceWithQuantity.toFixed(2)}`);
+  
   // Aplicar GRIS e Ad Valorem (0.3% cada, totalizando 0.6%)
   let adValoremValue = 0;
   let grisValue = 0;
@@ -208,11 +210,16 @@ const calculateLegacyShippingQuote = async ({
     adValoremValue = merchandiseValue * adValoremPercentage;
     grisValue = merchandiseValue * grisPercentage;
     
-    console.log(`💎 Ad Valorem (0.3%): R$${adValoremValue.toFixed(2)} + GRIS (0.3%): R$${grisValue.toFixed(2)}`);
+    console.log(`💎 Valor da mercadoria: R$${merchandiseValue.toFixed(2)}`);
+    console.log(`💎 Ad Valorem (0.3%): R$${adValoremValue.toFixed(2)}`);
+    console.log(`💎 GRIS (0.3%): R$${grisValue.toFixed(2)}`);
+    console.log(`💎 Total GRIS + Ad Valorem: R$${(adValoremValue + grisValue).toFixed(2)}`);
   }
   
-  // Preço econômico é o preço base + excesso + GRIS + Ad Valorem, multiplicado pela quantidade
+  // Preço econômico é o preço base + excesso + GRIS + Ad Valorem
   const economicPrice = basePriceWithQuantity + adValoremValue + grisValue;
+  
+  console.log(`✅ Preço Econômico Final: R$${basePriceWithQuantity.toFixed(2)} + R$${(adValoremValue + grisValue).toFixed(2)} = R$${economicPrice.toFixed(2)}`);
   
   // Preço expresso tem 60% de acréscimo sobre o preço base + excesso, depois adiciona GRIS + Ad Valorem
   const expressPrice = (basePriceWithQuantity * 1.6) + adValoremValue + grisValue;
