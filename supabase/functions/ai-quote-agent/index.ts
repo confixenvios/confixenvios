@@ -161,8 +161,8 @@ serve(async (req) => {
         name: t.name,
         cnpj: t.cnpj,
         source_type: t.source_type,
-        ad_valorem_percentage: t.ad_valorem_percentage,
-        gris_percentage: t.gris_percentage,
+        ad_valorem_percentage: t.ad_valorem_percentage || 0.003,
+        gris_percentage: t.gris_percentage || 0.003,
         cubic_meter_kg_equivalent: t.cubic_meter_kg_equivalent,
         excess_weight_threshold_kg: t.excess_weight_threshold_kg,
         excess_weight_charge_per_kg: t.excess_weight_charge_per_kg,
@@ -206,9 +206,10 @@ REGRAS DE CÁLCULO (SIGA ESTRITAMENTE):
    - Se exceder o limite, RECUSE a cotação (status: "recusado")
 
 4. AD VALOREM E GRIS:
-   - Percentual informado nas generalidades (ad_valorem_percentage e gris_percentage)
-   - Aplicar sobre o valor da mercadoria declarada
-   - Somar ao frete
+   - Percentual padrão: 0,3% cada (0.003 em decimal) = total 0,6%
+   - Se informado nas generalidades, use ad_valorem_percentage e gris_percentage
+   - Aplicar sobre o valor da mercadoria declarada (não sobre o frete base)
+   - SEMPRE somar ao frete base para obter o preço final
 
 5. PREÇO FINAL:
    frete_base + excedente (se houver) + ad_valorem + gris + outros adicionais
@@ -244,14 +245,14 @@ Retorne APENAS um objeto JSON válido (sem markdown) com esta estrutura DETALHAD
     {
       "name": "Ad Valorem",
       "type": "ad_valorem",
-      "percentage": 0.30,
-      "value": 10.00
+      "percentage": 0.003,
+      "value": 0.00
     },
     {
       "name": "GRIS",
       "type": "gris",
-      "percentage": 0.30,
-      "value": 10.00
+      "percentage": 0.003,
+      "value": 0.00
     }
   ],
   "final_price": 120.00,
@@ -262,7 +263,8 @@ Retorne APENAS um objeto JSON válido (sem markdown) com esta estrutura DETALHAD
 IMPORTANTE:
 - Nunca ignore regras de generalidades
 - Sempre priorize o MAIOR peso (real ou cubado)
-- SEMPRE inclua ad valorem e gris no cálculo
+- SEMPRE inclua ad valorem (0,3%) e gris (0,3%) no cálculo sobre o valor da mercadoria
+- Ad Valorem + GRIS = 0,6% do valor da mercadoria (não do frete)
 - Se houver múltiplas tabelas, ordene por total_final menor (primeiro critério) e menor prazo (segundo critério)
 - Retorne valores em R$ com 2 casas decimais`;
 
