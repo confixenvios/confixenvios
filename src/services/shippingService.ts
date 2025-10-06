@@ -77,7 +77,15 @@ export const calculateShippingQuote = async ({
 
     // Fallback IMEDIATO para o sistema legado
     console.log('Usando sistema legado como fallback');
-    const legacyQuote = await calculateLegacyShippingQuote({ destinyCep, weight, quantity });
+    const legacyQuote = await calculateLegacyShippingQuote({ 
+      destinyCep, 
+      weight, 
+      quantity,
+      length,
+      width,
+      height,
+      merchandiseValue 
+    });
     
     // Cache o resultado do fallback por 2 minutos
     sessionStorage.setItem('pricing_fallback_' + destinyCep + '_' + weight, JSON.stringify(legacyQuote));
@@ -101,7 +109,8 @@ export const calculateShippingQuote = async ({
 const calculateLegacyShippingQuote = async ({
   destinyCep,
   weight,
-  quantity = 1
+  quantity = 1,
+  merchandiseValue
 }: QuoteRequest): Promise<ShippingQuote> => {
   console.log(`Calculando via sistema legado - CEP: ${destinyCep}, Peso: ${weight}kg`);
   
@@ -188,11 +197,25 @@ const calculateLegacyShippingQuote = async ({
   // Multiplica o preço base pela quantidade de pacotes e adiciona cargo de excesso
   const basePriceWithQuantity = (basePrice + excessWeightCharge) * quantity;
   
-  // Preço econômico é o preço base + excesso, multiplicado pela quantidade
-  const economicPrice = basePriceWithQuantity;
+  // Aplicar GRIS e Ad Valorem (0.3% cada, totalizando 0.6%)
+  let adValoremValue = 0;
+  let grisValue = 0;
   
-  // Preço expresso tem 60% de acréscimo
-  const expressPrice = basePriceWithQuantity * 1.6;
+  if (merchandiseValue && merchandiseValue > 0) {
+    const adValoremPercentage = 0.003; // 0.3%
+    const grisPercentage = 0.003; // 0.3%
+    
+    adValoremValue = merchandiseValue * adValoremPercentage;
+    grisValue = merchandiseValue * grisPercentage;
+    
+    console.log(`💎 Ad Valorem (0.3%): R$${adValoremValue.toFixed(2)} + GRIS (0.3%): R$${grisValue.toFixed(2)}`);
+  }
+  
+  // Preço econômico é o preço base + excesso + GRIS + Ad Valorem, multiplicado pela quantidade
+  const economicPrice = basePriceWithQuantity + adValoremValue + grisValue;
+  
+  // Preço expresso tem 60% de acréscimo sobre o preço base + excesso, depois adiciona GRIS + Ad Valorem
+  const expressPrice = (basePriceWithQuantity * 1.6) + adValoremValue + grisValue;
 
   const result = {
     economicPrice: Number(economicPrice.toFixed(2)),
