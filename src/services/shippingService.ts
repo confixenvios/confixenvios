@@ -199,22 +199,16 @@ const calculateLegacyShippingQuote = async ({
   
   console.log(`📦 Cálculo base: R$${basePrice.toFixed(2)} + R$${excessWeightCharge.toFixed(2)} (excesso) × ${quantity} (qtd) = R$${basePriceWithQuantity.toFixed(2)}`);
   
-  // Aplicar GRIS e Ad Valorem (0.3% cada, totalizando 0.6%)
-  let adValoremValue = 0;
-  let grisValue = 0;
+  // Aplicar GRIS e Ad Valorem (0.3% cada, totalizando 0.6%) sobre o FRETE
+  const adValoremPercentage = 0.003; // 0.3%
+  const grisPercentage = 0.003; // 0.3%
   
-  if (merchandiseValue && merchandiseValue > 0) {
-    const adValoremPercentage = 0.003; // 0.3%
-    const grisPercentage = 0.003; // 0.3%
-    
-    adValoremValue = merchandiseValue * adValoremPercentage;
-    grisValue = merchandiseValue * grisPercentage;
-    
-    console.log(`💎 Valor da mercadoria: R$${merchandiseValue.toFixed(2)}`);
-    console.log(`💎 Ad Valorem (0.3%): R$${adValoremValue.toFixed(2)}`);
-    console.log(`💎 GRIS (0.3%): R$${grisValue.toFixed(2)}`);
-    console.log(`💎 Total GRIS + Ad Valorem: R$${(adValoremValue + grisValue).toFixed(2)}`);
-  }
+  const adValoremValue = basePriceWithQuantity * adValoremPercentage;
+  const grisValue = basePriceWithQuantity * grisPercentage;
+  
+  console.log(`💎 GRIS (0.3% do frete): R$${grisValue.toFixed(2)}`);
+  console.log(`💎 Ad Valorem (0.3% do frete): R$${adValoremValue.toFixed(2)}`);
+  console.log(`💎 Total GRIS + Ad Valorem: R$${(adValoremValue + grisValue).toFixed(2)}`);
   
   // Preço econômico é o preço base + excesso + GRIS + Ad Valorem
   const economicPrice = basePriceWithQuantity + adValoremValue + grisValue;
