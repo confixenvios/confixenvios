@@ -144,10 +144,10 @@ export class PricingTableService {
   }
 
   /**
-   * Obtém cotação de uma tabela específica
+   * Obtém cotação de uma tabela específica - PÚBLICO para auditoria IA
    */
-  private static async getQuoteFromTable(
-    table: any, 
+  static async getQuoteFromTable(
+    table: any,
     { destinyCep, weight, quantity, length, width, height, merchandiseValue }: { 
       destinyCep: string; 
       weight: number; 
