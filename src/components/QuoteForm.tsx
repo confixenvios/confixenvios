@@ -950,7 +950,7 @@ const QuoteForm = () => {
                     </div>
                     
                     <div className="space-y-3">
-                      <Label htmlFor="totalValue" className="text-base font-medium">Valor Total (R$)</Label>
+                      <Label htmlFor="totalValue" className="text-base font-medium">Valor Total Declarado (R$)</Label>
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium text-muted-foreground">
                           R$
@@ -964,6 +964,14 @@ const QuoteForm = () => {
                           className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg pl-12"
                         />
                       </div>
+                      {formData.unitValue && parseFloat(formData.unitValue) > 0 && (
+                        <p className="text-sm text-muted-foreground flex items-center justify-between">
+                          <span>Valor do seguro (0,6%):</span>
+                          <span className="font-semibold text-primary">
+                            R$ {(getTotalMerchandiseValue() * 0.006).toFixed(2)}
+                          </span>
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

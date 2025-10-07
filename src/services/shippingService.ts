@@ -11,6 +11,8 @@ export interface ShippingQuote {
   tableId?: string;
   tableName?: string;
   cnpj?: string;
+  insuranceValue?: number;
+  basePrice?: number;
 }
 
 export interface QuoteRequest {
@@ -199,24 +201,22 @@ const calculateLegacyShippingQuote = async ({
   
   console.log(`📦 Cálculo base: R$${basePrice.toFixed(2)} + R$${excessWeightCharge.toFixed(2)} (excesso) × ${quantity} (qtd) = R$${basePriceWithQuantity.toFixed(2)}`);
   
-  // Aplicar GRIS e Ad Valorem (0.3% cada, totalizando 0.6%) sobre o FRETE
-  const adValoremPercentage = 0.003; // 0.3%
-  const grisPercentage = 0.003; // 0.3%
+  // Calcular seguro (0.6% do valor da mercadoria declarada)
+  let insuranceValue = 0;
+  if (merchandiseValue && merchandiseValue > 0) {
+    const insurancePercentage = 0.006; // 0.6%
+    insuranceValue = merchandiseValue * insurancePercentage;
+    console.log(`🛡️ Valor da mercadoria: R$${merchandiseValue.toFixed(2)}`);
+    console.log(`🛡️ Seguro (0.6%): R$${insuranceValue.toFixed(2)}`);
+  }
   
-  const adValoremValue = basePriceWithQuantity * adValoremPercentage;
-  const grisValue = basePriceWithQuantity * grisPercentage;
+  // Preço econômico é o preço base da tabela + seguro
+  const economicPrice = basePriceWithQuantity + insuranceValue;
   
-  console.log(`💎 GRIS (0.3% do frete): R$${grisValue.toFixed(2)}`);
-  console.log(`💎 Ad Valorem (0.3% do frete): R$${adValoremValue.toFixed(2)}`);
-  console.log(`💎 Total GRIS + Ad Valorem: R$${(adValoremValue + grisValue).toFixed(2)}`);
+  console.log(`✅ Preço Econômico Final: R$${basePriceWithQuantity.toFixed(2)} (tabela) + R$${insuranceValue.toFixed(2)} (seguro) = R$${economicPrice.toFixed(2)}`);
   
-  // Preço econômico é o preço base + excesso + GRIS + Ad Valorem
-  const economicPrice = basePriceWithQuantity + adValoremValue + grisValue;
-  
-  console.log(`✅ Preço Econômico Final: R$${basePriceWithQuantity.toFixed(2)} + R$${(adValoremValue + grisValue).toFixed(2)} = R$${economicPrice.toFixed(2)}`);
-  
-  // Preço expresso tem 60% de acréscimo sobre o preço base + excesso, depois adiciona GRIS + Ad Valorem
-  const expressPrice = (basePriceWithQuantity * 1.6) + adValoremValue + grisValue;
+  // Preço expresso tem 60% de acréscimo sobre o preço base + seguro
+  const expressPrice = (basePriceWithQuantity * 1.6) + insuranceValue;
 
   const result = {
     economicPrice: Number(economicPrice.toFixed(2)),
@@ -227,7 +227,9 @@ const calculateLegacyShippingQuote = async ({
     zoneName: `${zone.state} - ${zone.zone_type === 'CAP' ? 'Capital' : 'Interior'}`,
     tableId: 'legacy',
     tableName: 'Sistema Legado Confix',
-    cnpj: '00000000000000'
+    cnpj: '00000000000000',
+    insuranceValue: Number(insuranceValue.toFixed(2)),
+    basePrice: Number(basePriceWithQuantity.toFixed(2))
   };
   
   console.log('Cotação calculada via sistema legado:', result);

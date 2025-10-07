@@ -11,8 +11,8 @@ export interface PricingTableQuote {
   tableId: string;
   tableName: string;
   cnpj: string;
-  adValoremValue?: number;
-  grisValue?: number;
+  insuranceValue?: number;
+  basePrice?: number;
   cubicWeight?: number;
   appliedWeight?: number;
 }
@@ -394,24 +394,17 @@ export class PricingTableService {
     }
 
     let totalPrice = basePrice * quantity;
+    const basePriceWithQuantity = totalPrice; // Guardar preço base antes do seguro
     
-    // Aplicar Ad Valorem e GRIS se houver valor da mercadoria e percentuais configurados
-    let adValoremValue: number | undefined;
-    let grisValue: number | undefined;
+    // Aplicar Seguro (0.6% do valor da mercadoria declarada)
+    let insuranceValue: number | undefined;
     
     if (merchandiseValue && merchandiseValue > 0) {
-      // Valores padrão: 0.003 (0.3%) cada
-      const adValoremPercentage = table.ad_valorem_percentage || 0.003;
-      const grisPercentage = table.gris_percentage || 0.003;
+      const insurancePercentage = 0.006; // 0.6%
       
-      // Aplicar diretamente (valores já estão em decimal: 0.003 = 0.3%)
-      adValoremValue = merchandiseValue * adValoremPercentage;
-      totalPrice += adValoremValue;
-      console.log(`Ad Valorem (${(adValoremPercentage * 100).toFixed(2)}%): R$ ${adValoremValue.toFixed(2)}`);
-      
-      grisValue = merchandiseValue * grisPercentage;
-      totalPrice += grisValue;
-      console.log(`GRIS (${(grisPercentage * 100).toFixed(2)}%): R$ ${grisValue.toFixed(2)}`);
+      insuranceValue = merchandiseValue * insurancePercentage;
+      totalPrice += insuranceValue;
+      console.log(`🛡️ Seguro (0.6%): R$ ${insuranceValue.toFixed(2)}`);
     }
 
     // Add excess weight charge to total
@@ -427,8 +420,8 @@ export class PricingTableService {
       tableId: table.id,
       tableName: table.name,
       cnpj: table.cnpj,
-      adValoremValue,
-      grisValue,
+      insuranceValue,
+      basePrice: Number(basePriceWithQuantity.toFixed(2)),
       cubicWeight,
       appliedWeight
     };
@@ -607,24 +600,17 @@ export class PricingTableService {
     }
     
     let totalPrice = basePrice * quantity;
+    const basePriceWithQuantity = totalPrice; // Guardar preço base antes do seguro
     
-    // Aplicar Ad Valorem e GRIS
-    let adValoremValue: number | undefined;
-    let grisValue: number | undefined;
+    // Aplicar Seguro (0.6% do valor da mercadoria declarada)
+    let insuranceValue: number | undefined;
     
     if (merchandiseValue && merchandiseValue > 0) {
-      // Valores padrão: 0.003 (0.3%) cada
-      const adValoremPercentage = table.ad_valorem_percentage || 0.003;
-      const grisPercentage = table.gris_percentage || 0.003;
+      const insurancePercentage = 0.006; // 0.6%
       
-      // Aplicar diretamente (valores já estão em decimal: 0.003 = 0.3%)
-      adValoremValue = merchandiseValue * adValoremPercentage;
-      totalPrice += adValoremValue;
-      console.log(`[combineSheetsData] Ad Valorem (${(adValoremPercentage * 100).toFixed(2)}%): R$ ${adValoremValue.toFixed(2)}`);
-      
-      grisValue = merchandiseValue * grisPercentage;
-      totalPrice += grisValue;
-      console.log(`[combineSheetsData] GRIS (${(grisPercentage * 100).toFixed(2)}%): R$ ${grisValue.toFixed(2)}`);
+      insuranceValue = merchandiseValue * insurancePercentage;
+      totalPrice += insuranceValue;
+      console.log(`[combineSheetsData] 🛡️ Seguro (0.6%): R$ ${insuranceValue.toFixed(2)}`);
     }
     
     // Add excess weight charge to total
@@ -640,8 +626,8 @@ export class PricingTableService {
       tableId: table.id,
       tableName: table.name,
       cnpj: table.cnpj,
-      adValoremValue,
-      grisValue,
+      insuranceValue,
+      basePrice: Number(basePriceWithQuantity.toFixed(2)),
       cubicWeight,
       appliedWeight
     };

@@ -174,21 +174,21 @@ const Results = () => {
                   </div>
                   
                   {/* Detalhamento do valor */}
-                  {(quoteData.shippingQuote.adValoremValue || quoteData.shippingQuote.grisValue || quoteData.weight > 30) && (
+                  {(quoteData.shippingQuote.insuranceValue || quoteData.shippingQuote.basePrice || quoteData.weight > 30) && (
                     <div className="mt-4 pt-4 border-t space-y-2 text-sm">
                       <div className="font-medium text-muted-foreground mb-2">Composição do valor:</div>
                       
-                      {quoteData.shippingQuote.adValoremValue && (
+                      {quoteData.shippingQuote.basePrice && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Ad Valorem (0,3%)</span>
-                          <span>R$ {quoteData.shippingQuote.adValoremValue.toFixed(2)}</span>
+                          <span className="text-muted-foreground">Preço da tabela</span>
+                          <span>R$ {quoteData.shippingQuote.basePrice.toFixed(2)}</span>
                         </div>
                       )}
                       
-                      {quoteData.shippingQuote.grisValue && (
+                      {quoteData.shippingQuote.insuranceValue && quoteData.shippingQuote.insuranceValue > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">GRIS (0,3%)</span>
-                          <span>R$ {quoteData.shippingQuote.grisValue.toFixed(2)}</span>
+                          <span className="text-muted-foreground">Seguro (0,6% do valor declarado)</span>
+                          <span>R$ {quoteData.shippingQuote.insuranceValue.toFixed(2)}</span>
                         </div>
                       )}
                       
