@@ -52,6 +52,7 @@ import AdminAgenteIA from "./pages/admin/AdminAgenteIA";
 
 
 import AdminTabelas from "./pages/admin/AdminTabelas";
+import AdminJadlogImport from "./pages/admin/AdminJadlogImport";
 import AdminRelatorios from "./pages/admin/AdminRelatorios";
 import AdminCte from "./pages/admin/AdminCte";
 import MotoristaAuth from "./pages/motorista/MotoristaAuth";
@@ -131,8 +132,9 @@ const App = () => (
                       <Route path="filiais" element={<AdminFiliais />} />
                       <Route path="faturamento" element={<AdminFaturamento />} />
                       <Route path="remessas" element={<AdminRemessas />} />
-                      <Route path="cte" element={<AdminCte />} />
+                     <Route path="cte" element={<AdminCte />} />
                        <Route path="tabelas" element={<AdminTabelas />} />
+                       <Route path="importar-jadlog" element={<AdminJadlogImport />} />
                        <Route path="relatorios" element={<AdminRelatorios />} />
                        <Route path="integracoes" element={<AdminIntegracoes />} />
                        <Route path="webhooks" element={<AdminWebhooks />} />

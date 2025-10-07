@@ -694,6 +694,84 @@ export type Database = {
         }
         Relationships: []
       }
+      jadlog_pricing: {
+        Row: {
+          created_at: string
+          destination_state: string
+          id: string
+          origin_state: string
+          price: number
+          tariff_type: string
+          updated_at: string
+          weight_max: number
+          weight_min: number
+        }
+        Insert: {
+          created_at?: string
+          destination_state: string
+          id?: string
+          origin_state: string
+          price: number
+          tariff_type: string
+          updated_at?: string
+          weight_max: number
+          weight_min: number
+        }
+        Update: {
+          created_at?: string
+          destination_state?: string
+          id?: string
+          origin_state?: string
+          price?: number
+          tariff_type?: string
+          updated_at?: string
+          weight_max?: number
+          weight_min?: number
+        }
+        Relationships: []
+      }
+      jadlog_zones: {
+        Row: {
+          cep_end: string | null
+          cep_start: string | null
+          created_at: string
+          delivery_days: number | null
+          express_delivery_days: number | null
+          id: string
+          state: string
+          tariff_type: string
+          updated_at: string
+          zone_code: string
+          zone_type: string
+        }
+        Insert: {
+          cep_end?: string | null
+          cep_start?: string | null
+          created_at?: string
+          delivery_days?: number | null
+          express_delivery_days?: number | null
+          id?: string
+          state: string
+          tariff_type: string
+          updated_at?: string
+          zone_code: string
+          zone_type: string
+        }
+        Update: {
+          cep_end?: string | null
+          cep_start?: string | null
+          created_at?: string
+          delivery_days?: number | null
+          express_delivery_days?: number | null
+          id?: string
+          state?: string
+          tariff_type?: string
+          updated_at?: string
+          zone_code?: string
+          zone_type?: string
+        }
+        Relationships: []
+      }
       motoristas: {
         Row: {
           cpf: string
