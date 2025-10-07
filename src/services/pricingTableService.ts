@@ -91,10 +91,12 @@ export class PricingTableService {
         return await this.getFallbackQuote({ destinyCep, weight, quantity });
       }
 
-      // OTIMIZAÇÃO: Processar tabelas em paralelo com timeout reduzido
+      // Processar tabelas em paralelo
+      console.log(`📊 Processando ${tables.length} tabelas de preço ativas...`);
       const quotePromises = tables.map(async (table) => {
         try {
-          // Timeout de 4 segundos por tabela
+          console.log(`🔍 Analisando tabela: ${table.name}`);
+          // Timeout de 6 segundos por tabela
           return await Promise.race([
             this.getQuoteFromTable(table, { destinyCep, weight, quantity, length, width, height, merchandiseValue }),
             new Promise<null>((_, reject) => 
@@ -107,25 +109,32 @@ export class PricingTableService {
         }
       });
 
-      // Aguardar todas as cotações com timeout global de 8 segundos
-      const quotes = await Promise.race([
-        Promise.all(quotePromises),
-        new Promise<(PricingTableQuote | null)[]>((resolve) => 
-          setTimeout(() => resolve([]), 8000)
-        )
-      ]);
+      const quotes = (await Promise.all(quotePromises)).filter(q => q !== null) as PricingTableQuote[];
 
-      const validQuotes = quotes.filter((quote): quote is PricingTableQuote => quote !== null);
-
-      if (validQuotes.length === 0) {
-        console.log('Nenhuma cotação válida encontrada, usando fallback');
+      if (quotes.length === 0) {
+        console.log('❌ Nenhuma cotação válida encontrada nas tabelas, usando fallback');
         return await this.getFallbackQuote({ destinyCep, weight, quantity });
       }
 
-      // Retorna a cotação com melhor preço econômico
-      return validQuotes.reduce((best, current) => 
-        current.economicPrice < best.economicPrice ? current : best
-      );
+      console.log(`💰 Total de ${quotes.length} cotações encontradas`);
+      quotes.forEach(q => {
+        console.log(`  - ${q.tableName}: R$${q.economicPrice.toFixed(2)} em ${q.economicDays} dias`);
+      });
+
+      // Selecionar melhor cotação: priorizar menor preço, em caso de empate escolher menor prazo
+      quotes.sort((a, b) => {
+        const priceDiff = a.economicPrice - b.economicPrice;
+        if (Math.abs(priceDiff) < 0.01) { // Se preços são praticamente iguais (diferença < 1 centavo)
+          return a.economicDays - b.economicDays; // Escolher menor prazo
+        }
+        return priceDiff; // Caso contrário, escolher menor preço
+      });
+      
+      const bestQuote = quotes[0];
+      console.log(`✅ MELHOR COTAÇÃO: ${bestQuote.tableName} - R$${bestQuote.economicPrice.toFixed(2)} em ${bestQuote.economicDays} dias`);
+      console.log(`📋 Tabela ID: ${bestQuote.tableId} | Zona: ${bestQuote.zone}`);
+      
+      return bestQuote;
 
     } catch (error) {
       console.error('Erro ao buscar cotações multi-tabela:', error);
@@ -825,7 +834,7 @@ export class PricingTableService {
   }
 
   /**
-   * Valida os dados da tabela
+   * Valida os dados da tabela - VALIDAÇÃO FLEXÍVEL para aceitar diferentes estruturas
    */
   private static validateTableData(data: any[]): ValidationResult {
     const errors: string[] = [];
@@ -850,79 +859,69 @@ export class PricingTableService {
       };
     }
 
-    // Verificar se tem as colunas necessárias
+    console.log(`🔍 Validando tabela com ${data.length} linhas`);
+    console.log('📋 Colunas encontradas:', Object.keys(data[0]));
+
+    // Tentar detectar padrão de colunas automaticamente
     const firstRow = data[0];
-    const requiredColumns = ['CEP_INICIO', 'CEP_FIM', 'PESO_MIN', 'PESO_MAX', 'PRECO', 'PRAZO'];
-    const altColumns = ['cep_inicio', 'cep_fim', 'peso_min', 'peso_max', 'preco', 'prazo'];
+    const columnKeys = Object.keys(firstRow);
     
-    const hasRequiredColumns = requiredColumns.some(col => col in firstRow) ||
-                              altColumns.some(col => col in firstRow);
-    
-    if (!hasRequiredColumns) {
-      errors.push('Colunas obrigatórias não encontradas. Esperado: CEP_INICIO, CEP_FIM, PESO_MIN, PESO_MAX, PRECO, PRAZO');
-    }
+    // Verificar se há dados numéricos e de texto que possam representar preços, pesos e CEPs
+    let hasPriceColumn = false;
+    let hasWeightColumn = false;
+    let hasCepColumn = false;
+    let hasDaysColumn = false;
 
-    // Validar cada linha
-    data.forEach((row, index) => {
-      const lineNumber = index + 1;
-      let isValidRow = true;
-
-      // Validar CEPs
-      const cepStart = String(row.CEP_INICIO || row.cep_inicio || '').replace(/\D/g, '');
-      const cepEnd = String(row.CEP_FIM || row.cep_fim || '').replace(/\D/g, '');
+    columnKeys.forEach(key => {
+      const lowerKey = key.toLowerCase();
+      const value = firstRow[key];
       
-      if (!cepStart || cepStart.length !== 8) {
-        errors.push(`Linha ${lineNumber}: CEP_INICIO inválido`);
-        isValidRow = false;
+      // Detectar coluna de preço
+      if (lowerKey.includes('preco') || lowerKey.includes('price') || lowerKey.includes('valor')) {
+        hasPriceColumn = true;
       }
       
-      if (!cepEnd || cepEnd.length !== 8) {
-        errors.push(`Linha ${lineNumber}: CEP_FIM inválido`);
-        isValidRow = false;
-      }
-
-      // Validar pesos
-      const weightMin = Number(row.PESO_MIN || row.peso_min);
-      const weightMax = Number(row.PESO_MAX || row.peso_max);
-      
-      if (isNaN(weightMin) || weightMin < 0) {
-        errors.push(`Linha ${lineNumber}: PESO_MIN inválido`);
-        isValidRow = false;
+      // Detectar coluna de peso
+      if (lowerKey.includes('peso') || lowerKey.includes('weight') || lowerKey.includes('kg')) {
+        hasWeightColumn = true;
       }
       
-      if (isNaN(weightMax) || weightMax <= 0) {
-        errors.push(`Linha ${lineNumber}: PESO_MAX inválido`);
-        isValidRow = false;
+      // Detectar coluna de CEP
+      if (lowerKey.includes('cep') || lowerKey.includes('zip')) {
+        hasCepColumn = true;
       }
       
-      if (weightMin >= weightMax) {
-        errors.push(`Linha ${lineNumber}: PESO_MIN deve ser menor que PESO_MAX`);
-        isValidRow = false;
-      }
-
-      // Validar preço
-      const price = Number(row.PRECO || row.preco);
-      if (isNaN(price) || price <= 0) {
-        errors.push(`Linha ${lineNumber}: PRECO inválido`);
-        isValidRow = false;
-      }
-
-      // Validar prazo
-      const days = Number(row.PRAZO || row.prazo);
-      if (isNaN(days) || days <= 0) {
-        errors.push(`Linha ${lineNumber}: PRAZO inválido`);
-        isValidRow = false;
-      }
-
-      if (isValidRow) {
-        validRows++;
+      // Detectar coluna de prazo
+      if (lowerKey.includes('prazo') || lowerKey.includes('dias') || lowerKey.includes('days')) {
+        hasDaysColumn = true;
       }
     });
 
-    const isValid = errors.length === 0;
+    // Validação flexível: apenas verificar se há dados estruturados
+    if (!hasPriceColumn && !hasWeightColumn && !hasCepColumn) {
+      warnings.push('Estrutura de colunas não reconhecida automaticamente. A IA irá tentar processar a tabela de qualquer forma.');
+    }
+
+    // Contar linhas válidas (linhas que têm pelo menos 3 valores não vazios)
+    data.forEach((row, index) => {
+      const lineNumber = index + 1;
+      const values = Object.values(row).filter(v => v !== null && v !== undefined && String(v).trim() !== '');
+      
+      if (values.length >= 3) {
+        validRows++;
+      } else {
+        warnings.push(`Linha ${lineNumber}: poucos dados (${values.length} valores)`);
+      }
+    });
+
+    // Validação passa se tiver pelo menos 70% de linhas válidas
+    const validPercentage = (validRows / data.length) * 100;
+    const isValid = validPercentage >= 70;
     
     if (!isValid) {
-      warnings.push(`${errors.length} erro(s) encontrado(s) na validação`);
+      errors.push(`Apenas ${validPercentage.toFixed(1)}% das linhas são válidas (mínimo: 70%)`);
+    } else {
+      console.log(`✅ Validação aprovada: ${validPercentage.toFixed(1)}% de linhas válidas`);
     }
 
     return {

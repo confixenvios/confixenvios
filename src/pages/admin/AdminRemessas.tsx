@@ -979,9 +979,12 @@ const AdminRemessas = () => {
                                   {shipment.weight}kg • {shipment.format}
                                 </div>
                                 {shipment.pricing_table_name && (
-                                  <div className="flex items-center text-xs text-muted-foreground mt-1">
-                                    <FileText className="w-3 h-3 mr-1" />
-                                    Tabela: {shipment.pricing_table_name}
+                                  <div className="flex items-center text-xs mt-1">
+                                    <FileText className="w-3 h-3 mr-1 text-primary" />
+                                    <span className="font-semibold">Tabela:</span>
+                                    <Badge variant="outline" className="ml-1 text-xs">
+                                      {shipment.pricing_table_name}
+                                    </Badge>
                                   </div>
                                 )}
                                 <div className="flex items-center gap-2 text-xs mt-1">
@@ -1211,12 +1214,24 @@ const AdminRemessas = () => {
                        </div>
                      )}
 
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Tabela de Preços</label>
+                      <div className="bg-muted/50 p-3 rounded-lg">
+                        <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                          <FileText className="w-4 h-4" />
+                          Tabela de Preços Utilizada
+                        </label>
                         {selectedShipmentDetails.pricing_table_name ? (
-                          <p className="text-sm mt-1">{selectedShipmentDetails.pricing_table_name}</p>
+                          <div className="mt-2">
+                            <Badge variant="secondary" className="text-sm">
+                              {selectedShipmentDetails.pricing_table_name}
+                            </Badge>
+                            {selectedShipmentDetails.quote_data?.shippingQuote?.zone && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Zona: {selectedShipmentDetails.quote_data.shippingQuote.zone} - {selectedShipmentDetails.quote_data.shippingQuote.zoneName}
+                              </p>
+                            )}
+                          </div>
                         ) : (
-                          <p className="text-sm mt-1 text-muted-foreground">Tabela padrão do sistema</p>
+                          <p className="text-sm mt-1 text-muted-foreground">Tabela padrão do sistema legado</p>
                         )}
                       </div>
                    </CardContent>

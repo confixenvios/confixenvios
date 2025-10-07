@@ -199,11 +199,11 @@ const Results = () => {
                         </div>
                       )}
                       
-                      {quoteData.shippingQuote.cubicWeight && quoteData.shippingQuote.cubicWeight > quoteData.weight && (
-                        <div className="text-xs text-muted-foreground pt-2 border-t">
-                          * Peso cubado aplicado: {quoteData.shippingQuote.cubicWeight.toFixed(2)}kg
-                        </div>
-                      )}
+                   {quoteData.shippingQuote.tableName && (
+                    <div className="text-xs text-muted-foreground pt-2 border-t mt-2">
+                      <strong>Tabela utilizada:</strong> {quoteData.shippingQuote.tableName}
+                    </div>
+                  )}
                     </div>
                   )}
                 </div>
