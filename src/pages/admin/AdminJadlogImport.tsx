@@ -39,7 +39,7 @@ const AdminJadlogImport = () => {
     setIsLoading(true);
     try {
       // Processar CSV local
-      const response = await fetch('/src/assets/TABELA_PRECO_JADLOG.csv');
+      const response = await fetch('/TABELA_PRECO_JADLOG.csv');
       const csvText = await response.text();
       const lines = csvText.split('\n');
       
