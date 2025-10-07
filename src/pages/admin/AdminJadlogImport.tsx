@@ -38,21 +38,113 @@ const AdminJadlogImport = () => {
   const handleImportToSupabase = async () => {
     setIsLoading(true);
     try {
+      // Obter todos os dados do Excel
+      const allData = await getAllJadlogData(jadlogTableFile);
+      
+      console.log('📦 Dados completos:', allData);
+      
       const { supabase } = await import('@/integrations/supabase/client');
       
-      // Chamar edge function para importar do Google Sheets
-      const { data, error } = await supabase.functions.invoke('import-jadlog-data');
+      let importedPricing = 0;
+      let importedZones = 0;
       
-      if (error) throw error;
+      // Processar a primeira aba (PREÇO)
+      const firstSheet = Object.keys(allData)[0];
+      const sheetData = allData[firstSheet] as any[];
+      
+      if (!sheetData || sheetData.length < 4) {
+        throw new Error('Estrutura da planilha inválida');
+      }
+      
+      console.log('📊 Processando aba:', firstSheet);
+      console.log('📝 Total de linhas:', sheetData.length);
+      
+      // Extrair cabeçalhos das 3 primeiras linhas
+      const originRow = sheetData[0]; // Linha ORIGEM (GO repetido)
+      const destRow = sheetData[1];   // Linha DESTINO (estados)
+      const tariffRow = sheetData[2]; // Linha TIPO DE TARIFA
+      
+      console.log('🔍 Origem:', originRow);
+      console.log('🔍 Destino:', destRow);
+      console.log('🔍 Tarifas:', tariffRow);
+      
+      // Preparar dados de pricing
+      const pricingData: any[] = [];
+      
+      // Processar cada linha de peso (a partir da linha 4)
+      for (let i = 3; i < Math.min(sheetData.length, 50); i++) {
+        const row = sheetData[i];
+        if (!row || Object.keys(row).length === 0) continue;
+        
+        // Primeira coluna tem o peso máximo
+        const weightMax = parseFloat(Object.values(row)[0] as string);
+        if (isNaN(weightMax)) continue;
+        
+        // Peso mínimo é o peso máximo da linha anterior (ou 0 para a primeira)
+        const weightMin = i > 3 ? parseFloat(Object.values(sheetData[i-1])[0] as string) : 0;
+        
+        console.log(`⚖️ Faixa de peso: ${weightMin} - ${weightMax}kg`);
+        
+        // Processar cada coluna (cada tarifa/destino)
+        const values = Object.values(row);
+        for (let j = 1; j < values.length && j < destRow.__EMPTY_3?.length; j++) {
+          const priceStr = values[j] as string;
+          if (!priceStr) continue;
+          
+          // Extrair preço (remover R$ e converter)
+          const price = parseFloat(priceStr.replace(/[R$\s]/g, '').replace(',', '.'));
+          if (isNaN(price) || price === 0) continue;
+          
+          // Extrair informações da tarifa
+          const destinationState = Object.values(destRow)[j] as string;
+          const tariffType = Object.values(tariffRow)[j] as string;
+          const originState = 'GO'; // Fixo para esta tabela
+          
+          if (destinationState && tariffType) {
+            pricingData.push({
+              origin_state: originState,
+              destination_state: destinationState.trim(),
+              tariff_type: tariffType.trim(),
+              weight_min: weightMin,
+              weight_max: weightMax,
+              price: price
+            });
+          }
+        }
+      }
+      
+      console.log(`📦 Total de registros de preço: ${pricingData.length}`);
+      console.log('📋 Amostra dos dados:', pricingData.slice(0, 5));
+      
+      if (pricingData.length > 0) {
+        // Limpar tabela existente
+        console.log('🗑️ Limpando dados existentes...');
+        await supabase.from('jadlog_pricing').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        
+        // Inserir em lotes de 100
+        for (let i = 0; i < pricingData.length; i += 100) {
+          const batch = pricingData.slice(i, i + 100);
+          console.log(`📤 Inserindo lote ${Math.floor(i/100) + 1}...`);
+          
+          const { error } = await supabase.from('jadlog_pricing').insert(batch);
+          
+          if (error) {
+            console.error('❌ Erro ao inserir:', error);
+            throw error;
+          }
+          
+          importedPricing += batch.length;
+          console.log(`✅ ${importedPricing} preços importados...`);
+        }
+      }
       
       toast({
         title: "Importação concluída!",
-        description: `${data.imported_pricing} preços e ${data.imported_zones} zonas importadas do Google Sheets`,
+        description: `${importedPricing} preços importados com sucesso`,
       });
       
-      console.log('✅ Importação bem-sucedida:', data);
     } catch (error) {
-      console.error('Erro ao importar:', error);
+      console.error('❌ Erro ao importar:', error);
       toast({
         title: "Erro ao importar",
         description: error instanceof Error ? error.message : "Erro desconhecido",
@@ -126,7 +218,7 @@ const AdminJadlogImport = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Isso importará os dados do Google Sheets para as tabelas jadlog_pricing e jadlog_zones no Supabase.
+                  Isso processará o arquivo Excel local e importará os dados para a tabela jadlog_pricing no Supabase.
                 </p>
                 <Button 
                   onClick={handleImportToSupabase}
@@ -134,7 +226,7 @@ const AdminJadlogImport = () => {
                   className="w-full"
                   variant="default"
                 >
-                  {isLoading ? 'Importando dados...' : 'Importar do Google Sheets'}
+                  {isLoading ? 'Importando dados...' : 'Importar Dados para Supabase'}
                 </Button>
               </CardContent>
             </Card>
