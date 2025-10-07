@@ -1,37 +1,47 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Database, CheckCircle } from "lucide-react";
+import { Upload, Database, CheckCircle, Loader2 } from "lucide-react";
 import { parseJadlogTable, getAllJadlogData, type JadlogSheetData } from '@/utils/parseJadlogTable';
+import { supabase } from '@/integrations/supabase/client';
 const jadlogTableFile = '/src/assets/TABELA_JAD_LOG_VENDA.xlsx';
 
 const AdminJadlogImport = () => {
   const [sheets, setSheets] = useState<JadlogSheetData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingData, setIsCheckingData] = useState(true);
+  const [recordCount, setRecordCount] = useState(0);
   const { toast } = useToast();
 
-  const handleAnalyzeTable = async () => {
-    setIsLoading(true);
+  // Verificar e importar automaticamente se necessário
+  useEffect(() => {
+    checkAndImportData();
+  }, []);
+
+  const checkAndImportData = async () => {
+    setIsCheckingData(true);
     try {
-      const sheetsData = await parseJadlogTable(jadlogTableFile);
-      setSheets(sheetsData);
-      
-      console.log('📊 Estrutura da tabela Jadlog:', sheetsData);
-      
-      toast({
-        title: "Tabela analisada!",
-        description: `Encontradas ${sheetsData.length} abas na tabela`,
-      });
+      // Verificar se já existem dados
+      const { count, error } = await supabase
+        .from('jadlog_pricing')
+        .select('*', { count: 'exact', head: true });
+
+      if (error) throw error;
+
+      setRecordCount(count || 0);
+
+      // Se não há dados, importar automaticamente
+      if (!count || count === 0) {
+        console.log('📊 Tabela vazia, iniciando importação automática...');
+        await handleImportToSupabase();
+      } else {
+        console.log(`✅ Tabela já contém ${count} registros`);
+      }
     } catch (error) {
-      console.error('Erro ao analisar:', error);
-      toast({
-        title: "Erro ao analisar tabela",
-        description: "Verifique o console para mais detalhes",
-        variant: "destructive",
-      });
+      console.error('Erro ao verificar dados:', error);
     } finally {
-      setIsLoading(false);
+      setIsCheckingData(false);
     }
   };
 
@@ -150,6 +160,9 @@ const AdminJadlogImport = () => {
         title: "✅ Importação concluída!",
         description: `${importedPricing} preços da Jadlog importados com sucesso`,
       });
+
+      // Atualizar contagem
+      setRecordCount(importedPricing);
       
     } catch (error) {
       console.error('❌ Erro ao importar:', error);
@@ -168,79 +181,93 @@ const AdminJadlogImport = () => {
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Importar Tabela Jadlog</h1>
         <p className="text-muted-foreground">
-          Analise e importe a estrutura completa da tabela de preços Jadlog
+          Gerenciar importação da tabela de preços Jadlog
         </p>
       </div>
 
-      <div className="grid gap-6">
+      {isCheckingData ? (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5" />
-              Passo 1: Analisar Estrutura
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={handleAnalyzeTable}
-              disabled={isLoading}
-              className="w-full"
-            >
-              {isLoading ? 'Analisando...' : 'Analisar Tabela Jadlog'}
-            </Button>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground">Verificando dados existentes...</p>
+            </div>
           </CardContent>
         </Card>
-
-        {sheets.length > 0 && (
-          <>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  Abas Encontradas ({sheets.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {sheets.map((sheet, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <h3 className="font-bold text-lg mb-2">{sheet.sheetName}</h3>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {sheet.rowCount} linhas de dados
-                      </p>
-                      <div className="text-xs">
-                        <strong>Colunas:</strong> {sheet.headers.join(', ')}
-                      </div>
-                    </div>
-                  ))}
+      ) : (
+        <div className="grid gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Status da Tabela Jadlog
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <p className="font-medium">Registros na tabela</p>
+                    <p className="text-sm text-muted-foreground">
+                      {recordCount > 0 
+                        ? `${recordCount} preços cadastrados` 
+                        : 'Tabela vazia - aguardando importação'}
+                    </p>
+                  </div>
+                  <div className={`flex items-center gap-2 ${recordCount > 0 ? 'text-green-600' : 'text-yellow-600'}`}>
+                    {recordCount > 0 ? (
+                      <>
+                        <CheckCircle className="h-5 w-5" />
+                        <span className="font-medium">Ativo</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-5 w-5" />
+                        <span className="font-medium">Pendente</span>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="h-5 w-5" />
-                  Passo 2: Criar Tabelas no Supabase
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Importar a tabela de preços Jadlog (CSV) diretamente para o Supabase.
-                </p>
                 <Button 
                   onClick={handleImportToSupabase}
                   disabled={isLoading}
                   className="w-full"
-                  variant="default"
+                  variant={recordCount > 0 ? "outline" : "default"}
                 >
-                  {isLoading ? 'Importando tabela Jadlog...' : '🚀 Importar Preços Jadlog'}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Importando...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      {recordCount > 0 ? 'Reimportar Preços Jadlog' : '🚀 Importar Preços Jadlog'}
+                    </>
+                  )}
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {sheets.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  Última Análise
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {sheets.length} abas encontradas na planilha
+                </p>
               </CardContent>
             </Card>
-          </>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
