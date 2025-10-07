@@ -38,73 +38,68 @@ const AdminJadlogImport = () => {
   const handleImportToSupabase = async () => {
     setIsLoading(true);
     try {
-      // Obter todos os dados do Excel
-      const allData = await getAllJadlogData(jadlogTableFile);
+      // Processar CSV local
+      const response = await fetch('/src/assets/TABELA_PRECO_JADLOG.csv');
+      const csvText = await response.text();
+      const lines = csvText.split('\n');
       
-      console.log('📦 Dados completos:', allData);
+      console.log('📊 Total de linhas no CSV:', lines.length);
       
-      const { supabase } = await import('@/integrations/supabase/client');
-      
-      let importedPricing = 0;
-      let importedZones = 0;
-      
-      // Processar a primeira aba (PREÇO)
-      const firstSheet = Object.keys(allData)[0];
-      const sheetData = allData[firstSheet] as any[];
-      
-      if (!sheetData || sheetData.length < 4) {
-        throw new Error('Estrutura da planilha inválida');
+      if (lines.length < 4) {
+        throw new Error('CSV inválido - menos de 4 linhas');
       }
       
-      console.log('📊 Processando aba:', firstSheet);
-      console.log('📝 Total de linhas:', sheetData.length);
+      // Processar cabeçalhos
+      const originRow = lines[0].split(',');
+      const destRow = lines[1].split(',');
+      const tariffRow = lines[2].split(',');
       
-      // Extrair cabeçalhos das 3 primeiras linhas
-      const originRow = sheetData[0]; // Linha ORIGEM (GO repetido)
-      const destRow = sheetData[1];   // Linha DESTINO (estados)
-      const tariffRow = sheetData[2]; // Linha TIPO DE TARIFA
+      console.log('🔍 Primeira linha (origem):', originRow.slice(0, 10));
+      console.log('🔍 Segunda linha (destino):', destRow.slice(0, 10));
+      console.log('🔍 Terceira linha (tarifas):', tariffRow.slice(0, 10));
       
-      console.log('🔍 Origem:', originRow);
-      console.log('🔍 Destino:', destRow);
-      console.log('🔍 Tarifas:', tariffRow);
-      
-      // Preparar dados de pricing
+      const { supabase } = await import('@/integrations/supabase/client');
       const pricingData: any[] = [];
       
-      // Processar cada linha de peso (a partir da linha 4)
-      for (let i = 3; i < Math.min(sheetData.length, 50); i++) {
-        const row = sheetData[i];
-        if (!row || Object.keys(row).length === 0) continue;
+      // Processar linhas de dados (a partir da linha 4)
+      for (let i = 3; i < lines.length; i++) {
+        const row = lines[i].split(',');
+        if (row.length < 3) continue;
         
         // Primeira coluna tem o peso máximo
-        const weightMax = parseFloat(Object.values(row)[0] as string);
+        const weightMax = parseFloat(row[0]);
         if (isNaN(weightMax)) continue;
         
-        // Peso mínimo é o peso máximo da linha anterior (ou 0 para a primeira)
-        const weightMin = i > 3 ? parseFloat(Object.values(sheetData[i-1])[0] as string) : 0;
+        // Peso mínimo é o peso máximo da linha anterior (ou 0 para a primeira linha de dados)
+        const weightMin = i > 3 ? parseFloat(lines[i-1].split(',')[0]) : 0;
         
-        console.log(`⚖️ Faixa de peso: ${weightMin} - ${weightMax}kg`);
+        console.log(`⚖️ Linha ${i}: Peso ${weightMin} - ${weightMax}kg`);
         
-        // Processar cada coluna (cada tarifa/destino)
-        const values = Object.values(row);
-        for (let j = 1; j < values.length && j < destRow.__EMPTY_3?.length; j++) {
-          const priceStr = values[j] as string;
-          if (!priceStr) continue;
+        // Processar cada coluna de preço
+        for (let j = 3; j < row.length && j < destRow.length; j++) {
+          const priceStr = row[j];
+          if (!priceStr || priceStr.trim() === '') continue;
           
-          // Extrair preço (remover R$ e converter)
-          const price = parseFloat(priceStr.replace(/[R$\s]/g, '').replace(',', '.'));
+          // Remover formatação brasileira de moeda
+          const cleanPrice = priceStr
+            .replace(/R\$/g, '')
+            .replace(/\s/g, '')
+            .replace(/\./g, '')
+            .replace(',', '.');
+          
+          const price = parseFloat(cleanPrice);
           if (isNaN(price) || price === 0) continue;
           
-          // Extrair informações da tarifa
-          const destinationState = Object.values(destRow)[j] as string;
-          const tariffType = Object.values(tariffRow)[j] as string;
+          // Extrair informações dos cabeçalhos
+          const destinationState = destRow[j]?.trim();
+          const tariffType = tariffRow[j]?.trim();
           const originState = 'GO'; // Fixo para esta tabela
           
-          if (destinationState && tariffType) {
+          if (destinationState && tariffType && destinationState !== '' && tariffType !== '') {
             pricingData.push({
               origin_state: originState,
-              destination_state: destinationState.trim(),
-              tariff_type: tariffType.trim(),
+              destination_state: destinationState,
+              tariff_type: tariffType,
               weight_min: weightMin,
               weight_max: weightMax,
               price: price
@@ -113,34 +108,47 @@ const AdminJadlogImport = () => {
         }
       }
       
-      console.log(`📦 Total de registros de preço: ${pricingData.length}`);
-      console.log('📋 Amostra dos dados:', pricingData.slice(0, 5));
+      console.log(`📦 Total de registros preparados: ${pricingData.length}`);
+      console.log('📋 Primeiros 5 registros:', pricingData.slice(0, 5));
       
-      if (pricingData.length > 0) {
-        // Limpar tabela existente
-        console.log('🗑️ Limpando dados existentes...');
-        await supabase.from('jadlog_pricing').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (pricingData.length === 0) {
+        throw new Error('Nenhum dado válido encontrado no CSV');
+      }
+      
+      // Limpar tabela existente
+      console.log('🗑️ Limpando dados existentes...');
+      const { error: deleteError } = await supabase
+        .from('jadlog_pricing')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+      
+      if (deleteError) {
+        console.error('❌ Erro ao limpar tabela:', deleteError);
+        throw deleteError;
+      }
+      
+      // Inserir em lotes de 100
+      let importedPricing = 0;
+      for (let i = 0; i < pricingData.length; i += 100) {
+        const batch = pricingData.slice(i, i + 100);
+        console.log(`📤 Inserindo lote ${Math.floor(i/100) + 1} de ${Math.ceil(pricingData.length/100)}...`);
         
-        // Inserir em lotes de 100
-        for (let i = 0; i < pricingData.length; i += 100) {
-          const batch = pricingData.slice(i, i + 100);
-          console.log(`📤 Inserindo lote ${Math.floor(i/100) + 1}...`);
-          
-          const { error } = await supabase.from('jadlog_pricing').insert(batch);
-          
-          if (error) {
-            console.error('❌ Erro ao inserir:', error);
-            throw error;
-          }
-          
-          importedPricing += batch.length;
-          console.log(`✅ ${importedPricing} preços importados...`);
+        const { error } = await supabase
+          .from('jadlog_pricing')
+          .insert(batch);
+        
+        if (error) {
+          console.error('❌ Erro ao inserir lote:', error);
+          throw error;
         }
+        
+        importedPricing += batch.length;
+        console.log(`✅ ${importedPricing} preços importados de ${pricingData.length}...`);
       }
       
       toast({
-        title: "Importação concluída!",
-        description: `${importedPricing} preços importados com sucesso`,
+        title: "✅ Importação concluída!",
+        description: `${importedPricing} preços da Jadlog importados com sucesso`,
       });
       
     } catch (error) {
@@ -218,7 +226,7 @@ const AdminJadlogImport = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Isso processará o arquivo Excel local e importará os dados para a tabela jadlog_pricing no Supabase.
+                  Importar a tabela de preços Jadlog (CSV) diretamente para o Supabase.
                 </p>
                 <Button 
                   onClick={handleImportToSupabase}
@@ -226,7 +234,7 @@ const AdminJadlogImport = () => {
                   className="w-full"
                   variant="default"
                 >
-                  {isLoading ? 'Importando dados...' : 'Importar Dados para Supabase'}
+                  {isLoading ? 'Importando tabela Jadlog...' : '🚀 Importar Preços Jadlog'}
                 </Button>
               </CardContent>
             </Card>
