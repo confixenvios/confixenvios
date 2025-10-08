@@ -1,5 +1,5 @@
-// AI Quote Agent - Agente de cotação inteligente v2.2
-// Atualizado: 2025-10-08 21:10 - Corrigido escopo da variável zones
+// AI Quote Agent - Agente de cotação inteligente v3.0
+// Atualizado: 2025-10-08 21:30 - OTIMIZADO: Queries filtradas por CEP e peso
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -77,7 +77,34 @@ serve(async (req) => {
 
     console.log('[AI Quote Agent] Tabelas encontradas:', pricingTables.length);
 
-    // Processar cada tabela e buscar seus dados
+    // Limpar CEP destino para busca
+    const cleanDestinationCep = destination_cep.replace(/\D/g, '');
+    const destinationCepNumeric = parseInt(cleanDestinationCep);
+    
+    // Determinar o estado de destino baseado no CEP (primeiros 2 dígitos)
+    const cepPrefix = cleanDestinationCep.substring(0, 2);
+    const stateMapping: { [key: string]: string } = {
+      '69': 'AC', '57': 'AL', '68': 'AP', '69': 'AM',
+      '40': 'BA', '60': 'CE', '70': 'DF', '29': 'ES',
+      '72': 'GO', '73': 'GO', '74': 'GO', '75': 'GO', '76': 'GO',
+      '65': 'MA', '78': 'MT', '79': 'MS',
+      '30': 'MG', '31': 'MG', '32': 'MG', '33': 'MG', '34': 'MG', '35': 'MG', '36': 'MG', '37': 'MG', '38': 'MG', '39': 'MG',
+      '66': 'PA', '68': 'PA',
+      '58': 'PB', '80': 'PR', '81': 'PR', '82': 'PR', '83': 'PR', '84': 'PR', '85': 'PR', '86': 'PR', '87': 'PR',
+      '50': 'PE', '51': 'PE', '52': 'PE', '53': 'PE', '54': 'PE', '55': 'PE', '56': 'PE',
+      '64': 'PI', '20': 'RJ', '21': 'RJ', '22': 'RJ', '23': 'RJ', '24': 'RJ', '25': 'RJ', '26': 'RJ', '27': 'RJ', '28': 'RJ',
+      '59': 'RN', '76': 'RO', '69': 'RR',
+      '90': 'RS', '91': 'RS', '92': 'RS', '93': 'RS', '94': 'RS', '95': 'RS', '96': 'RS', '97': 'RS', '98': 'RS', '99': 'RS',
+      '88': 'SC', '89': 'SC',
+      '49': 'SE', '01': 'SP', '02': 'SP', '03': 'SP', '04': 'SP', '05': 'SP', '06': 'SP', '07': 'SP', '08': 'SP', '09': 'SP',
+      '10': 'SP', '11': 'SP', '12': 'SP', '13': 'SP', '14': 'SP', '15': 'SP', '16': 'SP', '17': 'SP', '18': 'SP', '19': 'SP',
+      '77': 'TO'
+    };
+    
+    const destinationState = stateMapping[cepPrefix] || '';
+    console.log(`[AI Quote Agent] CEP ${destination_cep} → Estado: ${destinationState}`);
+
+    // Processar cada tabela e buscar APENAS os dados relevantes com queries filtradas
     const tablesWithData = [];
     
     for (const table of pricingTables) {
@@ -96,232 +123,150 @@ serve(async (req) => {
         pricing_data: []
       };
 
-      // TABELA JADLOG: Buscar diretamente do Supabase (jadlog_zones + jadlog_pricing)
+      // TABELA JADLOG: Query FILTRADA por estado e peso
       if (table.name.toLowerCase().includes('jadlog')) {
-        console.log(`[AI Quote Agent] Tabela Jadlog detectada - buscando dados do Supabase`);
+        console.log(`[AI Quote Agent] ⚡ OTIMIZADO: Buscando Jadlog FILTRADO por estado ${destinationState} e peso ${total_weight}kg`);
         try {
-          console.log(`[AI Quote Agent] Buscando TODAS as zonas Jadlog (sem limite)...`);
-          
-          // Buscar TODAS as zonas Jadlog usando range para evitar limite de 1000
-          let allZones = [];
-          let from = 0;
-          const batchSize = 1000;
-          
-          while (true) {
-            const { data: zonesBatch, error: zonesError } = await supabaseClient
-              .from('jadlog_zones')
-              .select('*')
-              .order('id')
-              .range(from, from + batchSize - 1);
-            
-            if (zonesError) {
-              console.error(`[AI Quote Agent] Erro ao buscar jadlog_zones:`, zonesError);
-              break;
-            }
-            
-            if (!zonesBatch || zonesBatch.length === 0) break;
-            
-            allZones = allZones.concat(zonesBatch);
-            console.log(`[AI Quote Agent] Carregadas ${allZones.length} zonas até agora...`);
-            
-            if (zonesBatch.length < batchSize) break; // Última página
-            from += batchSize;
+          if (!destinationState) {
+            console.log(`[AI Quote Agent] ⚠️ Estado não identificado para CEP ${destination_cep}`);
+            continue;
           }
-          
-          const zones = allZones;
-          console.log(`[AI Quote Agent] ✅ TOTAL: ${zones.length} zonas Jadlog carregadas`);
-          
-          if (zones.length > 0) {
-            console.log(`[AI Quote Agent] Buscando TODOS os preços Jadlog...`);
-            
-            // Buscar TODOS os preços Jadlog usando range
-            let allPricing = [];
-            from = 0;
-            
-            while (true) {
-              const { data: pricingBatch, error: pricingError } = await supabaseClient
-                .from('jadlog_pricing')
-                .select('*')
-                .order('id')
-                .range(from, from + batchSize - 1);
-              
-              if (pricingError) {
-                console.error(`[AI Quote Agent] Erro ao buscar jadlog_pricing:`, pricingError);
-                break;
-              }
-              
-              if (!pricingBatch || pricingBatch.length === 0) break;
-              
-              allPricing = allPricing.concat(pricingBatch);
-              console.log(`[AI Quote Agent] Carregados ${allPricing.length} preços até agora...`);
-              
-              if (pricingBatch.length < batchSize) break; // Última página
-              from += batchSize;
-            }
-            
-            const pricing = allPricing;
-            console.log(`[AI Quote Agent] ✅ TOTAL: ${pricing.length} preços Jadlog carregados`);
-            
-            // Mapear os dados no formato esperado pelo sistema
-            tableData.pricing_data = [];
-            
-            // CORRIGIDO: Para Jadlog, o match é por origin_state + destination_state, NÃO por tariff_type
-            // jadlog_pricing tem: origin_state="GO", destination_state="AC", tariff_type=39.6 (número)
-            // jadlog_zones tem: state="AC", tariff_type="Capital 1" (texto) - NÃO são compatíveis!
-            // A lógica correta: agrupar preços por destination_state e aplicar a TODAS as zonas daquele state
-            
-            console.log(`[Jadlog] Processando combinação de ${zones.length} zonas com preços baseado em destination_state`);
-            
-            // Para cada zona, encontrar TODOS os preços do mesmo destination_state
-            for (const zone of zones) {
-              // Match correto: origin_state="GO" + destination_state=zone.state (ex: "AC")
-              const zonePrices = (pricing || []).filter(p => 
-                p.origin_state === 'GO' && p.destination_state === zone.state
-              );
-              
-              // Log para debug AC
-              if (zone.state === 'AC' && zone.zone_code === 'GO-AC-69908') {
-                console.log(`[DEBUG-Jadlog] Zona ${zone.zone_code} (${zone.state}): Encontrados ${zonePrices.length} preços`);
-                if (zonePrices.length > 0) {
-                  console.log(`[DEBUG-Jadlog] Amostra de preços:`, zonePrices.slice(0, 3).map(p => ({
-                    weight: `${p.weight_min}-${p.weight_max}kg`,
-                    price: p.price,
-                    tariff_type: p.tariff_type
-                  })));
-                }
-              }
-              
-              // Criar registros combinando zona (CEP + prazos) + preços (faixas de peso)
-              for (const priceItem of zonePrices) {
-                const newRecord = {
-                  destination_cep: `${zone.cep_start}-${zone.cep_end}`,
-                  weight_min: priceItem.weight_min,
-                  weight_max: priceItem.weight_max,
-                  price: priceItem.price,
-                  delivery_days: zone.delivery_days,
-                  express_delivery_days: zone.express_delivery_days,
-                  zone_code: zone.zone_code,
-                  tariff_type: zone.tariff_type, // Manter o texto da zona
-                  state: zone.state,
-                  origin_state: priceItem.origin_state,
-                  destination_state: priceItem.destination_state
-                };
-                
-                tableData.pricing_data.push(newRecord);
-              }
-            }
-            
-            console.log(`[AI Quote Agent] ${table.name}: ${tableData.pricing_data.length} registros Jadlog criados`);
-            
-            // Log específico para AC
-            const acCount = tableData.pricing_data.filter(p => p.state === 'AC').length;
-            console.log(`[AI Quote Agent] Registros de AC criados: ${acCount}`);
-            
-            if (acCount > 0) {
-              const acSample = tableData.pricing_data.filter(p => p.state === 'AC').slice(0, 2);
-              console.log(`[AI Quote Agent] Amostra de AC:`, JSON.stringify(acSample, null, 2));
+
+          // 1. Buscar APENAS zonas do estado de destino com CEP matching
+          console.log(`[AI Quote Agent] Query 1: Buscando zonas Jadlog para ${destinationState}...`);
+          const { data: zones, error: zonesError } = await supabaseClient
+            .from('jadlog_zones')
+            .select('*')
+            .eq('state', destinationState)
+            .lte('cep_start', cleanDestinationCep)
+            .gte('cep_end', cleanDestinationCep)
+            .limit(50);
+
+          if (zonesError) {
+            console.error(`[AI Quote Agent] Erro ao buscar jadlog_zones:`, zonesError);
+            continue;
+          }
+
+          if (!zones || zones.length === 0) {
+            console.log(`[AI Quote Agent] ⚠️ Nenhuma zona Jadlog encontrada para ${destinationState} - CEP ${destination_cep}`);
+            continue;
+          }
+
+          console.log(`[AI Quote Agent] ✅ ${zones.length} zonas Jadlog encontradas para ${destinationState}`);
+
+          // 2. Buscar APENAS preços para GO → destination_state que cobrem o peso
+          console.log(`[AI Quote Agent] Query 2: Buscando preços Jadlog GO→${destinationState} para peso ${total_weight}kg...`);
+          const { data: pricing, error: pricingError } = await supabaseClient
+            .from('jadlog_pricing')
+            .select('*')
+            .eq('origin_state', 'GO')
+            .eq('destination_state', destinationState)
+            .lte('weight_min', total_weight)
+            .gte('weight_max', total_weight)
+            .limit(100);
+
+          if (pricingError) {
+            console.error(`[AI Quote Agent] Erro ao buscar jadlog_pricing:`, pricingError);
+            continue;
+          }
+
+          if (!pricing || pricing.length === 0) {
+            console.log(`[AI Quote Agent] ⚠️ Nenhum preço Jadlog GO→${destinationState} para ${total_weight}kg`);
+            continue;
+          }
+
+          console.log(`[AI Quote Agent] ✅ ${pricing.length} preços Jadlog encontrados`);
+
+          // 3. Combinar zonas com preços
+          for (const zone of zones) {
+            for (const priceItem of pricing) {
+              tableData.pricing_data.push({
+                destination_cep: `${zone.cep_start}-${zone.cep_end}`,
+                weight_min: priceItem.weight_min,
+                weight_max: priceItem.weight_max,
+                price: priceItem.price,
+                delivery_days: zone.delivery_days,
+                express_delivery_days: zone.express_delivery_days,
+                zone_code: zone.zone_code,
+                tariff_type: zone.tariff_type,
+                state: zone.state,
+                origin_state: priceItem.origin_state,
+                destination_state: priceItem.destination_state
+              });
             }
           }
+
+          console.log(`[AI Quote Agent] ✅ ${table.name}: ${tableData.pricing_data.length} registros (FILTRADO)`);
         } catch (error) {
-          console.error(`[AI Quote Agent] Erro ao processar tabela Jadlog:`, error);
+          console.error(`[AI Quote Agent] Erro ao processar Jadlog:`, error);
         }
       }
-      // TABELA MAGALOG: Buscar diretamente do Supabase (shipping_zones_magalog + shipping_pricing_magalog)
+      // TABELA MAGALOG: Query FILTRADA por CEP range e peso
       else if (table.name.toLowerCase().includes('magalog')) {
-        console.log(`[AI Quote Agent] Tabela Magalog detectada - buscando dados do Supabase`);
+        console.log(`[AI Quote Agent] ⚡ OTIMIZADO: Buscando Magalog FILTRADO por CEP ${destination_cep} e peso ${total_weight}kg`);
         try {
-          console.log(`[AI Quote Agent] Buscando TODAS as zonas Magalog (sem limite)...`);
-          
-          // Buscar TODAS as zonas Magalog usando range
-          let allZones = [];
-          let from = 0;
-          const batchSize = 1000;
-          
-          while (true) {
-            const { data: zonesBatch, error: zonesError } = await supabaseClient
-              .from('shipping_zones_magalog')
-              .select('*')
-              .order('id')
-              .range(from, from + batchSize - 1);
-            
-            if (zonesError) {
-              console.error(`[AI Quote Agent] Erro ao buscar shipping_zones_magalog:`, zonesError);
-              break;
-            }
-            
-            if (!zonesBatch || zonesBatch.length === 0) break;
-            
-            allZones = allZones.concat(zonesBatch);
-            
-            if (zonesBatch.length < batchSize) break; // Última página
-            from += batchSize;
+          // 1. Buscar APENAS zonas que cobrem o CEP destino
+          console.log(`[AI Quote Agent] Query 1: Buscando zonas Magalog para CEP ${cleanDestinationCep}...`);
+          const { data: zones, error: zonesError } = await supabaseClient
+            .from('shipping_zones_magalog')
+            .select('*')
+            .lte('cep_start', cleanDestinationCep)
+            .gte('cep_end', cleanDestinationCep)
+            .limit(10); // Normalmente só 1-2 zonas por CEP
+
+          if (zonesError) {
+            console.error(`[AI Quote Agent] Erro ao buscar shipping_zones_magalog:`, zonesError);
+            continue;
           }
-          
-          const zones = allZones;
-          console.log(`[AI Quote Agent] ✅ TOTAL: ${zones.length} zonas Magalog carregadas`);
-          
-          if (zones.length > 0) {
-            console.log(`[AI Quote Agent] Buscando TODOS os preços Magalog...`);
+
+          if (!zones || zones.length === 0) {
+            console.log(`[AI Quote Agent] ⚠️ Nenhuma zona Magalog encontrada para CEP ${destination_cep}`);
+            continue;
+          }
+
+          console.log(`[AI Quote Agent] ✅ ${zones.length} zonas Magalog encontradas`);
+
+          // 2. Para cada zona, buscar APENAS preços que cobrem o peso
+          for (const zone of zones) {
+            console.log(`[AI Quote Agent] Query 2: Buscando preços Magalog para zona ${zone.zone_code} e peso ${total_weight}kg...`);
             
-            // Buscar TODOS os preços Magalog usando range
-            let allPricing = [];
-            from = 0;
-            
-            while (true) {
-              const { data: pricingBatch, error: pricingError } = await supabaseClient
-                .from('shipping_pricing_magalog')
-                .select('*')
-                .order('id')
-                .range(from, from + batchSize - 1);
-              
-              if (pricingError) {
-                console.error(`[AI Quote Agent] Erro ao buscar shipping_pricing_magalog:`, pricingError);
-                break;
-              }
-              
-              if (!pricingBatch || pricingBatch.length === 0) break;
-              
-              allPricing = allPricing.concat(pricingBatch);
-              
-              if (pricingBatch.length < batchSize) break; // Última página
-              from += batchSize;
+            const { data: pricing, error: pricingError } = await supabaseClient
+              .from('shipping_pricing_magalog')
+              .select('*')
+              .eq('zone_code', zone.zone_code)
+              .lte('weight_min', total_weight)
+              .gte('weight_max', total_weight)
+              .limit(50); // Máximo 50 faixas de peso
+
+            if (pricingError) {
+              console.error(`[AI Quote Agent] Erro ao buscar shipping_pricing_magalog:`, pricingError);
+              continue;
             }
-            
-            const pricing = allPricing;
-            console.log(`[AI Quote Agent] ✅ TOTAL: ${pricing.length} preços Magalog carregados`);
-              
-              // Mapear os dados no formato esperado pelo sistema
-              tableData.pricing_data = [];
-              
-              for (const zone of (zones || [])) {
-                // Para Magalog, o zone_code já contém o padrão completo
-                // Precisamos combinar com os preços baseados no zone_code
-                
-                const zonePrices = (pricing || []).filter(p => p.zone_code === zone.zone_code);
-                
-                if (zonePrices.length > 0) {
-                  console.log(`[DEBUG] Magalog Zone ${zone.zone_code}: Found ${zonePrices.length} prices, CEP range: ${zone.cep_start}-${zone.cep_end}`);
-                }
-                
-                for (const priceItem of zonePrices) {
-                  // Criar um registro combinando zona + preço
-                  tableData.pricing_data.push({
-                    destination_cep: `${zone.cep_start}-${zone.cep_end}`,
-                    weight_min: priceItem.weight_min,
-                    weight_max: priceItem.weight_max,
-                    price: priceItem.price,
-                    delivery_days: zone.delivery_days,
-                    express_delivery_days: zone.express_delivery_days,
-                    zone_code: zone.zone_code,
-                    zone_type: zone.zone_type,
-                    state: zone.state
-                  });
-                }
-              }
-              
-              console.log(`[AI Quote Agent] ${table.name}: ${tableData.pricing_data.length} registros Magalog criados (zonas x preços)`);
-              console.log(`[AI Quote Agent] Amostra Magalog:`, tableData.pricing_data.slice(0, 3));
+
+            if (!pricing || pricing.length === 0) {
+              console.log(`[AI Quote Agent] ⚠️ Nenhum preço Magalog para zona ${zone.zone_code} e peso ${total_weight}kg`);
+              continue;
             }
+
+            console.log(`[AI Quote Agent] ✅ ${pricing.length} preços Magalog encontrados para zona ${zone.zone_code}`);
+
+            // 3. Combinar zona com preços (APENAS dados relevantes)
+            for (const priceItem of pricing) {
+              tableData.pricing_data.push({
+                destination_cep: `${zone.cep_start}-${zone.cep_end}`,
+                weight_min: priceItem.weight_min,
+                weight_max: priceItem.weight_max,
+                price: priceItem.price,
+                delivery_days: zone.delivery_days,
+                express_delivery_days: zone.express_delivery_days,
+                zone_code: zone.zone_code,
+                zone_type: zone.zone_type,
+                state: zone.state
+              });
+            }
+          }
+
+          console.log(`[AI Quote Agent] ✅ ${table.name}: ${tableData.pricing_data.length} registros Magalog (FILTRADOS)`);
         } catch (error) {
           console.error(`[AI Quote Agent] Erro ao processar tabela Magalog:`, error);
         }
