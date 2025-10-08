@@ -528,6 +528,7 @@ IMPORTANTE:
 
     // CALCULAR O PREÇO PARA TODAS AS TABELAS DISPONÍVEIS
     const cepNumerico = parseInt(destination_cep.replace(/\D/g, ''));
+    const cepPrefix = destination_cep.replace(/\D/g, '').substring(0, 5);
     const allTableQuotes = [];
 
     for (const table of tablesWithData) {
