@@ -275,28 +275,28 @@ ${JSON.stringify(additionals || [], null, 2)}
 REGRAS ADICIONAIS: ${config.additional_rules || 'Nenhuma'}
 
 SAÍDA ESPERADA:
-Retorne APENAS um objeto JSON válido (sem markdown, sem ```json) com esta estrutura:
+Retorne APENAS um objeto JSON válido (sem markdown, sem backticks) com esta estrutura:
 {
-  "selected_table_id": "uuid-da-tabela",
-  "selected_table_name": "nome-da-tabela",
-  "peso_informado": ${total_weight},
-  "peso_cubado": 0.00,
-  "peso_tarifavel": 0.00,
-  "base_price": 100.00,
-  "excedente_kg": 0,
-  "valor_excedente": 0.00,
-  "delivery_days": 5,
-  "additionals_applied": [
+  selected_table_id: "uuid-da-tabela",
+  selected_table_name: "nome-da-tabela",
+  peso_informado: ${total_weight},
+  peso_cubado: 0.00,
+  peso_tarifavel: 0.00,
+  base_price: 100.00,
+  excedente_kg: 0,
+  valor_excedente: 0.00,
+  delivery_days: 5,
+  additionals_applied: [
     {
-      "name": "Seguro da Mercadoria",
-      "type": "insurance",
-      "percentage": 0.003,
-      "value": 0.00
+      name: "Seguro da Mercadoria",
+      type: "insurance",
+      percentage: 0.003,
+      value: 0.00
     }
   ],
-  "final_price": 120.00,
-  "status": "ok",
-  "reasoning": "Explicação: CEP encontrado em qual tabela, peso tarifável calculado, faixas aplicadas, adicionais incluídos"
+  final_price: 120.00,
+  status: "ok",
+  reasoning: "Explicação: CEP encontrado em qual tabela, peso tarifável calculado, faixas aplicadas, adicionais incluídos"
 }
 
 IMPORTANTE:
