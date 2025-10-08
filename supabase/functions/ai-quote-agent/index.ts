@@ -122,13 +122,17 @@ serve(async (req) => {
               // Cada zona terá um registro para cada faixa de peso disponível no pricing
               tableData.pricing_data = [];
               
+              // Log dados brutos das primeiras zonas de AC
+              const acZonesDebug = (zones || []).filter(z => z.state === 'AC').slice(0, 3);
+              if (acZonesDebug.length > 0) {
+                console.log(`[DEBUG] Amostra de zonas AC do banco:`, JSON.stringify(acZonesDebug, null, 2));
+              }
+              
               for (const zone of (zones || [])) {
                 // CORRIGIDO: Combinar state + tariff_type para match com pricing
                 // Zone tem: state="AC", tariff_type="Capital 1"
                 // Pricing tem: tariff_type="AC CAPITAL 1"
                 const zoneTariffFormatted = `${zone.state} ${zone.tariff_type.toUpperCase()}`.replace(/\s+/g, ' ').trim();
-                
-                console.log(`[DEBUG] Zone: ${zone.zone_code}, Formatted: "${zoneTariffFormatted}"`);
                 
                 // Encontrar todos os preços aplicáveis para este tariff_type combinado
                 // Normalizar espaços também no pricing para evitar problemas com "AC INTERIOR  1" (dois espaços)
@@ -137,8 +141,9 @@ serve(async (req) => {
                   return normalizedPricing === zoneTariffFormatted;
                 });
                 
-                if (zonePrices.length > 0) {
-                  console.log(`[DEBUG] Zone ${zone.zone_code} (${zoneTariffFormatted}): Found ${zonePrices.length} prices, CEP range: ${zone.cep_start}-${zone.cep_end}`);
+                // Log apenas para AC para debug
+                if (zone.state === 'AC' && zonePrices.length > 0) {
+                  console.log(`[DEBUG-AC] Zone: ${zone.zone_code} (${zone.state}), Tariff: "${zoneTariffFormatted}", CEP: ${zone.cep_start}-${zone.cep_end}, Prices found: ${zonePrices.length}`);
                 }
                 
                 for (const priceItem of zonePrices) {
@@ -155,9 +160,16 @@ serve(async (req) => {
                     state: zone.state
                   };
                   
-                  // Debug: Log primeiros 3 registros do AC
-                  if (zone.state === 'AC' && tableData.pricing_data.filter(p => p.state === 'AC').length < 3) {
-                    console.log(`[DEBUG] Adding AC record:`, JSON.stringify(newRecord, null, 2));
+                  // Debug: Log primeiros 5 registros do AC com faixas de CEP
+                  const currentACCount = tableData.pricing_data.filter(p => p.state === 'AC').length;
+                  if (zone.state === 'AC' && currentACCount < 5) {
+                    console.log(`[DEBUG-AC] Record ${currentACCount + 1}:`, {
+                      cep_range: newRecord.destination_cep,
+                      weight: `${newRecord.weight_min}-${newRecord.weight_max}kg`,
+                      price: newRecord.price,
+                      state: newRecord.state,
+                      zone: newRecord.zone_code
+                    });
                   }
                   
                   tableData.pricing_data.push(newRecord);
@@ -165,7 +177,18 @@ serve(async (req) => {
               }
               
               console.log(`[AI Quote Agent] ${table.name}: ${tableData.pricing_data.length} registros Jadlog criados (zonas x preços)`);
-              console.log(`[AI Quote Agent] Amostra Jadlog:`, tableData.pricing_data.slice(0, 3));
+              
+              // Log específico para AC
+              const acCount = tableData.pricing_data.filter(p => p.state === 'AC').length;
+              console.log(`[AI Quote Agent] Registros de AC criados: ${acCount}`);
+              if (acCount > 0) {
+                const acSample = tableData.pricing_data.filter(p => p.state === 'AC').slice(0, 2);
+                console.log(`[AI Quote Agent] Amostra de AC:`, JSON.stringify(acSample, null, 2));
+              } else {
+                console.error(`[AI Quote Agent] ⚠️ NENHUM registro de AC foi criado!`);
+              }
+              
+              console.log(`[AI Quote Agent] Amostra geral Jadlog:`, tableData.pricing_data.slice(0, 2));
             }
           }
         } catch (error) {
@@ -468,9 +491,36 @@ IMPORTANTE:
         
         // Para Jadlog, mostrar alguns registros do AC para debug
         if (table.name.toLowerCase().includes('jadlog')) {
-          const acRecords = table.pricing_data.filter(p => p.state === 'AC').slice(0, 3);
-          console.log(`  - Amostra AC (primeiros 3):`, JSON.stringify(acRecords, null, 2));
+          const acRecords = table.pricing_data.filter(p => p.state === 'AC');
+          console.log(`  - Total de registros AC: ${acRecords.length}`);
+          console.log(`  - Amostra AC (primeiros 3):`, JSON.stringify(acRecords.slice(0, 3), null, 2));
           console.log(`  - Buscando CEP ${cepNumerico} em ${table.pricing_data.length} registros`);
+          
+          // Log específico: verificar se ALGUM registro de AC tem faixa que inclui 69918308
+          const acRecordsWithRange = acRecords.filter(p => {
+            const rangeMatch = p.destination_cep.match(/(\d{5,8})\s*-\s*(\d{5,8})/);
+            if (rangeMatch) {
+              const rangeStart = parseInt(rangeMatch[1]);
+              const rangeEnd = parseInt(rangeMatch[2]);
+              const includes = cepNumerico >= rangeStart && cepNumerico <= rangeEnd;
+              if (includes) {
+                console.log(`  [AC-MATCH-FOUND] Faixa ${p.destination_cep} CONTÉM ${cepNumerico}!`);
+              }
+              return includes;
+            }
+            return false;
+          });
+          
+          if (acRecordsWithRange.length > 0) {
+            console.log(`  ✅ Encontradas ${acRecordsWithRange.length} faixas de AC que incluem o CEP ${cepNumerico}`);
+            console.log(`  Detalhes:`, JSON.stringify(acRecordsWithRange.map(r => ({
+              cep_range: r.destination_cep,
+              weight: `${r.weight_min}-${r.weight_max}kg`,
+              price: r.price
+            })), null, 2));
+          } else {
+            console.log(`  ❌ Nenhuma faixa de AC inclui o CEP ${cepNumerico}`);
+          }
         }
         
         // Encontrar registro de preço correspondente ao CEP e peso
@@ -490,9 +540,11 @@ IMPORTANTE:
             const rangeEnd = parseInt(rangeMatch[2]);
             cepMatch = cepNumerico >= rangeStart && cepNumerico <= rangeEnd;
             
-            // Log detalhado para Jadlog
-            if (table.name.toLowerCase().includes('jadlog') && p.state === 'AC' && weightMatch) {
-              console.log(`  [Range Check] CEP ${p.destination_cep}: ${cepNumerico} >= ${rangeStart} && ${cepNumerico} <= ${rangeEnd} = ${cepMatch}`);
+            // Log detalhado para Jadlog AC quando há match de peso
+            if (table.name.toLowerCase().includes('jadlog') && p.state === 'AC') {
+              if (weightMatch) {
+                console.log(`  [AC-CHECK] CEP ${p.destination_cep} (${rangeStart} a ${rangeEnd}): CEP ${cepNumerico} está na faixa? ${cepMatch}, Peso ${peso_tarifavel}kg entre ${p.weight_min}-${p.weight_max}kg? ${weightMatch}`);
+              }
             }
           }
           // Formato 2: CEP exato ou prefixo (ex: 69918)
