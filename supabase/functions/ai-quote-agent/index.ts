@@ -116,7 +116,21 @@ serve(async (req) => {
             if (pricingError) {
               console.error(`[AI Quote Agent] Erro ao buscar jadlog_pricing:`, pricingError);
             } else {
-              console.log(`[AI Quote Agent] ${pricing?.length || 0} preços Jadlog carregados`);
+              console.log(`[AI Quote Agent] ${pricing?.length || 0} preços Jadlog carregados do banco`);
+              
+              // Verificar quantos são de AC
+              const acPricingCount = (pricing || []).filter(p => p.tariff_type?.includes('AC')).length;
+              console.log(`[AI Quote Agent] Desses, ${acPricingCount} são de AC`);
+              
+              // Verificar quantos são para peso 10kg
+              const peso10Count = (pricing || []).filter(p => p.weight_min <= 10 && p.weight_max >= 10).length;
+              console.log(`[AI Quote Agent] ${peso10Count} preços atendem peso 10kg`);
+              
+              // Verificar quantos de AC atendem peso 10kg
+              const acPeso10Count = (pricing || []).filter(p => 
+                p.tariff_type?.includes('AC') && p.weight_min <= 10 && p.weight_max >= 10
+              ).length;
+              console.log(`[AI Quote Agent] ${acPeso10Count} preços de AC atendem peso 10kg`);
               
               // Mapear os dados no formato esperado pelo sistema
               // Cada zona terá um registro para cada faixa de peso disponível no pricing
@@ -125,7 +139,19 @@ serve(async (req) => {
               // Log dados brutos das primeiras zonas de AC
               const acZonesDebug = (zones || []).filter(z => z.state === 'AC').slice(0, 3);
               if (acZonesDebug.length > 0) {
-                console.log(`[DEBUG] Amostra de zonas AC do banco:`, JSON.stringify(acZonesDebug, null, 2));
+                console.log(`[DEBUG] ===== ZONAS AC DO BANCO =====`);
+                acZonesDebug.forEach(z => {
+                  console.log(`  Zone: ${z.zone_code}, State: "${z.state}", Tariff: "${z.tariff_type}", CEP: ${z.cep_start}-${z.cep_end}`);
+                });
+              }
+              
+              // Log dados brutos dos preços de AC
+              const acPricingDebug = (pricing || []).filter(p => p.tariff_type?.includes('AC')).slice(0, 5);
+              if (acPricingDebug.length > 0) {
+                console.log(`[DEBUG] ===== PREÇOS AC DO BANCO =====`);
+                acPricingDebug.forEach(p => {
+                  console.log(`  Tariff: "${p.tariff_type}", Weight: ${p.weight_min}-${p.weight_max}kg, Price: R$ ${p.price}`);
+                });
               }
               
               for (const zone of (zones || [])) {
@@ -138,12 +164,22 @@ serve(async (req) => {
                 // Normalizar espaços também no pricing para evitar problemas com "AC INTERIOR  1" (dois espaços)
                 const zonePrices = (pricing || []).filter(p => {
                   const normalizedPricing = p.tariff_type.replace(/\s+/g, ' ').trim();
-                  return normalizedPricing === zoneTariffFormatted;
+                  const match = normalizedPricing === zoneTariffFormatted;
+                  
+                  // Log detalhado para primeira zona de AC
+                  if (zone.state === 'AC' && zone.zone_code === 'GO-AC-69908') {
+                    console.log(`[DEBUG-MATCH] Comparando: "${normalizedPricing}" === "${zoneTariffFormatted}" ? ${match}`);
+                  }
+                  
+                  return match;
                 });
                 
                 // Log apenas para AC para debug
-                if (zone.state === 'AC' && zonePrices.length > 0) {
-                  console.log(`[DEBUG-AC] Zone: ${zone.zone_code} (${zone.state}), Tariff: "${zoneTariffFormatted}", CEP: ${zone.cep_start}-${zone.cep_end}, Prices found: ${zonePrices.length}`);
+                if (zone.state === 'AC') {
+                  console.log(`[DEBUG-AC] Zone: ${zone.zone_code}, Tariff formatado: "${zoneTariffFormatted}", CEP: ${zone.cep_start}-${zone.cep_end}, Preços encontrados: ${zonePrices.length}`);
+                  if (zonePrices.length === 0) {
+                    console.error(`[DEBUG-AC] ❌ NENHUM preço encontrado para "${zoneTariffFormatted}"!`);
+                  }
                 }
                 
                 for (const priceItem of zonePrices) {
