@@ -87,7 +87,64 @@ serve(async (req) => {
         pricing_data: []
       };
 
-      if (table.source_type === 'google_sheets' && table.google_sheets_url) {
+      // TABELA JADLOG: Buscar diretamente do Supabase (jadlog_zones + jadlog_pricing)
+      if (table.name.toLowerCase().includes('jadlog')) {
+        console.log(`[AI Quote Agent] Tabela Jadlog detectada - buscando dados do Supabase`);
+        try {
+          // Buscar todas as zonas Jadlog
+          const { data: zones, error: zonesError } = await supabaseClient
+            .from('jadlog_zones')
+            .select('*');
+          
+          if (zonesError) {
+            console.error(`[AI Quote Agent] Erro ao buscar jadlog_zones:`, zonesError);
+          } else {
+            console.log(`[AI Quote Agent] ${zones?.length || 0} zonas Jadlog carregadas`);
+            
+            // Buscar todos os preços Jadlog
+            const { data: pricing, error: pricingError } = await supabaseClient
+              .from('jadlog_pricing')
+              .select('*');
+            
+            if (pricingError) {
+              console.error(`[AI Quote Agent] Erro ao buscar jadlog_pricing:`, pricingError);
+            } else {
+              console.log(`[AI Quote Agent] ${pricing?.length || 0} preços Jadlog carregados`);
+              
+              // Mapear os dados no formato esperado pelo sistema
+              // Cada zona terá um registro para cada faixa de peso disponível no pricing
+              tableData.pricing_data = [];
+              
+              for (const zone of (zones || [])) {
+                // Encontrar todos os preços aplicáveis para o tariff_type desta zona
+                const zonePrices = (pricing || []).filter(p => p.tariff_type === zone.tariff_type);
+                
+                for (const priceItem of zonePrices) {
+                  // Criar um registro combinando zona + preço
+                  tableData.pricing_data.push({
+                    destination_cep: `${zone.cep_start}-${zone.cep_end}`,
+                    weight_min: priceItem.weight_min,
+                    weight_max: priceItem.weight_max,
+                    price: priceItem.price,
+                    delivery_days: zone.delivery_days,
+                    express_delivery_days: zone.express_delivery_days,
+                    zone_code: zone.zone_code,
+                    tariff_type: zone.tariff_type,
+                    state: zone.state
+                  });
+                }
+              }
+              
+              console.log(`[AI Quote Agent] ${table.name}: ${tableData.pricing_data.length} registros Jadlog criados (zonas x preços)`);
+              console.log(`[AI Quote Agent] Amostra Jadlog:`, tableData.pricing_data.slice(0, 3));
+            }
+          }
+        } catch (error) {
+          console.error(`[AI Quote Agent] Erro ao processar tabela Jadlog:`, error);
+        }
+      }
+      // OUTRAS TABELAS: Buscar do Google Sheets
+      else if (table.source_type === 'google_sheets' && table.google_sheets_url) {
         // Buscar dados do Google Sheets
         try {
           console.log(`[AI Quote Agent] Buscando dados do Google Sheets: ${table.google_sheets_url}`);
@@ -101,15 +158,7 @@ serve(async (req) => {
           
           if (spreadsheetIdMatch) {
             const spreadsheetId = spreadsheetIdMatch[1];
-            // Se tem sheet_name configurado, tentar encontrar o gid
-            // Senão, usar o gid da URL ou tentar diferentes gids comuns
             let gid = gidMatch ? gidMatch[1] : '0';
-            
-            // Para tabela Jadlog, tentar gid=2031699923 (aba específica dos dados)
-            if (table.name.toLowerCase().includes('jadlog') && !gidMatch) {
-              gid = '2031699923';
-              console.log(`[AI Quote Agent] Usando gid específico para Jadlog: ${gid}`);
-            }
             
             sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
             console.log(`[AI Quote Agent] URL CSV convertida: ${sheetUrl} (gid=${gid})`);
@@ -125,70 +174,37 @@ serve(async (req) => {
             const rows = csvText.split('\n');
             console.log(`[AI Quote Agent] Total de linhas: ${rows.length}`);
             
-            // Mostrar primeiras 5 linhas brutas para debug
-            console.log(`[AI Quote Agent] Primeiras 5 linhas do CSV (${table.name}):`);
-            rows.slice(0, 5).forEach((row, idx) => {
-              console.log(`  Linha ${idx}: ${row.substring(0, 100)}`);
-            });
-            
             // Pular primeira linha (cabeçalho)
             const dataRows = rows.slice(1);
             
             tableData.pricing_data = dataRows
               .filter(row => row.trim())
               .map((row, index) => {
-                // Parse CSV usando split por vírgula (mais simples e direto)
                 const cols = row.split(',').map(col => col.trim().replace(/^"|"$/g, ''));
                 
-                // Para Jadlog, pode ter formato diferente - tentar diferentes posições
                 let destination_cep = cols[0] || '';
                 let weight_min = parseFloat(cols[1]) || 0;
                 let weight_max = parseFloat(cols[2]) || 999;
                 let price = parseFloat(cols[3]) || 0;
                 let delivery_days = parseInt(cols[4]) || 5;
                 
-                // Se CEP parecer inválido mas tiver mais colunas, tentar diferentes offsets
-                if (!/^\d{5}/.test(destination_cep) && cols.length > 5) {
-                  // Talvez primeira coluna seja região/zona, CEP na segunda
-                  destination_cep = cols[1] || '';
-                  weight_min = parseFloat(cols[2]) || 0;
-                  weight_max = parseFloat(cols[3]) || 999;
-                  price = parseFloat(cols[4]) || 0;
-                  delivery_days = parseInt(cols[5]) || 5;
-                }
-                
-                const item = {
+                return {
                   destination_cep,
                   weight_min,
                   weight_max,
                   price,
                   delivery_days
                 };
-                
-                // Log primeiros 5 itens parseados para debug
-                if (index < 5) {
-                  console.log(`[AI Quote Agent] Item parseado ${index} (${table.name}):`, item);
-                }
-                
-                return item;
               })
-              .filter((item, index) => {
-                // Validar que é um registro válido
-                // CEP deve ter pelo menos 5 dígitos consecutivos OU ser range (ex: 69000-69999)
+              .filter((item) => {
                 const cepValid = /\d{5}/.test(item.destination_cep);
                 const priceValid = item.price > 0;
                 const weightValid = item.weight_min >= 0 && item.weight_max > 0;
-                const isValid = cepValid && priceValid && weightValid;
-                
-                if (!isValid && index < 10) {
-                  console.log(`[AI Quote Agent] Linha ${index} inválida ignorada (${table.name}):`, item);
-                }
-                return isValid;
+                return cepValid && priceValid && weightValid;
               });
             
             console.log(`[AI Quote Agent] ${table.name}: ${tableData.pricing_data.length} registros válidos carregados`);
             
-            // Mostrar amostra dos primeiros 3 registros
             if (tableData.pricing_data.length > 0) {
               console.log(`[AI Quote Agent] Amostra dos dados:`, tableData.pricing_data.slice(0, 3));
             }
@@ -364,23 +380,26 @@ IMPORTANTE:
           // Verificar match de CEP - suportar diferentes formatos
           const recordCep = p.destination_cep.replace(/\D/g, '');
           
-          // Formato 1: CEP exato ou prefixo (ex: 69918)
-          if (recordCep.length <= 5) {
-            return cepPrefix.startsWith(recordCep);
-          }
-          
-          // Formato 2: CEP completo exato (ex: 69918308)
-          if (recordCep.length === 8) {
-            return cepNumerico === parseInt(recordCep);
-          }
-          
-          // Formato 3: Range de CEPs (ex: 69000-69999 ou 69918000-69918999)
-          // Procurar por padrões como "69000" até "69999" no destination_cep original
+          // Formato 1: Range de CEPs (ex: 69908643-69924999) - JADLOG
           const rangeMatch = p.destination_cep.match(/(\d{5,8})\s*-\s*(\d{5,8})/);
           if (rangeMatch) {
             const rangeStart = parseInt(rangeMatch[1]);
             const rangeEnd = parseInt(rangeMatch[2]);
-            return cepNumerico >= rangeStart && cepNumerico <= rangeEnd;
+            const match = cepNumerico >= rangeStart && cepNumerico <= rangeEnd;
+            if (match) {
+              console.log(`[AI Quote Agent] ${table.name} - CEP ${destination_cep} (${cepNumerico}) MATCH range ${rangeStart}-${rangeEnd}`);
+            }
+            return match;
+          }
+          
+          // Formato 2: CEP exato ou prefixo (ex: 69918)
+          if (recordCep.length <= 5) {
+            return cepPrefix.startsWith(recordCep);
+          }
+          
+          // Formato 3: CEP completo exato (ex: 69918308)
+          if (recordCep.length === 8) {
+            return cepNumerico === parseInt(recordCep);
           }
           
           // Fallback: prefixo simples
