@@ -201,13 +201,13 @@ const calculateLegacyShippingQuote = async ({
   
   console.log(`📦 Cálculo base: R$${basePrice.toFixed(2)} + R$${excessWeightCharge.toFixed(2)} (excesso) × ${quantity} (qtd) = R$${basePriceWithQuantity.toFixed(2)}`);
   
-  // Calcular seguro (0.6% do valor da mercadoria declarada)
+  // Calcular seguro (1.3% do valor da mercadoria declarada)
   let insuranceValue = 0;
   if (merchandiseValue && merchandiseValue > 0) {
-    const insurancePercentage = 0.006; // 0.6%
+    const insurancePercentage = 0.013; // 1.3%
     insuranceValue = merchandiseValue * insurancePercentage;
     console.log(`🛡️ Valor da mercadoria: R$${merchandiseValue.toFixed(2)}`);
-    console.log(`🛡️ Seguro (0.6%): R$${insuranceValue.toFixed(2)}`);
+    console.log(`🛡️ Seguro (1.3%): R$${insuranceValue.toFixed(2)}`);
   }
   
   // Preço econômico é o preço base da tabela + seguro

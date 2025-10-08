@@ -52,6 +52,74 @@ export class PricingTableService {
     merchandiseValue?: number;
   }): Promise<PricingTableQuote | null> {
     try {
+      console.log('[PricingTableService] Iniciando cotação multi-tabela...');
+      
+      // PASSO 1: Verificar se o Agente IA está ativo
+      const { data: aiConfig, error: aiConfigError } = await supabase
+        .from('ai_quote_config')
+        .select('*')
+        .single();
+      
+      if (!aiConfigError && aiConfig?.is_active) {
+        console.log('🤖 [AI Agent] Agente IA está ATIVO - delegando cotação para IA');
+        
+        // Calcular volume total em m³
+        let totalVolume = 0;
+        if (length && width && height) {
+          totalVolume = (length / 100) * (width / 100) * (height / 100) * quantity;
+        }
+        
+        try {
+          const { data: aiQuote, error: aiError } = await supabase.functions.invoke('ai-quote-agent', {
+            body: {
+              origin_cep: '74900000',
+              destination_cep: destinyCep,
+              total_weight: weight * quantity,
+              total_volume: totalVolume,
+              merchandise_value: merchandiseValue || 0,
+              volumes_data: [{
+                weight,
+                length: length || 0,
+                width: width || 0,
+                height: height || 0,
+                quantity
+              }]
+            }
+          });
+          
+          if (aiError) {
+            console.error('❌ [AI Agent] Erro ao chamar agente IA:', aiError);
+          } else if (aiQuote?.success) {
+            console.log('✅ [AI Agent] Cotação obtida via IA:', aiQuote.quote);
+            
+            // Converter resposta da IA para formato PricingTableQuote
+            const quote = aiQuote.quote;
+            return {
+              economicPrice: quote.final_price,
+              expressPrice: quote.final_price * 1.6,
+              economicDays: quote.delivery_days,
+              expressDays: Math.max(1, quote.delivery_days - 2),
+              zone: 'IA',
+              zoneName: `${quote.selected_table_name} (Agente IA)`,
+              tableId: quote.selected_table_id,
+              tableName: quote.selected_table_name,
+              cnpj: '',
+              insuranceValue: quote.additionals_applied?.find((a: any) => a.type === 'insurance')?.value,
+              basePrice: quote.base_price,
+              cubicWeight: quote.peso_cubado,
+              appliedWeight: quote.peso_tarifavel
+            };
+          }
+        } catch (aiError) {
+          console.error('❌ [AI Agent] Exceção ao chamar agente IA:', aiError);
+        }
+        
+        console.log('⚠️ [AI Agent] Agente IA falhou, continuando com método tradicional...');
+      } else {
+        console.log('🔧 [AI Agent] Agente IA está INATIVO - usando método tradicional');
+      }
+      
+      // PASSO 2: Método tradicional - buscar e processar tabelas manualmente
       // OTIMIZAÇÃO: Cache para evitar chamadas repetidas desnecessárias
       const cacheKey = 'active_pricing_tables';
       const cachedTables = sessionStorage.getItem(cacheKey);
@@ -405,15 +473,15 @@ export class PricingTableService {
     let totalPrice = basePrice * quantity;
     const basePriceWithQuantity = totalPrice; // Guardar preço base antes do seguro
     
-    // Aplicar Seguro (0.6% do valor da mercadoria declarada)
+    // Aplicar Seguro (1.3% do valor da mercadoria declarada)
     let insuranceValue: number | undefined;
     
     if (merchandiseValue && merchandiseValue > 0) {
-      const insurancePercentage = 0.006; // 0.6%
+      const insurancePercentage = 0.013; // 1.3%
       
       insuranceValue = merchandiseValue * insurancePercentage;
       totalPrice += insuranceValue;
-      console.log(`🛡️ Seguro (0.6%): R$ ${insuranceValue.toFixed(2)}`);
+      console.log(`🛡️ Seguro (1.3%): R$ ${insuranceValue.toFixed(2)}`);
     }
 
     // Add excess weight charge to total
@@ -611,15 +679,15 @@ export class PricingTableService {
     let totalPrice = basePrice * quantity;
     const basePriceWithQuantity = totalPrice; // Guardar preço base antes do seguro
     
-    // Aplicar Seguro (0.6% do valor da mercadoria declarada)
+    // Aplicar Seguro (1.3% do valor da mercadoria declarada)
     let insuranceValue: number | undefined;
     
     if (merchandiseValue && merchandiseValue > 0) {
-      const insurancePercentage = 0.006; // 0.6%
+      const insurancePercentage = 0.013; // 1.3%
       
       insuranceValue = merchandiseValue * insurancePercentage;
       totalPrice += insuranceValue;
-      console.log(`[combineSheetsData] 🛡️ Seguro (0.6%): R$ ${insuranceValue.toFixed(2)}`);
+      console.log(`[combineSheetsData] 🛡️ Seguro (1.3%): R$ ${insuranceValue.toFixed(2)}`);
     }
     
     // Add excess weight charge to total
