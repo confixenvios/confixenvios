@@ -17,7 +17,8 @@ import {
   AlertCircle, 
   Clock,
   ExternalLink,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Eye
 } from "lucide-react";
 import {
   Table,
@@ -35,6 +36,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { TableImportStatus } from "@/components/admin/TableImportStatus";
 
 interface PricingTable {
   id: string;
@@ -77,6 +79,8 @@ const AdminTabelas = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTable, setEditingTable] = useState<PricingTable | null>(null);
+  const [viewingTable, setViewingTable] = useState<PricingTable | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Form state
@@ -752,6 +756,17 @@ const AdminTabelas = () => {
                             <Button
                               variant="outline"
                               size="sm"
+                              onClick={() => {
+                                setViewingTable(table);
+                                setIsViewDialogOpen(true);
+                              }}
+                              title="Visualizar e Importar"
+                            >
+                              <Eye className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => handleEdit(table)}
                             >
                               <Edit className="w-3 h-3" />
@@ -774,6 +789,27 @@ const AdminTabelas = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Modal de Visualização e Importação */}
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                {viewingTable?.name}
+              </DialogTitle>
+            </DialogHeader>
+            
+            {viewingTable && (
+              <TableImportStatus
+                tableName={viewingTable.name}
+                tableId={viewingTable.id}
+                googleSheetsUrl={viewingTable.google_sheets_url}
+                sourceType={viewingTable.source_type}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
