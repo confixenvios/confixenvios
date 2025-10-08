@@ -125,33 +125,63 @@ serve(async (req) => {
             const rows = csvText.split('\n');
             console.log(`[AI Quote Agent] Total de linhas: ${rows.length}`);
             
+            // Mostrar primeiras 5 linhas brutas para debug
+            console.log(`[AI Quote Agent] Primeiras 5 linhas do CSV (${table.name}):`);
+            rows.slice(0, 5).forEach((row, idx) => {
+              console.log(`  Linha ${idx}: ${row.substring(0, 100)}`);
+            });
+            
             // Pular primeira linha (cabeçalho)
             const dataRows = rows.slice(1);
             
             tableData.pricing_data = dataRows
               .filter(row => row.trim())
-              .map(row => {
-                // Parse CSV considerando vírgulas dentro de aspas
-                const cols = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-                const cleanCols = cols.map(col => col.replace(/^"|"$/g, '').trim());
+              .map((row, index) => {
+                // Parse CSV usando split por vírgula (mais simples e direto)
+                const cols = row.split(',').map(col => col.trim().replace(/^"|"$/g, ''));
                 
-                return {
-                  destination_cep: cleanCols[0] || '',
-                  weight_min: parseFloat(cleanCols[1]) || 0,
-                  weight_max: parseFloat(cleanCols[2]) || 999,
-                  price: parseFloat(cleanCols[3]) || 0,
-                  delivery_days: parseInt(cleanCols[4]) || 5
+                // Para Jadlog, pode ter formato diferente - tentar diferentes posições
+                let destination_cep = cols[0] || '';
+                let weight_min = parseFloat(cols[1]) || 0;
+                let weight_max = parseFloat(cols[2]) || 999;
+                let price = parseFloat(cols[3]) || 0;
+                let delivery_days = parseInt(cols[4]) || 5;
+                
+                // Se CEP parecer inválido mas tiver mais colunas, tentar diferentes offsets
+                if (!/^\d{5}/.test(destination_cep) && cols.length > 5) {
+                  // Talvez primeira coluna seja região/zona, CEP na segunda
+                  destination_cep = cols[1] || '';
+                  weight_min = parseFloat(cols[2]) || 0;
+                  weight_max = parseFloat(cols[3]) || 999;
+                  price = parseFloat(cols[4]) || 0;
+                  delivery_days = parseInt(cols[5]) || 5;
+                }
+                
+                const item = {
+                  destination_cep,
+                  weight_min,
+                  weight_max,
+                  price,
+                  delivery_days
                 };
+                
+                // Log primeiros 5 itens parseados para debug
+                if (index < 5) {
+                  console.log(`[AI Quote Agent] Item parseado ${index} (${table.name}):`, item);
+                }
+                
+                return item;
               })
-              .filter(item => {
-                // Validar que é um registro válido (CEP deve ter 5+ dígitos e preço válido)
-                const cepValid = /^\d{5,8}/.test(item.destination_cep);
+              .filter((item, index) => {
+                // Validar que é um registro válido
+                // CEP deve ter pelo menos 5 dígitos consecutivos OU ser range (ex: 69000-69999)
+                const cepValid = /\d{5}/.test(item.destination_cep);
                 const priceValid = item.price > 0;
                 const weightValid = item.weight_min >= 0 && item.weight_max > 0;
                 const isValid = cepValid && priceValid && weightValid;
                 
-                if (!isValid) {
-                  console.log(`[AI Quote Agent] Linha inválida ignorada (table: ${table.name}):`, item);
+                if (!isValid && index < 10) {
+                  console.log(`[AI Quote Agent] Linha ${index} inválida ignorada (${table.name}):`, item);
                 }
                 return isValid;
               });
@@ -316,6 +346,7 @@ IMPORTANTE:
 
     // CALCULAR O PREÇO PARA TODAS AS TABELAS DISPONÍVEIS
     const cepPrefix = destination_cep.replace(/\D/g, '').substring(0, 5);
+    const cepNumerico = parseInt(destination_cep.replace(/\D/g, ''));
     const allTableQuotes = [];
 
     for (const table of tablesWithData) {
@@ -326,10 +357,34 @@ IMPORTANTE:
         
         // Encontrar registro de preço correspondente ao CEP e peso
         const priceRecord = table.pricing_data.find(p => {
-          const recordCepPrefix = p.destination_cep.replace(/\D/g, '').substring(0, 5);
-          const cepMatch = recordCepPrefix === cepPrefix;
+          // Verificar match de peso
           const weightMatch = peso_tarifavel >= p.weight_min && peso_tarifavel <= p.weight_max;
-          return cepMatch && weightMatch;
+          if (!weightMatch) return false;
+          
+          // Verificar match de CEP - suportar diferentes formatos
+          const recordCep = p.destination_cep.replace(/\D/g, '');
+          
+          // Formato 1: CEP exato ou prefixo (ex: 69918)
+          if (recordCep.length <= 5) {
+            return cepPrefix.startsWith(recordCep);
+          }
+          
+          // Formato 2: CEP completo exato (ex: 69918308)
+          if (recordCep.length === 8) {
+            return cepNumerico === parseInt(recordCep);
+          }
+          
+          // Formato 3: Range de CEPs (ex: 69000-69999 ou 69918000-69918999)
+          // Procurar por padrões como "69000" até "69999" no destination_cep original
+          const rangeMatch = p.destination_cep.match(/(\d{5,8})\s*-\s*(\d{5,8})/);
+          if (rangeMatch) {
+            const rangeStart = parseInt(rangeMatch[1]);
+            const rangeEnd = parseInt(rangeMatch[2]);
+            return cepNumerico >= rangeStart && cepNumerico <= rangeEnd;
+          }
+          
+          // Fallback: prefixo simples
+          return cepPrefix.startsWith(recordCep.substring(0, 5));
         });
 
         if (priceRecord) {
@@ -356,6 +411,8 @@ IMPORTANTE:
             peso_tarifavel,
             has_coverage: true
           });
+          
+          console.log(`[AI Quote Agent] ${table.name} - Cobertura ENCONTRADA para CEP ${destination_cep} e peso ${peso_tarifavel}kg - Preço: R$ ${final_price}`);
         } else {
           // Tabela não tem cobertura para este CEP/peso
           allTableQuotes.push({
@@ -369,6 +426,8 @@ IMPORTANTE:
             peso_tarifavel: 0,
             has_coverage: false
           });
+          
+          console.log(`[AI Quote Agent] ${table.name} - Sem cobertura para CEP ${destination_cep} e peso ${peso_tarifavel}kg`);
         }
       } catch (error) {
         console.error(`[AI Quote Agent] Error calculating price for table ${table.name}:`, error);
