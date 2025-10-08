@@ -61,6 +61,12 @@ serve(async (req) => {
     let importedPricing = 0;
     let importedZones = 0;
     const processedSheets: string[] = [];
+    
+    // Limpar tabelas ANTES de processar qualquer aba
+    console.log('🗑️ Limpando dados antigos de jadlog_pricing e jadlog_zones...');
+    await supabaseClient.from('jadlog_pricing').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabaseClient.from('jadlog_zones').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    console.log('✅ Tabelas limpas');
 
     // Processar cada aba
     for (const sheetName of workbook.SheetNames) {
@@ -82,17 +88,23 @@ serve(async (req) => {
         console.log(`  Linha ${i}:`, jsonData[i].slice(0, 10));
       }
 
-      // Detectar tipo de aba analisando estrutura
+      // Detectar tipo de aba analisando estrutura e NOME da aba
+      const sheetNameLower = sheetName.toLowerCase();
       const firstRow = jsonData[0].map(v => String(v).toLowerCase());
       const columnA = jsonData.slice(0, 10).map(row => String(row[0] || '').toLowerCase());
       
-      // Aba de ABRANGÊNCIA/PRAZOS: primeira linha tem colunas UF, CEP INICIAL, CEP FINAL, PRAZO
-      const isDeliveryTimeSheet = firstRow.some(cell => cell.includes('cep') && cell.includes('inicial')) && 
-                                   firstRow.some(cell => cell.includes('prazo'));
+      // Aba de ABRANGÊNCIA/PRAZOS: nome ou estrutura
+      const isDeliveryTimeSheet = sheetNameLower.includes('abrang') || 
+                                   (firstRow.some(cell => cell.includes('cep') && cell.includes('inicial')) && 
+                                    firstRow.some(cell => cell.includes('prazo')));
       
-      // Aba de PREÇOS: coluna A contém "peso" em alguma das primeiras linhas
-      const isPricingSheet = columnA.some(cell => cell.includes('peso'));
+      // Aba de PREÇOS: nome "tabela de preco" OU coluna A contém "peso" OU primeira linha contém "origem"
+      const isPricingSheet = sheetNameLower.includes('tabela') && sheetNameLower.includes('preco') ||
+                            sheetNameLower.includes('preço') ||
+                            columnA.some(cell => cell.includes('peso')) ||
+                            firstRow.some(cell => cell.includes('origem'));
 
+      console.log(`🔍 Nome da aba: "${sheetName}"`);
       console.log(`🔍 Tipo de aba: ${isDeliveryTimeSheet ? 'ABRANGÊNCIA/PRAZOS' : isPricingSheet ? 'PREÇOS' : 'DESCONHECIDA'}`);
       console.log(`🔍 Primeira linha:`, firstRow.slice(0, 8));
       console.log(`🔍 Coluna A (primeiras 5):`, columnA.slice(0, 5));
@@ -149,23 +161,27 @@ serve(async (req) => {
       
         
         if (zonesData.length > 0) {
-          console.log(`📦 ${zonesData.length} zonas preparadas`);
-          console.log('📋 Amostra (primeiras 2):', JSON.stringify(zonesData.slice(0, 2), null, 2));
+          // Remover duplicatas usando Map (manter última ocorrência)
+          const uniqueZones = new Map();
+          zonesData.forEach(zone => {
+            const key = `${zone.state}-${zone.zone_type}-${zone.tariff_type}`;
+            uniqueZones.set(key, zone);
+          });
+          const uniqueZonesArray = Array.from(uniqueZones.values());
           
-          // Limpar dados existentes
-          console.log('🗑️ Limpando dados antigos de jadlog_zones...');
-          await supabaseClient.from('jadlog_zones').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          console.log(`📦 ${zonesData.length} zonas extraídas, ${uniqueZonesArray.length} únicas após remoção de duplicatas`);
+          console.log('📋 Amostra (primeiras 2):', JSON.stringify(uniqueZonesArray.slice(0, 2), null, 2));
           
           // Inserir em lotes de 100
-          for (let i = 0; i < zonesData.length; i += 100) {
-            const batch = zonesData.slice(i, i + 100);
+          for (let i = 0; i < uniqueZonesArray.length; i += 100) {
+            const batch = uniqueZonesArray.slice(i, i + 100);
             const { error } = await supabaseClient.from('jadlog_zones').insert(batch);
             
             if (error) {
               console.error(`❌ Erro ao inserir lote de zonas:`, error);
             } else {
               importedZones += batch.length;
-              console.log(`✅ Progresso zonas: ${importedZones}/${zonesData.length}`);
+              console.log(`✅ Progresso zonas: ${importedZones}/${uniqueZonesArray.length}`);
             }
           }
         } else {
@@ -292,10 +308,6 @@ serve(async (req) => {
         if (pricingData.length > 0) {
           console.log(`💰 ${pricingData.length} preços preparados`);
           console.log('📋 Amostra (primeiros 3):', JSON.stringify(pricingData.slice(0, 3), null, 2));
-          
-          // Limpar dados existentes
-          console.log('🗑️ Limpando dados antigos de jadlog_pricing...');
-          await supabaseClient.from('jadlog_pricing').delete().neq('id', '00000000-0000-0000-0000-000000000000');
           
           // Inserir em lotes de 100
           for (let i = 0; i < pricingData.length; i += 100) {
