@@ -91,6 +91,8 @@ serve(async (req) => {
       // Detectar tipo de aba analisando estrutura e NOME da aba
       const sheetNameLower = sheetName.toLowerCase();
       const firstRow = jsonData[0].map(v => String(v).toLowerCase());
+      const secondRow = jsonData[1]?.map(v => String(v).toLowerCase()) || [];
+      const thirdRow = jsonData[2]?.map(v => String(v).toLowerCase()) || [];
       const columnA = jsonData.slice(0, 10).map(row => String(row[0] || '').toLowerCase());
       
       // Aba de ABRANGÊNCIA/PRAZOS: nome ou estrutura
@@ -98,16 +100,36 @@ serve(async (req) => {
                                    (firstRow.some(cell => cell.includes('cep') && cell.includes('inicial')) && 
                                     firstRow.some(cell => cell.includes('prazo')));
       
-      // Aba de PREÇOS: nome "tabela de preco" OU coluna A contém "peso" OU primeira linha contém "origem"
-      const isPricingSheet = sheetNameLower.includes('tabela') && sheetNameLower.includes('preco') ||
-                            sheetNameLower.includes('preço') ||
-                            columnA.some(cell => cell.includes('peso')) ||
-                            firstRow.some(cell => cell.includes('origem'));
+      // Aba de PREÇOS: detectar por múltiplos critérios
+      const isPricingSheet = 
+        // Por nome da aba
+        (sheetNameLower.includes('tabela') && (sheetNameLower.includes('preco') || sheetNameLower.includes('preço'))) ||
+        sheetNameLower === 'preços' ||
+        sheetNameLower === 'precos' ||
+        // Por estrutura: primeira linha tem "ORIGEM" ou "GO" repetido
+        firstRow.filter(cell => cell === 'go').length > 3 ||
+        firstRow.some(cell => cell.includes('origem')) ||
+        // Por estrutura: segunda linha tem estados (AC, AL, AM, BA, etc.)
+        secondRow.filter(cell => cell.length === 2 && cell.match(/^[a-z]{2}$/)).length > 3 ||
+        // Por estrutura: terceira linha tem "capital" ou "interior"
+        thirdRow.some(cell => cell.includes('capital') || cell.includes('interior')) ||
+        // Por estrutura: coluna A tem "peso"
+        columnA.some(cell => cell.includes('peso'));
 
-      console.log(`🔍 Nome da aba: "${sheetName}"`);
-      console.log(`🔍 Tipo de aba: ${isDeliveryTimeSheet ? 'ABRANGÊNCIA/PRAZOS' : isPricingSheet ? 'PREÇOS' : 'DESCONHECIDA'}`);
+      console.log(`🔍 Nome da aba: "${sheetName}" (lower: "${sheetNameLower}")`);
       console.log(`🔍 Primeira linha:`, firstRow.slice(0, 8));
+      console.log(`🔍 Segunda linha:`, secondRow.slice(0, 8));
+      console.log(`🔍 Terceira linha:`, thirdRow.slice(0, 8));
       console.log(`🔍 Coluna A (primeiras 5):`, columnA.slice(0, 5));
+      console.log(`🔍 Critérios detecção preços:`, {
+        nomeTabela: sheetNameLower.includes('tabela') && sheetNameLower.includes('prec'),
+        origemNaLinha1: firstRow.some(cell => cell.includes('origem')),
+        goRepetido: firstRow.filter(cell => cell === 'go').length,
+        estadosNaLinha2: secondRow.filter(cell => cell.length === 2).length,
+        capitalNaLinha3: thirdRow.some(cell => cell.includes('capital')),
+        pesoNaColunaA: columnA.some(cell => cell.includes('peso'))
+      });
+      console.log(`🔍 Tipo de aba detectado: ${isDeliveryTimeSheet ? 'ABRANGÊNCIA/PRAZOS' : isPricingSheet ? 'PREÇOS' : 'DESCONHECIDA'}`);
       
       if (isDeliveryTimeSheet) {
         // ===== Processar aba de ABRANGÊNCIA/PRAZOS =====
