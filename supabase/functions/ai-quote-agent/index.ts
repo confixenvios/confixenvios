@@ -90,30 +90,66 @@ serve(async (req) => {
       if (table.source_type === 'google_sheets' && table.google_sheets_url) {
         // Buscar dados do Google Sheets
         try {
-          const sheetUrl = table.google_sheets_url
-            .replace('/edit', '/export?format=csv')
-            .replace(/\/edit.*$/, '/export?format=csv');
+          console.log(`[AI Quote Agent] Buscando dados do Google Sheets: ${table.google_sheets_url}`);
+          
+          // Converter URL do Google Sheets para CSV export
+          let sheetUrl = table.google_sheets_url;
+          
+          // Extrair spreadsheet ID e gid
+          const spreadsheetIdMatch = sheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+          const gidMatch = sheetUrl.match(/[#&]gid=([0-9]+)/);
+          
+          if (spreadsheetIdMatch) {
+            const spreadsheetId = spreadsheetIdMatch[1];
+            const gid = gidMatch ? gidMatch[1] : '0';
+            sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
+            console.log(`[AI Quote Agent] URL CSV convertida: ${sheetUrl}`);
+          }
           
           const response = await fetch(sheetUrl);
+          console.log(`[AI Quote Agent] Response status: ${response.status}`);
+          
           if (response.ok) {
             const csvText = await response.text();
-            const rows = csvText.split('\n').slice(1); // Pular cabeçalho
+            console.log(`[AI Quote Agent] CSV obtido, tamanho: ${csvText.length} caracteres`);
             
-            tableData.pricing_data = rows
+            const rows = csvText.split('\n');
+            console.log(`[AI Quote Agent] Total de linhas: ${rows.length}`);
+            
+            // Pular primeira linha (cabeçalho)
+            const dataRows = rows.slice(1);
+            
+            tableData.pricing_data = dataRows
               .filter(row => row.trim())
               .map(row => {
-                const cols = row.split(',');
+                // Parse CSV considerando vírgulas dentro de aspas
+                const cols = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+                const cleanCols = cols.map(col => col.replace(/^"|"$/g, '').trim());
+                
                 return {
-                  destination_cep: cols[0]?.replace(/['"]/g, '').trim(),
-                  weight_min: parseFloat(cols[1]) || 0,
-                  weight_max: parseFloat(cols[2]) || 999,
-                  price: parseFloat(cols[3]) || 0,
-                  delivery_days: parseInt(cols[4]) || 5
+                  destination_cep: cleanCols[0] || '',
+                  weight_min: parseFloat(cleanCols[1]) || 0,
+                  weight_max: parseFloat(cleanCols[2]) || 999,
+                  price: parseFloat(cleanCols[3]) || 0,
+                  delivery_days: parseInt(cleanCols[4]) || 5
                 };
               })
-              .filter(item => item.destination_cep && item.price > 0);
+              .filter(item => {
+                const isValid = item.destination_cep && item.price > 0;
+                if (!isValid) {
+                  console.log(`[AI Quote Agent] Linha inválida ignorada:`, item);
+                }
+                return isValid;
+              });
             
-            console.log(`[AI Quote Agent] ${table.name}: ${tableData.pricing_data.length} registros carregados do Google Sheets`);
+            console.log(`[AI Quote Agent] ${table.name}: ${tableData.pricing_data.length} registros válidos carregados`);
+            
+            // Mostrar amostra dos primeiros 3 registros
+            if (tableData.pricing_data.length > 0) {
+              console.log(`[AI Quote Agent] Amostra dos dados:`, tableData.pricing_data.slice(0, 3));
+            }
+          } else {
+            console.error(`[AI Quote Agent] Falha ao buscar Google Sheets, status: ${response.status}`);
           }
         } catch (error) {
           console.error(`[AI Quote Agent] Erro ao carregar Google Sheets para ${table.name}:`, error);
