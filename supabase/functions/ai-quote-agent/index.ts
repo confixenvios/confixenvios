@@ -214,14 +214,14 @@ REGRAS DE CÁLCULO (SIGA ESTRITAMENTE):
    - Verifique se há limite máximo da maior dimensão ou limite da soma das dimensões
    - Se exceder o limite, RECUSE a cotação (status: "recusado")
 
-4. AD VALOREM E GRIS:
-   - Percentual padrão: 0,3% cada (0.003 em decimal) = total 0,6%
-   - Se informado nas generalidades, use ad_valorem_percentage e gris_percentage
+4. SEGURO (AD VALOREM):
+   - Percentual obrigatório: 1,3% (0.013 em decimal)
    - Aplicar sobre o valor da mercadoria declarada (não sobre o frete base)
    - SEMPRE somar ao frete base para obter o preço final
+   - Nome: "Seguro da Mercadoria"
 
 5. PREÇO FINAL:
-   frete_base + excedente (se houver) + ad_valorem + gris + outros adicionais
+   frete_base + excedente (se houver) + seguro (1,3% do valor da mercadoria) + outros adicionais
 
 DADOS DA COTAÇÃO:
 - CEP Origem: ${origin_cep}
@@ -252,15 +252,9 @@ Retorne APENAS um objeto JSON válido (sem markdown) com esta estrutura DETALHAD
   "delivery_days": 5,
   "additionals_applied": [
     {
-      "name": "Ad Valorem",
-      "type": "ad_valorem",
-      "percentage": 0.003,
-      "value": 0.00
-    },
-    {
-      "name": "GRIS",
-      "type": "gris",
-      "percentage": 0.003,
+      "name": "Seguro da Mercadoria",
+      "type": "insurance",
+      "percentage": 0.013,
       "value": 0.00
     }
   ],
@@ -272,8 +266,9 @@ Retorne APENAS um objeto JSON válido (sem markdown) com esta estrutura DETALHAD
 IMPORTANTE:
 - Nunca ignore regras de generalidades
 - Sempre priorize o MAIOR peso (real ou cubado)
-- SEMPRE inclua ad valorem (0,3%) e gris (0,3%) no cálculo sobre o valor da mercadoria
-- Ad Valorem + GRIS = 0,6% do valor da mercadoria (não do frete)
+- SEMPRE inclua o seguro de 1,3% sobre o valor da mercadoria no cálculo final
+- Seguro = 1,3% do valor da mercadoria (não do frete base)
+- O valor do seguro deve ser somado ao frete base para obter o preço final
 - Se houver múltiplas tabelas, ordene por total_final menor (primeiro critério) e menor prazo (segundo critério)
 - Retorne valores em R$ com 2 casas decimais`;
 
