@@ -84,58 +84,84 @@ serve(async (req) => {
 
       // Detectar tipo de aba analisando conteúdo
       const firstRow = jsonData[0].map(v => String(v).toLowerCase());
-      const hasZoneKeywords = firstRow.some(cell => 
-        cell.includes('zona') || 
-        cell.includes('cep') || 
-        cell.includes('prazo') ||
-        cell.includes('days')
-      );
       
-      const hasPriceKeywords = firstRow.some(cell => 
-        cell.includes('preço') ||
-        cell.includes('preco') ||
-        cell.includes('price') ||
-        cell.includes('tarifa')
-      );
+      // Detectar aba de ZONAS: tem CEP + UF/CIDADE + PRAZO
+      const hasZoneStructure = firstRow.some(cell => cell.includes('cep')) && 
+                               (firstRow.some(cell => cell.includes('uf') || cell.includes('cidade')) &&
+                               firstRow.some(cell => cell.includes('prazo')));
+      
+      // Detectar aba de PREÇOS: tem "peso" nos cabeçalhos
+      const hasPriceStructure = firstRow.some(cell => cell.includes('peso'));
 
-      console.log(`🔍 Detectado: zona=${hasZoneKeywords}, preço=${hasPriceKeywords}`);
+      console.log(`🔍 Detectado: zonas=${hasZoneStructure}, preços=${hasPriceStructure}`);
+      console.log(`🔍 Cabeçalhos encontrados:`, firstRow.slice(0, 10));
       
-      if (hasZoneKeywords && !hasPriceKeywords) {
-        // ===== Processar aba de ZONAS/PRAZOS =====
-        console.log('🗺️ Processando como aba de zonas/prazos...');
+      if (hasZoneStructure && !hasPriceStructure) {
+        // ===== Processar aba de ZONAS/PRAZOS/ABRANGÊNCIA =====
+        console.log('🗺️ Processando como aba de zonas/abrangência...');
         const zonesData: JadlogZoneRow[] = [];
         
-        // Pular cabeçalho
+        // Estrutura esperada: ORIGEM, UF, CIDADE DESTINO, CEP INICIAL, CEP FINAL, PRAZO, TARIFA, ...
+        let colOrigin = -1, colUF = -1, colCity = -1, colCEPStart = -1, colCEPEnd = -1, colPrazo = -1, colTarifa = -1;
+        
+        // Encontrar índices das colunas
+        for (let j = 0; j < firstRow.length; j++) {
+          const header = firstRow[j];
+          if (header.includes('origem')) colOrigin = j;
+          if (header.includes('uf') && !header.includes('destino')) colUF = j;
+          if (header.includes('cidade')) colCity = j;
+          if (header.includes('cep') && header.includes('inicial')) colCEPStart = j;
+          if (header.includes('cep') && header.includes('final')) colCEPEnd = j;
+          if (header.includes('prazo')) colPrazo = j;
+          if (header.includes('tarifa')) colTarifa = j;
+        }
+        
+        console.log(`📍 Mapeamento de colunas: origem=${colOrigin}, uf=${colUF}, cidade=${colCity}, cep_start=${colCEPStart}, cep_end=${colCEPEnd}, prazo=${colPrazo}, tarifa=${colTarifa}`);
+        
+        if (colUF === -1 || colCEPStart === -1 || colCEPEnd === -1) {
+          console.log('⚠️ Colunas essenciais não encontradas, pulando aba');
+          continue;
+        }
+        
+        // Processar linhas de dados
+        let processedRows = 0;
         for (let i = 1; i < jsonData.length; i++) {
           const row = jsonData[i];
-          if (!row || row.length < 4) {
-            console.log(`  ⚠️ Linha ${i} inválida ou incompleta, pulando...`);
-            continue;
-          }
+          if (!row || row.length < 5) continue;
           
-          // Mapear colunas
-          const zoneCode = String(row[0] || '').trim();
-          const state = String(row[1] || '').trim();
-          const zoneType = String(row[2] || '').trim();
-          const tariffType = String(row[3] || '').trim();
-          const cepStart = String(row[4] || '').trim();
-          const cepEnd = String(row[5] || '').trim();
-          const deliveryDays = parseInt(String(row[6] || '5'));
-          const expressDeliveryDays = parseInt(String(row[7] || '3'));
+          const origin = colOrigin !== -1 ? String(row[colOrigin] || '').trim() : 'GO';
+          const state = String(row[colUF] || '').trim();
+          const city = colCity !== -1 ? String(row[colCity] || '').trim() : '';
+          const cepStart = String(row[colCEPStart] || '').trim();
+          const cepEnd = String(row[colCEPEnd] || '').trim();
+          const prazo = colPrazo !== -1 ? parseInt(String(row[colPrazo] || '5')) : 5;
+          const tarifa = colTarifa !== -1 ? String(row[colTarifa] || '').trim() : 'STANDARD';
           
-          if (zoneCode && state) {
-            zonesData.push({
-              zone_code: zoneCode,
-              state: state,
-              zone_type: zoneType || 'STANDARD',
-              tariff_type: tariffType || 'PACKAGE',
-              cep_start: cepStart || undefined,
-              cep_end: cepEnd || undefined,
-              delivery_days: isNaN(deliveryDays) ? 5 : deliveryDays,
-              express_delivery_days: isNaN(expressDeliveryDays) ? 3 : expressDeliveryDays
-            });
+          // Validar dados essenciais
+          if (!state || !cepStart || !cepEnd) continue;
+          
+          // Criar código de zona único
+          const zoneCode = `${origin}-${state}-${cepStart.substring(0, 5)}`;
+          
+          zonesData.push({
+            zone_code: zoneCode,
+            state: state,
+            zone_type: city || 'STANDARD',
+            tariff_type: tarifa,
+            cep_start: cepStart,
+            cep_end: cepEnd,
+            delivery_days: isNaN(prazo) ? 5 : prazo,
+            express_delivery_days: isNaN(prazo) ? 3 : Math.max(1, prazo - 2)
+          });
+          
+          processedRows++;
+          if (processedRows % 1000 === 0) {
+            console.log(`  ✅ Processadas ${processedRows} linhas de zonas...`);
           }
         }
+        
+        console.log(`📦 Total de ${zonesData.length} zonas extraídas`);
+      
         
         if (zonesData.length > 0) {
           console.log(`📦 ${zonesData.length} zonas preparadas`);
