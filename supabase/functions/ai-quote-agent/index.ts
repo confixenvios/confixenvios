@@ -268,7 +268,6 @@ serve(async (req) => {
               
               console.log(`[AI Quote Agent] Amostra geral Jadlog:`, tableData.pricing_data.slice(0, 2));
             }
-          }
         } catch (error) {
           console.error(`[AI Quote Agent] Erro ao processar tabela Jadlog:`, error);
         }
