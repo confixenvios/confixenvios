@@ -135,13 +135,13 @@ export class PricingTableService {
               expressDays: quote.expressDays,
               zone: quote.zone || 'IA',
               zoneName: quote.zone || 'Agente IA',
-              tableId: 'ai-agent',
-              tableName: 'Agente IA',
+              tableId: quote.selected_table_id || 'ai-agent',
+              tableName: quote.selected_table_name || 'Agente IA',
               cnpj: '',
-              insuranceValue: quote.additionals_applied?.find((a: any) => a.type === 'insurance')?.value,
-              basePrice: quote.economicPrice,
-              cubicWeight: undefined,
-              appliedWeight: weight
+              insuranceValue: quote.insuranceValue || 0,
+              basePrice: quote.basePrice || quote.economicPrice,
+              cubicWeight: quote.peso_cubado,
+              appliedWeight: quote.peso_tarifavel || weight
             };
           } else {
             console.warn('⚠️ [AI Agent] Resposta da IA sem sucesso ou incompleta:', aiQuote);

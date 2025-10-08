@@ -32,13 +32,15 @@ serve(async (req) => {
       total_weight, 
       volumes_data, 
       user_id, 
-      session_id 
+      session_id,
+      merchandise_value 
     } = await req.json();
 
     console.log('[AI Quote Agent] Processing quote request', {
       origin_cep,
       destination_cep,
       total_weight,
+      merchandise_value
     });
 
     // Verificar se o agente está ativo
@@ -477,7 +479,15 @@ serve(async (req) => {
           }
 
           const base_price = priceRecord.price;
-          const final_price = base_price + valor_excedente;
+          
+          // Calcular seguro (1.3% do valor da mercadoria)
+          let insurance_value = 0;
+          if (merchandise_value && merchandise_value > 0) {
+            insurance_value = merchandise_value * 0.013; // 1.3%
+            console.log(`[AI Quote Agent] 🛡️ Seguro calculado: R$ ${insurance_value.toFixed(2)} (1.3% de R$ ${merchandise_value.toFixed(2)})`);
+          }
+          
+          const final_price = base_price + valor_excedente + insurance_value;
 
           allTableQuotes.push({
             table_id: table.id,
@@ -485,22 +495,24 @@ serve(async (req) => {
             base_price,
             excedente_kg,
             valor_excedente,
+            insurance_value,
             final_price,
             delivery_days: priceRecord.delivery_days,
             peso_tarifavel,
             has_coverage: true
           });
           
-          console.log(`[AI Quote Agent] ${table.name} - Cobertura ENCONTRADA para CEP ${destination_cep} e peso ${peso_tarifavel}kg - Preço: R$ ${final_price}`);
+          console.log(`[AI Quote Agent] ${table.name} - Cobertura ENCONTRADA para CEP ${destination_cep} e peso ${peso_tarifavel}kg - Preço: R$ ${final_price} (base: R$ ${base_price} + excedente: R$ ${valor_excedente} + seguro: R$ ${insurance_value})`);
         } else {
           // Tabela não tem cobertura para este CEP/peso
           allTableQuotes.push({
-            table_id: table.id,
-            table_name: table.name,
-            base_price: 0,
-            excedente_kg: 0,
-            valor_excedente: 0,
-            final_price: 0,
+          table_id: table.id,
+          table_name: table.name,
+          base_price: 0,
+          excedente_kg: 0,
+          valor_excedente: 0,
+          insurance_value: 0,
+          final_price: 0,
             delivery_days: 0,
             peso_tarifavel: 0,
             has_coverage: false
@@ -511,12 +523,13 @@ serve(async (req) => {
       } catch (error) {
         console.error(`[AI Quote Agent] Error calculating price for table ${table.name}:`, error);
         allTableQuotes.push({
-          table_id: table.id,
-          table_name: table.name,
-          base_price: 0,
-          excedente_kg: 0,
-          valor_excedente: 0,
-          final_price: 0,
+            table_id: table.id,
+            table_name: table.name,
+            base_price: 0,
+            excedente_kg: 0,
+            valor_excedente: 0,
+            insurance_value: 0,
+            final_price: 0,
           delivery_days: 0,
           peso_tarifavel: 0,
           has_coverage: false,
@@ -721,12 +734,24 @@ Retorne APENAS JSON válido:
           expressPrice: calculationResult.final_price * 1.3,
           expressDays: Math.max(1, calculationResult.delivery_days - 2),
           zone: `Tabela: ${calculationResult.selected_table_name}`,
-          additionals_applied: [],
+          additionals_applied: [
+            ...(selectedQuote.excedente_kg > 0 ? [{
+              type: 'excess_weight',
+              value: selectedQuote.valor_excedente,
+              description: `Excedente de peso: ${selectedQuote.excedente_kg.toFixed(2)}kg`
+            }] : []),
+            ...(selectedQuote.insurance_value && selectedQuote.insurance_value > 0 ? [{
+              type: 'insurance',
+              value: selectedQuote.insurance_value,
+              description: `Seguro (1.3% do valor declarado)`
+            }] : [])
+          ],
           reasoning: calculationResult.reasoning,
+          insuranceValue: selectedQuote.insurance_value || 0,
+          basePrice: calculationResult.base_price,
           // Dados detalhados para histórico
           selected_table_id: calculationResult.selected_table_id,
           selected_table_name: calculationResult.selected_table_name,
-          base_price: calculationResult.base_price,
           final_price: calculationResult.final_price,
           delivery_days: calculationResult.delivery_days,
           peso_tarifavel: calculationResult.peso_tarifavel,
