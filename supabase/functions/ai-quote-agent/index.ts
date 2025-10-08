@@ -413,7 +413,8 @@ serve(async (req) => {
     for (const table of tablesWithData) {
       try {
         // Calcular peso tarifável
-        const peso_cubado = (total_volume * 1000000) / table.cubic_meter_kg_equivalent;
+        // total_volume já está em m³, então basta multiplicar pelo equivalente
+        const peso_cubado = total_volume * table.cubic_meter_kg_equivalent;
         const peso_tarifavel = Math.max(total_weight, peso_cubado);
         
         console.log(`[AI Quote Agent] Buscando preço em ${table.name}:`);
