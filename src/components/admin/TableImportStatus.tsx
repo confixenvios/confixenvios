@@ -73,6 +73,26 @@ export const TableImportStatus = ({
             sheets: []
           });
         }
+      } else if (lowerTableName.includes('magalog')) {
+        // Contar registros da tabela Magalog - usando rpc para evitar problemas de tipo
+        const { count: pricingCount } = await supabase
+          .from('shipping_pricing_magalog' as any)
+          .select('*', { count: 'exact', head: true });
+
+        const { count: zonesCount } = await supabase
+          .from('shipping_zones_magalog' as any)
+          .select('*', { count: 'exact', head: true });
+
+        const total = (pricingCount || 0) + (zonesCount || 0);
+        setRecordCount(total);
+        
+        if (total > 0) {
+          setImportDetails({
+            pricing: pricingCount || 0,
+            zones: zonesCount || 0,
+            sheets: []
+          });
+        }
       } else {
         // Para outras transportadoras
         setRecordCount(0);

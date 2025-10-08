@@ -81,6 +81,7 @@ const AdminTabelas = () => {
   const [editingTable, setEditingTable] = useState<PricingTable | null>(null);
   const [viewingTable, setViewingTable] = useState<PricingTable | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [tableRecordCounts, setTableRecordCounts] = useState<Record<string, number>>({});
   const { toast } = useToast();
 
   // Form state
@@ -142,6 +143,33 @@ const AdminTabelas = () => {
 
       setPricingTables(tablesData || []);
       setCompanyBranches(branchesData || []);
+      
+      // Verificar contagem de registros para cada tabela
+      if (tablesData) {
+        const counts: Record<string, number> = {};
+        for (const table of tablesData) {
+          const lowerName = table.name.toLowerCase();
+          
+          if (lowerName.includes('jadlog')) {
+            const { count: pricingCount } = await supabase
+              .from('jadlog_pricing')
+              .select('*', { count: 'exact', head: true });
+            const { count: zonesCount } = await supabase
+              .from('jadlog_zones')
+              .select('*', { count: 'exact', head: true });
+            counts[table.id] = (pricingCount || 0) + (zonesCount || 0);
+          } else if (lowerName.includes('magalog')) {
+            const { count: pricingCount } = await supabase
+              .from('shipping_pricing_magalog' as any)
+              .select('*', { count: 'exact', head: true });
+            const { count: zonesCount } = await supabase
+              .from('shipping_zones_magalog' as any)
+              .select('*', { count: 'exact', head: true });
+            counts[table.id] = (pricingCount || 0) + (zonesCount || 0);
+          }
+        }
+        setTableRecordCounts(counts);
+      }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       toast({
@@ -747,7 +775,11 @@ const AdminTabelas = () => {
                             )}
                           </Badge>
                         </TableCell>
-                        <TableCell>{getValidationBadge(table.validation_status)}</TableCell>
+                        <TableCell>
+                          <Badge variant={tableRecordCounts[table.id] > 0 ? 'default' : 'secondary'}>
+                            {tableRecordCounts[table.id] > 0 ? 'Completa' : 'Pendente'}
+                          </Badge>
+                        </TableCell>
                         <TableCell>
                           {new Date(table.updated_at).toLocaleDateString('pt-BR')}
                         </TableCell>
