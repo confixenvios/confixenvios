@@ -98,22 +98,20 @@ serve(async (req) => {
       if (table.name.toLowerCase().includes('jadlog')) {
         console.log(`[AI Quote Agent] Tabela Jadlog detectada - buscando dados do Supabase`);
         try {
-          // Buscar todas as zonas Jadlog - AUMENTAR LIMIT
+          // Buscar todas as zonas Jadlog - SEM LIMITE para pegar todas
           const { data: zones, error: zonesError } = await supabaseClient
             .from('jadlog_zones')
-            .select('*')
-            .limit(10000); // Aumentar limite para garantir que pegue todas as zonas
+            .select('*');
           
           if (zonesError) {
             console.error(`[AI Quote Agent] Erro ao buscar jadlog_zones:`, zonesError);
           } else {
             console.log(`[AI Quote Agent] ${zones?.length || 0} zonas Jadlog carregadas`);
             
-            // Buscar todos os preços Jadlog - AUMENTAR LIMIT para pegar todas as faixas de peso
+            // Buscar todos os preços Jadlog - SEM LIMITE para pegar todas as faixas de peso
             const { data: pricing, error: pricingError } = await supabaseClient
               .from('jadlog_pricing')
-              .select('*')
-              .limit(10000); // Aumentar limite para garantir que pegue todos os preços
+              .select('*');
             
             if (pricingError) {
               console.error(`[AI Quote Agent] Erro ao buscar jadlog_pricing:`, pricingError);
@@ -237,22 +235,20 @@ serve(async (req) => {
       else if (table.name.toLowerCase().includes('magalog')) {
         console.log(`[AI Quote Agent] Tabela Magalog detectada - buscando dados do Supabase`);
         try {
-          // Buscar todas as zonas Magalog - AUMENTAR LIMIT
+          // Buscar todas as zonas Magalog - SEM LIMITE
           const { data: zones, error: zonesError } = await supabaseClient
             .from('shipping_zones_magalog')
-            .select('*')
-            .limit(10000); // Aumentar limite
+            .select('*');
           
           if (zonesError) {
             console.error(`[AI Quote Agent] Erro ao buscar shipping_zones_magalog:`, zonesError);
           } else {
             console.log(`[AI Quote Agent] ${zones?.length || 0} zonas Magalog carregadas`);
             
-            // Buscar todos os preços Magalog - AUMENTAR LIMIT
+            // Buscar todos os preços Magalog - SEM LIMITE
             const { data: pricing, error: pricingError } = await supabaseClient
               .from('shipping_pricing_magalog')
-              .select('*')
-              .limit(10000); // Aumentar limite
+              .select('*');
             
             if (pricingError) {
               console.error(`[AI Quote Agent] Erro ao buscar shipping_pricing_magalog:`, pricingError);
