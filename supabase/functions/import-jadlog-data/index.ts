@@ -84,16 +84,18 @@ serve(async (req) => {
 
       // Detectar tipo de aba analisando estrutura
       const firstRow = jsonData[0].map(v => String(v).toLowerCase());
+      const columnA = jsonData.slice(0, 10).map(row => String(row[0] || '').toLowerCase());
       
-      // Aba de ABRANGÊNCIA/PRAZOS: tem colunas UF, CEP INICIAL, CEP FINAL, PRAZO
+      // Aba de ABRANGÊNCIA/PRAZOS: primeira linha tem colunas UF, CEP INICIAL, CEP FINAL, PRAZO
       const isDeliveryTimeSheet = firstRow.some(cell => cell.includes('cep') && cell.includes('inicial')) && 
                                    firstRow.some(cell => cell.includes('prazo'));
       
-      // Aba de PREÇOS: primeira célula contém "peso"
-      const isPricingSheet = firstRow[0] && firstRow[0].includes('peso');
+      // Aba de PREÇOS: coluna A contém "peso" em alguma das primeiras linhas
+      const isPricingSheet = columnA.some(cell => cell.includes('peso'));
 
       console.log(`🔍 Tipo de aba: ${isDeliveryTimeSheet ? 'ABRANGÊNCIA/PRAZOS' : isPricingSheet ? 'PREÇOS' : 'DESCONHECIDA'}`);
-      console.log(`🔍 Primeira linha:`, firstRow.slice(0, 10));
+      console.log(`🔍 Primeira linha:`, firstRow.slice(0, 8));
+      console.log(`🔍 Coluna A (primeiras 5):`, columnA.slice(0, 5));
       
       if (isDeliveryTimeSheet) {
         // ===== Processar aba de ABRANGÊNCIA/PRAZOS =====
