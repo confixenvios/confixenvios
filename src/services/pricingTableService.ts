@@ -52,61 +52,81 @@ export class PricingTableService {
     merchandiseValue?: number;
   }): Promise<PricingTableQuote | null> {
     try {
-      console.log('[PricingTableService] Iniciando cotação multi-tabela...');
+      console.log('🚀 [PricingTableService] === INÍCIO DA COTAÇÃO ===');
+      console.log('📦 Parâmetros recebidos:', { destinyCep, weight, quantity, length, width, height, merchandiseValue });
       
       // PASSO 1: Verificar se o Agente IA está ativo
+      console.log('🔍 [AI Agent] Verificando status do agente IA...');
       const { data: aiConfig, error: aiConfigError } = await supabase
         .from('ai_quote_config')
         .select('*')
         .single();
       
+      console.log('📊 [AI Agent] Config:', { aiConfig, aiConfigError });
+      
       if (!aiConfigError && aiConfig?.is_active) {
-        console.log('🤖 [AI Agent] Agente IA está ATIVO - delegando cotação para IA');
+        console.log('✅ [AI Agent] Agente IA está ATIVO - delegando cotação para IA');
         
         // Calcular volume total em m³
         let totalVolume = 0;
         if (length && width && height) {
           totalVolume = (length / 100) * (width / 100) * (height / 100) * quantity;
         }
+        console.log('📐 [AI Agent] Volume calculado:', totalVolume, 'm³');
         
         // Obter user_id ou session_id para tracking
         const { data: { user } } = await supabase.auth.getUser();
+        console.log('👤 [AI Agent] User ID:', user?.id || 'Anônimo');
         
         try {
-          console.log('🤖 [AI Agent] Chamando edge function com:', {
+          const requestBody = {
             origin_cep: '74900000',
             destination_cep: destinyCep,
             total_weight: weight,
             total_volume: totalVolume,
-            merchandise_value: merchandiseValue || 0
-          });
+            merchandise_value: merchandiseValue || 0,
+            user_id: user?.id || null,
+            session_id: (window as any).anonymousSessionId || null,
+            volumes_data: [{
+              weight,
+              length: length || 0,
+              width: width || 0,
+              height: height || 0,
+              quantity
+            }]
+          };
+          
+          console.log('📤 [AI Agent] Enviando requisição para edge function:', requestBody);
           
           const { data: aiQuote, error: aiError } = await supabase.functions.invoke('ai-quote-agent', {
-            body: {
-              origin_cep: '74900000',
-              destination_cep: destinyCep,
-              total_weight: weight,
-              total_volume: totalVolume,
-              merchandise_value: merchandiseValue || 0,
-              user_id: user?.id || null,
-              volumes_data: [{
-                weight,
-                length: length || 0,
-                width: width || 0,
-                height: height || 0,
-                quantity
-              }]
-            }
+            body: requestBody
           });
           
-          console.log('🤖 [AI Agent] Resposta da edge function:', { aiQuote, aiError });
+          console.log('📥 [AI Agent] Resposta completa:', { 
+            success: aiQuote?.success, 
+            hasQuote: !!aiQuote?.quote,
+            error: aiError,
+            fullResponse: aiQuote 
+          });
           
           if (aiError) {
-            console.error('❌ [AI Agent] Erro ao chamar agente IA:', aiError);
+            console.error('❌ [AI Agent] Erro ao chamar agente IA:', {
+              message: aiError.message,
+              details: aiError,
+              context: aiError.context
+            });
           } else if (aiQuote?.success && aiQuote?.quote) {
-            console.log('✅ [AI Agent] Cotação obtida via IA:', aiQuote.quote);
+            console.log('✅ [AI Agent] Cotação obtida via IA com sucesso!');
+            console.log('💰 [AI Agent] Detalhes da cotação:', {
+              economicPrice: aiQuote.quote.economicPrice,
+              expressPrice: aiQuote.quote.expressPrice,
+              economicDays: aiQuote.quote.economicDays,
+              expressDays: aiQuote.quote.expressDays,
+              zone: aiQuote.quote.zone,
+              additionals: aiQuote.quote.additionals_applied,
+              reasoning: aiQuote.quote.reasoning
+            });
             
-            // A edge function já retorna no formato correto
             const quote = aiQuote.quote;
             return {
               economicPrice: quote.economicPrice,
@@ -124,15 +144,22 @@ export class PricingTableService {
               appliedWeight: weight
             };
           } else {
-            console.warn('⚠️ [AI Agent] Resposta da IA sem sucesso:', aiQuote);
+            console.warn('⚠️ [AI Agent] Resposta da IA sem sucesso ou incompleta:', aiQuote);
           }
-        } catch (aiError) {
-          console.error('❌ [AI Agent] Exceção ao chamar agente IA:', aiError);
+        } catch (aiError: any) {
+          console.error('❌ [AI Agent] Exceção ao chamar agente IA:', {
+            message: aiError?.message,
+            stack: aiError?.stack,
+            full: aiError
+          });
         }
         
         console.log('⚠️ [AI Agent] Agente IA falhou, continuando com método tradicional...');
       } else {
         console.log('🔧 [AI Agent] Agente IA está INATIVO - usando método tradicional');
+        if (aiConfigError) {
+          console.error('⚠️ [AI Agent] Erro ao buscar config:', aiConfigError);
+        }
       }
       
       // PASSO 2: Método tradicional - buscar e processar tabelas manualmente
