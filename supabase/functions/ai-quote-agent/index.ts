@@ -304,64 +304,103 @@ IMPORTANTE:
     console.log('[AI Quote Agent] Selected table:', selectedTable.name);
     console.log('[AI Quote Agent] AI Reasoning:', aiSelection.reasoning);
 
-    // CALCULAR O PREÇO REAL usando os dados da tabela
+    // CALCULAR O PREÇO PARA TODAS AS TABELAS DISPONÍVEIS
     const cepPrefix = destination_cep.replace(/\D/g, '').substring(0, 5);
-    
-    // Calcular peso tarifável
-    const peso_cubado = (total_volume * 1000000) / selectedTable.cubic_meter_kg_equivalent;
-    const peso_tarifavel = Math.max(total_weight, peso_cubado);
-    
-    console.log('[AI Quote Agent] Peso calculations:', {
-      peso_informado: total_weight,
-      peso_cubado,
-      peso_tarifavel,
-      cubic_divisor: selectedTable.cubic_meter_kg_equivalent
-    });
+    const allTableQuotes = [];
 
-    // Encontrar registro de preço correspondente ao CEP e peso
-    const priceRecord = selectedTable.pricing_data.find(p => {
-      const recordCepPrefix = p.destination_cep.replace(/\D/g, '').substring(0, 5);
-      const cepMatch = recordCepPrefix === cepPrefix;
-      const weightMatch = peso_tarifavel >= p.weight_min && peso_tarifavel <= p.weight_max;
-      return cepMatch && weightMatch;
-    });
+    for (const table of tablesWithData) {
+      try {
+        // Calcular peso tarifável
+        const peso_cubado = (total_volume * 1000000) / table.cubic_meter_kg_equivalent;
+        const peso_tarifavel = Math.max(total_weight, peso_cubado);
+        
+        // Encontrar registro de preço correspondente ao CEP e peso
+        const priceRecord = table.pricing_data.find(p => {
+          const recordCepPrefix = p.destination_cep.replace(/\D/g, '').substring(0, 5);
+          const cepMatch = recordCepPrefix === cepPrefix;
+          const weightMatch = peso_tarifavel >= p.weight_min && peso_tarifavel <= p.weight_max;
+          return cepMatch && weightMatch;
+        });
 
-    if (!priceRecord) {
-      console.error('[AI Quote Agent] No price record found for:', { cepPrefix, peso_tarifavel });
-      throw new Error(`Nenhum registro de preço encontrado para CEP ${destination_cep} e peso ${peso_tarifavel}kg na tabela ${selectedTable.name}`);
+        if (priceRecord) {
+          // Calcular excedente de peso se aplicável
+          let excedente_kg = 0;
+          let valor_excedente = 0;
+          
+          if (peso_tarifavel > table.excess_weight_threshold_kg) {
+            excedente_kg = peso_tarifavel - table.excess_weight_threshold_kg;
+            valor_excedente = excedente_kg * table.excess_weight_charge_per_kg;
+          }
+
+          const base_price = priceRecord.price;
+          const final_price = base_price + valor_excedente;
+
+          allTableQuotes.push({
+            table_id: table.id,
+            table_name: table.name,
+            base_price,
+            excedente_kg,
+            valor_excedente,
+            final_price,
+            delivery_days: priceRecord.delivery_days,
+            peso_tarifavel,
+            has_coverage: true
+          });
+        } else {
+          // Tabela não tem cobertura para este CEP/peso
+          allTableQuotes.push({
+            table_id: table.id,
+            table_name: table.name,
+            base_price: 0,
+            excedente_kg: 0,
+            valor_excedente: 0,
+            final_price: 0,
+            delivery_days: 0,
+            peso_tarifavel: 0,
+            has_coverage: false
+          });
+        }
+      } catch (error) {
+        console.error(`[AI Quote Agent] Error calculating price for table ${table.name}:`, error);
+        allTableQuotes.push({
+          table_id: table.id,
+          table_name: table.name,
+          base_price: 0,
+          excedente_kg: 0,
+          valor_excedente: 0,
+          final_price: 0,
+          delivery_days: 0,
+          peso_tarifavel: 0,
+          has_coverage: false,
+          error: error.message
+        });
+      }
     }
 
-    console.log('[AI Quote Agent] Price record found:', priceRecord);
-
-    // Calcular excedente de peso se aplicável
-    let excedente_kg = 0;
-    let valor_excedente = 0;
+    // Encontrar o resultado da tabela selecionada
+    const selectedQuote = allTableQuotes.find(q => q.table_id === selectedTable.id);
     
-    if (peso_tarifavel > selectedTable.excess_weight_threshold_kg) {
-      excedente_kg = peso_tarifavel - selectedTable.excess_weight_threshold_kg;
-      valor_excedente = excedente_kg * selectedTable.excess_weight_charge_per_kg;
+    if (!selectedQuote || !selectedQuote.has_coverage) {
+      throw new Error(`Tabela selecionada ${selectedTable.name} não tem cobertura para CEP ${destination_cep} e peso ${peso_tarifavel || total_weight}kg`);
     }
-
-    // Preço final
-    const base_price = priceRecord.price;
-    const final_price = base_price + valor_excedente;
 
     const calculationResult = {
       selected_table_id: selectedTable.id,
       selected_table_name: selectedTable.name,
       peso_informado: total_weight,
-      peso_cubado,
-      peso_tarifavel,
-      base_price,
-      excedente_kg,
-      valor_excedente,
-      delivery_days: priceRecord.delivery_days,
-      final_price,
+      peso_cubado: selectedQuote.peso_tarifavel > total_weight ? (total_volume * 1000000) / selectedTable.cubic_meter_kg_equivalent : 0,
+      peso_tarifavel: selectedQuote.peso_tarifavel,
+      base_price: selectedQuote.base_price,
+      excedente_kg: selectedQuote.excedente_kg,
+      valor_excedente: selectedQuote.valor_excedente,
+      delivery_days: selectedQuote.delivery_days,
+      final_price: selectedQuote.final_price,
       reasoning: aiSelection.reasoning,
-      price_record_used: priceRecord
+      all_table_quotes: allTableQuotes
     };
 
-    console.log('[AI Quote Agent] Final calculation:', calculationResult);
+    console.log('[AI Quote Agent] All table quotes calculated:', allTableQuotes);
+    console.log('[AI Quote Agent] Final selected calculation:', calculationResult);
 
     // Salvar log da cotação
     const { error: logError } = await supabaseClient
@@ -383,16 +422,15 @@ IMPORTANTE:
         priority_used: config.priority_mode,
         all_options_analyzed: {
           tables_analyzed: tablesWithData.length,
-          tables_available: tablesWithData.map(t => t.name),
           reasoning: calculationResult.reasoning,
+          all_quotes: calculationResult.all_table_quotes,
           calculation_details: {
             peso_informado: calculationResult.peso_informado,
             peso_cubado: calculationResult.peso_cubado,
             peso_tarifavel: calculationResult.peso_tarifavel,
             base_price: calculationResult.base_price,
             excedente_kg: calculationResult.excedente_kg,
-            valor_excedente: calculationResult.valor_excedente,
-            price_record_used: calculationResult.price_record_used
+            valor_excedente: calculationResult.valor_excedente
           }
         },
       }]);

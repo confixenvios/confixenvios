@@ -286,28 +286,65 @@ const AdminAgenteIA = () => {
                               )}
                             </div>
 
-                            {log.all_options_analyzed && typeof log.all_options_analyzed === 'object' && Object.keys(log.all_options_analyzed).length > 0 && (
-                              <div className="mt-3">
-                                <div className="text-xs font-medium text-muted-foreground mb-2">Todas as opções analisadas pela IA:</div>
-                                <div className="space-y-1">
-                                  {Object.entries(log.all_options_analyzed).map(([tableName, data]: [string, any]) => (
+                            {log.all_options_analyzed?.all_quotes && Array.isArray(log.all_options_analyzed.all_quotes) && log.all_options_analyzed.all_quotes.length > 0 && (
+                              <div className="mt-4 space-y-2">
+                                <div className="text-sm font-semibold">Comparação de Tabelas Analisadas:</div>
+                                <div className="space-y-2">
+                                  {log.all_options_analyzed.all_quotes.map((quote: any) => (
                                     <div 
-                                      key={tableName} 
-                                      className={`text-xs p-2 rounded ${
-                                        tableName === log.selected_pricing_table_name 
-                                          ? 'bg-primary/10 border border-primary/20' 
-                                          : 'bg-muted/30'
+                                      key={quote.table_id} 
+                                      className={`p-3 rounded-lg border-2 ${
+                                        quote.table_name === log.selected_pricing_table_name 
+                                          ? 'bg-primary/10 border-primary' 
+                                          : 'bg-muted/30 border-muted'
                                       }`}
                                     >
-                                      <div className="flex justify-between">
-                                        <span className="font-medium">{tableName}</span>
-                                        <span className="font-mono">
-                                          R$ {data.price?.toFixed(2) || '0.00'} - {data.days || 0} dias
-                                        </span>
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-semibold">{quote.table_name}</span>
+                                          {quote.table_name === log.selected_pricing_table_name && (
+                                            <Badge variant="default" className="text-xs">ESCOLHIDA</Badge>
+                                          )}
+                                          {!quote.has_coverage && (
+                                            <Badge variant="destructive" className="text-xs">SEM COBERTURA</Badge>
+                                          )}
+                                        </div>
+                                        {quote.has_coverage && (
+                                          <div className="text-right">
+                                            <div className="font-bold text-lg">R$ {quote.final_price.toFixed(2)}</div>
+                                            <div className="text-xs text-muted-foreground">{quote.delivery_days} dias úteis</div>
+                                          </div>
+                                        )}
                                       </div>
+                                      
+                                      {quote.has_coverage && (
+                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                          <div>
+                                            <span className="text-muted-foreground">Valor Base:</span>
+                                            <span className="ml-1 font-mono">R$ {quote.base_price.toFixed(2)}</span>
+                                          </div>
+                                          {quote.excedente_kg > 0 && (
+                                            <div>
+                                              <span className="text-muted-foreground">Excedente ({quote.excedente_kg.toFixed(1)}kg):</span>
+                                              <span className="ml-1 font-mono">R$ {quote.valor_excedente.toFixed(2)}</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
+
+                                {log.all_options_analyzed.reasoning && (
+                                  <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                    <div className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                                      Por que a IA escolheu {log.selected_pricing_table_name}?
+                                    </div>
+                                    <div className="text-xs text-blue-800 dark:text-blue-200">
+                                      {log.all_options_analyzed.reasoning}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
