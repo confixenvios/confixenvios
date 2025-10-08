@@ -389,39 +389,61 @@ IMPORTANTE:
         const peso_cubado = (total_volume * 1000000) / table.cubic_meter_kg_equivalent;
         const peso_tarifavel = Math.max(total_weight, peso_cubado);
         
+        console.log(`[AI Quote Agent] Buscando preço em ${table.name}:`);
+        console.log(`  - CEP: ${destination_cep} (${cepNumerico})`);
+        console.log(`  - Peso tarifável: ${peso_tarifavel}kg`);
+        console.log(`  - Total de registros: ${table.pricing_data.length}`);
+        
+        // Para Jadlog, mostrar alguns registros do AC para debug
+        if (table.name.toLowerCase().includes('jadlog')) {
+          const acRecords = table.pricing_data.filter(p => p.state === 'AC').slice(0, 5);
+          console.log(`  - Amostra AC (primeiros 5):`, JSON.stringify(acRecords, null, 2));
+        }
+        
         // Encontrar registro de preço correspondente ao CEP e peso
         const priceRecord = table.pricing_data.find(p => {
           // Verificar match de peso
           const weightMatch = peso_tarifavel >= p.weight_min && peso_tarifavel <= p.weight_max;
-          if (!weightMatch) return false;
           
           // Verificar match de CEP - suportar diferentes formatos
           const recordCep = p.destination_cep.replace(/\D/g, '');
           
           // Formato 1: Range de CEPs (ex: 69908643-69924999) - JADLOG
           const rangeMatch = p.destination_cep.match(/(\d{5,8})\s*-\s*(\d{5,8})/);
+          let cepMatch = false;
+          
           if (rangeMatch) {
             const rangeStart = parseInt(rangeMatch[1]);
             const rangeEnd = parseInt(rangeMatch[2]);
-            const match = cepNumerico >= rangeStart && cepNumerico <= rangeEnd;
-            if (match) {
-              console.log(`[AI Quote Agent] ${table.name} - CEP ${destination_cep} (${cepNumerico}) MATCH range ${rangeStart}-${rangeEnd}`);
-            }
-            return match;
+            cepMatch = cepNumerico >= rangeStart && cepNumerico <= rangeEnd;
           }
-          
           // Formato 2: CEP exato ou prefixo (ex: 69918)
-          if (recordCep.length <= 5) {
-            return cepPrefix.startsWith(recordCep);
+          else if (recordCep.length <= 5) {
+            cepMatch = cepPrefix.startsWith(recordCep);
           }
-          
           // Formato 3: CEP completo exato (ex: 69918308)
-          if (recordCep.length === 8) {
-            return cepNumerico === parseInt(recordCep);
+          else if (recordCep.length === 8) {
+            cepMatch = cepNumerico === parseInt(recordCep);
+          }
+          // Fallback: prefixo simples
+          else {
+            cepMatch = cepPrefix.startsWith(recordCep.substring(0, 5));
           }
           
-          // Fallback: prefixo simples
-          return cepPrefix.startsWith(recordCep.substring(0, 5));
+          const finalMatch = weightMatch && cepMatch;
+          
+          // Log quando encontrar match
+          if (finalMatch) {
+            console.log(`[AI Quote Agent] ✅ MATCH encontrado em ${table.name}:`, {
+              cep: p.destination_cep,
+              peso: `${p.weight_min}-${p.weight_max}kg`,
+              price: p.price,
+              weightMatch,
+              cepMatch
+            });
+          }
+          
+          return finalMatch;
         });
 
         if (priceRecord) {
