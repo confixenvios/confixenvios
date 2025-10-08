@@ -314,7 +314,7 @@ IMPORTANTE:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-4o-mini',
         messages: [
           { 
             role: 'system', 
@@ -322,7 +322,8 @@ IMPORTANTE:
           },
           { role: 'user', content: aiPrompt }
         ],
-        max_completion_tokens: 2000,
+        max_tokens: 2000,
+        temperature: 0.3,
         response_format: { type: "json_object" }
       }),
     });
@@ -330,13 +331,17 @@ IMPORTANTE:
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
       console.error('[AI Quote Agent] AI API error:', errorText);
+      console.error('[AI Quote Agent] Response status:', aiResponse.status);
       throw new Error(`Erro na API de IA: ${errorText}`);
     }
 
     const aiData = await aiResponse.json();
+    console.log('[AI Quote Agent] AI response structure:', JSON.stringify(aiData, null, 2));
+    
     const aiContent = aiData.choices?.[0]?.message?.content;
     
     if (!aiContent) {
+      console.error('[AI Quote Agent] Empty AI response. Full response:', JSON.stringify(aiData));
       throw new Error('Resposta da IA vazia');
     }
 
