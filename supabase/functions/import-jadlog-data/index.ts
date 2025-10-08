@@ -42,6 +42,7 @@ serve(async (req) => {
     const xlsxUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=xlsx`;
     
     console.log('🔍 Iniciando importação da tabela Jadlog via XLSX...');
+    console.log('📥 Baixando planilha de:', xlsxUrl);
     
     // Import XLSX library (Deno-compatible)
     const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs');
@@ -49,49 +50,70 @@ serve(async (req) => {
     // Buscar planilha como XLSX
     const response = await fetch(xlsxUrl);
     if (!response.ok) {
-      throw new Error(`Erro ao acessar Google Sheets: ${response.status}`);
+      throw new Error(`Erro ao acessar Google Sheets: ${response.status} - ${response.statusText}`);
     }
     
     const arrayBuffer = await response.arrayBuffer();
-    const workbook = XLSX.read(new Uint8Array(arrayBuffer));
+    const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
     
-    console.log(`📊 Abas encontradas:`, workbook.SheetNames);
+    console.log(`📊 Abas encontradas (${workbook.SheetNames.length}):`, workbook.SheetNames);
     
     let importedPricing = 0;
     let importedZones = 0;
+    const processedSheets: string[] = [];
 
     // Processar cada aba
     for (const sheetName of workbook.SheetNames) {
-      console.log(`\n📋 Processando aba: ${sheetName}`);
+      console.log(`\n📋 ==================== Processando aba: ${sheetName} ====================`);
       
       const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[][];
       
-      console.log(`📝 ${jsonData.length} linhas encontradas`);
+      console.log(`📝 Total de linhas na aba: ${jsonData.length}`);
       
       if (jsonData.length < 2) {
-        console.log('⚠️ Aba vazia ou inválida, pulando...');
+        console.log(`⚠️ Aba "${sheetName}" tem menos de 2 linhas, pulando...`);
         continue;
       }
 
-      // Detectar tipo de aba pelos cabeçalhos
-      const headers = jsonData[0];
-      const isZoneSheet = headers.some((h: any) => 
-        String(h).toLowerCase().includes('zona') || 
-        String(h).toLowerCase().includes('cep') ||
-        String(h).toLowerCase().includes('prazo')
+      // Log das primeiras linhas para debug
+      console.log('🔍 Primeiras 3 linhas da aba:');
+      for (let i = 0; i < Math.min(3, jsonData.length); i++) {
+        console.log(`  Linha ${i}:`, jsonData[i].slice(0, 10));
+      }
+
+      // Detectar tipo de aba analisando conteúdo
+      const firstRow = jsonData[0].map(v => String(v).toLowerCase());
+      const hasZoneKeywords = firstRow.some(cell => 
+        cell.includes('zona') || 
+        cell.includes('cep') || 
+        cell.includes('prazo') ||
+        cell.includes('days')
       );
       
-      if (isZoneSheet) {
-        // Processar aba de ZONAS/PRAZOS
-        console.log('🗺️ Processando como aba de zonas...');
+      const hasPriceKeywords = firstRow.some(cell => 
+        cell.includes('preço') ||
+        cell.includes('preco') ||
+        cell.includes('price') ||
+        cell.includes('tarifa')
+      );
+
+      console.log(`🔍 Detectado: zona=${hasZoneKeywords}, preço=${hasPriceKeywords}`);
+      
+      if (hasZoneKeywords && !hasPriceKeywords) {
+        // ===== Processar aba de ZONAS/PRAZOS =====
+        console.log('🗺️ Processando como aba de zonas/prazos...');
         const zonesData: JadlogZoneRow[] = [];
         
+        // Pular cabeçalho
         for (let i = 1; i < jsonData.length; i++) {
           const row = jsonData[i];
-          if (!row || row.length < 4) continue;
+          if (!row || row.length < 4) {
+            console.log(`  ⚠️ Linha ${i} inválida ou incompleta, pulando...`);
+            continue;
+          }
           
-          // Mapear colunas dinamicamente
+          // Mapear colunas
           const zoneCode = String(row[0] || '').trim();
           const state = String(row[1] || '').trim();
           const zoneType = String(row[2] || '').trim();
@@ -107,8 +129,8 @@ serve(async (req) => {
               state: state,
               zone_type: zoneType || 'STANDARD',
               tariff_type: tariffType || 'PACKAGE',
-              cep_start: cepStart || null,
-              cep_end: cepEnd || null,
+              cep_start: cepStart || undefined,
+              cep_end: cepEnd || undefined,
               delivery_days: isNaN(deliveryDays) ? 5 : deliveryDays,
               express_delivery_days: isNaN(expressDeliveryDays) ? 3 : expressDeliveryDays
             });
@@ -116,9 +138,11 @@ serve(async (req) => {
         }
         
         if (zonesData.length > 0) {
-          console.log(`📦 ${zonesData.length} zonas preparadas para importação`);
+          console.log(`📦 ${zonesData.length} zonas preparadas`);
+          console.log('📋 Amostra (primeiras 2):', JSON.stringify(zonesData.slice(0, 2), null, 2));
           
-          // Limpar dados existentes de zonas
+          // Limpar dados existentes
+          console.log('🗑️ Limpando dados antigos de jadlog_zones...');
           await supabaseClient.from('jadlog_zones').delete().neq('id', '00000000-0000-0000-0000-000000000000');
           
           // Inserir em lotes de 100
@@ -130,18 +154,21 @@ serve(async (req) => {
               console.error(`❌ Erro ao inserir lote de zonas:`, error);
             } else {
               importedZones += batch.length;
-              console.log(`✅ ${importedZones} zonas importadas...`);
+              console.log(`✅ Progresso zonas: ${importedZones}/${zonesData.length}`);
             }
           }
+        } else {
+          console.log('⚠️ Nenhuma zona válida encontrada');
         }
         
       } else {
-        // Processar aba de PREÇOS
+        // ===== Processar aba de PREÇOS =====
         console.log('💰 Processando como aba de preços...');
         const pricingData: JadlogPricingRow[] = [];
         
+        // Estrutura esperada:
         // Linha 0: Estados de origem
-        // Linha 1: Estados de destino
+        // Linha 1: Estados de destino  
         // Linha 2: Tipos de tarifa
         // Linha 3+: Faixas de peso e preços
         
@@ -155,16 +182,16 @@ serve(async (req) => {
         const tariffRow = jsonData[2];
         
         console.log('📊 Estrutura detectada:');
-        console.log('  - Origens:', originRow.slice(0, 5));
-        console.log('  - Destinos:', destRow.slice(0, 5));
-        console.log('  - Tarifas:', tariffRow.slice(0, 5));
+        console.log('  - Origens (primeiras 5):', originRow.slice(0, 5));
+        console.log('  - Destinos (primeiras 5):', destRow.slice(0, 5));
+        console.log('  - Tarifas (primeiras 5):', tariffRow.slice(0, 5));
         
         // Processar linhas de dados (peso e preços)
         for (let i = 3; i < jsonData.length; i++) {
           const row = jsonData[i];
           if (!row || row.length < 2) continue;
           
-          // Primeira coluna: faixa de peso (ex: "0-5", "5-10" ou apenas "10")
+          // Primeira coluna: faixa de peso
           const weightStr = String(row[0] || '').trim();
           if (!weightStr) continue;
           
@@ -188,9 +215,12 @@ serve(async (req) => {
             }
           }
           
-          if (isNaN(weightMax) || weightMax === 0) continue;
+          if (isNaN(weightMax) || weightMax === 0) {
+            console.log(`  ⚠️ Linha ${i}: peso inválido "${weightStr}", pulando...`);
+            continue;
+          }
           
-          console.log(`⚖️ Processando faixa: ${weightMin}-${weightMax}kg`);
+          let pricesFound = 0;
           
           // Processar cada coluna de preço (a partir da coluna 1)
           for (let j = 1; j < row.length && j < destRow.length; j++) {
@@ -225,15 +255,21 @@ serve(async (req) => {
                 weight_max: weightMax,
                 price: price
               });
+              pricesFound++;
             }
+          }
+          
+          if (pricesFound > 0) {
+            console.log(`  ✅ Linha ${i} (${weightMin}-${weightMax}kg): ${pricesFound} preços processados`);
           }
         }
         
         if (pricingData.length > 0) {
-          console.log(`💰 ${pricingData.length} preços preparados para importação`);
-          console.log('📋 Amostra dos primeiros 3:', pricingData.slice(0, 3));
+          console.log(`💰 ${pricingData.length} preços preparados`);
+          console.log('📋 Amostra (primeiros 3):', JSON.stringify(pricingData.slice(0, 3), null, 2));
           
-          // Limpar dados existentes de preços
+          // Limpar dados existentes
+          console.log('🗑️ Limpando dados antigos de jadlog_pricing...');
           await supabaseClient.from('jadlog_pricing').delete().neq('id', '00000000-0000-0000-0000-000000000000');
           
           // Inserir em lotes de 100
@@ -245,15 +281,20 @@ serve(async (req) => {
               console.error(`❌ Erro ao inserir lote de preços:`, error);
             } else {
               importedPricing += batch.length;
-              console.log(`✅ ${importedPricing} preços importados...`);
+              console.log(`✅ Progresso preços: ${importedPricing}/${pricingData.length}`);
             }
           }
+        } else {
+          console.log('⚠️ Nenhum preço válido encontrado');
         }
       }
+      
+      processedSheets.push(sheetName);
     }
 
-    console.log('\n✅ Importação concluída!');
+    console.log('\n✅ ==================== Importação concluída! ====================');
     console.log(`📊 Total: ${importedPricing} preços, ${importedZones} zonas`);
+    console.log(`📋 Abas processadas: ${processedSheets.join(', ')}`);
 
     return new Response(
       JSON.stringify({
@@ -261,7 +302,7 @@ serve(async (req) => {
         message: 'Importação concluída com sucesso',
         imported_pricing: importedPricing,
         imported_zones: importedZones,
-        sheets_processed: workbook.SheetNames
+        sheets_processed: processedSheets
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -270,11 +311,14 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('❌ Erro na importação:', error);
+    console.error('❌ ==================== Erro na importação ====================');
+    console.error('Erro:', error);
+    console.error('Stack:', error.stack);
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message
+        error: error.message,
+        details: error.stack
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
