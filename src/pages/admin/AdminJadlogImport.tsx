@@ -21,14 +21,24 @@ const AdminJadlogImport = () => {
 
   const checkAndImportData = async () => {
     setIsCheckingData(true);
+    console.log('🔍 Verificando dados da tabela jadlog_pricing...');
     try {
       // Verificar se já existem dados
       const { count, error } = await supabase
         .from('jadlog_pricing')
         .select('*', { count: 'exact', head: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao verificar dados:', error);
+        toast({
+          title: "Erro ao verificar tabela",
+          description: error.message,
+          variant: "destructive",
+        });
+        throw error;
+      }
 
+      console.log(`📊 Tabela contém ${count || 0} registros`);
       setRecordCount(count || 0);
 
       // Se não há dados, importar automaticamente
@@ -39,7 +49,12 @@ const AdminJadlogImport = () => {
         console.log(`✅ Tabela já contém ${count} registros`);
       }
     } catch (error) {
-      console.error('Erro ao verificar dados:', error);
+      console.error('❌ Erro ao verificar dados:', error);
+      toast({
+        title: "Erro ao verificar tabela",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive",
+      });
     } finally {
       setIsCheckingData(false);
     }
@@ -68,7 +83,6 @@ const AdminJadlogImport = () => {
       console.log('🔍 Segunda linha (destino):', destRow.slice(0, 10));
       console.log('🔍 Terceira linha (tarifas):', tariffRow.slice(0, 10));
       
-      const { supabase } = await import('@/integrations/supabase/client');
       const pricingData: any[] = [];
       
       // Processar linhas de dados (a partir da linha 4)
