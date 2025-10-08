@@ -493,7 +493,6 @@ IMPORTANTE:
     console.log('[AI Quote Agent] AI Reasoning:', aiSelection.reasoning);
 
     // CALCULAR O PREÇO PARA TODAS AS TABELAS DISPONÍVEIS
-    const cepPrefix = destination_cep.replace(/\D/g, '').substring(0, 5);
     const cepNumerico = parseInt(destination_cep.replace(/\D/g, ''));
     const allTableQuotes = [];
 
