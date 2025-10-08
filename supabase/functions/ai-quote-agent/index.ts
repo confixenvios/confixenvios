@@ -165,6 +165,67 @@ serve(async (req) => {
           console.error(`[AI Quote Agent] Erro ao processar tabela Jadlog:`, error);
         }
       }
+      // TABELA MAGALOG: Buscar diretamente do Supabase (shipping_zones_magalog + shipping_pricing_magalog)
+      else if (table.name.toLowerCase().includes('magalog')) {
+        console.log(`[AI Quote Agent] Tabela Magalog detectada - buscando dados do Supabase`);
+        try {
+          // Buscar todas as zonas Magalog
+          const { data: zones, error: zonesError } = await supabaseClient
+            .from('shipping_zones_magalog')
+            .select('*');
+          
+          if (zonesError) {
+            console.error(`[AI Quote Agent] Erro ao buscar shipping_zones_magalog:`, zonesError);
+          } else {
+            console.log(`[AI Quote Agent] ${zones?.length || 0} zonas Magalog carregadas`);
+            
+            // Buscar todos os preços Magalog
+            const { data: pricing, error: pricingError } = await supabaseClient
+              .from('shipping_pricing_magalog')
+              .select('*');
+            
+            if (pricingError) {
+              console.error(`[AI Quote Agent] Erro ao buscar shipping_pricing_magalog:`, pricingError);
+            } else {
+              console.log(`[AI Quote Agent] ${pricing?.length || 0} preços Magalog carregados`);
+              
+              // Mapear os dados no formato esperado pelo sistema
+              tableData.pricing_data = [];
+              
+              for (const zone of (zones || [])) {
+                // Para Magalog, o zone_code já contém o padrão completo
+                // Precisamos combinar com os preços baseados no zone_code
+                
+                const zonePrices = (pricing || []).filter(p => p.zone_code === zone.zone_code);
+                
+                if (zonePrices.length > 0) {
+                  console.log(`[DEBUG] Magalog Zone ${zone.zone_code}: Found ${zonePrices.length} prices, CEP range: ${zone.cep_start}-${zone.cep_end}`);
+                }
+                
+                for (const priceItem of zonePrices) {
+                  // Criar um registro combinando zona + preço
+                  tableData.pricing_data.push({
+                    destination_cep: `${zone.cep_start}-${zone.cep_end}`,
+                    weight_min: priceItem.weight_min,
+                    weight_max: priceItem.weight_max,
+                    price: priceItem.price,
+                    delivery_days: zone.delivery_days,
+                    express_delivery_days: zone.express_delivery_days,
+                    zone_code: zone.zone_code,
+                    zone_type: zone.zone_type,
+                    state: zone.state
+                  });
+                }
+              }
+              
+              console.log(`[AI Quote Agent] ${table.name}: ${tableData.pricing_data.length} registros Magalog criados (zonas x preços)`);
+              console.log(`[AI Quote Agent] Amostra Magalog:`, tableData.pricing_data.slice(0, 3));
+            }
+          }
+        } catch (error) {
+          console.error(`[AI Quote Agent] Erro ao processar tabela Magalog:`, error);
+        }
+      }
       // OUTRAS TABELAS: Buscar do Google Sheets
       else if (table.source_type === 'google_sheets' && table.google_sheets_url) {
         // Buscar dados do Google Sheets
