@@ -126,15 +126,19 @@ serve(async (req) => {
                 // CORRIGIDO: Combinar state + tariff_type para match com pricing
                 // Zone tem: state="AC", tariff_type="Capital 1"
                 // Pricing tem: tariff_type="AC CAPITAL 1"
-                const zoneTariffFormatted = `${zone.state} ${zone.tariff_type.toUpperCase()}`;
+                const zoneTariffFormatted = `${zone.state} ${zone.tariff_type.toUpperCase()}`.replace(/\s+/g, ' ').trim();
+                
+                console.log(`[DEBUG] Zone: ${zone.zone_code}, Formatted: "${zoneTariffFormatted}"`);
                 
                 // Encontrar todos os preços aplicáveis para este tariff_type combinado
-                const zonePrices = (pricing || []).filter(p => p.tariff_type === zoneTariffFormatted);
+                // Normalizar espaços também no pricing para evitar problemas com "AC INTERIOR  1" (dois espaços)
+                const zonePrices = (pricing || []).filter(p => {
+                  const normalizedPricing = p.tariff_type.replace(/\s+/g, ' ').trim();
+                  return normalizedPricing === zoneTariffFormatted;
+                });
                 
-                if (zonePrices.length === 0) {
-                  // Tentar também sem o espaço extra no Interior (ex: "AC INTERIOR  1" vs "AC INTERIOR 1")
-                  const altFormat = zoneTariffFormatted.replace(/\s+/g, ' ');
-                  zonePrices.push(...(pricing || []).filter(p => p.tariff_type.replace(/\s+/g, ' ') === altFormat));
+                if (zonePrices.length > 0) {
+                  console.log(`[DEBUG] Found ${zonePrices.length} prices for ${zoneTariffFormatted}`);
                 }
                 
                 for (const priceItem of zonePrices) {
