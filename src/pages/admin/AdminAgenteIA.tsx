@@ -71,18 +71,28 @@ const AdminAgenteIA = () => {
   // Atualizar configuração
   const updateConfigMutation = useMutation({
     mutationFn: async (updates: Partial<Config>) => {
-      const { error } = await supabase
+      console.log('Atualizando configuração:', updates);
+      const { data, error } = await supabase
         .from("ai_quote_config")
         .update(updates)
-        .eq("id", config?.id);
-      if (error) throw error;
+        .eq("id", config?.id)
+        .select();
+      
+      if (error) {
+        console.error('Erro ao atualizar:', error);
+        throw error;
+      }
+      
+      console.log('Configuração atualizada com sucesso:', data);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ai-quote-config"] });
       toast.success("Configuração atualizada com sucesso!");
     },
-    onError: () => {
-      toast.error("Erro ao atualizar configuração");
+    onError: (error: any) => {
+      console.error('Erro completo:', error);
+      toast.error(`Erro ao atualizar: ${error.message || 'Erro desconhecido'}`);
     },
   });
 
