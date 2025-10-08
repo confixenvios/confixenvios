@@ -49,59 +49,87 @@ serve(async (req) => {
       );
     }
 
-    // Buscar dados DIRETAMENTE do Supabase (Jadlog e Magalog)
-    console.log('[AI Quote Agent] Buscando dados das tabelas Jadlog e Magalog no Supabase...');
+    // Buscar tabelas de preços ativas configuradas
+    console.log('[AI Quote Agent] Buscando tabelas de preços ativas...');
     
-    // Buscar dados da Jadlog
-    const { data: jadlogPricing } = await supabaseClient
-      .from('jadlog_pricing')
-      .select('*');
+    const { data: pricingTables, error: pricingError } = await supabaseClient
+      .from('pricing_tables')
+      .select('*')
+      .eq('is_active', true);
+
+    if (pricingError) {
+      console.error('[AI Quote Agent] Erro ao buscar tabelas:', pricingError);
+      throw new Error(`Erro ao buscar tabelas: ${pricingError.message}`);
+    }
+
+    if (!pricingTables || pricingTables.length === 0) {
+      throw new Error('Nenhuma tabela de preços ativa encontrada');
+    }
+
+    console.log('[AI Quote Agent] Tabelas encontradas:', pricingTables.length);
+
+    // Processar cada tabela e buscar seus dados
+    const tablesWithData = [];
     
-    const { data: jadlogZones } = await supabaseClient
-      .from('jadlog_zones')
-      .select('*');
-    
-    // Buscar dados da Magalog
-    const { data: magalogPricing } = await supabaseClient
-      .from('shipping_pricing_magalog')
-      .select('*');
-    
-    const { data: magalogZones } = await supabaseClient
-      .from('shipping_zones_magalog')
-      .select('*');
-    
-    console.log('[AI Quote Agent] Dados carregados:', {
-      jadlog_pricing: jadlogPricing?.length || 0,
-      jadlog_zones: jadlogZones?.length || 0,
-      magalog_pricing: magalogPricing?.length || 0,
-      magalog_zones: magalogZones?.length || 0
-    });
-    
-    // Organizar dados por transportadora
-    const tablesWithData = [
-      {
-        id: 'jadlog',
-        name: 'Jadlog',
-        cnpj: '04884082000178',
-        source_type: 'supabase',
-        ad_valorem_percentage: 0.013,
-        gris_percentage: 0.013,
-        cubic_meter_kg_equivalent: 167,
-        pricing_data: jadlogPricing || [],
-        zones_data: jadlogZones || [],
-      },
-      {
-        id: 'magalog',
-        name: 'Magalog',
-        cnpj: '00000000000000',
-        source_type: 'supabase',
-        ad_valorem_percentage: 0.013,
-        gris_percentage: 0.013,
-        cubic_meter_kg_equivalent: 167,
-        pricing_data: magalogPricing || [],
-        zones_data: magalogZones || [],
+    for (const table of pricingTables) {
+      console.log(`[AI Quote Agent] Processando tabela: ${table.name} (${table.source_type})`);
+      
+      let tableData: any = {
+        id: table.id,
+        name: table.name,
+        cnpj: table.cnpj || '',
+        source_type: table.source_type,
+        ad_valorem_percentage: table.ad_valorem_percentage || 0.003,
+        gris_percentage: table.gris_percentage || 0.003,
+        cubic_meter_kg_equivalent: table.cubic_meter_kg_equivalent || 167,
+        excess_weight_threshold_kg: table.excess_weight_threshold_kg || 30,
+        excess_weight_charge_per_kg: table.excess_weight_charge_per_kg || 10,
+        pricing_data: []
+      };
+
+      if (table.source_type === 'google_sheets' && table.google_sheets_url) {
+        // Buscar dados do Google Sheets
+        try {
+          const sheetUrl = table.google_sheets_url
+            .replace('/edit', '/export?format=csv')
+            .replace(/\/edit.*$/, '/export?format=csv');
+          
+          const response = await fetch(sheetUrl);
+          if (response.ok) {
+            const csvText = await response.text();
+            const rows = csvText.split('\n').slice(1); // Pular cabeçalho
+            
+            tableData.pricing_data = rows
+              .filter(row => row.trim())
+              .map(row => {
+                const cols = row.split(',');
+                return {
+                  destination_cep: cols[0]?.replace(/['"]/g, '').trim(),
+                  weight_min: parseFloat(cols[1]) || 0,
+                  weight_max: parseFloat(cols[2]) || 999,
+                  price: parseFloat(cols[3]) || 0,
+                  delivery_days: parseInt(cols[4]) || 5
+                };
+              })
+              .filter(item => item.destination_cep && item.price > 0);
+            
+            console.log(`[AI Quote Agent] ${table.name}: ${tableData.pricing_data.length} registros carregados do Google Sheets`);
+          }
+        } catch (error) {
+          console.error(`[AI Quote Agent] Erro ao carregar Google Sheets para ${table.name}:`, error);
+        }
       }
-    ];
+
+      if (tableData.pricing_data.length > 0) {
+        tablesWithData.push(tableData);
+      }
+    }
+
+    console.log('[AI Quote Agent] Total de tabelas com dados:', tablesWithData.length);
+
+    if (tablesWithData.length === 0) {
+      throw new Error('Nenhuma tabela com dados disponível para cotação');
+    }
 
     // Buscar adicionais ativos
     const { data: additionals } = await supabaseClient
@@ -165,49 +193,44 @@ REGRAS DE CÁLCULO (SIGA ESTRITAMENTE):
 
 2. CÁLCULO DO FRETE BASE:
    
-   **IMPORTANTE: ESTRUTURA DAS TABELAS DO SUPABASE**
+   **ESTRUTURA DAS TABELAS DE PREÇOS:**
    
-   Cada transportadora tem 2 tabelas:
-   
-   A) TABELA DE ZONAS (zones_data):
-      - Jadlog: jadlog_zones | Magalog: shipping_zones_magalog
-      - Campos: zone_code, state, zone_type, cep_start, cep_end, delivery_days, express_delivery_days, tariff_type
-      - Use para: identificar a zona com base no CEP de destino e obter prazos de entrega
-   
-   B) TABELA DE PREÇOS (pricing_data):
-      - Jadlog: jadlog_pricing | Magalog: shipping_pricing_magalog
-      - Campos Jadlog: origin_state, destination_state, tariff_type, weight_min, weight_max, price
-      - Campos Magalog: zone_code, weight_min, weight_max, price
-      - Use para: buscar o preço com base no peso tarifável e zona/estados
+   Cada tabela contém um array pricing_data com:
+   - destination_cep: CEP de destino ou faixa inicial do CEP (ex: "01000" cobre 01000-000 a 01999-999)
+   - weight_min: peso mínimo da faixa (kg)
+   - weight_max: peso máximo da faixa (kg) 
+   - price: preço do frete base (R$)
+   - delivery_days: prazo de entrega (dias úteis)
    
    **FLUXO DE CÁLCULO:**
-   1. Identifique a zona de destino em zones_data comparando o CEP ${destination_cep} com cep_start e cep_end
-   2. Para Jadlog: use origin_state='GO', destination_state e tariff_type da zona para buscar o preço
-   3. Para Magalog: use zone_code para buscar o preço
-   4. Encontre a faixa de peso (weight_min <= peso_tarifavel <= weight_max) na tabela de preços
-   5. Pegue os prazos (delivery_days/express_delivery_days) da tabela de zonas
+   1. Encontre o registro onde o CEP de destino ${destination_cep} corresponde ao destination_cep
+      - Se destination_cep for "01000", ele cobre CEPs de 01000-000 até 01999-999
+      - Compare os primeiros dígitos do CEP: ${destination_cep.substring(0, 5)} deve corresponder
+   2. Encontre a faixa de peso onde weight_min <= peso_tarifavel <= weight_max
+   3. Use o price como frete base
+   4. Use delivery_days como prazo de entrega
 
-3. VALIDAÇÃO DE DIMENSÕES:
-   - Verifique se há limite máximo da maior dimensão ou limite da soma das dimensões
-   - Se exceder o limite, RECUSE a cotação (status: "recusado")
+3. EXCEDENTE DE PESO:
+   - Se peso tarifável > excess_weight_threshold_kg (ex: 30kg)
+   - Calcule: excedente_kg = peso_tarifavel - excess_weight_threshold_kg
+   - Valor excedente = excedente_kg × excess_weight_charge_per_kg
 
 4. SEGURO (AD VALOREM):
-   - Percentual obrigatório: 1,3% (0.013 em decimal)
-   - Aplicar sobre o valor da mercadoria declarada (não sobre o frete base)
-   - SEMPRE somar ao frete base para obter o preço final
-   - Nome: "Seguro da Mercadoria"
+   - Use o percentual definido em ad_valorem_percentage (geralmente 0.003 = 0,3%)
+   - Aplicar sobre o valor da mercadoria declarada
+   - SEMPRE somar ao frete base + excedente
 
 5. PREÇO FINAL:
-   frete_base + excedente (se houver) + seguro (1,3% do valor da mercadoria) + outros adicionais
+   frete_base + excedente (se houver) + seguro (ad_valorem% × valor mercadoria) + outros adicionais
 
 DADOS DA COTAÇÃO:
 - CEP Origem: ${origin_cep}
-- CEP Destino: ${destination_cep}
+- CEP Destino: ${destination_cep} (primeiros 5 dígitos: ${destination_cep.substring(0, 5)})
 - Peso Real: ${total_weight} kg
 - Volume Total: ${total_volume} m³ (${total_volume * 1000000} cm³)
 - Prioridade: ${config.priority_mode} (lowest_price = menor preço, fastest_delivery = menor prazo, balanced = equilíbrio)
 
-TABELAS DISPONÍVEIS (com dados reais de preços):
+TABELAS DISPONÍVEIS:
 ${JSON.stringify(aiContext.pricing_tables, null, 2)}
 
 ADICIONAIS:
@@ -216,7 +239,7 @@ ${JSON.stringify(additionals || [], null, 2)}
 REGRAS ADICIONAIS: ${config.additional_rules || 'Nenhuma'}
 
 SAÍDA ESPERADA:
-Retorne APENAS um objeto JSON válido (sem markdown) com esta estrutura DETALHADA:
+Retorne APENAS um objeto JSON válido (sem markdown, sem ```json) com esta estrutura:
 {
   "selected_table_id": "uuid-da-tabela",
   "selected_table_name": "nome-da-tabela",
@@ -231,23 +254,21 @@ Retorne APENAS um objeto JSON válido (sem markdown) com esta estrutura DETALHAD
     {
       "name": "Seguro da Mercadoria",
       "type": "insurance",
-      "percentage": 0.013,
+      "percentage": 0.003,
       "value": 0.00
     }
   ],
   "final_price": 120.00,
   "status": "ok",
-  "reasoning": "Explicação detalhada: peso tarifável calculado, faixas aplicadas, adicionais incluídos, motivo da escolha"
+  "reasoning": "Explicação: CEP encontrado em qual tabela, peso tarifável calculado, faixas aplicadas, adicionais incluídos"
 }
 
 IMPORTANTE:
-- Nunca ignore regras de generalidades
-- Sempre priorize o MAIOR peso (real ou cubado)
-- SEMPRE inclua o seguro de 1,3% sobre o valor da mercadoria no cálculo final
-- Seguro = 1,3% do valor da mercadoria (não do frete base)
-- O valor do seguro deve ser somado ao frete base para obter o preço final
-- Se houver múltiplas tabelas, ordene por total_final menor (primeiro critério) e menor prazo (segundo critério)
-- Retorne valores em R$ com 2 casas decimais`;
+- Se não encontrar o CEP nas tabelas, retorne status: "not_found"
+- Se peso exceder limites, retorne status: "rejected"
+- Compare apenas os primeiros 5 dígitos do CEP (ex: 01307-001 → 01307)
+- SEMPRE retorne JSON válido, sem markdown
+- Inclua reasoning detalhado explicando cada cálculo`;
 
     console.log('[AI Quote Agent] Calling OpenAI GPT-5...');
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -361,13 +382,46 @@ IMPORTANTE:
     );
   } catch (error) {
     console.error('[AI Quote Agent] Error:', error);
+    
+    // Tentar salvar log do erro
+    try {
+      const supabaseClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      );
+      
+      const body = await req.json().catch(() => ({}));
+      
+      await supabaseClient
+        .from('ai_quote_logs')
+        .insert([{
+          user_id: body.user_id || null,
+          session_id: body.session_id || null,
+          origin_cep: body.origin_cep || '',
+          destination_cep: body.destination_cep || '',
+          total_weight: body.total_weight || 0,
+          total_volume: 0,
+          volumes_data: body.volumes_data || [],
+          base_price: 0,
+          final_price: 0,
+          delivery_days: 0,
+          priority_used: 'error',
+          all_options_analyzed: {
+            error: error.message,
+            timestamp: new Date().toISOString()
+          },
+        }]);
+    } catch (logError) {
+      console.error('[AI Quote Agent] Failed to log error:', logError);
+    }
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
         error: error.message 
       }),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 
       }
     );
