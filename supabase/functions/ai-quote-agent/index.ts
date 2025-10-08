@@ -101,9 +101,18 @@ serve(async (req) => {
           
           if (spreadsheetIdMatch) {
             const spreadsheetId = spreadsheetIdMatch[1];
-            const gid = gidMatch ? gidMatch[1] : '0';
+            // Se tem sheet_name configurado, tentar encontrar o gid
+            // Senão, usar o gid da URL ou tentar diferentes gids comuns
+            let gid = gidMatch ? gidMatch[1] : '0';
+            
+            // Para tabela Jadlog, tentar gid=2031699923 (aba específica dos dados)
+            if (table.name.toLowerCase().includes('jadlog') && !gidMatch) {
+              gid = '2031699923';
+              console.log(`[AI Quote Agent] Usando gid específico para Jadlog: ${gid}`);
+            }
+            
             sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
-            console.log(`[AI Quote Agent] URL CSV convertida: ${sheetUrl}`);
+            console.log(`[AI Quote Agent] URL CSV convertida: ${sheetUrl} (gid=${gid})`);
           }
           
           const response = await fetch(sheetUrl);
@@ -135,13 +144,14 @@ serve(async (req) => {
                 };
               })
               .filter(item => {
-                // Validar que é um registro válido (CEP deve ser numérico ou começar com dígito)
-                const cepValid = /^\d/.test(item.destination_cep);
+                // Validar que é um registro válido (CEP deve ter 5+ dígitos e preço válido)
+                const cepValid = /^\d{5,8}/.test(item.destination_cep);
                 const priceValid = item.price > 0;
-                const isValid = cepValid && priceValid;
+                const weightValid = item.weight_min >= 0 && item.weight_max > 0;
+                const isValid = cepValid && priceValid && weightValid;
                 
                 if (!isValid) {
-                  console.log(`[AI Quote Agent] Linha inválida ignorada:`, item);
+                  console.log(`[AI Quote Agent] Linha inválida ignorada (table: ${table.name}):`, item);
                 }
                 return isValid;
               });
@@ -381,7 +391,7 @@ IMPORTANTE:
     const selectedQuote = allTableQuotes.find(q => q.table_id === selectedTable.id);
     
     if (!selectedQuote || !selectedQuote.has_coverage) {
-      throw new Error(`Tabela selecionada ${selectedTable.name} não tem cobertura para CEP ${destination_cep} e peso ${peso_tarifavel || total_weight}kg`);
+      throw new Error(`Tabela selecionada ${selectedTable.name} não tem cobertura para CEP ${destination_cep} e peso ${selectedQuote?.peso_tarifavel || total_weight}kg`);
     }
 
     const calculationResult = {
