@@ -135,7 +135,11 @@ serve(async (req) => {
                 };
               })
               .filter(item => {
-                const isValid = item.destination_cep && item.price > 0;
+                // Validar que é um registro válido (CEP deve ser numérico ou começar com dígito)
+                const cepValid = /^\d/.test(item.destination_cep);
+                const priceValid = item.price > 0;
+                const isValid = cepValid && priceValid;
+                
                 if (!isValid) {
                   console.log(`[AI Quote Agent] Linha inválida ignorada:`, item);
                 }
@@ -178,135 +182,64 @@ serve(async (req) => {
       return acc + ((vol.length * vol.width * vol.height) / 1000000);
     }, 0);
 
-    // Preparar contexto para a IA com dados do Supabase
+    // Preparar contexto simplificado para a IA (apenas para escolha da tabela)
     const aiContext = {
       origin_cep,
       destination_cep,
       total_weight,
       total_volume,
       priority_mode: config.priority_mode,
-      weight_calculation_mode: config.weight_calculation_mode,
-      additional_rules: config.additional_rules,
       pricing_tables: tablesWithData.map(t => ({
         id: t.id,
         name: t.name,
         cnpj: t.cnpj,
-        source_type: t.source_type,
-        ad_valorem_percentage: t.ad_valorem_percentage,
-        gris_percentage: t.gris_percentage,
+        total_records: t.pricing_data.length,
+        sample_ceps: t.pricing_data.slice(0, 3).map(p => p.destination_cep),
         cubic_meter_kg_equivalent: t.cubic_meter_kg_equivalent,
-        pricing_data: t.pricing_data,
-        zones_data: t.zones_data,
       })),
-      additionals: additionals || [],
     };
 
-    // Chamar OpenAI GPT-5 para analisar e selecionar a melhor tabela
+    // Chamar OpenAI para escolher a melhor tabela
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     if (!OPENAI_API_KEY) {
       throw new Error('OPENAI_API_KEY não configurada');
     }
 
-    const aiPrompt = `Você é um agente de IA especializado em cotação de fretes que trabalha para o site Confix Envios.
-Sua função é calcular e comparar fretes de diferentes transportadoras a partir de tabelas fornecidas.
+    const aiPrompt = `Você é um especialista em seleção de transportadoras para o site Confix Envios.
 
-REGRAS DE CÁLCULO (SIGA ESTRITAMENTE):
-
-1. PESO TARIFÁVEL:
-   MODO DE CÁLCULO CONFIGURADO: ${config.weight_calculation_mode}
-   
-   ${config.weight_calculation_mode === 'informed_weight' 
-     ? `- Use APENAS o peso informado: ${total_weight} kg`
-     : config.weight_calculation_mode === 'cubed_weight'
-     ? `- Calcule e use APENAS o peso cubado: volume total em cm³ dividido pelo divisor de cubagem da transportadora
-   - Volume total informado: ${total_volume} m³ (${total_volume * 1000000} cm³)`
-     : `- Sempre considere o peso tarifável como o MAIOR entre:
-      * Peso informado (peso real em kg): ${total_weight} kg
-      * Peso cubado: volume total em cm³ dividido pelo divisor de cubagem da transportadora
-      * Peso mínimo tarifável definido na transportadora
-   - Volume total informado: ${total_volume} m³ (${total_volume * 1000000} cm³)`
-   }
-
-2. CÁLCULO DO FRETE BASE:
-   
-   **ESTRUTURA DAS TABELAS DE PREÇOS:**
-   
-   Cada tabela contém um array pricing_data com:
-   - destination_cep: CEP de destino ou faixa inicial do CEP (ex: "01000" cobre 01000-000 a 01999-999)
-   - weight_min: peso mínimo da faixa (kg)
-   - weight_max: peso máximo da faixa (kg) 
-   - price: preço do frete base (R$)
-   - delivery_days: prazo de entrega (dias úteis)
-   
-   **FLUXO DE CÁLCULO:**
-   1. Encontre o registro onde o CEP de destino ${destination_cep} corresponde ao destination_cep
-      - Se destination_cep for "01000", ele cobre CEPs de 01000-000 até 01999-999
-      - Compare os primeiros dígitos do CEP: ${destination_cep.substring(0, 5)} deve corresponder
-   2. Encontre a faixa de peso onde weight_min <= peso_tarifavel <= weight_max
-   3. Use o price como frete base
-   4. Use delivery_days como prazo de entrega
-
-3. EXCEDENTE DE PESO:
-   - Se peso tarifável > excess_weight_threshold_kg (ex: 30kg)
-   - Calcule: excedente_kg = peso_tarifavel - excess_weight_threshold_kg
-   - Valor excedente = excedente_kg × excess_weight_charge_per_kg
-
-4. SEGURO (AD VALOREM):
-   - Use o percentual definido em ad_valorem_percentage (geralmente 0.003 = 0,3%)
-   - Aplicar sobre o valor da mercadoria declarada
-   - SEMPRE somar ao frete base + excedente
-
-5. PREÇO FINAL:
-   frete_base + excedente (se houver) + seguro (ad_valorem% × valor mercadoria) + outros adicionais
+SUA FUNÇÃO: Escolher a melhor tabela de preços e EXPLICAR detalhadamente o porquê dessa escolha.
 
 DADOS DA COTAÇÃO:
 - CEP Origem: ${origin_cep}
-- CEP Destino: ${destination_cep} (primeiros 5 dígitos: ${destination_cep.substring(0, 5)})
-- Peso Real: ${total_weight} kg
-- Volume Total: ${total_volume} m³ (${total_volume * 1000000} cm³)
-- Prioridade: ${config.priority_mode} (lowest_price = menor preço, fastest_delivery = menor prazo, balanced = equilíbrio)
+- CEP Destino: ${destination_cep}
+- Peso: ${total_weight} kg
+- Volume: ${total_volume} m³
+- Prioridade: ${config.priority_mode}
 
 TABELAS DISPONÍVEIS:
 ${JSON.stringify(aiContext.pricing_tables, null, 2)}
 
-ADICIONAIS:
-${JSON.stringify(additionals || [], null, 2)}
-
-REGRAS ADICIONAIS: ${config.additional_rules || 'Nenhuma'}
+CRITÉRIOS DE ESCOLHA:
+1. Qual tabela tem cobertura para o CEP ${destination_cep}?
+2. Considerando o modo de prioridade: ${config.priority_mode}
+   - lowest_price: prefira tabela com menores preços históricos
+   - fastest_delivery: prefira tabela com menores prazos
+   - balanced: equilibre preço e prazo
 
 SAÍDA ESPERADA:
-Retorne APENAS um objeto JSON válido (sem markdown, sem backticks) com esta estrutura:
+Retorne JSON com sua escolha e explicação DETALHADA:
 {
-  selected_table_id: "uuid-da-tabela",
-  selected_table_name: "nome-da-tabela",
-  peso_informado: ${total_weight},
-  peso_cubado: 0.00,
-  peso_tarifavel: 0.00,
-  base_price: 100.00,
-  excedente_kg: 0,
-  valor_excedente: 0.00,
-  delivery_days: 5,
-  additionals_applied: [
-    {
-      name: "Seguro da Mercadoria",
-      type: "insurance",
-      percentage: 0.003,
-      value: 0.00
-    }
-  ],
-  final_price: 120.00,
-  status: "ok",
-  reasoning: "Explicação: CEP encontrado em qual tabela, peso tarifável calculado, faixas aplicadas, adicionais incluídos"
+  "selected_table_id": "uuid-da-tabela-escolhida",
+  "selected_table_name": "nome-da-tabela",
+  "reasoning": "Explicação DETALHADA: Por que escolhi esta tabela? Qual a cobertura de CEP? Por que não escolhi as outras tabelas disponíveis? Como a prioridade ${config.priority_mode} influenciou minha decisão?"
 }
 
-IMPORTANTE:
-- Se não encontrar o CEP nas tabelas, retorne status: "not_found"
-- Se peso exceder limites, retorne status: "rejected"
-- Compare apenas os primeiros 5 dígitos do CEP (ex: 01307-001 → 01307)
-- SEMPRE retorne JSON válido, sem markdown
-- Inclua reasoning detalhado explicando cada cálculo`;
+IMPORTANTE: 
+- Compare TODAS as tabelas disponíveis
+- Explique POR QUE você escolheu uma e NÃO escolheu as outras
+- Seja específico sobre cobertura de CEP e critérios de prioridade`;
 
-    console.log('[AI Quote Agent] Calling OpenAI GPT-5...');
+    console.log('[AI Quote Agent] Calling OpenAI for table selection...');
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -318,11 +251,11 @@ IMPORTANTE:
         messages: [
           { 
             role: 'system', 
-            content: 'Você é um especialista em logística e cotações de frete. Sempre retorne respostas em JSON válido sem formatação markdown.' 
+            content: 'Você é um especialista em seleção de transportadoras. Escolha a melhor tabela e explique detalhadamente o motivo.' 
           },
           { role: 'user', content: aiPrompt }
         ],
-        max_tokens: 2000,
+        max_tokens: 500,
         temperature: 0.3,
         response_format: { type: "json_object" }
       }),
@@ -345,21 +278,90 @@ IMPORTANTE:
       throw new Error('Resposta da IA vazia');
     }
 
-    console.log('[AI Quote Agent] AI raw response:', aiContent);
+    console.log('[AI Quote Agent] AI selection response:', aiContent);
 
-    // Extrair JSON da resposta (remover markdown se houver)
-    let aiResult;
+    // Parse da resposta da IA
+    let aiSelection;
     try {
       const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        aiResult = JSON.parse(jsonMatch[0]);
+        aiSelection = JSON.parse(jsonMatch[0]);
       } else {
-        aiResult = JSON.parse(aiContent);
+        aiSelection = JSON.parse(aiContent);
       }
     } catch (e) {
       console.error('[AI Quote Agent] Failed to parse AI response:', aiContent);
       throw new Error('Resposta da IA inválida');
     }
+
+    // Encontrar a tabela selecionada pela IA
+    const selectedTable = tablesWithData.find(t => t.id === aiSelection.selected_table_id);
+    
+    if (!selectedTable) {
+      throw new Error(`Tabela selecionada não encontrada: ${aiSelection.selected_table_id}`);
+    }
+
+    console.log('[AI Quote Agent] Selected table:', selectedTable.name);
+    console.log('[AI Quote Agent] AI Reasoning:', aiSelection.reasoning);
+
+    // CALCULAR O PREÇO REAL usando os dados da tabela
+    const cepPrefix = destination_cep.replace(/\D/g, '').substring(0, 5);
+    
+    // Calcular peso tarifável
+    const peso_cubado = (total_volume * 1000000) / selectedTable.cubic_meter_kg_equivalent;
+    const peso_tarifavel = Math.max(total_weight, peso_cubado);
+    
+    console.log('[AI Quote Agent] Peso calculations:', {
+      peso_informado: total_weight,
+      peso_cubado,
+      peso_tarifavel,
+      cubic_divisor: selectedTable.cubic_meter_kg_equivalent
+    });
+
+    // Encontrar registro de preço correspondente ao CEP e peso
+    const priceRecord = selectedTable.pricing_data.find(p => {
+      const recordCepPrefix = p.destination_cep.replace(/\D/g, '').substring(0, 5);
+      const cepMatch = recordCepPrefix === cepPrefix;
+      const weightMatch = peso_tarifavel >= p.weight_min && peso_tarifavel <= p.weight_max;
+      return cepMatch && weightMatch;
+    });
+
+    if (!priceRecord) {
+      console.error('[AI Quote Agent] No price record found for:', { cepPrefix, peso_tarifavel });
+      throw new Error(`Nenhum registro de preço encontrado para CEP ${destination_cep} e peso ${peso_tarifavel}kg na tabela ${selectedTable.name}`);
+    }
+
+    console.log('[AI Quote Agent] Price record found:', priceRecord);
+
+    // Calcular excedente de peso se aplicável
+    let excedente_kg = 0;
+    let valor_excedente = 0;
+    
+    if (peso_tarifavel > selectedTable.excess_weight_threshold_kg) {
+      excedente_kg = peso_tarifavel - selectedTable.excess_weight_threshold_kg;
+      valor_excedente = excedente_kg * selectedTable.excess_weight_charge_per_kg;
+    }
+
+    // Preço final
+    const base_price = priceRecord.price;
+    const final_price = base_price + valor_excedente;
+
+    const calculationResult = {
+      selected_table_id: selectedTable.id,
+      selected_table_name: selectedTable.name,
+      peso_informado: total_weight,
+      peso_cubado,
+      peso_tarifavel,
+      base_price,
+      excedente_kg,
+      valor_excedente,
+      delivery_days: priceRecord.delivery_days,
+      final_price,
+      reasoning: aiSelection.reasoning,
+      price_record_used: priceRecord
+    };
+
+    console.log('[AI Quote Agent] Final calculation:', calculationResult);
 
     // Salvar log da cotação
     const { error: logError } = await supabaseClient
@@ -372,16 +374,26 @@ IMPORTANTE:
         total_weight,
         total_volume,
         volumes_data,
-        selected_pricing_table_id: aiResult.selected_table_id,
-        selected_pricing_table_name: aiResult.selected_table_name,
-        base_price: aiResult.base_price,
-        additionals_applied: aiResult.additionals_applied || [],
-        final_price: aiResult.final_price,
-        delivery_days: aiResult.delivery_days,
+        selected_pricing_table_id: calculationResult.selected_table_id,
+        selected_pricing_table_name: calculationResult.selected_table_name,
+        base_price: calculationResult.base_price,
+        additionals_applied: [],
+        final_price: calculationResult.final_price,
+        delivery_days: calculationResult.delivery_days,
         priority_used: config.priority_mode,
         all_options_analyzed: {
           tables_analyzed: tablesWithData.length,
-          reasoning: aiResult.reasoning,
+          tables_available: tablesWithData.map(t => t.name),
+          reasoning: calculationResult.reasoning,
+          calculation_details: {
+            peso_informado: calculationResult.peso_informado,
+            peso_cubado: calculationResult.peso_cubado,
+            peso_tarifavel: calculationResult.peso_tarifavel,
+            base_price: calculationResult.base_price,
+            excedente_kg: calculationResult.excedente_kg,
+            valor_excedente: calculationResult.valor_excedente,
+            price_record_used: calculationResult.price_record_used
+          }
         },
       }]);
 
@@ -390,30 +402,33 @@ IMPORTANTE:
     }
 
     console.log('[AI Quote Agent] Quote processed successfully', {
-      table: aiResult.selected_table_name,
-      final_price: aiResult.final_price,
+      table: calculationResult.selected_table_name,
+      final_price: calculationResult.final_price,
+      reasoning: calculationResult.reasoning
     });
 
     return new Response(
       JSON.stringify({
         success: true,
         quote: {
-          economicPrice: aiResult.final_price,
-          economicDays: aiResult.delivery_days,
-          expressPrice: aiResult.final_price * 1.3, // Expresso 30% mais caro
-          expressDays: Math.max(1, aiResult.delivery_days - 2),
-          zone: `Tabela: ${aiResult.selected_table_name}`,
-          additionals_applied: aiResult.additionals_applied,
-          reasoning: aiResult.reasoning,
-          // Incluir dados originais da IA para debug/histórico
-          selected_table_id: aiResult.selected_table_id,
-          selected_table_name: aiResult.selected_table_name,
-          base_price: aiResult.base_price,
-          final_price: aiResult.final_price,
-          delivery_days: aiResult.delivery_days,
-          peso_tarifavel: aiResult.peso_tarifavel,
-          peso_cubado: aiResult.peso_cubado,
-          peso_informado: aiResult.peso_informado,
+          economicPrice: calculationResult.final_price,
+          economicDays: calculationResult.delivery_days,
+          expressPrice: calculationResult.final_price * 1.3,
+          expressDays: Math.max(1, calculationResult.delivery_days - 2),
+          zone: `Tabela: ${calculationResult.selected_table_name}`,
+          additionals_applied: [],
+          reasoning: calculationResult.reasoning,
+          // Dados detalhados para histórico
+          selected_table_id: calculationResult.selected_table_id,
+          selected_table_name: calculationResult.selected_table_name,
+          base_price: calculationResult.base_price,
+          final_price: calculationResult.final_price,
+          delivery_days: calculationResult.delivery_days,
+          peso_tarifavel: calculationResult.peso_tarifavel,
+          peso_cubado: calculationResult.peso_cubado,
+          peso_informado: calculationResult.peso_informado,
+          excedente_kg: calculationResult.excedente_kg,
+          valor_excedente: calculationResult.valor_excedente
         },
       }),
       { 
