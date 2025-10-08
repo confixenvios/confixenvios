@@ -156,7 +156,7 @@ const AdminAgenteIA = () => {
               <div className="space-y-2">
                 <Label>Cálculo de Peso</Label>
                 <Select 
-                  value={config?.weight_calculation_mode || "cubed_weight"} 
+                  value={config?.weight_calculation_mode || "greater_weight"} 
                   onValueChange={(value) => updateConfigMutation.mutate({ weight_calculation_mode: value })}
                 >
                   <SelectTrigger>
@@ -165,12 +165,15 @@ const AdminAgenteIA = () => {
                   <SelectContent>
                     <SelectItem value="informed_weight">Peso Informado</SelectItem>
                     <SelectItem value="cubed_weight">Peso Cubado</SelectItem>
+                    <SelectItem value="greater_weight">Maior Peso</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-muted-foreground">
                   {config?.weight_calculation_mode === 'informed_weight' 
                     ? 'Utilizar apenas o peso informado pelo usuário'
-                    : 'Calcular e usar o peso cubado (comprimento × largura × altura ÷ 6000)'
+                    : config?.weight_calculation_mode === 'cubed_weight'
+                    ? 'Calcular e usar o peso cubado (comprimento × largura × altura ÷ 6000)'
+                    : 'Comparar peso informado com peso cubado e sempre usar o maior valor'
                   }
                 </p>
               </div>

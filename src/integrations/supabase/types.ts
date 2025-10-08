@@ -88,6 +88,7 @@ export type Database = {
           preferred_carriers: Json | null
           priority_mode: string
           updated_at: string
+          weight_calculation_mode: string
         }
         Insert: {
           additional_rules?: string | null
@@ -97,6 +98,7 @@ export type Database = {
           preferred_carriers?: Json | null
           priority_mode?: string
           updated_at?: string
+          weight_calculation_mode?: string
         }
         Update: {
           additional_rules?: string | null
@@ -106,6 +108,7 @@ export type Database = {
           preferred_carriers?: Json | null
           priority_mode?: string
           updated_at?: string
+          weight_calculation_mode?: string
         }
         Relationships: []
       }
@@ -1277,7 +1280,7 @@ export type Database = {
           },
         ]
       }
-      shipping_pricing: {
+      shipping_pricing_magalog: {
         Row: {
           created_at: string
           id: string
@@ -1310,12 +1313,12 @@ export type Database = {
             foreignKeyName: "shipping_pricing_zone_code_fkey"
             columns: ["zone_code"]
             isOneToOne: false
-            referencedRelation: "shipping_zones"
+            referencedRelation: "shipping_zones_magalog"
             referencedColumns: ["zone_code"]
           },
         ]
       }
-      shipping_zones: {
+      shipping_zones_magalog: {
         Row: {
           cep_end: string
           cep_start: string
