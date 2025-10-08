@@ -82,65 +82,53 @@ serve(async (req) => {
         console.log(`  Linha ${i}:`, jsonData[i].slice(0, 10));
       }
 
-      // Detectar tipo de aba analisando conteúdo
+      // Detectar tipo de aba analisando estrutura
       const firstRow = jsonData[0].map(v => String(v).toLowerCase());
       
-      // Detectar aba de ZONAS: tem CEP + UF/CIDADE + PRAZO
-      const hasZoneStructure = firstRow.some(cell => cell.includes('cep')) && 
-                               (firstRow.some(cell => cell.includes('uf') || cell.includes('cidade')) &&
-                               firstRow.some(cell => cell.includes('prazo')));
+      // Aba de ABRANGÊNCIA/PRAZOS: tem colunas UF, CEP INICIAL, CEP FINAL, PRAZO
+      const isDeliveryTimeSheet = firstRow.some(cell => cell.includes('cep') && cell.includes('inicial')) && 
+                                   firstRow.some(cell => cell.includes('prazo'));
       
-      // Detectar aba de PREÇOS: tem "peso" nos cabeçalhos
-      const hasPriceStructure = firstRow.some(cell => cell.includes('peso'));
+      // Aba de PREÇOS: primeira célula contém "peso"
+      const isPricingSheet = firstRow[0] && firstRow[0].includes('peso');
 
-      console.log(`🔍 Detectado: zonas=${hasZoneStructure}, preços=${hasPriceStructure}`);
-      console.log(`🔍 Cabeçalhos encontrados:`, firstRow.slice(0, 10));
+      console.log(`🔍 Tipo de aba: ${isDeliveryTimeSheet ? 'ABRANGÊNCIA/PRAZOS' : isPricingSheet ? 'PREÇOS' : 'DESCONHECIDA'}`);
+      console.log(`🔍 Primeira linha:`, firstRow.slice(0, 10));
       
-      if (hasZoneStructure && !hasPriceStructure) {
-        // ===== Processar aba de ZONAS/PRAZOS/ABRANGÊNCIA =====
-        console.log('🗺️ Processando como aba de zonas/abrangência...');
+      if (isDeliveryTimeSheet) {
+        // ===== Processar aba de ABRANGÊNCIA/PRAZOS =====
+        console.log('🗺️ Processando aba de ABRANGÊNCIA (prazos de entrega)...');
         const zonesData: JadlogZoneRow[] = [];
         
-        // Estrutura esperada: ORIGEM, UF, CIDADE DESTINO, CEP INICIAL, CEP FINAL, PRAZO, TARIFA, ...
-        let colOrigin = -1, colUF = -1, colCity = -1, colCEPStart = -1, colCEPEnd = -1, colPrazo = -1, colTarifa = -1;
+        // Mapear índices das colunas no cabeçalho
+        const headers = jsonData[0].map(v => String(v).toLowerCase());
+        const colOrigin = headers.findIndex(h => h.includes('origem'));
+        const colUF = headers.findIndex(h => h === 'uf' || (h.includes('uf') && !h.includes('destino')));
+        const colCity = headers.findIndex(h => h.includes('cidade'));
+        const colCEPStart = headers.findIndex(h => h.includes('cep') && h.includes('inicial'));
+        const colCEPEnd = headers.findIndex(h => h.includes('cep') && h.includes('final'));
+        const colPrazo = headers.findIndex(h => h.includes('prazo'));
+        const colTarifa = headers.findIndex(h => h.includes('tarifa'));
         
-        // Encontrar índices das colunas
-        for (let j = 0; j < firstRow.length; j++) {
-          const header = firstRow[j];
-          if (header.includes('origem')) colOrigin = j;
-          if (header.includes('uf') && !header.includes('destino')) colUF = j;
-          if (header.includes('cidade')) colCity = j;
-          if (header.includes('cep') && header.includes('inicial')) colCEPStart = j;
-          if (header.includes('cep') && header.includes('final')) colCEPEnd = j;
-          if (header.includes('prazo')) colPrazo = j;
-          if (header.includes('tarifa')) colTarifa = j;
-        }
+        console.log(`📍 Mapeamento: origem=${colOrigin}, uf=${colUF}, cep_start=${colCEPStart}, cep_end=${colCEPEnd}, prazo=${colPrazo}, tarifa=${colTarifa}`);
         
-        console.log(`📍 Mapeamento de colunas: origem=${colOrigin}, uf=${colUF}, cidade=${colCity}, cep_start=${colCEPStart}, cep_end=${colCEPEnd}, prazo=${colPrazo}, tarifa=${colTarifa}`);
-        
-        if (colUF === -1 || colCEPStart === -1 || colCEPEnd === -1) {
-          console.log('⚠️ Colunas essenciais não encontradas, pulando aba');
-          continue;
-        }
-        
-        // Processar linhas de dados
-        let processedRows = 0;
+        // Processar cada linha de dados (pulando cabeçalho)
         for (let i = 1; i < jsonData.length; i++) {
           const row = jsonData[i];
           if (!row || row.length < 5) continue;
           
-          const origin = colOrigin !== -1 ? String(row[colOrigin] || '').trim() : 'GO';
-          const state = String(row[colUF] || '').trim();
+          const origin = colOrigin !== -1 ? String(row[colOrigin] || 'GO').trim() : 'GO';
+          const state = colUF !== -1 ? String(row[colUF] || '').trim() : '';
           const city = colCity !== -1 ? String(row[colCity] || '').trim() : '';
-          const cepStart = String(row[colCEPStart] || '').trim();
-          const cepEnd = String(row[colCEPEnd] || '').trim();
+          const cepStart = colCEPStart !== -1 ? String(row[colCEPStart] || '').trim().replace(/\D/g, '') : '';
+          const cepEnd = colCEPEnd !== -1 ? String(row[colCEPEnd] || '').trim().replace(/\D/g, '') : '';
           const prazo = colPrazo !== -1 ? parseInt(String(row[colPrazo] || '5')) : 5;
-          const tarifa = colTarifa !== -1 ? String(row[colTarifa] || '').trim() : 'STANDARD';
+          const tarifa = colTarifa !== -1 ? String(row[colTarifa] || 'STANDARD').trim() : 'STANDARD';
           
           // Validar dados essenciais
-          if (!state || !cepStart || !cepEnd) continue;
+          if (!state || !cepStart || !cepEnd || cepStart.length < 5 || cepEnd.length < 5) continue;
           
-          // Criar código de zona único
+          // Criar código único para a zona
           const zoneCode = `${origin}-${state}-${cepStart.substring(0, 5)}`;
           
           zonesData.push({
@@ -148,19 +136,14 @@ serve(async (req) => {
             state: state,
             zone_type: city || 'STANDARD',
             tariff_type: tarifa,
-            cep_start: cepStart,
-            cep_end: cepEnd,
+            cep_start: cepStart.padStart(8, '0'),
+            cep_end: cepEnd.padStart(8, '0'),
             delivery_days: isNaN(prazo) ? 5 : prazo,
             express_delivery_days: isNaN(prazo) ? 3 : Math.max(1, prazo - 2)
           });
-          
-          processedRows++;
-          if (processedRows % 1000 === 0) {
-            console.log(`  ✅ Processadas ${processedRows} linhas de zonas...`);
-          }
         }
         
-        console.log(`📦 Total de ${zonesData.length} zonas extraídas`);
+        console.log(`📦 ${zonesData.length} registros de prazo extraídos`);
       
         
         if (zonesData.length > 0) {
@@ -187,108 +170,104 @@ serve(async (req) => {
           console.log('⚠️ Nenhuma zona válida encontrada');
         }
         
-      } else {
+      } else if (isPricingSheet) {
         // ===== Processar aba de PREÇOS =====
-        console.log('💰 Processando como aba de preços...');
+        console.log('💰 Processando aba de PREÇOS (valores de frete)...');
         const pricingData: JadlogPricingRow[] = [];
         
-        // Estrutura esperada:
-        // Linha 0: Estados de origem
-        // Linha 1: Estados de destino  
-        // Linha 2: Tipos de tarifa
-        // Linha 3+: Faixas de peso e preços
+        // Estrutura da planilha de preços:
+        // Linha 1 (índice 0): ORIGEM (GO, GO, GO, ...)
+        // Linha 2 (índice 1): DESTINO (AC, AC, AL, ...)
+        // Linha 3 (índice 2): TIPO DE TARIFA (AC CAPITAL 1, AC CAPITAL 2, ...)
+        // Linhas 4+ (índice 3+): Coluna A = "Peso Até (kg)" + valores, demais colunas = preços
         
         if (jsonData.length < 4) {
-          console.log('⚠️ Aba de preços inválida (menos de 4 linhas)');
+          console.log('⚠️ Aba de preços com poucas linhas, pulando');
           continue;
         }
         
-        const originRow = jsonData[0];
-        const destRow = jsonData[1];
-        const tariffRow = jsonData[2];
+        const originRow = jsonData[0];    // Linha 1: ORIGEM
+        const destRow = jsonData[1];      // Linha 2: DESTINO  
+        const tariffRow = jsonData[2];    // Linha 3: TIPO DE TARIFA
         
-        console.log('📊 Estrutura detectada:');
+        console.log('📊 Cabeçalhos de preço:');
         console.log('  - Origens (primeiras 5):', originRow.slice(0, 5));
         console.log('  - Destinos (primeiras 5):', destRow.slice(0, 5));
         console.log('  - Tarifas (primeiras 5):', tariffRow.slice(0, 5));
         
-        // Processar linhas de dados (peso e preços)
+        // Processar linhas de dados (a partir da linha 4, índice 3)
+        let totalPrices = 0;
         for (let i = 3; i < jsonData.length; i++) {
           const row = jsonData[i];
           if (!row || row.length < 2) continue;
           
-          // Primeira coluna: faixa de peso
+          // Coluna A (índice 0): "Peso Até (kg)" com valor (ex: 0,25, 1, 2, 3, ...)
           const weightStr = String(row[0] || '').trim();
-          if (!weightStr) continue;
+          if (!weightStr || weightStr.toLowerCase().includes('peso')) continue;
           
+          // Converter peso (pode ter vírgula como decimal)
+          const weightMax = parseFloat(weightStr.replace(',', '.'));
+          if (isNaN(weightMax) || weightMax === 0) continue;
+          
+          // Peso mínimo é o peso máximo da linha anterior (ou 0 se primeira linha)
           let weightMin = 0;
-          let weightMax = 0;
-          
-          if (weightStr.includes('-')) {
-            const [min, max] = weightStr.split('-').map(w => parseFloat(w.trim()));
-            weightMin = min || 0;
-            weightMax = max || 0;
-          } else {
-            weightMax = parseFloat(weightStr);
-            // Peso mínimo é o máximo da linha anterior
-            if (i > 3) {
-              const prevWeightStr = String(jsonData[i-1][0] || '').trim();
-              if (prevWeightStr.includes('-')) {
-                weightMin = parseFloat(prevWeightStr.split('-')[1]);
-              } else {
-                weightMin = parseFloat(prevWeightStr);
-              }
+          if (i > 3) {
+            const prevWeightStr = String(jsonData[i-1][0] || '').trim();
+            const prevWeight = parseFloat(prevWeightStr.replace(',', '.'));
+            if (!isNaN(prevWeight)) {
+              weightMin = prevWeight;
             }
           }
           
-          if (isNaN(weightMax) || weightMax === 0) {
-            console.log(`  ⚠️ Linha ${i}: peso inválido "${weightStr}", pulando...`);
-            continue;
-          }
+          let pricesInRow = 0;
           
-          let pricesFound = 0;
-          
-          // Processar cada coluna de preço (a partir da coluna 1)
+          // Processar cada coluna de preço (a partir da coluna B, índice 1)
           for (let j = 1; j < row.length && j < destRow.length; j++) {
             const priceValue = row[j];
+            
+            // Pular células vazias
             if (priceValue === null || priceValue === undefined || priceValue === '') continue;
             
-            // Limpar e converter preço
+            // Extrair preço (pode estar como número ou texto "R$ 39,60")
             let price = 0;
             if (typeof priceValue === 'number') {
               price = priceValue;
             } else {
               const priceStr = String(priceValue)
-                .replace(/[R$\s]/g, '')
-                .replace(/\./g, '')
-                .replace(',', '.');
+                .replace(/[R$\s]/g, '')  // Remove R$ e espaços
+                .replace(/\./g, '')       // Remove separador de milhar
+                .replace(',', '.');       // Substitui vírgula decimal por ponto
               price = parseFloat(priceStr);
             }
             
             if (isNaN(price) || price === 0) continue;
             
-            // Extrair informações dos cabeçalhos
+            // Extrair dados dos cabeçalhos (linhas 1, 2, 3)
             const originState = String(originRow[j] || 'GO').trim();
             const destinationState = String(destRow[j] || '').trim();
-            const tariffType = String(tariffRow[j] || 'PACKAGE').trim();
+            const tariffType = String(tariffRow[j] || 'STANDARD').trim();
             
-            if (destinationState) {
-              pricingData.push({
-                origin_state: originState,
-                destination_state: destinationState,
-                tariff_type: tariffType,
-                weight_min: weightMin,
-                weight_max: weightMax,
-                price: price
-              });
-              pricesFound++;
-            }
+            if (!destinationState) continue;
+            
+            pricingData.push({
+              origin_state: originState,
+              destination_state: destinationState,
+              tariff_type: tariffType,
+              weight_min: weightMin,
+              weight_max: weightMax,
+              price: price
+            });
+            
+            pricesInRow++;
+            totalPrices++;
           }
           
-          if (pricesFound > 0) {
-            console.log(`  ✅ Linha ${i} (${weightMin}-${weightMax}kg): ${pricesFound} preços processados`);
+          if (pricesInRow > 0 && i % 10 === 0) {
+            console.log(`  ✅ Linha ${i}: peso ${weightMin}-${weightMax}kg, ${pricesInRow} preços`);
           }
         }
+        
+        console.log(`💰 Total de ${totalPrices} preços extraídos`);
         
         if (pricingData.length > 0) {
           console.log(`💰 ${pricingData.length} preços preparados`);
