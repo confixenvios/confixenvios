@@ -202,41 +202,66 @@ serve(async (req) => {
         console.log('💰 Processando aba de PREÇOS (valores de frete)...');
         const pricingData: JadlogPricingRow[] = [];
         
-        // Encontrar a linha "ORIGEM" (primeira linha que contém "ORIGEM" em qualquer célula)
+        // Detectar estrutura da planilha:
+        // OPÇÃO 1: Com linha ORIGEM
+        // Linha N: ORIGEM | GO | GO | GO | ...
+        // Linha N+1: DESTINO | AC | AC | AC | AL | AL | ...
+        // Linha N+2: REGIÃO | AC CAPITAL 1 | AC CAPITAL 2 | ...
+        // Linha N+3+: Peso Até (kg) | 0,25 | preços...
+        //
+        // OPÇÃO 2: Sem linha ORIGEM (estrutura simplificada)
+        // Linha 0: AC | AC | AC | AL | AL | ... (estados direto)
+        // Linha 1: REGIÃO | REGIÃO | REGIÃO | ...
+        // Linha 2: AC CAPITAL 1 | AC CAPITAL 2 | AC INTERIOR 1 | ...
+        // Linha 3: FAIXA DE PESO | Peso Até (kg) | 0,25 | ...
+        // Linha 4+: Peso Até (kg) | peso | preços...
+        
+        let stateRow: any[];
+        let tariffRow: any[];
+        let firstDataRowIndex: number;
+        
+        // Tentar encontrar linha "ORIGEM"
         let origemRowIndex = -1;
         for (let i = 0; i < Math.min(10, jsonData.length); i++) {
           const row = jsonData[i];
-          // Procurar "ORIGEM" em qualquer célula da linha
-          const hasOrigem = row.some((cell: any) => 
-            String(cell || '').toLowerCase().includes('origem')
-          );
-          if (hasOrigem) {
+          if (row.some((cell: any) => String(cell || '').toLowerCase().includes('origem'))) {
             origemRowIndex = i;
-            console.log(`📍 Linha ORIGEM encontrada no índice ${i}:`, row.slice(0, 10));
+            console.log(`📍 Linha ORIGEM encontrada no índice ${i}`);
             break;
           }
         }
         
-        if (origemRowIndex === -1 || jsonData.length < origemRowIndex + 4) {
-          console.log('⚠️ Estrutura de aba de preços inválida (linha ORIGEM não encontrada), pulando');
-          continue;
+        if (origemRowIndex !== -1) {
+          // OPÇÃO 1: Estrutura com ORIGEM
+          stateRow = jsonData[origemRowIndex + 1]; // DESTINO
+          tariffRow = jsonData[origemRowIndex + 2]; // REGIÃO
+          firstDataRowIndex = origemRowIndex + 3;
+          console.log(`📋 Estrutura: COM linha ORIGEM`);
+        } else {
+          // OPÇÃO 2: Estrutura simplificada (estados direto na linha 0)
+          stateRow = jsonData[0];
+          tariffRow = jsonData[2]; // Tipos de tarifa
+          
+          // Encontrar primeira linha de dados (tem peso numérico na coluna B)
+          firstDataRowIndex = 4;
+          for (let i = 3; i < Math.min(jsonData.length, 10); i++) {
+            const row = jsonData[i];
+            if (row && row[1]) {
+              const val = String(row[1]).replace(',', '.');
+              const num = parseFloat(val);
+              if (!isNaN(num) && num > 0) {
+                firstDataRowIndex = i;
+                break;
+              }
+            }
+          }
+          console.log(`📋 Estrutura: SEM linha ORIGEM (simplificada)`);
         }
         
-        // Estrutura da planilha:
-        // Linha N: ORIGEM | GO | GO | GO | ...
-        // Linha N+1: DESTINO | AC | AC | AC | AL | AL | ...
-        // Linha N+2: REGIÃO | AC CAPITAL 1 | AC CAPITAL 2 | AC CAPITAL 3 | AL CAPITAL 1 | ...
-        // Linha N+3: Peso Até (kg) | 0,25 | (começa os dados)
-        // Linha N+4+: Peso Até (kg) | 1 | ...
-        const originRow = jsonData[origemRowIndex];
-        const destRow = jsonData[origemRowIndex + 1];
-        const regionRow = jsonData[origemRowIndex + 2];
-        const firstDataRowIndex = origemRowIndex + 3;
-        
-        console.log(`📍 ORIGEM na linha ${origemRowIndex}`);
-        console.log(`📍 Linha DEST (primeiras 10):`, destRow?.slice(0, 10));
-        console.log(`📍 Linha REGIÃO (primeiras 10):`, regionRow?.slice(0, 10));
-        console.log(`📍 Primeira linha de dados (índice ${firstDataRowIndex}):`, jsonData[firstDataRowIndex]?.slice(0, 10));
+        console.log(`📍 Linha Estados (primeiras 10):`, stateRow?.slice(0, 10));
+        console.log(`📍 Linha Tarifas (primeiras 10):`, tariffRow?.slice(0, 10));
+        console.log(`📍 Primeira linha de dados: índice ${firstDataRowIndex}`);
+        console.log(`📍 Exemplo linha:`, jsonData[firstDataRowIndex]?.slice(0, 10));
         
         // Processar linhas de dados (a partir de firstDataRowIndex)
         let totalPrices = 0;
@@ -244,18 +269,27 @@ serve(async (req) => {
         
         for (let i = firstDataRowIndex; i < jsonData.length; i++) {
           const row = jsonData[i];
-          if (!row || row.length < 2) continue;
+          if (!row || row.length < 3) continue; // Precisa coluna A, B e pelo menos C
           
-          // Coluna A: "Peso Até (kg)" com valor (ex: 0,25, 1, 2, 3, ...)
-          const weightStr = String(row[0] || '').trim();
+          // Peso pode estar na coluna A ou B dependendo da estrutura
+          // Tentar coluna B primeiro (mais comum), depois coluna A
+          let weightStr = String(row[1] || '').trim();
+          let priceStartCol = 2; // Preços começam na coluna C
+          
+          // Se coluna B não tem número válido, tentar coluna A
+          if (!weightStr || isNaN(parseFloat(weightStr.replace(',', '.')))) {
+            weightStr = String(row[0] || '').trim();
+            priceStartCol = 1; // Preços começam na coluna B
+          }
           
           // Log primeira linha de dados para debug
           if (processedRows === 0) {
-            console.log(`🔍 Primeira linha dados: peso="${weightStr}", valores:`, row.slice(1, 6));
+            console.log(`🔍 Primeira linha: colA="${row[0]}", colB="${row[1]}", peso="${weightStr}", startCol=${priceStartCol}`);
+            console.log(`🔍 Valores preço:`, row.slice(priceStartCol, priceStartCol + 5));
           }
           
-          // Pular se não for um número válido
-          if (!weightStr || weightStr.toLowerCase().includes('peso')) {
+          // Pular linhas sem peso válido
+          if (!weightStr || weightStr.toLowerCase().includes('peso') || weightStr.toLowerCase().includes('faixa')) {
             if (processedRows < 3) console.log(`⏭️ Pulando linha ${i}: "${weightStr}"`);
             continue;
           }
@@ -283,18 +317,18 @@ serve(async (req) => {
             console.log(`📦 Processando peso ${weightMin}-${weightMax}kg, ${row.length} colunas na linha`);
           }
           
-          // Processar cada coluna de preço (a partir da coluna B, índice 1)
-          for (let j = 1; j < row.length && j < destRow.length; j++) {
+          // Processar cada coluna de preço (a partir de priceStartCol)
+          for (let j = priceStartCol; j < row.length && j < stateRow.length; j++) {
             const priceValue = row[j];
             
             // Log primeira célula para debug
-            if (processedRows === 1 && j === 1) {
+            if (processedRows === 1 && j === priceStartCol) {
               console.log(`🔍 Primeira célula: coluna ${j}, valor="${priceValue}", tipo=${typeof priceValue}`);
             }
             
             // Pular células vazias
             if (priceValue === null || priceValue === undefined || priceValue === '') {
-              if (processedRows === 1 && j < 5) console.log(`⏭️ Célula vazia na coluna ${j}`);
+              if (processedRows === 1 && j < priceStartCol + 5) console.log(`⏭️ Célula vazia na coluna ${j}`);
               continue;
             }
             
@@ -310,30 +344,30 @@ serve(async (req) => {
               price = parseFloat(priceStr);
             }
             
-            if (processedRows === 1 && j === 1) {
+            if (processedRows === 1 && j === priceStartCol) {
               console.log(`💰 Preço extraído: ${price} (original: "${priceValue}")`);
             }
             
             if (isNaN(price) || price === 0) {
-              if (processedRows === 1 && j < 5) console.log(`⏭️ Preço inválido na coluna ${j}: ${price}`);
+              if (processedRows === 1 && j < priceStartCol + 5) console.log(`⏭️ Preço inválido na coluna ${j}: ${price}`);
               continue;
             }
             
             // ORIGEM: sempre GO (Goiás)
             const originState = 'GO';
             
-            // DESTINO: sigla do estado (AC, AL, MA, SP, etc.)
-            const destinationState = String(destRow[j] || '').trim().toUpperCase();
+            // DESTINO: sigla do estado da linha stateRow
+            const destinationState = String(stateRow[j] || '').trim().toUpperCase();
             
-            // REGIÃO: tipo de tarifa completo (AC CAPITAL 1, AC INTERIOR 2, etc.)
-            const tariffType = String(regionRow[j] || 'STANDARD').trim();
+            // REGIÃO: tipo de tarifa da linha tariffRow
+            const tariffType = String(tariffRow[j] || 'STANDARD').trim();
             
-            if (processedRows === 1 && j === 1) {
+            if (processedRows === 1 && j === priceStartCol) {
               console.log(`📍 Estado: "${destinationState}", Tarifa: "${tariffType}"`);
             }
             
-            if (!destinationState) {
-              if (processedRows === 1 && j < 5) console.log(`⏭️ Estado vazio na coluna ${j}`);
+            if (!destinationState || destinationState.length > 2) {
+              if (processedRows === 1 && j < priceStartCol + 5) console.log(`⏭️ Estado inválido na coluna ${j}: "${destinationState}"`);
               continue;
             }
             
