@@ -229,12 +229,17 @@ serve(async (req) => {
         console.log('💰 Processando aba de PREÇOS (valores de frete)...');
         const pricingData: JadlogPricingRow[] = [];
         
-        // Encontrar a linha "ORIGEM" (primeira linha com "ORIGEM" na coluna A)
+        // Encontrar a linha "ORIGEM" (primeira linha que contém "ORIGEM" em qualquer célula)
         let origemRowIndex = -1;
         for (let i = 0; i < Math.min(10, jsonData.length); i++) {
-          const firstCell = String(jsonData[i][0] || '').toLowerCase();
-          if (firstCell.includes('origem')) {
+          const row = jsonData[i];
+          // Procurar "ORIGEM" em qualquer célula da linha
+          const hasOrigem = row.some((cell: any) => 
+            String(cell || '').toLowerCase().includes('origem')
+          );
+          if (hasOrigem) {
             origemRowIndex = i;
+            console.log(`📍 Linha ORIGEM encontrada no índice ${i}:`, row.slice(0, 10));
             break;
           }
         }
