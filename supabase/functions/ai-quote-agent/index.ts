@@ -375,7 +375,6 @@ serve(async (req) => {
               console.log(`[AI Quote Agent] ${table.name}: ${tableData.pricing_data.length} registros Magalog criados (zonas x preços)`);
               console.log(`[AI Quote Agent] Amostra Magalog:`, tableData.pricing_data.slice(0, 3));
             }
-          }
         } catch (error) {
           console.error(`[AI Quote Agent] Erro ao processar tabela Magalog:`, error);
         }
