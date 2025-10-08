@@ -3,15 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Database, CheckCircle, Loader2 } from "lucide-react";
-import { parseJadlogTable, getAllJadlogData, type JadlogSheetData } from '@/utils/parseJadlogTable';
 import { supabase } from '@/integrations/supabase/client';
-const jadlogTableFile = '/src/assets/TABELA_JAD_LOG_VENDA.xlsx';
 
 const AdminJadlogImport = () => {
-  const [sheets, setSheets] = useState<JadlogSheetData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingData, setIsCheckingData] = useState(true);
   const [recordCount, setRecordCount] = useState(0);
+  const [importDetails, setImportDetails] = useState<{
+    pricing: number;
+    zones: number;
+    sheets: string[];
+  } | null>(null);
   const { toast } = useToast();
 
   // Verificar e importar automaticamente se necessário
@@ -76,13 +78,19 @@ const AdminJadlogImport = () => {
       console.log('📊 Resposta da importação:', data);
       
       if (data.success) {
+        setImportDetails({
+          pricing: data.imported_pricing,
+          zones: data.imported_zones,
+          sheets: data.sheets_processed || []
+        });
+        
         toast({
           title: "✅ Importação concluída!",
-          description: `${data.imported_pricing} preços e ${data.imported_zones} zonas da Jadlog importados com sucesso`,
+          description: `${data.imported_pricing} preços e ${data.imported_zones} zonas importados de ${data.sheets_processed?.length || 0} abas`,
         });
 
         // Atualizar contagem
-        setRecordCount(data.imported_pricing);
+        setRecordCount(data.imported_pricing + data.imported_zones);
       } else {
         throw new Error(data.error || 'Erro desconhecido na importação');
       }
@@ -104,7 +112,7 @@ const AdminJadlogImport = () => {
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Importar Tabela Jadlog</h1>
         <p className="text-muted-foreground">
-          Gerenciar importação da tabela de preços Jadlog
+          Gerenciar importação da tabela de preços e zonas Jadlog do Google Sheets
         </p>
       </div>
 
@@ -129,28 +137,50 @@ const AdminJadlogImport = () => {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Registros na tabela</p>
-                    <p className="text-sm text-muted-foreground">
-                      {recordCount > 0 
-                        ? `${recordCount} preços cadastrados` 
-                        : 'Tabela vazia - aguardando importação'}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Registros na tabela:</span>
+                      <span className="text-lg font-semibold ml-4">{recordCount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {recordCount > 0 ? (
+                        <>
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <span className="text-sm text-green-600">Tabela ativa e populada</span>
+                        </>
+                      ) : (
+                        <>
+                          <Database className="h-4 w-4 text-yellow-500" />
+                          <span className="text-sm text-yellow-600">Tabela vazia - importação necessária</span>
+                        </>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Fonte: Google Sheets (ID: 1GPAhV94gwZWkVGsO-ribwjAJNQJGAF2RAX79WXOajtc)
                     </p>
                   </div>
-                  <div className={`flex items-center gap-2 ${recordCount > 0 ? 'text-green-600' : 'text-yellow-600'}`}>
-                    {recordCount > 0 ? (
-                      <>
-                        <CheckCircle className="h-5 w-5" />
-                        <span className="font-medium">Ativo</span>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-5 w-5" />
-                        <span className="font-medium">Pendente</span>
-                      </>
+                </div>
+
+                {importDetails && (
+                  <div className="p-4 bg-muted rounded-lg space-y-2">
+                    <p className="font-medium text-sm">Última importação:</p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Preços:</span>
+                        <span className="ml-2 font-medium">{importDetails.pricing.toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Zonas:</span>
+                        <span className="ml-2 font-medium">{importDetails.zones.toLocaleString()}</span>
+                      </div>
+                    </div>
+                    {importDetails.sheets.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Abas processadas: {importDetails.sheets.join(', ')}
+                      </p>
                     )}
                   </div>
-                </div>
+                )}
 
                 <Button 
                   onClick={handleImportToSupabase}
@@ -161,12 +191,12 @@ const AdminJadlogImport = () => {
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Importando...
+                      Importando do Google Sheets...
                     </>
                   ) : (
                     <>
                       <Upload className="mr-2 h-4 w-4" />
-                      {recordCount > 0 ? 'Reimportar Preços Jadlog' : '🚀 Importar Preços Jadlog'}
+                      {recordCount > 0 ? 'Reimportar do Google Sheets' : '🚀 Importar do Google Sheets'}
                     </>
                   )}
                 </Button>
@@ -174,21 +204,17 @@ const AdminJadlogImport = () => {
             </CardContent>
           </Card>
 
-          {sheets.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  Última Análise
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {sheets.length} abas encontradas na planilha
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">ℹ️ Como funciona</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <p>• A importação busca os dados diretamente do Google Sheets</p>
+              <p>• Todas as abas da planilha são processadas automaticamente</p>
+              <p>• Os dados são validados e importados para as tabelas jadlog_pricing e jadlog_zones</p>
+              <p>• O processo é automático ao acessar esta página pela primeira vez</p>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
