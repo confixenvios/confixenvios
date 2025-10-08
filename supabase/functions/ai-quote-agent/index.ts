@@ -1,5 +1,5 @@
-// AI Quote Agent - Agente de cotação inteligente v2.1
-// Atualizado: 2025-10-08 - Corrigido match Jadlog por state
+// AI Quote Agent - Agente de cotação inteligente v2.2
+// Atualizado: 2025-10-08 21:10 - Corrigido escopo da variável zones
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -128,10 +128,11 @@ serve(async (req) => {
             from += batchSize;
           }
           
-            console.log(`[AI Quote Agent] ✅ TOTAL: ${zones.length} zonas Jadlog carregadas`);
-            
-            if (zones.length > 0) {
-              console.log(`[AI Quote Agent] Buscando TODOS os preços Jadlog...`);
+          const zones = allZones;
+          console.log(`[AI Quote Agent] ✅ TOTAL: ${zones.length} zonas Jadlog carregadas`);
+          
+          if (zones.length > 0) {
+            console.log(`[AI Quote Agent] Buscando TODOS os preços Jadlog...`);
             
             // Buscar TODOS os preços Jadlog usando range
             let allPricing = [];
