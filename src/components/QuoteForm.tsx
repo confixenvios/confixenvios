@@ -20,6 +20,71 @@ import AuthModal from "@/components/AuthModal";
 import { SessionManager } from "@/utils/sessionManager";
 import SavedAddressManager from "@/components/SavedAddressManager";
 
+// Função para determinar estado e tipo (capital/interior) baseado no CEP
+const getCepInfo = (cep: string) => {
+  const cleanCep = cep.replace(/\D/g, '');
+  const cepPrefix = cleanCep.substring(0, 5);
+  
+  // Mapeamento de CEPs para estados
+  const stateMapping: { [key: string]: string } = {
+    '01': 'SP', '02': 'SP', '03': 'SP', '04': 'SP', '05': 'SP', '06': 'SP', '07': 'SP', '08': 'SP', '09': 'SP',
+    '10': 'SP', '11': 'SP', '12': 'SP', '13': 'SP', '14': 'SP', '15': 'SP', '16': 'SP', '17': 'SP', '18': 'SP', '19': 'SP',
+    '20': 'RJ', '21': 'RJ', '22': 'RJ', '23': 'RJ', '24': 'RJ', '25': 'RJ', '26': 'RJ', '27': 'RJ', '28': 'RJ',
+    '29': 'ES', '30': 'MG', '31': 'MG', '32': 'MG', '33': 'MG', '34': 'MG', '35': 'MG', '36': 'MG', '37': 'MG', '38': 'MG', '39': 'MG',
+    '40': 'BA', '41': 'BA', '42': 'BA', '43': 'BA', '44': 'BA', '45': 'BA', '46': 'BA', '47': 'BA', '48': 'BA',
+    '49': 'SE', '50': 'PE', '51': 'PE', '52': 'PE', '53': 'PE', '54': 'PE', '55': 'PE', '56': 'AL', '57': 'AL',
+    '58': 'PB', '59': 'RN', '60': 'CE', '61': 'CE', '62': 'CE', '63': 'CE',
+    '64': 'PI', '65': 'MA', '66': 'PA', '67': 'PA', '68': 'AP',
+    '69': 'AC',
+    '70': 'DF', '71': 'DF', '72': 'GO', '73': 'GO', '74': 'GO', '75': 'GO', '76': 'TO', '77': 'TO',
+    '78': 'MT', '79': 'MS',
+    '80': 'PR', '81': 'PR', '82': 'PR', '83': 'PR', '84': 'PR', '85': 'PR', '86': 'PR', '87': 'PR',
+    '88': 'SC', '89': 'SC',
+    '90': 'RS', '91': 'RS', '92': 'RS', '93': 'RS', '94': 'RS', '95': 'RS', '96': 'RS', '97': 'RS', '98': 'RS', '99': 'RS'
+  };
+  
+  // Verificar região 69xxx (Acre, Amazonas, Roraima)
+  let state = 'AC';
+  if (cepPrefix >= '69000' && cepPrefix <= '69099') state = 'AM';
+  else if (cepPrefix >= '69100' && cepPrefix <= '69299') state = 'AM';
+  else if (cepPrefix >= '69300' && cepPrefix <= '69389') state = 'RR';
+  else if (cepPrefix >= '69400' && cepPrefix <= '69899') state = 'AM';
+  else if (cepPrefix >= '69900' && cepPrefix <= '69999') state = 'AC';
+  else {
+    const prefix2 = cleanCep.substring(0, 2);
+    state = stateMapping[prefix2] || 'BR';
+  }
+  
+  // Determinar se é capital ou interior
+  const isCapital = checkIfCapital(cleanCep, state);
+  
+  return {
+    state,
+    type: isCapital ? 'Capital' : 'Interior'
+  };
+};
+
+const checkIfCapital = (cep: string, state: string): boolean => {
+  const cepNum = parseInt(cep);
+  
+  const capitalRanges: { [key: string]: [number, number][] } = {
+    'AC': [[69900000, 69920999]], 'AL': [[57000000, 57099999]], 'AP': [[68900000, 68919999]],
+    'AM': [[69000000, 69099999]], 'BA': [[40000000, 42599999]], 'CE': [[60000000, 61599999]],
+    'DF': [[70000000, 72799999]], 'ES': [[29000000, 29099999]], 'GO': [[74000000, 74899999]],
+    'MA': [[65000000, 65099999]], 'MT': [[78000000, 78109999]], 'MS': [[79000000, 79124999]],
+    'MG': [[30100000, 31999999]], 'PA': [[66000000, 66999999]], 'PB': [[58000000, 58099999]],
+    'PR': [[80000000, 82599999]], 'PE': [[50000000, 52999999]], 'PI': [[64000000, 64099999]],
+    'RJ': [[20000000, 23799999]], 'RN': [[59000000, 59139999]], 'RS': [[90000000, 91999999]],
+    'RO': [[76800000, 76834999]], 'RR': [[69300000, 69329999]], 'SC': [[88000000, 88099999]],
+    'SP': [[1000000, 5999999]], 'SE': [[49000000, 49099999]], 'TO': [[77000000, 77270999]],
+  };
+  
+  const ranges = capitalRanges[state];
+  if (!ranges) return false;
+  
+  return ranges.some(([min, max]) => cepNum >= min && cepNum <= max);
+};
+
 interface Volume {
   id: string;
   weight: string;
@@ -1208,7 +1273,9 @@ const QuoteForm = () => {
                       <div className="flex items-center space-x-2">
                         <MapPin className="h-4 w-4 text-primary" />
                         <span className="text-muted-foreground">Destino:</span>
-                        <span className="font-medium">{formatCep(quoteData.destinyCep)} - {quoteData.shippingQuote?.zoneName}</span>
+                        <span className="font-medium">
+                          {formatCep(quoteData.destinyCep)} - {getCepInfo(quoteData.destinyCep).state} ({getCepInfo(quoteData.destinyCep).type})
+                        </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Package className="h-4 w-4 text-primary" />
