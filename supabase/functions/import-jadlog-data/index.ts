@@ -82,10 +82,9 @@ serve(async (req) => {
         continue;
       }
 
-      // Log das primeiras linhas para debug
-      console.log('🔍 Primeiras 3 linhas da aba:');
-      for (let i = 0; i < Math.min(3, jsonData.length); i++) {
-        console.log(`  Linha ${i}:`, jsonData[i].slice(0, 10));
+      // Log apenas primeira linha para debug
+      if (jsonData.length > 0) {
+        console.log('🔍 Primeira linha:', jsonData[0].slice(0, 8));
       }
 
       // Detectar tipo de aba analisando estrutura e NOME da aba
@@ -122,28 +121,7 @@ serve(async (req) => {
         (jsonData.length > 5 && jsonData[5] && jsonData[5].filter((v: any) => typeof v === 'number' && v > 0).length > 10)
       );
 
-      console.log(`🔍 Nome da aba: "${sheetName}" (lower: "${sheetNameLower}")`);
-      console.log(`🔍 Primeira linha:`, firstRow.slice(0, 8));
-      console.log(`🔍 Segunda linha:`, secondRow.slice(0, 8));
-      console.log(`🔍 Terceira linha:`, thirdRow.slice(0, 8));
-      console.log(`🔍 Coluna A (primeiras 5):`, columnA.slice(0, 5));
-      
-      // Contar valores numéricos na linha 5 (indicador de tabela de preços)
-      const numericValuesInRow5 = jsonData[5] ? jsonData[5].filter((v: any) => typeof v === 'number' && v > 0).length : 0;
-      
-      console.log(`🔍 Critérios detecção preços:`, {
-        nomeTabela: sheetNameLower.includes('tabela') && sheetNameLower.includes('prec'),
-        nomePreco: sheetNameLower.includes('preco') || sheetNameLower.includes('preço'),
-        origemNaLinha1: firstRow.some(cell => cell.includes('origem')),
-        goRepetido: firstRow.filter(cell => cell === 'go').length,
-        estadosNaLinha2: secondRow.filter(cell => cell.length === 2 && cell.match(/^[a-z]{2}$/)).length,
-        capitalNaLinha3: thirdRow.some(cell => cell.includes('capital') || cell.includes('interior')),
-        pesoNaColunaA: columnA.some(cell => cell.includes('peso')),
-        valoresNumericosLinha5: numericValuesInRow5
-      });
-      console.log(`🔍 isDeliveryTimeSheet: ${isDeliveryTimeSheet}`);
-      console.log(`🔍 isPricingSheet: ${isPricingSheet}`);
-      console.log(`🔍 Tipo de aba detectado: ${isDeliveryTimeSheet ? 'ABRANGÊNCIA/PRAZOS' : isPricingSheet ? 'PREÇOS' : 'DESCONHECIDA'}`);
+      console.log(`🔍 Tipo: ${isDeliveryTimeSheet ? 'PRAZOS' : isPricingSheet ? 'PREÇOS' : 'OUTRO'}`);
       
       if (isDeliveryTimeSheet) {
         // ===== Processar aba de ABRANGÊNCIA/PRAZOS =====
@@ -160,7 +138,7 @@ serve(async (req) => {
         const colPrazo = headers.findIndex(h => h.includes('prazo'));
         const colTarifa = headers.findIndex(h => h.includes('tarifa'));
         
-        console.log(`📍 Mapeamento: origem=${colOrigin}, uf=${colUF}, cep_start=${colCEPStart}, cep_end=${colCEPEnd}, prazo=${colPrazo}, tarifa=${colTarifa}`);
+        // Mapeamento de colunas concluído
         
         // Processar cada linha de dados (pulando cabeçalho)
         for (let i = 1; i < jsonData.length; i++) {
@@ -193,31 +171,26 @@ serve(async (req) => {
           });
         }
         
-        console.log(`📦 ${zonesData.length} registros de prazo extraídos`);
-      
+        // Remover duplicatas
+        const uniqueZones = new Map();
+        zonesData.forEach(zone => {
+          const key = `${zone.state}-${zone.zone_type}-${zone.tariff_type}`;
+          uniqueZones.set(key, zone);
+        });
+        const uniqueZonesArray = Array.from(uniqueZones.values());
         
-        if (zonesData.length > 0) {
-          // Remover duplicatas usando Map (manter última ocorrência)
-          const uniqueZones = new Map();
-          zonesData.forEach(zone => {
-            const key = `${zone.state}-${zone.zone_type}-${zone.tariff_type}`;
-            uniqueZones.set(key, zone);
-          });
-          const uniqueZonesArray = Array.from(uniqueZones.values());
-          
-          console.log(`📦 ${zonesData.length} zonas extraídas, ${uniqueZonesArray.length} únicas após remoção de duplicatas`);
-          console.log('📋 Amostra (primeiras 2):', JSON.stringify(uniqueZonesArray.slice(0, 2), null, 2));
-          
-          // Inserir em lotes de 100
-          for (let i = 0; i < uniqueZonesArray.length; i += 100) {
-            const batch = uniqueZonesArray.slice(i, i + 100);
+        console.log(`📦 ${uniqueZonesArray.length} zonas únicas`);
+        
+        if (uniqueZonesArray.length > 0) {
+          // Inserir em lotes maiores (500)
+          for (let i = 0; i < uniqueZonesArray.length; i += 500) {
+            const batch = uniqueZonesArray.slice(i, i + 500);
             const { error } = await supabaseClient.from('jadlog_zones').insert(batch);
             
             if (error) {
-              console.error(`❌ Erro ao inserir lote de zonas:`, error);
+              console.error(`❌ Erro lote zonas:`, error.message);
             } else {
               importedZones += batch.length;
-              console.log(`✅ Progresso zonas: ${importedZones}/${uniqueZonesArray.length}`);
             }
           }
         } else {
@@ -260,11 +233,7 @@ serve(async (req) => {
         const regionRow = jsonData[origemRowIndex + 2];
         const firstDataRowIndex = origemRowIndex + 3;
         
-        console.log(`📍 Estrutura encontrada: ORIGEM na linha ${origemRowIndex}`);
-        console.log('📊 Cabeçalhos de preço:');
-        console.log('  - Origens (primeiras 5):', originRow?.slice(0, 5));
-        console.log('  - Destinos (primeiras 5):', destRow?.slice(0, 5));
-        console.log('  - Regiões (primeiras 5):', regionRow?.slice(0, 5));
+        console.log(`📍 ORIGEM na linha ${origemRowIndex}`);
         
         // Processar linhas de dados (a partir de firstDataRowIndex)
         let totalPrices = 0;
@@ -339,27 +308,22 @@ serve(async (req) => {
             totalPrices++;
           }
           
-          if (pricesInRow > 0 && (i - firstDataRowIndex) % 10 === 0) {
-            console.log(`  ✅ Linha ${i}: peso ${weightMin}-${weightMax}kg, ${pricesInRow} preços`);
-          }
+          // Log removido para performance
         }
         
-        console.log(`💰 Total de ${totalPrices} preços extraídos`);
+        console.log(`💰 ${pricingData.length} preços extraídos`);
         
         if (pricingData.length > 0) {
-          console.log(`💰 ${pricingData.length} preços preparados`);
-          console.log('📋 Amostra (primeiros 3):', JSON.stringify(pricingData.slice(0, 3), null, 2));
-          
-          // Inserir em lotes de 100
-          for (let i = 0; i < pricingData.length; i += 100) {
-            const batch = pricingData.slice(i, i + 100);
+          // Inserir em lotes maiores (500) para performance
+          for (let i = 0; i < pricingData.length; i += 500) {
+            const batch = pricingData.slice(i, i + 500);
             const { error } = await supabaseClient.from('jadlog_pricing').insert(batch);
             
             if (error) {
-              console.error(`❌ Erro ao inserir lote de preços:`, error);
+              console.error(`❌ Erro lote ${i}:`, error.message);
             } else {
               importedPricing += batch.length;
-              console.log(`✅ Progresso preços: ${importedPricing}/${pricingData.length}`);
+              if (i % 2000 === 0) console.log(`✅ ${importedPricing}/${pricingData.length}`);
             }
           }
         } else {
