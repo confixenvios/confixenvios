@@ -404,129 +404,8 @@ serve(async (req) => {
       return acc + ((vol.length * vol.width * vol.height) / 1000000);
     }, 0);
 
-    // Preparar contexto simplificado para a IA (apenas para escolha da tabela)
-    const aiContext = {
-      origin_cep,
-      destination_cep,
-      total_weight,
-      total_volume,
-      priority_mode: config.priority_mode,
-      pricing_tables: tablesWithData.map(t => ({
-        id: t.id,
-        name: t.name,
-        cnpj: t.cnpj,
-        total_records: t.pricing_data.length,
-        sample_ceps: t.pricing_data.slice(0, 3).map(p => p.destination_cep),
-        cubic_meter_kg_equivalent: t.cubic_meter_kg_equivalent,
-      })),
-    };
-
-    // Chamar OpenAI para escolher a melhor tabela
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY não configurada');
-    }
-
-    const aiPrompt = `Você é um especialista em seleção de transportadoras para o site Confix Envios.
-
-SUA FUNÇÃO: Escolher a melhor tabela de preços e EXPLICAR detalhadamente o porquê dessa escolha.
-
-DADOS DA COTAÇÃO:
-- CEP Origem: ${origin_cep}
-- CEP Destino: ${destination_cep}
-- Peso: ${total_weight} kg
-- Volume: ${total_volume} m³
-- Prioridade: ${config.priority_mode}
-
-TABELAS DISPONÍVEIS:
-${JSON.stringify(aiContext.pricing_tables, null, 2)}
-
-CRITÉRIOS DE ESCOLHA:
-1. Qual tabela tem cobertura para o CEP ${destination_cep}?
-2. Considerando o modo de prioridade: ${config.priority_mode}
-   - lowest_price: prefira tabela com menores preços históricos
-   - fastest_delivery: prefira tabela com menores prazos
-   - balanced: equilibre preço e prazo
-
-SAÍDA ESPERADA:
-Retorne JSON com sua escolha e explicação DETALHADA:
-{
-  "selected_table_id": "uuid-da-tabela-escolhida",
-  "selected_table_name": "nome-da-tabela",
-  "reasoning": "Explicação DETALHADA: Por que escolhi esta tabela? Qual a cobertura de CEP? Por que não escolhi as outras tabelas disponíveis? Como a prioridade ${config.priority_mode} influenciou minha decisão?"
-}
-
-IMPORTANTE: 
-- Compare TODAS as tabelas disponíveis
-- Explique POR QUE você escolheu uma e NÃO escolheu as outras
-- Seja específico sobre cobertura de CEP e critérios de prioridade`;
-
-    console.log('[AI Quote Agent] Calling OpenAI for table selection...');
-    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'Você é um especialista em seleção de transportadoras. Escolha a melhor tabela e explique detalhadamente o motivo.' 
-          },
-          { role: 'user', content: aiPrompt }
-        ],
-        max_tokens: 500,
-        temperature: 0.3,
-        response_format: { type: "json_object" }
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('[AI Quote Agent] AI API error:', errorText);
-      console.error('[AI Quote Agent] Response status:', aiResponse.status);
-      throw new Error(`Erro na API de IA: ${errorText}`);
-    }
-
-    const aiData = await aiResponse.json();
-    console.log('[AI Quote Agent] AI response structure:', JSON.stringify(aiData, null, 2));
-    
-    const aiContent = aiData.choices?.[0]?.message?.content;
-    
-    if (!aiContent) {
-      console.error('[AI Quote Agent] Empty AI response. Full response:', JSON.stringify(aiData));
-      throw new Error('Resposta da IA vazia');
-    }
-
-    console.log('[AI Quote Agent] AI selection response:', aiContent);
-
-    // Parse da resposta da IA
-    let aiSelection;
-    try {
-      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        aiSelection = JSON.parse(jsonMatch[0]);
-      } else {
-        aiSelection = JSON.parse(aiContent);
-      }
-    } catch (e) {
-      console.error('[AI Quote Agent] Failed to parse AI response:', aiContent);
-      throw new Error('Resposta da IA inválida');
-    }
-
-    // Encontrar a tabela selecionada pela IA
-    const selectedTable = tablesWithData.find(t => t.id === aiSelection.selected_table_id);
-    
-    if (!selectedTable) {
-      throw new Error(`Tabela selecionada não encontrada: ${aiSelection.selected_table_id}`);
-    }
-
-    console.log('[AI Quote Agent] Selected table:', selectedTable.name);
-    console.log('[AI Quote Agent] AI Reasoning:', aiSelection.reasoning);
-
-    // CALCULAR O PREÇO PARA TODAS AS TABELAS DISPONÍVEIS
+    // ETAPA 1: CALCULAR PREÇOS EM TODAS AS TABELAS DISPONÍVEIS (VERIFICAR COBERTURA)
+    console.log('[AI Quote Agent] Calculando preços em TODAS as tabelas para verificar cobertura...');
     const cepNumerico = parseInt(destination_cep.replace(/\D/g, ''));
     const cepPrefix = destination_cep.replace(/\D/g, '').substring(0, 5);
     const allTableQuotes = [];
@@ -645,30 +524,149 @@ IMPORTANTE:
       }
     }
 
-    // Encontrar o resultado da tabela selecionada
-    const selectedQuote = allTableQuotes.find(q => q.table_id === selectedTable.id);
+    // ETAPA 2: FILTRAR APENAS TABELAS COM COBERTURA REAL
+    const tablesWithCoverage = allTableQuotes.filter(q => q.has_coverage);
     
-    if (!selectedQuote || !selectedQuote.has_coverage) {
-      throw new Error(`Tabela selecionada ${selectedTable.name} não tem cobertura para CEP ${destination_cep} e peso ${selectedQuote?.peso_tarifavel || total_weight}kg`);
+    console.log('[AI Quote Agent] ==========================================');
+    console.log('[AI Quote Agent] RESULTADO DA VERIFICAÇÃO DE COBERTURA:');
+    console.log(`[AI Quote Agent] Total de tabelas analisadas: ${allTableQuotes.length}`);
+    console.log(`[AI Quote Agent] Tabelas COM cobertura: ${tablesWithCoverage.length}`);
+    console.log('[AI Quote Agent] ==========================================');
+    
+    // Se NENHUMA tabela tem cobertura, erro claro
+    if (tablesWithCoverage.length === 0) {
+      const tableNames = allTableQuotes.map(q => q.table_name).join(', ');
+      throw new Error(`Nenhuma transportadora disponível atende o CEP ${destination_cep} para peso ${total_weight}kg. Tabelas verificadas: ${tableNames}`);
+    }
+    
+    // ETAPA 3: ESCOLHER A MELHOR ENTRE AS QUE TÊM COBERTURA
+    let selectedQuote;
+    let aiReasoning = '';
+    
+    // Se apenas UMA tabela tem cobertura, usar ela diretamente
+    if (tablesWithCoverage.length === 1) {
+      selectedQuote = tablesWithCoverage[0];
+      aiReasoning = `Única transportadora com cobertura disponível para o CEP ${destination_cep}. Transportadora: ${selectedQuote.table_name}, Preço: R$ ${selectedQuote.final_price.toFixed(2)}, Prazo: ${selectedQuote.delivery_days} dias.`;
+      
+      console.log('[AI Quote Agent] ✅ Apenas UMA tabela com cobertura:', selectedQuote.table_name);
+      console.log('[AI Quote Agent] Selecionada automaticamente (sem necessidade de IA)');
+    } 
+    // Se MÚLTIPLAS tabelas têm cobertura, usar IA para escolher a melhor
+    else {
+      console.log('[AI Quote Agent] ⚡ MÚLTIPLAS tabelas com cobertura detectadas!');
+      console.log('[AI Quote Agent] Chamando IA para escolher a melhor opção...');
+      
+      const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+      if (!OPENAI_API_KEY) {
+        // Fallback: escolher a mais barata se IA não disponível
+        console.warn('[AI Quote Agent] ⚠️ OpenAI API Key não encontrada, usando fallback (mais barata)');
+        selectedQuote = tablesWithCoverage.sort((a, b) => a.final_price - b.final_price)[0];
+        aiReasoning = `Selecionada opção mais econômica entre ${tablesWithCoverage.length} transportadoras disponíveis (IA indisponível). Transportadora: ${selectedQuote.table_name}.`;
+      } else {
+        try {
+          const aiPrompt = `Você é um especialista em logística. Escolha a MELHOR transportadora entre as opções disponíveis.
+
+DADOS DO ENVIO:
+- CEP Destino: ${destination_cep}
+- Peso: ${total_weight}kg
+- Prioridade: ${config.priority_mode}
+
+TRANSPORTADORAS DISPONÍVEIS (TODAS COM COBERTURA):
+${JSON.stringify(tablesWithCoverage.map(q => ({
+  table_id: q.table_id,
+  table_name: q.table_name,
+  price: q.final_price,
+  delivery_days: q.delivery_days,
+  weight: q.peso_tarifavel
+})), null, 2)}
+
+CRITÉRIOS DE ESCOLHA (baseado em prioridade "${config.priority_mode}"):
+- "fastest": Escolha a com MENOR prazo (delivery_days)
+- "cheapest": Escolha a com MENOR preço (final_price)
+- "balanced": Balance preço e prazo (melhor custo-benefício)
+
+Retorne APENAS JSON válido:
+{
+  "selected_table_id": "uuid-da-tabela",
+  "selected_table_name": "Nome da Tabela",
+  "reasoning": "Explicação breve da escolha"
+}`;
+
+          const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${OPENAI_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [
+                { 
+                  role: 'system', 
+                  content: 'Você é um especialista em logística. Escolha a melhor transportadora baseado nos critérios fornecidos. Retorne APENAS JSON válido.' 
+                },
+                { role: 'user', content: aiPrompt }
+              ],
+              max_tokens: 300,
+              temperature: 0.3,
+              response_format: { type: "json_object" }
+            }),
+          });
+
+          if (!aiResponse.ok) {
+            throw new Error(`AI API error: ${aiResponse.status}`);
+          }
+
+          const aiData = await aiResponse.json();
+          const aiContent = aiData.choices?.[0]?.message?.content;
+          const aiSelection = JSON.parse(aiContent);
+          
+          selectedQuote = tablesWithCoverage.find(q => q.table_id === aiSelection.selected_table_id);
+          
+          if (!selectedQuote) {
+            // Fallback: se IA retornar ID inválido, usar primeira opção
+            console.warn('[AI Quote Agent] ⚠️ IA retornou ID inválido, usando primeira opção');
+            selectedQuote = tablesWithCoverage[0];
+            aiReasoning = `Primeira opção disponível (IA retornou resposta inválida). Transportadora: ${selectedQuote.table_name}.`;
+          } else {
+            aiReasoning = aiSelection.reasoning;
+            console.log('[AI Quote Agent] ✅ IA escolheu:', selectedQuote.table_name);
+            console.log('[AI Quote Agent] Raciocínio:', aiReasoning);
+          }
+        } catch (aiError) {
+          // Fallback: escolher a mais barata se IA falhar
+          console.error('[AI Quote Agent] ❌ Erro na IA:', aiError.message);
+          console.log('[AI Quote Agent] Usando fallback: transportadora mais barata');
+          selectedQuote = tablesWithCoverage.sort((a, b) => a.final_price - b.final_price)[0];
+          aiReasoning = `Selecionada opção mais econômica (erro na IA). Transportadora: ${selectedQuote.table_name}.`;
+        }
+      }
     }
 
+    // ETAPA 4: MONTAR RESULTADO FINAL
     const calculationResult = {
-      selected_table_id: selectedTable.id,
-      selected_table_name: selectedTable.name,
+      selected_table_id: selectedQuote.table_id,
+      selected_table_name: selectedQuote.table_name,
       peso_informado: total_weight,
-      peso_cubado: selectedQuote.peso_tarifavel > total_weight ? (total_volume * 1000000) / selectedTable.cubic_meter_kg_equivalent : 0,
+      peso_cubado: selectedQuote.peso_tarifavel > total_weight ? (total_volume * 1000000) / 167 : 0,
       peso_tarifavel: selectedQuote.peso_tarifavel,
       base_price: selectedQuote.base_price,
       excedente_kg: selectedQuote.excedente_kg,
       valor_excedente: selectedQuote.valor_excedente,
       delivery_days: selectedQuote.delivery_days,
       final_price: selectedQuote.final_price,
-      reasoning: aiSelection.reasoning,
-      all_table_quotes: allTableQuotes
+      reasoning: aiReasoning,
+      all_table_quotes: allTableQuotes,
+      tables_with_coverage_count: tablesWithCoverage.length
     };
 
-    console.log('[AI Quote Agent] All table quotes calculated:', allTableQuotes);
-    console.log('[AI Quote Agent] Final selected calculation:', calculationResult);
+    console.log('[AI Quote Agent] ==========================================');
+    console.log('[AI Quote Agent] COTAÇÃO FINALIZADA COM SUCESSO');
+    console.log(`[AI Quote Agent] Transportadora selecionada: ${selectedQuote.table_name}`);
+    console.log(`[AI Quote Agent] Preço final: R$ ${selectedQuote.final_price.toFixed(2)}`);
+    console.log(`[AI Quote Agent] Prazo: ${selectedQuote.delivery_days} dias`);
+    console.log(`[AI Quote Agent] Opções com cobertura: ${tablesWithCoverage.length}/${allTableQuotes.length}`);
+    console.log('[AI Quote Agent] ==========================================');
 
     // Salvar log da cotação
     const { error: logError } = await supabaseClient
