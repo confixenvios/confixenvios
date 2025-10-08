@@ -165,7 +165,7 @@ const AdminAgenteIA = () => {
                   <SelectContent>
                     <SelectItem value="informed_weight">Peso Informado</SelectItem>
                     <SelectItem value="cubed_weight">Peso Cubado</SelectItem>
-                    <SelectItem value="greater_weight">Maior Peso</SelectItem>
+                    <SelectItem value="greater_weight">Maior Peso (Recomendado)</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-muted-foreground">
@@ -173,7 +173,7 @@ const AdminAgenteIA = () => {
                     ? 'Utilizar apenas o peso informado pelo usuário'
                     : config?.weight_calculation_mode === 'cubed_weight'
                     ? 'Calcular e usar o peso cubado (comprimento × largura × altura ÷ 6000)'
-                    : 'Comparar peso informado com peso cubado e sempre usar o maior valor'
+                    : 'Compara peso informado vs peso cubado e utiliza sempre o maior valor entre os dois'
                   }
                 </p>
               </div>
