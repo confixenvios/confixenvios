@@ -180,6 +180,22 @@ serve(async (req) => {
             // Cada zona terá um registro para cada faixa de peso disponível no pricing
             tableData.pricing_data = [];
             
+            console.log(`[DEBUG] Iniciando processamento de ${zones.length} zonas Jadlog...`);
+            
+            // Verificar se a zona específica GO-AC-69908 está nas zonas carregadas
+            const zona69908 = zones.find(z => z.zone_code === 'GO-AC-69908');
+            if (zona69908) {
+              console.log(`[DEBUG] ✅ Zona GO-AC-69908 ENCONTRADA nas zonas carregadas:`, {
+                zone_code: zona69908.zone_code,
+                state: zona69908.state,
+                tariff_type: zona69908.tariff_type,
+                cep_start: zona69908.cep_start,
+                cep_end: zona69908.cep_end
+              });
+            } else {
+              console.error(`[DEBUG] ❌ Zona GO-AC-69908 NÃO ENCONTRADA nas zonas carregadas!`);
+            }
+            
             // Log dados brutos das primeiras zonas de AC
             const acZonesDebug = zones.filter(z => z.state === 'AC').slice(0, 3);
             if (acZonesDebug.length > 0) {
@@ -266,6 +282,16 @@ serve(async (req) => {
               // Log específico para AC
               const acCount = tableData.pricing_data.filter(p => p.state === 'AC').length;
               console.log(`[AI Quote Agent] Registros de AC criados: ${acCount}`);
+              
+              // Verificar se há registros para a zona GO-AC-69908
+              const zona69908Records = tableData.pricing_data.filter(p => p.zone_code === 'GO-AC-69908');
+              console.log(`[DEBUG] Registros criados para GO-AC-69908: ${zona69908Records.length}`);
+              if (zona69908Records.length > 0) {
+                console.log(`[DEBUG] Amostra GO-AC-69908:`, JSON.stringify(zona69908Records.slice(0, 3), null, 2));
+              } else {
+                console.error(`[DEBUG] ❌ NENHUM registro criado para GO-AC-69908!`);
+              }
+              
               if (acCount > 0) {
                 const acSample = tableData.pricing_data.filter(p => p.state === 'AC').slice(0, 2);
                 console.log(`[AI Quote Agent] Amostra de AC:`, JSON.stringify(acSample, null, 2));
