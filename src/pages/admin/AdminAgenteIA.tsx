@@ -159,7 +159,12 @@ const AdminAgenteIA = () => {
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-muted-foreground">
-                  {getPriorityLabel(config?.priority_mode || "balanced")}
+                  {config?.priority_mode === 'lowest_price'
+                    ? 'A IA busca em todas as tabelas de transportadoras cadastradas e retorna a opção com MENOR PREÇO'
+                    : config?.priority_mode === 'fastest_delivery'
+                    ? 'A IA busca em todas as tabelas de transportadoras cadastradas e retorna a opção com MENOR PRAZO de entrega'
+                    : 'A IA analisa todas as tabelas de transportadoras e retorna a melhor opção equilibrando PREÇO e PRAZO de entrega'
+                  }
                 </p>
               </div>
 
@@ -180,10 +185,10 @@ const AdminAgenteIA = () => {
                 </Select>
                 <p className="text-sm text-muted-foreground">
                   {config?.weight_calculation_mode === 'informed_weight' 
-                    ? 'Utilizar apenas o peso informado pelo usuário'
+                    ? 'Usar apenas o peso informado pelo cliente no formulário para buscar na tabela de preços'
                     : config?.weight_calculation_mode === 'cubed_weight'
-                    ? 'Calcular e usar o peso cubado (comprimento × largura × altura ÷ 6000)'
-                    : 'Compara peso informado vs peso cubado e utiliza sempre o maior valor entre os dois'
+                    ? 'Calcular e usar o peso cubado (comprimento × largura × altura ÷ 6000) para buscar na tabela de preços'
+                    : 'A IA compara o peso informado com o peso cubado e usa sempre o MAIOR entre os dois para buscar o frete nas tabelas das transportadoras cadastradas'
                   }
                 </p>
               </div>
