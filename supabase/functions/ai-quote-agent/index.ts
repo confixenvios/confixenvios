@@ -126,11 +126,10 @@ serve(async (req) => {
             from += batchSize;
           }
           
-          const zones = allZones;
-          console.log(`[AI Quote Agent] ✅ TOTAL: ${zones.length} zonas Jadlog carregadas`);
-          
-          if (zones.length > 0) {
-            console.log(`[AI Quote Agent] Buscando TODOS os preços Jadlog...`);
+            console.log(`[AI Quote Agent] ✅ TOTAL: ${zones.length} zonas Jadlog carregadas`);
+            
+            if (zones.length > 0) {
+              console.log(`[AI Quote Agent] Buscando TODOS os preços Jadlog...`);
             
             // Buscar TODOS os preços Jadlog usando range
             let allPricing = [];
@@ -158,148 +157,66 @@ serve(async (req) => {
             }
             
             const pricing = allPricing;
-            
-            
-            console.log(`[AI Quote Agent] ✅ TOTAL: ${pricing.length} preços Jadlog carregados do banco`);
-            
-            // Verificar quantos são de AC
-            const acPricingCount = pricing.filter(p => p.tariff_type?.includes('AC')).length;
-            console.log(`[AI Quote Agent] Desses, ${acPricingCount} são de AC`);
-            
-            // Verificar quantos são para peso 10kg
-            const peso10Count = pricing.filter(p => p.weight_min <= 10 && p.weight_max >= 10).length;
-            console.log(`[AI Quote Agent] ${peso10Count} preços atendem peso 10kg`);
-            
-            // Verificar quantos de AC atendem peso 10kg
-            const acPeso10Count = pricing.filter(p => 
-              p.tariff_type?.includes('AC') && p.weight_min <= 10 && p.weight_max >= 10
-            ).length;
-            console.log(`[AI Quote Agent] ${acPeso10Count} preços de AC atendem peso 10kg`);
+            console.log(`[AI Quote Agent] ✅ TOTAL: ${pricing.length} preços Jadlog carregados`);
             
             // Mapear os dados no formato esperado pelo sistema
-            // Cada zona terá um registro para cada faixa de peso disponível no pricing
             tableData.pricing_data = [];
             
-            console.log(`[DEBUG] Iniciando processamento de ${zones.length} zonas Jadlog...`);
+            // CORRIGIDO: Para Jadlog, o match é por origin_state + destination_state, NÃO por tariff_type
+            // jadlog_pricing tem: origin_state="GO", destination_state="AC", tariff_type=39.6 (número)
+            // jadlog_zones tem: state="AC", tariff_type="Capital 1" (texto) - NÃO são compatíveis!
+            // A lógica correta: agrupar preços por destination_state e aplicar a TODAS as zonas daquele state
             
-            // Verificar se a zona específica GO-AC-69908 está nas zonas carregadas
-            const zona69908 = zones.find(z => z.zone_code === 'GO-AC-69908');
-            if (zona69908) {
-              console.log(`[DEBUG] ✅ Zona GO-AC-69908 ENCONTRADA nas zonas carregadas:`, {
-                zone_code: zona69908.zone_code,
-                state: zona69908.state,
-                tariff_type: zona69908.tariff_type,
-                cep_start: zona69908.cep_start,
-                cep_end: zona69908.cep_end
-              });
-            } else {
-              console.error(`[DEBUG] ❌ Zona GO-AC-69908 NÃO ENCONTRADA nas zonas carregadas!`);
-            }
+            console.log(`[Jadlog] Processando combinação de ${zones.length} zonas com preços baseado em destination_state`);
             
-            // Log dados brutos das primeiras zonas de AC
-            const acZonesDebug = zones.filter(z => z.state === 'AC').slice(0, 3);
-            if (acZonesDebug.length > 0) {
-              console.log(`[DEBUG] ===== ZONAS AC DO BANCO =====`);
-              acZonesDebug.forEach(z => {
-                console.log(`  Zone: ${z.zone_code}, State: "${z.state}", Tariff: "${z.tariff_type}", CEP: ${z.cep_start}-${z.cep_end}`);
-              });
-            }
-            
-            // Log dados brutos dos preços de AC
-            const acPricingDebug = pricing.filter(p => p.tariff_type?.includes('AC')).slice(0, 5);
-            if (acPricingDebug.length > 0) {
-              console.log(`[DEBUG] ===== PREÇOS AC DO BANCO =====`);
-              acPricingDebug.forEach(p => {
-                console.log(`  Tariff: "${p.tariff_type}", Weight: ${p.weight_min}-${p.weight_max}kg, Price: R$ ${p.price}`);
-              });
-            }
-            
+            // Para cada zona, encontrar TODOS os preços do mesmo destination_state
             for (const zone of zones) {
-                // CORRIGIDO: Combinar state + tariff_type para match com pricing
-                // Zone tem: state="AC", tariff_type="Capital 1"
-                // Pricing tem: tariff_type="AC CAPITAL 1"
-                const zoneTariffFormatted = `${zone.state} ${zone.tariff_type.toUpperCase()}`.replace(/\s+/g, ' ').trim();
-                
-                // Log detalhado para TODAS as zonas de AC
-                if (zone.state === 'AC') {
-                  console.log(`[DEBUG-AC-ZONE] Zone: ${zone.zone_code}, Raw tariff: "${zone.tariff_type}", Formatted: "${zoneTariffFormatted}", CEP: ${zone.cep_start}-${zone.cep_end}`);
-                }
-                
-                // Encontrar todos os preços aplicáveis para este tariff_type combinado
-                // Normalizar espaços também no pricing para evitar problemas com "AC INTERIOR  1" (dois espaços)
-                const zonePrices = (pricing || []).filter(p => {
-                  const normalizedPricing = p.tariff_type.replace(/\s+/g, ' ').trim();
-                  const match = normalizedPricing === zoneTariffFormatted;
-                  
-                  // Log detalhado para TODAS as zonas de AC
-                  if (zone.state === 'AC' && zone.zone_code === 'GO-AC-69908') {
-                    console.log(`[DEBUG-MATCH] Pricing "${p.tariff_type}" -> Normalized "${normalizedPricing}" === "${zoneTariffFormatted}" ? ${match}`);
-                  }
-                  
-                  return match;
-                });
-                
-                // Log apenas para AC para debug
-                if (zone.state === 'AC') {
-                  console.log(`[DEBUG-AC] Zone: ${zone.zone_code}, Tariff formatado: "${zoneTariffFormatted}", CEP: ${zone.cep_start}-${zone.cep_end}, Preços encontrados: ${zonePrices.length}`);
-                  if (zonePrices.length === 0) {
-                    console.error(`[DEBUG-AC] ❌ NENHUM preço encontrado para "${zoneTariffFormatted}"!`);
-                  }
-                }
-                
-                for (const priceItem of zonePrices) {
-                  // Criar um registro combinando zona + preço
-                  const newRecord = {
-                    destination_cep: `${zone.cep_start}-${zone.cep_end}`,
-                    weight_min: priceItem.weight_min,
-                    weight_max: priceItem.weight_max,
-                    price: priceItem.price,
-                    delivery_days: zone.delivery_days,
-                    express_delivery_days: zone.express_delivery_days,
-                    zone_code: zone.zone_code,
-                    tariff_type: zone.tariff_type,
-                    state: zone.state
-                  };
-                  
-                  // Debug: Log primeiros 5 registros do AC com faixas de CEP
-                  const currentACCount = tableData.pricing_data.filter(p => p.state === 'AC').length;
-                  if (zone.state === 'AC' && currentACCount < 5) {
-                    console.log(`[DEBUG-AC] Record ${currentACCount + 1}:`, {
-                      cep_range: newRecord.destination_cep,
-                      weight: `${newRecord.weight_min}-${newRecord.weight_max}kg`,
-                      price: newRecord.price,
-                      state: newRecord.state,
-                      zone: newRecord.zone_code
-                    });
-                  }
-                  
-                  tableData.pricing_data.push(newRecord);
+              // Match correto: origin_state="GO" + destination_state=zone.state (ex: "AC")
+              const zonePrices = (pricing || []).filter(p => 
+                p.origin_state === 'GO' && p.destination_state === zone.state
+              );
+              
+              // Log para debug AC
+              if (zone.state === 'AC' && zone.zone_code === 'GO-AC-69908') {
+                console.log(`[DEBUG-Jadlog] Zona ${zone.zone_code} (${zone.state}): Encontrados ${zonePrices.length} preços`);
+                if (zonePrices.length > 0) {
+                  console.log(`[DEBUG-Jadlog] Amostra de preços:`, zonePrices.slice(0, 3).map(p => ({
+                    weight: `${p.weight_min}-${p.weight_max}kg`,
+                    price: p.price,
+                    tariff_type: p.tariff_type
+                  })));
                 }
               }
               
-              console.log(`[AI Quote Agent] ${table.name}: ${tableData.pricing_data.length} registros Jadlog criados (zonas x preços)`);
+              // Criar registros combinando zona (CEP + prazos) + preços (faixas de peso)
+              for (const priceItem of zonePrices) {
+                const newRecord = {
+                  destination_cep: `${zone.cep_start}-${zone.cep_end}`,
+                  weight_min: priceItem.weight_min,
+                  weight_max: priceItem.weight_max,
+                  price: priceItem.price,
+                  delivery_days: zone.delivery_days,
+                  express_delivery_days: zone.express_delivery_days,
+                  zone_code: zone.zone_code,
+                  tariff_type: zone.tariff_type, // Manter o texto da zona
+                  state: zone.state,
+                  origin_state: priceItem.origin_state,
+                  destination_state: priceItem.destination_state
+                };
+                
+                tableData.pricing_data.push(newRecord);
+              }
+              
+              console.log(`[AI Quote Agent] ${table.name}: ${tableData.pricing_data.length} registros Jadlog criados`);
               
               // Log específico para AC
               const acCount = tableData.pricing_data.filter(p => p.state === 'AC').length;
               console.log(`[AI Quote Agent] Registros de AC criados: ${acCount}`);
               
-              // Verificar se há registros para a zona GO-AC-69908
-              const zona69908Records = tableData.pricing_data.filter(p => p.zone_code === 'GO-AC-69908');
-              console.log(`[DEBUG] Registros criados para GO-AC-69908: ${zona69908Records.length}`);
-              if (zona69908Records.length > 0) {
-                console.log(`[DEBUG] Amostra GO-AC-69908:`, JSON.stringify(zona69908Records.slice(0, 3), null, 2));
-              } else {
-                console.error(`[DEBUG] ❌ NENHUM registro criado para GO-AC-69908!`);
-              }
-              
               if (acCount > 0) {
                 const acSample = tableData.pricing_data.filter(p => p.state === 'AC').slice(0, 2);
                 console.log(`[AI Quote Agent] Amostra de AC:`, JSON.stringify(acSample, null, 2));
-              } else {
-                console.error(`[AI Quote Agent] ⚠️ NENHUM registro de AC foi criado!`);
               }
-              
-              console.log(`[AI Quote Agent] Amostra geral Jadlog:`, tableData.pricing_data.slice(0, 2));
             }
         } catch (error) {
           console.error(`[AI Quote Agent] Erro ao processar tabela Jadlog:`, error);
@@ -634,43 +551,7 @@ IMPORTANTE:
         const peso_tarifavel = Math.max(total_weight, peso_cubado);
         
         console.log(`[AI Quote Agent] Buscando preço em ${table.name}:`);
-        console.log(`  - CEP: ${destination_cep} (${cepNumerico})`);
-        console.log(`  - Peso tarifável: ${peso_tarifavel}kg`);
-        console.log(`  - Total de registros: ${table.pricing_data.length}`);
-        
-        // Para Jadlog, mostrar alguns registros do AC para debug
-        if (table.name.toLowerCase().includes('jadlog')) {
-          const acRecords = table.pricing_data.filter(p => p.state === 'AC');
-          console.log(`  - Total de registros AC: ${acRecords.length}`);
-          console.log(`  - Amostra AC (primeiros 3):`, JSON.stringify(acRecords.slice(0, 3), null, 2));
-          console.log(`  - Buscando CEP ${cepNumerico} em ${table.pricing_data.length} registros`);
-          
-          // Log específico: verificar se ALGUM registro de AC tem faixa que inclui 69918308
-          const acRecordsWithRange = acRecords.filter(p => {
-            const rangeMatch = p.destination_cep.match(/(\d{5,8})\s*-\s*(\d{5,8})/);
-            if (rangeMatch) {
-              const rangeStart = parseInt(rangeMatch[1]);
-              const rangeEnd = parseInt(rangeMatch[2]);
-              const includes = cepNumerico >= rangeStart && cepNumerico <= rangeEnd;
-              if (includes) {
-                console.log(`  [AC-MATCH-FOUND] Faixa ${p.destination_cep} CONTÉM ${cepNumerico}!`);
-              }
-              return includes;
-            }
-            return false;
-          });
-          
-          if (acRecordsWithRange.length > 0) {
-            console.log(`  ✅ Encontradas ${acRecordsWithRange.length} faixas de AC que incluem o CEP ${cepNumerico}`);
-            console.log(`  Detalhes:`, JSON.stringify(acRecordsWithRange.map(r => ({
-              cep_range: r.destination_cep,
-              weight: `${r.weight_min}-${r.weight_max}kg`,
-              price: r.price
-            })), null, 2));
-          } else {
-            console.log(`  ❌ Nenhuma faixa de AC inclui o CEP ${cepNumerico}`);
-          }
-        }
+        console.log(`  - CEP: ${destination_cep}, Peso: ${peso_tarifavel}kg`);
         
         // Encontrar registro de preço correspondente ao CEP e peso
         const priceRecord = table.pricing_data.find(p => {
@@ -688,13 +569,6 @@ IMPORTANTE:
             const rangeStart = parseInt(rangeMatch[1]);
             const rangeEnd = parseInt(rangeMatch[2]);
             cepMatch = cepNumerico >= rangeStart && cepNumerico <= rangeEnd;
-            
-            // Log detalhado para Jadlog AC quando há match de peso
-            if (table.name.toLowerCase().includes('jadlog') && p.state === 'AC') {
-              if (weightMatch) {
-                console.log(`  [AC-CHECK] CEP ${p.destination_cep} (${rangeStart} a ${rangeEnd}): CEP ${cepNumerico} está na faixa? ${cepMatch}, Peso ${peso_tarifavel}kg entre ${p.weight_min}-${p.weight_max}kg? ${weightMatch}`);
-              }
-            }
           }
           // Formato 2: CEP exato ou prefixo (ex: 69918)
           else if (recordCep.length <= 5) {
