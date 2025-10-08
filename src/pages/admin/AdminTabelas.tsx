@@ -182,144 +182,81 @@ const AdminTabelas = () => {
     }
   };
 
-  const handleValidateAllTables = async () => {
-    if (pricingTables.length === 0) {
+  const handleUpdateAllTables = async () => {
+    const googleSheetsTables = pricingTables.filter(t => t.source_type === 'google_sheets' && t.google_sheets_url);
+    
+    if (googleSheetsTables.length === 0) {
       toast({
         title: "Aviso",
-        description: "Nenhuma tabela cadastrada para validar"
+        description: "Nenhuma tabela com Google Sheets cadastrada para atualizar"
       });
       return;
     }
 
     setIsLoading(true);
-    const auditResults: any[] = [];
+    let successCount = 0;
+    let errorCount = 0;
 
     try {
       toast({
-        title: "🤖 Auditoria IA Iniciada",
-        description: "A IA está analisando todas as tabelas de preços...",
+        title: "🔄 Atualização Iniciada",
+        description: `Atualizando ${googleSheetsTables.length} tabela(s) do Google Sheets...`,
       });
 
-      // Auditar cada tabela com IA
-      for (const table of pricingTables) {
-        console.log(`\n🔍 === AUDITORIA IA: ${table.name} ===`);
+      // Atualizar cada tabela do Google Sheets
+      for (const table of googleSheetsTables) {
+        console.log(`\n📥 Atualizando tabela: ${table.name}`);
         
         try {
-          const { PricingTableService } = await import('@/services/pricingTableService');
+          const lowerName = table.name.toLowerCase();
           
-          // 1. Validar estrutura da tabela
-          console.log(`📋 Validando estrutura da tabela ${table.name}...`);
-          const validationResult = await PricingTableService.validatePricingTable(table.id);
-          
-          // 2. Testar leitura de todas as abas
-          console.log(`📚 Testando leitura de abas da tabela ${table.name}...`);
-          let sheetsCount = 0;
-          let sheetsData: any = {};
-          
-          if (table.source_type === 'google_sheets' && table.google_sheets_url) {
-            const sheets = await PricingTableService.getSheetNames(table.google_sheets_url);
-            sheetsCount = sheets.length;
-            sheetsData = { sheets, total: sheetsCount };
-            console.log(`  ✅ ${sheetsCount} abas encontradas:`, sheets);
-          }
-          
-          // 3. Teste prático: fazer cotação real
-          console.log(`🧪 Testando cotação real na tabela ${table.name}...`);
-          let quoteTest = null;
-          try {
-            // Teste com CEP de São Paulo e peso de 5kg
-            quoteTest = await PricingTableService.getQuoteFromTable(table, {
-              destinyCep: '01310-100',
-              weight: 5,
-              quantity: 1
+          // Chamar edge function apropriada baseada no nome da tabela
+          if (lowerName.includes('jadlog')) {
+            const { data, error } = await supabase.functions.invoke('import-jadlog-data', {
+              body: { 
+                googleSheetsUrl: table.google_sheets_url,
+                forceReimport: true
+              }
             });
-            
-            if (quoteTest) {
-              console.log(`  ✅ Cotação teste bem-sucedida: R$${quoteTest.economicPrice.toFixed(2)} em ${quoteTest.economicDays} dias`);
-            } else {
-              console.log(`  ⚠️ Nenhuma cotação encontrada para o teste`);
-            }
-          } catch (error) {
-            console.error(`  ❌ Erro no teste de cotação:`, error);
+
+            if (error) throw error;
+
+            console.log(`✅ Tabela ${table.name} atualizada com sucesso:`, data);
+            successCount++;
+          } else {
+            console.log(`⚠️ Tipo de tabela não suportado para reimportação automática: ${table.name}`);
           }
-          
-          // 4. Análise IA dos resultados
-          const auditScore = {
-            structure: validationResult.isValid ? 100 : 0,
-            sheets: sheetsCount > 0 ? 100 : 0,
-            quote: quoteTest !== null ? 100 : 0,
-            overall: 0
-          };
-          auditScore.overall = Math.round((auditScore.structure + auditScore.sheets + auditScore.quote) / 3);
-          
-          const auditReport = {
-            tableName: table.name,
-            tableId: table.id,
-            status: auditScore.overall >= 70 ? 'approved' : 'failed',
-            score: auditScore,
-            details: {
-              validation: validationResult,
-              sheets: sheetsData,
-              quoteTest: quoteTest ? {
-                success: true,
-                price: quoteTest.economicPrice,
-                days: quoteTest.economicDays,
-                zone: quoteTest.zone
-              } : { success: false },
-              errors: validationResult.errors,
-              warnings: validationResult.warnings
-            }
-          };
-          
-          auditResults.push(auditReport);
-          
-          // Log resultado da auditoria
-          console.log(`\n📊 RESULTADO DA AUDITORIA: ${table.name}`);
-          console.log(`  Score Geral: ${auditScore.overall}%`);
-          console.log(`  Status: ${auditReport.status === 'approved' ? '✅ APROVADA' : '❌ REPROVADA'}`);
-          console.log(`  - Estrutura: ${auditScore.structure}%`);
-          console.log(`  - Abas: ${auditScore.sheets}%`);
-          console.log(`  - Cotação: ${auditScore.quote}%`);
           
         } catch (error) {
-          console.error(`❌ Erro na auditoria da tabela ${table.name}:`, error);
-          auditResults.push({
-            tableName: table.name,
-            tableId: table.id,
-            status: 'error',
-            score: { overall: 0 },
-            error: error instanceof Error ? error.message : 'Erro desconhecido'
-          });
+          console.error(`❌ Erro ao atualizar tabela ${table.name}:`, error);
+          errorCount++;
         }
       }
 
-      // Gerar relatório final
-      const approvedTables = auditResults.filter(r => r.status === 'approved').length;
-      const failedTables = auditResults.filter(r => r.status === 'failed').length;
-      const errorTables = auditResults.filter(r => r.status === 'error').length;
-      
-      console.log(`\n\n🎯 === RELATÓRIO FINAL DA AUDITORIA IA ===`);
-      console.log(`Total de tabelas: ${auditResults.length}`);
-      console.log(`✅ Aprovadas: ${approvedTables}`);
-      console.log(`⚠️ Reprovadas: ${failedTables}`);
-      console.log(`❌ Com erro: ${errorTables}`);
-      console.log(`\nDetalhes por tabela:`);
-      auditResults.forEach(r => {
-        console.log(`  ${r.status === 'approved' ? '✅' : r.status === 'failed' ? '⚠️' : '❌'} ${r.tableName}: Score ${r.score.overall}%`);
-      });
+      console.log(`\n📊 RESULTADO DA ATUALIZAÇÃO`);
+      console.log(`✅ Sucesso: ${successCount}`);
+      console.log(`❌ Erros: ${errorCount}`);
 
-      toast({
-        title: "🤖 Auditoria IA Concluída",
-        description: `✅ ${approvedTables} aprovadas | ⚠️ ${failedTables} reprovadas | ❌ ${errorTables} com erro`,
-      });
+      if (errorCount === 0) {
+        toast({
+          title: "✅ Atualização Concluída",
+          description: `${successCount} tabela(s) atualizada(s) com sucesso`,
+        });
+      } else {
+        toast({
+          title: "⚠️ Atualização Parcial",
+          description: `${successCount} sucesso(s) | ${errorCount} erro(s)`,
+          variant: errorCount > successCount ? "destructive" : "default"
+        });
+      }
 
       // Recarregar dados para mostrar status atualizado
       fetchData();
     } catch (error) {
-      console.error('❌ Erro crítico na auditoria:', error);
+      console.error('❌ Erro crítico na atualização:', error);
       toast({
-        title: "Erro na Auditoria",
-        description: "Erro durante a auditoria das tabelas",
+        title: "Erro na Atualização",
+        description: "Erro durante a atualização das tabelas",
         variant: "destructive"
       });
     } finally {
@@ -722,12 +659,12 @@ const AdminTabelas = () => {
               </div>
               <Button 
                 variant="outline"
-                onClick={handleValidateAllTables}
+                onClick={handleUpdateAllTables}
                 disabled={isLoading}
                 className="bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 border-primary/30"
               >
                 <Database className="w-4 h-4 mr-2" />
-                {isLoading ? 'Auditando com IA...' : '🤖 Auditar com IA'}
+                {isLoading ? 'Atualizando...' : '🔄 Atualizar Tabelas'}
               </Button>
             </CardTitle>
           </CardHeader>
