@@ -177,29 +177,40 @@ serve(async (req) => {
         console.log('💰 Processando aba de PREÇOS (valores de frete)...');
         const pricingData: JadlogPricingRow[] = [];
         
-        // Estrutura da planilha de preços:
-        // Linha 1 (índice 0): ORIGEM (GO, GO, GO, ...)
-        // Linha 2 (índice 1): DESTINO (AC, AC, AL, ...)
-        // Linha 3 (índice 2): TIPO DE TARIFA (AC CAPITAL 1, AC CAPITAL 2, ...)
-        // Linhas 4+ (índice 3+): Coluna A = "Peso Até (kg)" + valores, demais colunas = preços
+        // Encontrar a linha que contém "Peso Até (kg)" ou similar
+        let headerRowIndex = -1;
+        for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+          const firstCell = String(jsonData[i][0] || '').toLowerCase();
+          if (firstCell.includes('peso')) {
+            headerRowIndex = i;
+            break;
+          }
+        }
         
-        if (jsonData.length < 4) {
-          console.log('⚠️ Aba de preços com poucas linhas, pulando');
+        if (headerRowIndex === -1 || jsonData.length < headerRowIndex + 2) {
+          console.log('⚠️ Estrutura de aba de preços inválida, pulando');
           continue;
         }
         
-        const originRow = jsonData[0];    // Linha 1: ORIGEM
-        const destRow = jsonData[1];      // Linha 2: DESTINO  
-        const tariffRow = jsonData[2];    // Linha 3: TIPO DE TARIFA
+        // Cabeçalhos estão nas 3 linhas ANTES da linha de peso
+        // Se "Peso Até" está na linha 3, então:
+        // Linha 0: ORIGEM
+        // Linha 1: DESTINO  
+        // Linha 2: TIPO DE TARIFA
+        // Linha 3+: Dados de peso e preços
+        const originRow = jsonData[headerRowIndex - 3];
+        const destRow = jsonData[headerRowIndex - 2];
+        const tariffRow = jsonData[headerRowIndex - 1];
         
+        console.log(`📍 Linha de cabeçalho "Peso" encontrada na linha ${headerRowIndex}`);
         console.log('📊 Cabeçalhos de preço:');
-        console.log('  - Origens (primeiras 5):', originRow.slice(0, 5));
-        console.log('  - Destinos (primeiras 5):', destRow.slice(0, 5));
-        console.log('  - Tarifas (primeiras 5):', tariffRow.slice(0, 5));
+        console.log('  - Origens (primeiras 5):', originRow?.slice(0, 5));
+        console.log('  - Destinos (primeiras 5):', destRow?.slice(0, 5));
+        console.log('  - Tarifas (primeiras 5):', tariffRow?.slice(0, 5));
         
-        // Processar linhas de dados (a partir da linha 4, índice 3)
+        // Processar linhas de dados (a partir da linha APÓS o cabeçalho de peso)
         let totalPrices = 0;
-        for (let i = 3; i < jsonData.length; i++) {
+        for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
           const row = jsonData[i];
           if (!row || row.length < 2) continue;
           
@@ -211,9 +222,9 @@ serve(async (req) => {
           const weightMax = parseFloat(weightStr.replace(',', '.'));
           if (isNaN(weightMax) || weightMax === 0) continue;
           
-          // Peso mínimo é o peso máximo da linha anterior (ou 0 se primeira linha)
+          // Peso mínimo é o peso máximo da linha anterior (ou 0 se primeira linha de dados)
           let weightMin = 0;
-          if (i > 3) {
+          if (i > headerRowIndex + 1) {
             const prevWeightStr = String(jsonData[i-1][0] || '').trim();
             const prevWeight = parseFloat(prevWeightStr.replace(',', '.'));
             if (!isNaN(prevWeight)) {
@@ -224,7 +235,7 @@ serve(async (req) => {
           let pricesInRow = 0;
           
           // Processar cada coluna de preço (a partir da coluna B, índice 1)
-          for (let j = 1; j < row.length && j < destRow.length; j++) {
+          for (let j = 1; j < row.length && destRow && j < destRow.length; j++) {
             const priceValue = row[j];
             
             // Pular células vazias
