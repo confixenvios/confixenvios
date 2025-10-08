@@ -1,3 +1,5 @@
+// AI Quote Agent - Agente de cotação inteligente v2.1
+// Atualizado: 2025-10-08 - Corrigido match Jadlog por state
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -206,18 +208,19 @@ serve(async (req) => {
                 
                 tableData.pricing_data.push(newRecord);
               }
-              
-              console.log(`[AI Quote Agent] ${table.name}: ${tableData.pricing_data.length} registros Jadlog criados`);
-              
-              // Log específico para AC
-              const acCount = tableData.pricing_data.filter(p => p.state === 'AC').length;
-              console.log(`[AI Quote Agent] Registros de AC criados: ${acCount}`);
-              
-              if (acCount > 0) {
-                const acSample = tableData.pricing_data.filter(p => p.state === 'AC').slice(0, 2);
-                console.log(`[AI Quote Agent] Amostra de AC:`, JSON.stringify(acSample, null, 2));
-              }
             }
+            
+            console.log(`[AI Quote Agent] ${table.name}: ${tableData.pricing_data.length} registros Jadlog criados`);
+            
+            // Log específico para AC
+            const acCount = tableData.pricing_data.filter(p => p.state === 'AC').length;
+            console.log(`[AI Quote Agent] Registros de AC criados: ${acCount}`);
+            
+            if (acCount > 0) {
+              const acSample = tableData.pricing_data.filter(p => p.state === 'AC').slice(0, 2);
+              console.log(`[AI Quote Agent] Amostra de AC:`, JSON.stringify(acSample, null, 2));
+            }
+          }
         } catch (error) {
           console.error(`[AI Quote Agent] Erro ao processar tabela Jadlog:`, error);
         }
