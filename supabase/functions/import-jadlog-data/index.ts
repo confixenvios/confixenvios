@@ -101,34 +101,48 @@ serve(async (req) => {
                                     firstRow.some(cell => cell.includes('prazo')));
       
       // Aba de PREÇOS: detectar por múltiplos critérios
-      const isPricingSheet = 
+      // IMPORTANTE: A aba de preços não pode ser detectada como aba de prazos
+      const isPricingSheet = !isDeliveryTimeSheet && (
         // Por nome da aba
         (sheetNameLower.includes('tabela') && (sheetNameLower.includes('preco') || sheetNameLower.includes('preço'))) ||
+        sheetNameLower.includes('preço') ||
+        sheetNameLower.includes('preco') ||
         sheetNameLower === 'preços' ||
         sheetNameLower === 'precos' ||
-        // Por estrutura: primeira linha tem "ORIGEM" ou "GO" repetido
+        // Por estrutura: primeira linha tem "ORIGEM" ou "GO" repetido (mais de 3 vezes)
         firstRow.filter(cell => cell === 'go').length > 3 ||
         firstRow.some(cell => cell.includes('origem')) ||
-        // Por estrutura: segunda linha tem estados (AC, AL, AM, BA, etc.)
+        // Por estrutura: segunda linha tem estados (AC, AL, AM, BA, etc.) - mais de 3
         secondRow.filter(cell => cell.length === 2 && cell.match(/^[a-z]{2}$/)).length > 3 ||
         // Por estrutura: terceira linha tem "capital" ou "interior"
         thirdRow.some(cell => cell.includes('capital') || cell.includes('interior')) ||
         // Por estrutura: coluna A tem "peso"
-        columnA.some(cell => cell.includes('peso'));
+        columnA.some(cell => cell.includes('peso')) ||
+        // Por estrutura: muitas colunas com valores numéricos (preços)
+        (jsonData.length > 5 && jsonData[5] && jsonData[5].filter((v: any) => typeof v === 'number' && v > 0).length > 10)
+      );
 
       console.log(`🔍 Nome da aba: "${sheetName}" (lower: "${sheetNameLower}")`);
       console.log(`🔍 Primeira linha:`, firstRow.slice(0, 8));
       console.log(`🔍 Segunda linha:`, secondRow.slice(0, 8));
       console.log(`🔍 Terceira linha:`, thirdRow.slice(0, 8));
       console.log(`🔍 Coluna A (primeiras 5):`, columnA.slice(0, 5));
+      
+      // Contar valores numéricos na linha 5 (indicador de tabela de preços)
+      const numericValuesInRow5 = jsonData[5] ? jsonData[5].filter((v: any) => typeof v === 'number' && v > 0).length : 0;
+      
       console.log(`🔍 Critérios detecção preços:`, {
         nomeTabela: sheetNameLower.includes('tabela') && sheetNameLower.includes('prec'),
+        nomePreco: sheetNameLower.includes('preco') || sheetNameLower.includes('preço'),
         origemNaLinha1: firstRow.some(cell => cell.includes('origem')),
         goRepetido: firstRow.filter(cell => cell === 'go').length,
-        estadosNaLinha2: secondRow.filter(cell => cell.length === 2).length,
-        capitalNaLinha3: thirdRow.some(cell => cell.includes('capital')),
-        pesoNaColunaA: columnA.some(cell => cell.includes('peso'))
+        estadosNaLinha2: secondRow.filter(cell => cell.length === 2 && cell.match(/^[a-z]{2}$/)).length,
+        capitalNaLinha3: thirdRow.some(cell => cell.includes('capital') || cell.includes('interior')),
+        pesoNaColunaA: columnA.some(cell => cell.includes('peso')),
+        valoresNumericosLinha5: numericValuesInRow5
       });
+      console.log(`🔍 isDeliveryTimeSheet: ${isDeliveryTimeSheet}`);
+      console.log(`🔍 isPricingSheet: ${isPricingSheet}`);
       console.log(`🔍 Tipo de aba detectado: ${isDeliveryTimeSheet ? 'ABRANGÊNCIA/PRAZOS' : isPricingSheet ? 'PREÇOS' : 'DESCONHECIDA'}`);
       
       if (isDeliveryTimeSheet) {
