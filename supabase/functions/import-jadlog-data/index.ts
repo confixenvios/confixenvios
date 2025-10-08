@@ -38,7 +38,7 @@ serve(async (req) => {
     );
 
     // URL da planilha do Google Sheets
-    const GOOGLE_SHEETS_ID = '1cAH3flP8wmCiDvngG0VUvDOTfBjrHEB7ZCRnwB6NHXk';
+    const GOOGLE_SHEETS_ID = '1GPAhV94gwZWkVGsO-ribwjAJNQJGAF2RAX79WXOajtc';
     
     console.log('🔍 Iniciando importação da tabela Jadlog...');
 
