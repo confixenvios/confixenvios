@@ -87,8 +87,8 @@ serve(async (req) => {
     
     // Função para determinar estado com base no CEP
     const getStateFromCep = (cep: string): string => {
-      // CEPs do Acre (69900-69923)
-      if (cep >= '69900' && cep <= '69923') return 'AC';
+      // CEPs do Acre (69900-69999)
+      if (cep >= '69900' && cep <= '69999') return 'AC';
       
       // CEPs do Amazonas (69000-69299, 69400-69899)
       if ((cep >= '69000' && cep <= '69299') || (cep >= '69400' && cep <= '69899')) return 'AM';
