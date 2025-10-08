@@ -138,7 +138,7 @@ serve(async (req) => {
                 });
                 
                 if (zonePrices.length > 0) {
-                  console.log(`[DEBUG] Found ${zonePrices.length} prices for ${zoneTariffFormatted}`);
+                  console.log(`[DEBUG] Zone ${zone.zone_code} (${zoneTariffFormatted}): Found ${zonePrices.length} prices, CEP range: ${zone.cep_start}-${zone.cep_end}`);
                 }
                 
                 for (const priceItem of zonePrices) {
@@ -400,8 +400,9 @@ IMPORTANTE:
         
         // Para Jadlog, mostrar alguns registros do AC para debug
         if (table.name.toLowerCase().includes('jadlog')) {
-          const acRecords = table.pricing_data.filter(p => p.state === 'AC').slice(0, 5);
-          console.log(`  - Amostra AC (primeiros 5):`, JSON.stringify(acRecords, null, 2));
+          const acRecords = table.pricing_data.filter(p => p.state === 'AC').slice(0, 3);
+          console.log(`  - Amostra AC (primeiros 3):`, JSON.stringify(acRecords, null, 2));
+          console.log(`  - Buscando CEP ${cepNumerico} em ${table.pricing_data.length} registros`);
         }
         
         // Encontrar registro de preço correspondente ao CEP e peso
@@ -420,6 +421,11 @@ IMPORTANTE:
             const rangeStart = parseInt(rangeMatch[1]);
             const rangeEnd = parseInt(rangeMatch[2]);
             cepMatch = cepNumerico >= rangeStart && cepNumerico <= rangeEnd;
+            
+            // Log detalhado para Jadlog
+            if (table.name.toLowerCase().includes('jadlog') && p.state === 'AC' && weightMatch) {
+              console.log(`  [Range Check] CEP ${p.destination_cep}: ${cepNumerico} >= ${rangeStart} && ${cepNumerico} <= ${rangeEnd} = ${cepMatch}`);
+            }
           }
           // Formato 2: CEP exato ou prefixo (ex: 69918)
           else if (recordCep.length <= 5) {
