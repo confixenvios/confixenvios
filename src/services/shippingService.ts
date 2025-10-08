@@ -126,7 +126,7 @@ const calculateLegacyShippingQuote = async ({
   
   // Busca a zona de destino baseada no CEP
   const { data: zones, error: zoneError } = await supabase
-    .from('shipping_zones')
+    .from('shipping_zones_magalog')
     .select('*')
     .lte('cep_start', cleanCep)
     .gte('cep_end', cleanCep)
@@ -146,7 +146,7 @@ const calculateLegacyShippingQuote = async ({
 
   // Busca o preço baseado no peso e zona
   const { data: pricing, error: priceError } = await supabase
-    .from('shipping_pricing')
+    .from('shipping_pricing_magalog')
     .select('*')
     .eq('zone_code', zone.zone_code)
     .lte('weight_min', weight)
@@ -168,7 +168,7 @@ const calculateLegacyShippingQuote = async ({
     console.log(`⚠️ Peso ${weight}kg excede faixas disponíveis. Buscando maior faixa...`);
     
     const { data: maxWeightPricing, error: maxError } = await supabase
-      .from('shipping_pricing')
+      .from('shipping_pricing_magalog')
       .select('*')
       .eq('zone_code', zone.zone_code)
       .order('weight_max', { ascending: false })

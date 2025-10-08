@@ -175,7 +175,7 @@ export const validateZonesConfiguration = async () => {
   console.log('🔍 Validando configuração das zonas...');
   
   const { data: zones, error } = await supabase
-    .from('shipping_zones')
+    .from('shipping_zones_magalog')
     .select('*')
     .order('state, zone_code');
 
