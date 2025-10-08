@@ -133,14 +133,16 @@ serve(async (req) => {
           }
 
           // 1. Buscar APENAS zonas do estado de destino com CEP matching
-          console.log(`[AI Quote Agent] Query 1: Buscando zonas Jadlog para ${destinationState}...`);
+          console.log(`[AI Quote Agent] Query 1: Buscando zonas Jadlog para ${destinationState} e CEP ${cleanDestinationCep}...`);
           const { data: zones, error: zonesError } = await supabaseClient
             .from('jadlog_zones')
             .select('*')
             .eq('state', destinationState)
-            .lte('cep_start', cleanDestinationCep)
-            .gte('cep_end', cleanDestinationCep)
+            .lte('cep_start', cleanDestinationCep)  // cep_start <= CEP buscado
+            .gte('cep_end', cleanDestinationCep)    // cep_end >= CEP buscado
             .limit(50);
+          
+          console.log(`[AI Quote Agent] DEBUG Query Jadlog Zones: state=${destinationState}, CEP=${cleanDestinationCep}`);
 
           if (zonesError) {
             console.error(`[AI Quote Agent] Erro ao buscar jadlog_zones:`, zonesError);
@@ -210,9 +212,11 @@ serve(async (req) => {
           const { data: zones, error: zonesError } = await supabaseClient
             .from('shipping_zones_magalog')
             .select('*')
-            .lte('cep_start', cleanDestinationCep)
-            .gte('cep_end', cleanDestinationCep)
-            .limit(10); // Normalmente só 1-2 zonas por CEP
+            .lte('cep_start', cleanDestinationCep)  // cep_start <= CEP buscado
+            .gte('cep_end', cleanDestinationCep)    // cep_end >= CEP buscado
+            .limit(10);
+          
+          console.log(`[AI Quote Agent] DEBUG Query Magalog Zones: CEP=${cleanDestinationCep}`);
 
           if (zonesError) {
             console.error(`[AI Quote Agent] Erro ao buscar shipping_zones_magalog:`, zonesError);
