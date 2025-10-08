@@ -109,6 +109,7 @@ serve(async (req) => {
             const { data: zonesBatch, error: zonesError } = await supabaseClient
               .from('jadlog_zones')
               .select('*')
+              .order('id')
               .range(from, from + batchSize - 1);
             
             if (zonesError) {
@@ -139,6 +140,7 @@ serve(async (req) => {
               const { data: pricingBatch, error: pricingError } = await supabaseClient
                 .from('jadlog_pricing')
                 .select('*')
+                .order('id')
                 .range(from, from + batchSize - 1);
               
               if (pricingError) {
@@ -202,15 +204,20 @@ serve(async (req) => {
                 // Pricing tem: tariff_type="AC CAPITAL 1"
                 const zoneTariffFormatted = `${zone.state} ${zone.tariff_type.toUpperCase()}`.replace(/\s+/g, ' ').trim();
                 
+                // Log detalhado para TODAS as zonas de AC
+                if (zone.state === 'AC') {
+                  console.log(`[DEBUG-AC-ZONE] Zone: ${zone.zone_code}, Raw tariff: "${zone.tariff_type}", Formatted: "${zoneTariffFormatted}", CEP: ${zone.cep_start}-${zone.cep_end}`);
+                }
+                
                 // Encontrar todos os preços aplicáveis para este tariff_type combinado
                 // Normalizar espaços também no pricing para evitar problemas com "AC INTERIOR  1" (dois espaços)
                 const zonePrices = (pricing || []).filter(p => {
                   const normalizedPricing = p.tariff_type.replace(/\s+/g, ' ').trim();
                   const match = normalizedPricing === zoneTariffFormatted;
                   
-                  // Log detalhado para primeira zona de AC
+                  // Log detalhado para TODAS as zonas de AC
                   if (zone.state === 'AC' && zone.zone_code === 'GO-AC-69908') {
-                    console.log(`[DEBUG-MATCH] Comparando: "${normalizedPricing}" === "${zoneTariffFormatted}" ? ${match}`);
+                    console.log(`[DEBUG-MATCH] Pricing "${p.tariff_type}" -> Normalized "${normalizedPricing}" === "${zoneTariffFormatted}" ? ${match}`);
                   }
                   
                   return match;
@@ -287,6 +294,7 @@ serve(async (req) => {
             const { data: zonesBatch, error: zonesError } = await supabaseClient
               .from('shipping_zones_magalog')
               .select('*')
+              .order('id')
               .range(from, from + batchSize - 1);
             
             if (zonesError) {
@@ -316,6 +324,7 @@ serve(async (req) => {
               const { data: pricingBatch, error: pricingError } = await supabaseClient
                 .from('shipping_pricing_magalog')
                 .select('*')
+                .order('id')
                 .range(from, from + batchSize - 1);
               
               if (pricingError) {
