@@ -155,6 +155,7 @@ serve(async (req) => {
       total_weight,
       total_volume,
       priority_mode: config.priority_mode,
+      weight_calculation_mode: config.weight_calculation_mode,
       additional_rules: config.additional_rules,
       pricing_tables: tablesWithData.map(t => ({
         id: t.id,
@@ -186,11 +187,19 @@ Sua função é calcular e comparar fretes de diferentes transportadoras a parti
 REGRAS DE CÁLCULO (SIGA ESTRITAMENTE):
 
 1. PESO TARIFÁVEL:
-   - Sempre considere o peso tarifável como o MAIOR entre:
-     * Peso informado (peso real em kg): ${total_weight} kg
-     * Peso cubado: volume total em cm³ dividido pelo divisor de cubagem da transportadora
-     * Peso mínimo tarifável definido na transportadora
-   - Volume total informado: ${total_volume} m³ (${total_volume * 1000000} cm³)
+   MODO DE CÁLCULO CONFIGURADO: ${config.weight_calculation_mode}
+   
+   ${config.weight_calculation_mode === 'informed_weight' 
+     ? `- Use APENAS o peso informado: ${total_weight} kg`
+     : config.weight_calculation_mode === 'cubed_weight'
+     ? `- Calcule e use APENAS o peso cubado: volume total em cm³ dividido pelo divisor de cubagem da transportadora
+   - Volume total informado: ${total_volume} m³ (${total_volume * 1000000} cm³)`
+     : `- Sempre considere o peso tarifável como o MAIOR entre:
+      * Peso informado (peso real em kg): ${total_weight} kg
+      * Peso cubado: volume total em cm³ dividido pelo divisor de cubagem da transportadora
+      * Peso mínimo tarifável definido na transportadora
+   - Volume total informado: ${total_volume} m³ (${total_volume * 1000000} cm³)`
+   }
 
 2. CÁLCULO DO FRETE BASE:
    - Use os dados reais em 'pricing_data' de cada tabela (inclui TODAS AS ABAS)
