@@ -149,26 +149,21 @@ serve(async (req) => {
         pricing_data: []
       };
 
-      // TABELA JADLOG: Query FILTRADA por estado e peso
+      // TABELA JADLOG: Buscar TODOS os dados do estado (sem filtros restritivos)
       if (table.name.toLowerCase().includes('jadlog')) {
-        console.log(`[AI Quote Agent] ⚡ OTIMIZADO: Buscando Jadlog FILTRADO por estado ${destinationState} e peso ${total_weight}kg`);
+        console.log(`[AI Quote Agent] 📊 Buscando TODOS os dados Jadlog para estado ${destinationState}`);
         try {
-          if (!destinationState) {
+          if (!destinationState || destinationState === 'UNKNOWN') {
             console.log(`[AI Quote Agent] ⚠️ Estado não identificado para CEP ${destination_cep}`);
             continue;
           }
 
-          // 1. Buscar APENAS zonas do estado de destino com CEP matching
-          console.log(`[AI Quote Agent] Query 1: Buscando zonas Jadlog para ${destinationState} e CEP ${cleanDestinationCep}...`);
+          // 1. Buscar TODAS as zonas do estado de destino (SEM filtro de CEP)
+          console.log(`[AI Quote Agent] Query 1: Buscando TODAS zonas Jadlog para estado ${destinationState}...`);
           const { data: zones, error: zonesError } = await supabaseClient
             .from('jadlog_zones')
             .select('*')
-            .eq('state', destinationState)
-            .lte('cep_start', cleanDestinationCep)  // cep_start <= CEP buscado
-            .gte('cep_end', cleanDestinationCep)    // cep_end >= CEP buscado
-            .limit(50);
-          
-          console.log(`[AI Quote Agent] DEBUG Query Jadlog Zones: state=${destinationState}, CEP=${cleanDestinationCep}`);
+            .eq('state', destinationState);
 
           if (zonesError) {
             console.error(`[AI Quote Agent] Erro ao buscar jadlog_zones:`, zonesError);
@@ -176,22 +171,19 @@ serve(async (req) => {
           }
 
           if (!zones || zones.length === 0) {
-            console.log(`[AI Quote Agent] ⚠️ Nenhuma zona Jadlog encontrada para ${destinationState} - CEP ${destination_cep}`);
+            console.log(`[AI Quote Agent] ⚠️ Nenhuma zona Jadlog encontrada para estado ${destinationState}`);
             continue;
           }
 
           console.log(`[AI Quote Agent] ✅ ${zones.length} zonas Jadlog encontradas para ${destinationState}`);
 
-          // 2. Buscar APENAS preços para GO → destination_state que cobrem o peso
-          console.log(`[AI Quote Agent] Query 2: Buscando preços Jadlog GO→${destinationState} para peso ${total_weight}kg...`);
+          // 2. Buscar TODOS os preços para GO → destination_state (SEM filtro de peso)
+          console.log(`[AI Quote Agent] Query 2: Buscando TODOS preços Jadlog GO→${destinationState}...`);
           const { data: pricing, error: pricingError } = await supabaseClient
             .from('jadlog_pricing')
             .select('*')
             .eq('origin_state', 'GO')
-            .eq('destination_state', destinationState)
-            .lte('weight_min', total_weight)
-            .gte('weight_max', total_weight)
-            .limit(100);
+            .eq('destination_state', destinationState);
 
           if (pricingError) {
             console.error(`[AI Quote Agent] Erro ao buscar jadlog_pricing:`, pricingError);
@@ -199,17 +191,30 @@ serve(async (req) => {
           }
 
           if (!pricing || pricing.length === 0) {
-            console.log(`[AI Quote Agent] ⚠️ Nenhum preço Jadlog GO→${destinationState} para ${total_weight}kg`);
+            console.log(`[AI Quote Agent] ⚠️ Nenhum preço Jadlog encontrado para GO→${destinationState}`);
             continue;
           }
 
-          console.log(`[AI Quote Agent] ✅ ${pricing.length} preços Jadlog encontrados`);
+          console.log(`[AI Quote Agent] ✅ ${pricing.length} preços Jadlog encontrados para GO→${destinationState}`);
 
-          // 3. Combinar zonas com preços
+          // 3. Combinar TODAS as zonas com TODOS os preços (filtrar em memória depois)
           for (const zone of zones) {
+            // Verificar se o CEP buscado está na faixa desta zona
+            const cepNumerico = parseInt(cleanDestinationCep);
+            const cepStartNum = parseInt(zone.cep_start || '0');
+            const cepEndNum = parseInt(zone.cep_end || '99999999');
+            
+            const cepNaFaixa = cepNumerico >= cepStartNum && cepNumerico <= cepEndNum;
+            
             for (const priceItem of pricing) {
+              // Verificar se o peso está na faixa
+              const pesoNaFaixa = total_weight >= priceItem.weight_min && total_weight <= priceItem.weight_max;
+              
+              // Adicionar TODOS os registros (filtrar depois na busca de preço)
               tableData.pricing_data.push({
                 destination_cep: `${zone.cep_start}-${zone.cep_end}`,
+                cep_start: zone.cep_start,
+                cep_end: zone.cep_end,
                 weight_min: priceItem.weight_min,
                 weight_max: priceItem.weight_max,
                 price: priceItem.price,
@@ -219,12 +224,15 @@ serve(async (req) => {
                 tariff_type: zone.tariff_type,
                 state: zone.state,
                 origin_state: priceItem.origin_state,
-                destination_state: priceItem.destination_state
+                destination_state: priceItem.destination_state,
+                // Flags para ajudar na busca
+                matches_cep: cepNaFaixa,
+                matches_weight: pesoNaFaixa
               });
             }
           }
 
-          console.log(`[AI Quote Agent] ✅ ${table.name}: ${tableData.pricing_data.length} registros (FILTRADO)`);
+          console.log(`[AI Quote Agent] ✅ ${table.name}: ${tableData.pricing_data.length} registros combinados (zonas x preços)`);
         } catch (error) {
           console.error(`[AI Quote Agent] Erro ao processar Jadlog:`, error);
         }
