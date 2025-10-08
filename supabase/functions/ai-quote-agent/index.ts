@@ -98,63 +98,105 @@ serve(async (req) => {
       if (table.name.toLowerCase().includes('jadlog')) {
         console.log(`[AI Quote Agent] Tabela Jadlog detectada - buscando dados do Supabase`);
         try {
-          // Buscar todas as zonas Jadlog - SEM LIMITE para pegar todas
-          const { data: zones, error: zonesError } = await supabaseClient
-            .from('jadlog_zones')
-            .select('*');
+          console.log(`[AI Quote Agent] Buscando TODAS as zonas Jadlog (sem limite)...`);
           
-          if (zonesError) {
-            console.error(`[AI Quote Agent] Erro ao buscar jadlog_zones:`, zonesError);
-          } else {
-            console.log(`[AI Quote Agent] ${zones?.length || 0} zonas Jadlog carregadas`);
+          // Buscar TODAS as zonas Jadlog usando range para evitar limite de 1000
+          let allZones = [];
+          let from = 0;
+          const batchSize = 1000;
+          
+          while (true) {
+            const { data: zonesBatch, error: zonesError } = await supabaseClient
+              .from('jadlog_zones')
+              .select('*')
+              .range(from, from + batchSize - 1);
             
-            // Buscar todos os preços Jadlog - SEM LIMITE para pegar todas as faixas de peso
-            const { data: pricing, error: pricingError } = await supabaseClient
-              .from('jadlog_pricing')
-              .select('*');
+            if (zonesError) {
+              console.error(`[AI Quote Agent] Erro ao buscar jadlog_zones:`, zonesError);
+              break;
+            }
             
-            if (pricingError) {
-              console.error(`[AI Quote Agent] Erro ao buscar jadlog_pricing:`, pricingError);
-            } else {
-              console.log(`[AI Quote Agent] ${pricing?.length || 0} preços Jadlog carregados do banco`);
+            if (!zonesBatch || zonesBatch.length === 0) break;
+            
+            allZones = allZones.concat(zonesBatch);
+            console.log(`[AI Quote Agent] Carregadas ${allZones.length} zonas até agora...`);
+            
+            if (zonesBatch.length < batchSize) break; // Última página
+            from += batchSize;
+          }
+          
+          const zones = allZones;
+          console.log(`[AI Quote Agent] ✅ TOTAL: ${zones.length} zonas Jadlog carregadas`);
+          
+          if (zones.length > 0) {
+            console.log(`[AI Quote Agent] Buscando TODOS os preços Jadlog...`);
+            
+            // Buscar TODOS os preços Jadlog usando range
+            let allPricing = [];
+            from = 0;
+            
+            while (true) {
+              const { data: pricingBatch, error: pricingError } = await supabaseClient
+                .from('jadlog_pricing')
+                .select('*')
+                .range(from, from + batchSize - 1);
               
-              // Verificar quantos são de AC
-              const acPricingCount = (pricing || []).filter(p => p.tariff_type?.includes('AC')).length;
-              console.log(`[AI Quote Agent] Desses, ${acPricingCount} são de AC`);
-              
-              // Verificar quantos são para peso 10kg
-              const peso10Count = (pricing || []).filter(p => p.weight_min <= 10 && p.weight_max >= 10).length;
-              console.log(`[AI Quote Agent] ${peso10Count} preços atendem peso 10kg`);
-              
-              // Verificar quantos de AC atendem peso 10kg
-              const acPeso10Count = (pricing || []).filter(p => 
-                p.tariff_type?.includes('AC') && p.weight_min <= 10 && p.weight_max >= 10
-              ).length;
-              console.log(`[AI Quote Agent] ${acPeso10Count} preços de AC atendem peso 10kg`);
-              
-              // Mapear os dados no formato esperado pelo sistema
-              // Cada zona terá um registro para cada faixa de peso disponível no pricing
-              tableData.pricing_data = [];
-              
-              // Log dados brutos das primeiras zonas de AC
-              const acZonesDebug = (zones || []).filter(z => z.state === 'AC').slice(0, 3);
-              if (acZonesDebug.length > 0) {
-                console.log(`[DEBUG] ===== ZONAS AC DO BANCO =====`);
-                acZonesDebug.forEach(z => {
-                  console.log(`  Zone: ${z.zone_code}, State: "${z.state}", Tariff: "${z.tariff_type}", CEP: ${z.cep_start}-${z.cep_end}`);
-                });
+              if (pricingError) {
+                console.error(`[AI Quote Agent] Erro ao buscar jadlog_pricing:`, pricingError);
+                break;
               }
               
-              // Log dados brutos dos preços de AC
-              const acPricingDebug = (pricing || []).filter(p => p.tariff_type?.includes('AC')).slice(0, 5);
-              if (acPricingDebug.length > 0) {
-                console.log(`[DEBUG] ===== PREÇOS AC DO BANCO =====`);
-                acPricingDebug.forEach(p => {
-                  console.log(`  Tariff: "${p.tariff_type}", Weight: ${p.weight_min}-${p.weight_max}kg, Price: R$ ${p.price}`);
-                });
-              }
+              if (!pricingBatch || pricingBatch.length === 0) break;
               
-              for (const zone of (zones || [])) {
+              allPricing = allPricing.concat(pricingBatch);
+              console.log(`[AI Quote Agent] Carregados ${allPricing.length} preços até agora...`);
+              
+              if (pricingBatch.length < batchSize) break; // Última página
+              from += batchSize;
+            }
+            
+            const pricing = allPricing;
+            
+            
+            console.log(`[AI Quote Agent] ✅ TOTAL: ${pricing.length} preços Jadlog carregados do banco`);
+            
+            // Verificar quantos são de AC
+            const acPricingCount = pricing.filter(p => p.tariff_type?.includes('AC')).length;
+            console.log(`[AI Quote Agent] Desses, ${acPricingCount} são de AC`);
+            
+            // Verificar quantos são para peso 10kg
+            const peso10Count = pricing.filter(p => p.weight_min <= 10 && p.weight_max >= 10).length;
+            console.log(`[AI Quote Agent] ${peso10Count} preços atendem peso 10kg`);
+            
+            // Verificar quantos de AC atendem peso 10kg
+            const acPeso10Count = pricing.filter(p => 
+              p.tariff_type?.includes('AC') && p.weight_min <= 10 && p.weight_max >= 10
+            ).length;
+            console.log(`[AI Quote Agent] ${acPeso10Count} preços de AC atendem peso 10kg`);
+            
+            // Mapear os dados no formato esperado pelo sistema
+            // Cada zona terá um registro para cada faixa de peso disponível no pricing
+            tableData.pricing_data = [];
+            
+            // Log dados brutos das primeiras zonas de AC
+            const acZonesDebug = zones.filter(z => z.state === 'AC').slice(0, 3);
+            if (acZonesDebug.length > 0) {
+              console.log(`[DEBUG] ===== ZONAS AC DO BANCO =====`);
+              acZonesDebug.forEach(z => {
+                console.log(`  Zone: ${z.zone_code}, State: "${z.state}", Tariff: "${z.tariff_type}", CEP: ${z.cep_start}-${z.cep_end}`);
+              });
+            }
+            
+            // Log dados brutos dos preços de AC
+            const acPricingDebug = pricing.filter(p => p.tariff_type?.includes('AC')).slice(0, 5);
+            if (acPricingDebug.length > 0) {
+              console.log(`[DEBUG] ===== PREÇOS AC DO BANCO =====`);
+              acPricingDebug.forEach(p => {
+                console.log(`  Tariff: "${p.tariff_type}", Weight: ${p.weight_min}-${p.weight_max}kg, Price: R$ ${p.price}`);
+              });
+            }
+            
+            for (const zone of zones) {
                 // CORRIGIDO: Combinar state + tariff_type para match com pricing
                 // Zone tem: state="AC", tariff_type="Capital 1"
                 // Pricing tem: tariff_type="AC CAPITAL 1"
@@ -235,25 +277,63 @@ serve(async (req) => {
       else if (table.name.toLowerCase().includes('magalog')) {
         console.log(`[AI Quote Agent] Tabela Magalog detectada - buscando dados do Supabase`);
         try {
-          // Buscar todas as zonas Magalog - SEM LIMITE
-          const { data: zones, error: zonesError } = await supabaseClient
-            .from('shipping_zones_magalog')
-            .select('*');
+          console.log(`[AI Quote Agent] Buscando TODAS as zonas Magalog (sem limite)...`);
           
-          if (zonesError) {
-            console.error(`[AI Quote Agent] Erro ao buscar shipping_zones_magalog:`, zonesError);
-          } else {
-            console.log(`[AI Quote Agent] ${zones?.length || 0} zonas Magalog carregadas`);
+          // Buscar TODAS as zonas Magalog usando range
+          let allZones = [];
+          let from = 0;
+          const batchSize = 1000;
+          
+          while (true) {
+            const { data: zonesBatch, error: zonesError } = await supabaseClient
+              .from('shipping_zones_magalog')
+              .select('*')
+              .range(from, from + batchSize - 1);
             
-            // Buscar todos os preços Magalog - SEM LIMITE
-            const { data: pricing, error: pricingError } = await supabaseClient
-              .from('shipping_pricing_magalog')
-              .select('*');
+            if (zonesError) {
+              console.error(`[AI Quote Agent] Erro ao buscar shipping_zones_magalog:`, zonesError);
+              break;
+            }
             
-            if (pricingError) {
-              console.error(`[AI Quote Agent] Erro ao buscar shipping_pricing_magalog:`, pricingError);
-            } else {
-              console.log(`[AI Quote Agent] ${pricing?.length || 0} preços Magalog carregados`);
+            if (!zonesBatch || zonesBatch.length === 0) break;
+            
+            allZones = allZones.concat(zonesBatch);
+            
+            if (zonesBatch.length < batchSize) break; // Última página
+            from += batchSize;
+          }
+          
+          const zones = allZones;
+          console.log(`[AI Quote Agent] ✅ TOTAL: ${zones.length} zonas Magalog carregadas`);
+          
+          if (zones.length > 0) {
+            console.log(`[AI Quote Agent] Buscando TODOS os preços Magalog...`);
+            
+            // Buscar TODOS os preços Magalog usando range
+            let allPricing = [];
+            from = 0;
+            
+            while (true) {
+              const { data: pricingBatch, error: pricingError } = await supabaseClient
+                .from('shipping_pricing_magalog')
+                .select('*')
+                .range(from, from + batchSize - 1);
+              
+              if (pricingError) {
+                console.error(`[AI Quote Agent] Erro ao buscar shipping_pricing_magalog:`, pricingError);
+                break;
+              }
+              
+              if (!pricingBatch || pricingBatch.length === 0) break;
+              
+              allPricing = allPricing.concat(pricingBatch);
+              
+              if (pricingBatch.length < batchSize) break; // Última página
+              from += batchSize;
+            }
+            
+            const pricing = allPricing;
+            console.log(`[AI Quote Agent] ✅ TOTAL: ${pricing.length} preços Magalog carregados`);
               
               // Mapear os dados no formato esperado pelo sistema
               tableData.pricing_data = [];
