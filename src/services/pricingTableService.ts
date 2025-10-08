@@ -69,14 +69,26 @@ export class PricingTableService {
           totalVolume = (length / 100) * (width / 100) * (height / 100) * quantity;
         }
         
+        // Obter user_id ou session_id para tracking
+        const { data: { user } } = await supabase.auth.getUser();
+        
         try {
+          console.log('🤖 [AI Agent] Chamando edge function com:', {
+            origin_cep: '74900000',
+            destination_cep: destinyCep,
+            total_weight: weight,
+            total_volume: totalVolume,
+            merchandise_value: merchandiseValue || 0
+          });
+          
           const { data: aiQuote, error: aiError } = await supabase.functions.invoke('ai-quote-agent', {
             body: {
               origin_cep: '74900000',
               destination_cep: destinyCep,
-              total_weight: weight * quantity,
+              total_weight: weight,
               total_volume: totalVolume,
               merchandise_value: merchandiseValue || 0,
+              user_id: user?.id || null,
               volumes_data: [{
                 weight,
                 length: length || 0,
@@ -87,28 +99,32 @@ export class PricingTableService {
             }
           });
           
+          console.log('🤖 [AI Agent] Resposta da edge function:', { aiQuote, aiError });
+          
           if (aiError) {
             console.error('❌ [AI Agent] Erro ao chamar agente IA:', aiError);
-          } else if (aiQuote?.success) {
+          } else if (aiQuote?.success && aiQuote?.quote) {
             console.log('✅ [AI Agent] Cotação obtida via IA:', aiQuote.quote);
             
-            // Converter resposta da IA para formato PricingTableQuote
+            // A edge function já retorna no formato correto
             const quote = aiQuote.quote;
             return {
-              economicPrice: quote.final_price,
-              expressPrice: quote.final_price * 1.6,
-              economicDays: quote.delivery_days,
-              expressDays: Math.max(1, quote.delivery_days - 2),
-              zone: 'IA',
-              zoneName: `${quote.selected_table_name} (Agente IA)`,
-              tableId: quote.selected_table_id,
-              tableName: quote.selected_table_name,
+              economicPrice: quote.economicPrice,
+              expressPrice: quote.expressPrice,
+              economicDays: quote.economicDays,
+              expressDays: quote.expressDays,
+              zone: quote.zone || 'IA',
+              zoneName: quote.zone || 'Agente IA',
+              tableId: 'ai-agent',
+              tableName: 'Agente IA',
               cnpj: '',
               insuranceValue: quote.additionals_applied?.find((a: any) => a.type === 'insurance')?.value,
-              basePrice: quote.base_price,
-              cubicWeight: quote.peso_cubado,
-              appliedWeight: quote.peso_tarifavel
+              basePrice: quote.economicPrice,
+              cubicWeight: undefined,
+              appliedWeight: weight
             };
+          } else {
+            console.warn('⚠️ [AI Agent] Resposta da IA sem sucesso:', aiQuote);
           }
         } catch (aiError) {
           console.error('❌ [AI Agent] Exceção ao chamar agente IA:', aiError);

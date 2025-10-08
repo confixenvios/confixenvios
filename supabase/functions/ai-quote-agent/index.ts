@@ -366,6 +366,15 @@ IMPORTANTE:
           zone: `Tabela: ${aiResult.selected_table_name}`,
           additionals_applied: aiResult.additionals_applied,
           reasoning: aiResult.reasoning,
+          // Incluir dados originais da IA para debug/histórico
+          selected_table_id: aiResult.selected_table_id,
+          selected_table_name: aiResult.selected_table_name,
+          base_price: aiResult.base_price,
+          final_price: aiResult.final_price,
+          delivery_days: aiResult.delivery_days,
+          peso_tarifavel: aiResult.peso_tarifavel,
+          peso_cubado: aiResult.peso_cubado,
+          peso_informado: aiResult.peso_informado,
         },
       }),
       { 
