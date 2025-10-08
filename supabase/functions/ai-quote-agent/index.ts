@@ -143,7 +143,7 @@ serve(async (req) => {
                 
                 for (const priceItem of zonePrices) {
                   // Criar um registro combinando zona + preço
-                  tableData.pricing_data.push({
+                  const newRecord = {
                     destination_cep: `${zone.cep_start}-${zone.cep_end}`,
                     weight_min: priceItem.weight_min,
                     weight_max: priceItem.weight_max,
@@ -153,7 +153,14 @@ serve(async (req) => {
                     zone_code: zone.zone_code,
                     tariff_type: zone.tariff_type,
                     state: zone.state
-                  });
+                  };
+                  
+                  // Debug: Log primeiros 3 registros do AC
+                  if (zone.state === 'AC' && tableData.pricing_data.filter(p => p.state === 'AC').length < 3) {
+                    console.log(`[DEBUG] Adding AC record:`, JSON.stringify(newRecord, null, 2));
+                  }
+                  
+                  tableData.pricing_data.push(newRecord);
                 }
               }
               
