@@ -81,27 +81,53 @@ serve(async (req) => {
     const cleanDestinationCep = destination_cep.replace(/\D/g, '');
     const destinationCepNumeric = parseInt(cleanDestinationCep);
     
-    // Determinar o estado de destino baseado no CEP (primeiros 2 dígitos)
-    const cepPrefix = cleanDestinationCep.substring(0, 2);
-    const stateMapping: { [key: string]: string } = {
-      '69': 'AC', '57': 'AL', '68': 'AP', '69': 'AM',
-      '40': 'BA', '60': 'CE', '70': 'DF', '29': 'ES',
-      '72': 'GO', '73': 'GO', '74': 'GO', '75': 'GO', '76': 'GO',
-      '65': 'MA', '78': 'MT', '79': 'MS',
-      '30': 'MG', '31': 'MG', '32': 'MG', '33': 'MG', '34': 'MG', '35': 'MG', '36': 'MG', '37': 'MG', '38': 'MG', '39': 'MG',
-      '66': 'PA', '68': 'PA',
-      '58': 'PB', '80': 'PR', '81': 'PR', '82': 'PR', '83': 'PR', '84': 'PR', '85': 'PR', '86': 'PR', '87': 'PR',
-      '50': 'PE', '51': 'PE', '52': 'PE', '53': 'PE', '54': 'PE', '55': 'PE', '56': 'PE',
-      '64': 'PI', '20': 'RJ', '21': 'RJ', '22': 'RJ', '23': 'RJ', '24': 'RJ', '25': 'RJ', '26': 'RJ', '27': 'RJ', '28': 'RJ',
-      '59': 'RN', '76': 'RO', '69': 'RR',
-      '90': 'RS', '91': 'RS', '92': 'RS', '93': 'RS', '94': 'RS', '95': 'RS', '96': 'RS', '97': 'RS', '98': 'RS', '99': 'RS',
-      '88': 'SC', '89': 'SC',
-      '49': 'SE', '01': 'SP', '02': 'SP', '03': 'SP', '04': 'SP', '05': 'SP', '06': 'SP', '07': 'SP', '08': 'SP', '09': 'SP',
-      '10': 'SP', '11': 'SP', '12': 'SP', '13': 'SP', '14': 'SP', '15': 'SP', '16': 'SP', '17': 'SP', '18': 'SP', '19': 'SP',
-      '77': 'TO'
+    // Determinar o estado de destino baseado no CEP - usando primeiros 5 dígitos para maior precisão
+    const cepPrefix5 = cleanDestinationCep.substring(0, 5);
+    const cepPrefix2 = cleanDestinationCep.substring(0, 2);
+    
+    // Função para determinar estado com base no CEP
+    const getStateFromCep = (cep: string): string => {
+      // CEPs do Acre (69900-69923)
+      if (cep >= '69900' && cep <= '69923') return 'AC';
+      
+      // CEPs do Amazonas (69000-69299, 69400-69899)
+      if ((cep >= '69000' && cep <= '69299') || (cep >= '69400' && cep <= '69899')) return 'AM';
+      
+      // CEPs de Roraima (69300-69389)
+      if (cep >= '69300' && cep <= '69389') return 'RR';
+      
+      // Mapeamento padrão por 2 dígitos
+      const stateMapping: { [key: string]: string } = {
+        '57': 'AL', '68': 'AP',
+        '40': 'BA', '41': 'BA', '42': 'BA', '43': 'BA', '44': 'BA', '45': 'BA', '46': 'BA', '47': 'BA', '48': 'BA',
+        '60': 'CE', '61': 'CE', '62': 'CE', '63': 'CE',
+        '70': 'DF', '71': 'DF', '72': 'DF', '73': 'DF',
+        '29': 'ES',
+        '72': 'GO', '73': 'GO', '74': 'GO', '75': 'GO', '76': 'GO',
+        '65': 'MA',
+        '78': 'MT',
+        '79': 'MS',
+        '30': 'MG', '31': 'MG', '32': 'MG', '33': 'MG', '34': 'MG', '35': 'MG', '36': 'MG', '37': 'MG', '38': 'MG', '39': 'MG',
+        '66': 'PA', '67': 'PA',
+        '58': 'PB',
+        '80': 'PR', '81': 'PR', '82': 'PR', '83': 'PR', '84': 'PR', '85': 'PR', '86': 'PR', '87': 'PR',
+        '50': 'PE', '51': 'PE', '52': 'PE', '53': 'PE', '54': 'PE', '55': 'PE', '56': 'PE',
+        '64': 'PI',
+        '20': 'RJ', '21': 'RJ', '22': 'RJ', '23': 'RJ', '24': 'RJ', '25': 'RJ', '26': 'RJ', '27': 'RJ', '28': 'RJ',
+        '59': 'RN',
+        '76': 'RO', '78': 'RO',
+        '90': 'RS', '91': 'RS', '92': 'RS', '93': 'RS', '94': 'RS', '95': 'RS', '96': 'RS', '97': 'RS', '98': 'RS', '99': 'RS',
+        '88': 'SC', '89': 'SC',
+        '49': 'SE',
+        '01': 'SP', '02': 'SP', '03': 'SP', '04': 'SP', '05': 'SP', '06': 'SP', '07': 'SP', '08': 'SP', '09': 'SP',
+        '10': 'SP', '11': 'SP', '12': 'SP', '13': 'SP', '14': 'SP', '15': 'SP', '16': 'SP', '17': 'SP', '18': 'SP', '19': 'SP',
+        '77': 'TO'
+      };
+      
+      return stateMapping[cepPrefix2] || 'UNKNOWN';
     };
     
-    const destinationState = stateMapping[cepPrefix] || '';
+    const destinationState = getStateFromCep(cepPrefix5);
     console.log(`[AI Quote Agent] CEP ${destination_cep} → Estado: ${destinationState}`);
 
     // Processar cada tabela e buscar APENAS os dados relevantes com queries filtradas
