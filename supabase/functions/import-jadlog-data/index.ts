@@ -202,54 +202,23 @@ serve(async (req) => {
         console.log('💰 Processando aba de PREÇOS (valores de frete)...');
         const pricingData: JadlogPricingRow[] = [];
         
-        let stateRow: any[];
-        let tariffRow: any[];
-        let firstDataRowIndex: number;
+        // Estrutura da planilha Jadlog:
+        // Linha 0 (índice 0): Estados (AC, AC, AC, AL, AL, ...)
+        // Linha 1 (índice 1): "REGIÃO" repetido
+        // Linha 2 (índice 2): Tipos de tarifa (AC CAPITAL 1, AC CAPITAL 2, AC INTERIOR 1, ...)
+        // Linha 3 (índice 3): Header "Peso Até (kg)" na coluna A, peso 0,25 na coluna B
+        // Linha 4+ (índice 4+): Dados - coluna A = "Peso Até (kg)", coluna B = peso, coluna C+ = preços
         
-        // Tentar encontrar linha "ORIGEM"
-        let origemRowIndex = -1;
-        for (let i = 0; i < Math.min(10, jsonData.length); i++) {
-          const row = jsonData[i];
-          if (row.some((cell: any) => String(cell || '').toLowerCase().includes('origem'))) {
-            origemRowIndex = i;
-            console.log(`📍 Linha ORIGEM encontrada no índice ${i}`);
-            break;
-          }
-        }
+        const stateRow = jsonData[0];      // Estados
+        const tariffRow = jsonData[2];     // Tipos de tarifa
+        const firstDataRowIndex = 4;       // Dados começam na linha 5 (índice 4)
         
-        if (origemRowIndex !== -1) {
-          // OPÇÃO 1: Estrutura com ORIGEM
-          stateRow = jsonData[origemRowIndex + 1]; // DESTINO
-          tariffRow = jsonData[origemRowIndex + 2]; // REGIÃO
-          firstDataRowIndex = origemRowIndex + 3;
-          console.log(`📋 Estrutura: COM linha ORIGEM`);
-        } else {
-          // OPÇÃO 2: Estrutura simplificada (estados direto na linha 0)
-          stateRow = jsonData[0];
-          tariffRow = jsonData[2]; // Tipos de tarifa
-          
-          // Encontrar primeira linha de dados (tem peso numérico na coluna B)
-          firstDataRowIndex = 4;
-          for (let i = 3; i < Math.min(jsonData.length, 10); i++) {
-            const row = jsonData[i];
-            if (row && row[1]) {
-              const val = String(row[1]).replace(',', '.');
-              const num = parseFloat(val);
-              if (!isNaN(num) && num > 0) {
-                firstDataRowIndex = i;
-                break;
-              }
-            }
-          }
-          console.log(`📋 Estrutura: SEM linha ORIGEM (simplificada)`);
-        }
+        console.log(`📍 Estrutura FIXA Jadlog`);
+        console.log(`📍 Linha 0 - Estados:`, stateRow?.slice(0, 10));
+        console.log(`📍 Linha 2 - Tarifas:`, tariffRow?.slice(0, 10));
+        console.log(`📍 Primeira linha de dados (índice ${firstDataRowIndex}):`, jsonData[firstDataRowIndex]?.slice(0, 10));
         
-        console.log(`📍 Linha Estados (primeiras 10):`, stateRow?.slice(0, 10));
-        console.log(`📍 Linha Tarifas (primeiras 10):`, tariffRow?.slice(0, 10));
-        console.log(`📍 Primeira linha de dados: índice ${firstDataRowIndex}`);
-        console.log(`📍 Exemplo linha:`, jsonData[firstDataRowIndex]?.slice(0, 10));
-        
-        // Processar linhas de dados (a partir de firstDataRowIndex)
+        // Processar linhas de dados (linha 5 em diante, índice 4+)
         let totalPrices = 0;
         let processedRows = 0;
         
@@ -257,26 +226,20 @@ serve(async (req) => {
           const row = jsonData[i];
           if (!row || row.length < 3) continue; // Precisa coluna A, B e pelo menos C
           
-          // Peso pode estar na coluna A ou B dependendo da estrutura
-          // Tentar coluna B primeiro (mais comum), depois coluna A
-          let weightStr = String(row[1] || '').trim();
-          let priceStartCol = 2; // Preços começam na coluna C
+          // Coluna B (índice 1): peso (0.25, 1, 2, 3, ...)
+          const weightStr = String(row[1] || '').trim();
           
-          // Se coluna B não tem número válido, tentar coluna A
-          if (!weightStr || isNaN(parseFloat(weightStr.replace(',', '.')))) {
-            weightStr = String(row[0] || '').trim();
-            priceStartCol = 1; // Preços começam na coluna B
-          }
-          
-          // Log primeira linha de dados para debug
+          // Log primeira linha para debug
           if (processedRows === 0) {
-            console.log(`🔍 Primeira linha: colA="${row[0]}", colB="${row[1]}", peso="${weightStr}", startCol=${priceStartCol}`);
-            console.log(`🔍 Valores preço:`, row.slice(priceStartCol, priceStartCol + 5));
+            console.log(`🔍 Primeira linha dados:`);
+            console.log(`   - Coluna A: "${row[0]}"`);
+            console.log(`   - Coluna B (peso): "${weightStr}"`);
+            console.log(`   - Colunas C-G (preços):`, row.slice(2, 7));
           }
           
-          // Pular linhas sem peso válido
-          if (!weightStr || weightStr.toLowerCase().includes('peso') || weightStr.toLowerCase().includes('faixa')) {
-            if (processedRows < 3) console.log(`⏭️ Pulando linha ${i}: "${weightStr}"`);
+          // Pular linhas inválidas
+          if (!weightStr || isNaN(parseFloat(weightStr.replace(',', '.')))) {
+            if (processedRows < 3) console.log(`⏭️ Pulando linha ${i}: peso="${weightStr}"`);
             continue;
           }
           
@@ -284,7 +247,7 @@ serve(async (req) => {
           
           // Converter peso (pode ter vírgula como decimal)
           const weightMax = parseFloat(weightStr.replace(',', '.'));
-          if (isNaN(weightMax) || weightMax === 0) continue;
+          if (isNaN(weightMax) || weightMax <= 0) continue;
           
           // Peso mínimo é o peso máximo da linha anterior (ou 0 se primeira linha)
           let weightMin = 0;
@@ -303,7 +266,8 @@ serve(async (req) => {
             console.log(`📦 Processando peso ${weightMin}-${weightMax}kg, ${row.length} colunas na linha`);
           }
           
-          // Processar cada coluna de preço (a partir de priceStartCol)
+          // Processar cada coluna de preço (SEMPRE a partir da coluna C, índice 2)
+          const priceStartCol = 2;
           for (let j = priceStartCol; j < row.length && j < stateRow.length; j++) {
             const priceValue = row[j];
             
@@ -339,19 +303,20 @@ serve(async (req) => {
               continue;
             }
             
-            // ORIGEM: sempre GO (Goiás)
+            // ORIGEM: SEMPRE GO (Goiás) - conforme especificação
             const originState = 'GO';
             
-            // DESTINO: sigla do estado da linha stateRow
+            // DESTINO: estado da linha 0 (índice 0)
             const destinationState = String(stateRow[j] || '').trim().toUpperCase();
             
-            // REGIÃO: tipo de tarifa da linha tariffRow
+            // REGIÃO/TARIFA: tipo da linha 2 (índice 2)
             const tariffType = String(tariffRow[j] || 'STANDARD').trim();
             
             if (processedRows === 1 && j === priceStartCol) {
-              console.log(`📍 Estado: "${destinationState}", Tarifa: "${tariffType}"`);
+              console.log(`📍 Primeira célula - Estado: "${destinationState}", Tarifa: "${tariffType}"`);
             }
             
+            // Validar estado (deve ter 2 caracteres)
             if (!destinationState || destinationState.length > 2) {
               if (processedRows === 1 && j < priceStartCol + 5) console.log(`⏭️ Estado inválido na coluna ${j}: "${destinationState}"`);
               continue;
