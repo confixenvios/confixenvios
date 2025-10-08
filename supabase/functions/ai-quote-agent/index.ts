@@ -49,93 +49,59 @@ serve(async (req) => {
       );
     }
 
-    // Buscar todas as tabelas de preço ativas
-    const { data: pricingTables } = await supabaseClient
-      .from('pricing_tables')
-      .select('*')
-      .eq('is_active', true);
-
-    if (!pricingTables || pricingTables.length === 0) {
-      console.log('[AI Quote Agent] No active pricing tables found');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Nenhuma tabela de preços ativa encontrada' 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-
-    // Buscar dados reais das tabelas (Google Sheets ou arquivo) - TODAS AS ABAS
-    const tablesWithData = await Promise.all(
-      pricingTables.map(async (table) => {
-        try {
-          let allSheetsData: any[] = [];
-          
-          if (table.source_type === 'google_sheets' && table.google_sheets_url) {
-            console.log(`[AI Quote Agent] Fetching all sheets from: ${table.name}`);
-            
-            // Buscar como XLSX para obter todas as abas
-            const match = table.google_sheets_url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-            if (!match) throw new Error('URL inválida do Google Sheets');
-            
-            const spreadsheetId = match[1];
-            const xlsxUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=xlsx`;
-            
-            // Import XLSX (Deno-compatible)
-            const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs');
-            
-            const response = await fetch(xlsxUrl);
-            if (!response.ok) throw new Error(`Erro ao acessar Google Sheets: ${response.status}`);
-            
-            const arrayBuffer = await response.arrayBuffer();
-            const workbook = XLSX.read(new Uint8Array(arrayBuffer));
-            
-            console.log(`[AI Quote Agent] Found ${workbook.SheetNames.length} sheets in ${table.name}:`, workbook.SheetNames);
-            
-            // Processar todas as abas
-            for (const sheetName of workbook.SheetNames) {
-              const worksheet = workbook.Sheets[sheetName];
-              const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-              
-              if (jsonData.length > 0) {
-                const headers = jsonData[0] as string[];
-                const rows = jsonData.slice(1)
-                  .filter((row: any[]) => row.some(cell => cell !== null && cell !== undefined && cell !== ''))
-                  .map((row: any[]) => {
-                    const rowObj: any = { _sheet_name: sheetName };
-                    headers.forEach((header, index) => {
-                      if (header) {
-                        rowObj[header.toString().trim()] = row[index];
-                      }
-                    });
-                    return rowObj;
-                  });
-                
-                allSheetsData = allSheetsData.concat(rows);
-                console.log(`[AI Quote Agent] Processed sheet "${sheetName}": ${rows.length} rows`);
-              }
-            }
-            
-            console.log(`[AI Quote Agent] Total rows from all sheets: ${allSheetsData.length}`);
-          }
-          
-          return {
-            ...table,
-            pricing_data: allSheetsData,
-            total_sheets: allSheetsData.length > 0 ? new Set(allSheetsData.map(r => r._sheet_name)).size : 0,
-          };
-        } catch (error) {
-          console.error(`[AI Quote Agent] Error fetching data for table ${table.name}:`, error);
-          return {
-            ...table,
-            pricing_data: [],
-            total_sheets: 0,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          };
-        }
-      })
-    );
+    // Buscar dados DIRETAMENTE do Supabase (Jadlog e Magalog)
+    console.log('[AI Quote Agent] Buscando dados das tabelas Jadlog e Magalog no Supabase...');
+    
+    // Buscar dados da Jadlog
+    const { data: jadlogPricing } = await supabaseClient
+      .from('jadlog_pricing')
+      .select('*');
+    
+    const { data: jadlogZones } = await supabaseClient
+      .from('jadlog_zones')
+      .select('*');
+    
+    // Buscar dados da Magalog
+    const { data: magalogPricing } = await supabaseClient
+      .from('shipping_pricing_magalog')
+      .select('*');
+    
+    const { data: magalogZones } = await supabaseClient
+      .from('shipping_zones_magalog')
+      .select('*');
+    
+    console.log('[AI Quote Agent] Dados carregados:', {
+      jadlog_pricing: jadlogPricing?.length || 0,
+      jadlog_zones: jadlogZones?.length || 0,
+      magalog_pricing: magalogPricing?.length || 0,
+      magalog_zones: magalogZones?.length || 0
+    });
+    
+    // Organizar dados por transportadora
+    const tablesWithData = [
+      {
+        id: 'jadlog',
+        name: 'Jadlog',
+        cnpj: '04884082000178',
+        source_type: 'supabase',
+        ad_valorem_percentage: 0.013,
+        gris_percentage: 0.013,
+        cubic_meter_kg_equivalent: 167,
+        pricing_data: jadlogPricing || [],
+        zones_data: jadlogZones || [],
+      },
+      {
+        id: 'magalog',
+        name: 'Magalog',
+        cnpj: '00000000000000',
+        source_type: 'supabase',
+        ad_valorem_percentage: 0.013,
+        gris_percentage: 0.013,
+        cubic_meter_kg_equivalent: 167,
+        pricing_data: magalogPricing || [],
+        zones_data: magalogZones || [],
+      }
+    ];
 
     // Buscar adicionais ativos
     const { data: additionals } = await supabaseClient
@@ -148,7 +114,7 @@ serve(async (req) => {
       return acc + ((vol.length * vol.width * vol.height) / 1000000);
     }, 0);
 
-    // Preparar contexto para a IA com dados completos
+    // Preparar contexto para a IA com dados do Supabase
     const aiContext = {
       origin_cep,
       destination_cep,
@@ -162,15 +128,11 @@ serve(async (req) => {
         name: t.name,
         cnpj: t.cnpj,
         source_type: t.source_type,
-        ad_valorem_percentage: t.ad_valorem_percentage || 0.003,
-        gris_percentage: t.gris_percentage || 0.003,
+        ad_valorem_percentage: t.ad_valorem_percentage,
+        gris_percentage: t.gris_percentage,
         cubic_meter_kg_equivalent: t.cubic_meter_kg_equivalent,
-        excess_weight_threshold_kg: t.excess_weight_threshold_kg,
-        excess_weight_charge_per_kg: t.excess_weight_charge_per_kg,
-        max_length_cm: t.max_length_cm,
-        max_width_cm: t.max_width_cm,
-        max_height_cm: t.max_height_cm,
-        pricing_data: t.pricing_data, // Dados reais da tabela
+        pricing_data: t.pricing_data,
+        zones_data: t.zones_data,
       })),
       additionals: additionals || [],
     };
@@ -202,13 +164,28 @@ REGRAS DE CÁLCULO (SIGA ESTRITAMENTE):
    }
 
 2. CÁLCULO DO FRETE BASE:
-   - Use os dados reais em 'pricing_data' de cada tabela (inclui TODAS AS ABAS)
-   - Cada linha tem um campo '_sheet_name' indicando de qual aba veio
-   - Encontre a faixa de CEP de destino que corresponde ao CEP ${destination_cep}
-   - Dentro dessa faixa, encontre o valor para o peso tarifável
-   - As colunas geralmente são: CEP_INICIO, CEP_FIM, PESO_1, PESO_2, PESO_3, etc. (ou variações)
-   - Pode haver abas separadas para: preços, prazos, zonas, generalidades
-   - Se ultrapassar o peso máximo da tabela (excess_weight_threshold_kg), cobrar o valor por kg excedente (excess_weight_charge_per_kg) multiplicado pelos quilos acima do limite
+   
+   **IMPORTANTE: ESTRUTURA DAS TABELAS DO SUPABASE**
+   
+   Cada transportadora tem 2 tabelas:
+   
+   A) TABELA DE ZONAS (zones_data):
+      - Jadlog: jadlog_zones | Magalog: shipping_zones_magalog
+      - Campos: zone_code, state, zone_type, cep_start, cep_end, delivery_days, express_delivery_days, tariff_type
+      - Use para: identificar a zona com base no CEP de destino e obter prazos de entrega
+   
+   B) TABELA DE PREÇOS (pricing_data):
+      - Jadlog: jadlog_pricing | Magalog: shipping_pricing_magalog
+      - Campos Jadlog: origin_state, destination_state, tariff_type, weight_min, weight_max, price
+      - Campos Magalog: zone_code, weight_min, weight_max, price
+      - Use para: buscar o preço com base no peso tarifável e zona/estados
+   
+   **FLUXO DE CÁLCULO:**
+   1. Identifique a zona de destino em zones_data comparando o CEP ${destination_cep} com cep_start e cep_end
+   2. Para Jadlog: use origin_state='GO', destination_state e tariff_type da zona para buscar o preço
+   3. Para Magalog: use zone_code para buscar o preço
+   4. Encontre a faixa de peso (weight_min <= peso_tarifavel <= weight_max) na tabela de preços
+   5. Pegue os prazos (delivery_days/express_delivery_days) da tabela de zonas
 
 3. VALIDAÇÃO DE DIMENSÕES:
    - Verifique se há limite máximo da maior dimensão ou limite da soma das dimensões
