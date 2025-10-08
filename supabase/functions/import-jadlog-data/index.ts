@@ -234,9 +234,14 @@ serve(async (req) => {
         const firstDataRowIndex = origemRowIndex + 3;
         
         console.log(`📍 ORIGEM na linha ${origemRowIndex}`);
+        console.log(`📍 Linha DEST (primeiras 10):`, destRow?.slice(0, 10));
+        console.log(`📍 Linha REGIÃO (primeiras 10):`, regionRow?.slice(0, 10));
+        console.log(`📍 Primeira linha de dados (índice ${firstDataRowIndex}):`, jsonData[firstDataRowIndex]?.slice(0, 10));
         
         // Processar linhas de dados (a partir de firstDataRowIndex)
         let totalPrices = 0;
+        let processedRows = 0;
+        
         for (let i = firstDataRowIndex; i < jsonData.length; i++) {
           const row = jsonData[i];
           if (!row || row.length < 2) continue;
@@ -244,8 +249,18 @@ serve(async (req) => {
           // Coluna A: "Peso Até (kg)" com valor (ex: 0,25, 1, 2, 3, ...)
           const weightStr = String(row[0] || '').trim();
           
+          // Log primeira linha de dados para debug
+          if (processedRows === 0) {
+            console.log(`🔍 Primeira linha dados: peso="${weightStr}", valores:`, row.slice(1, 6));
+          }
+          
           // Pular se não for um número válido
-          if (!weightStr || weightStr.toLowerCase().includes('peso')) continue;
+          if (!weightStr || weightStr.toLowerCase().includes('peso')) {
+            if (processedRows < 3) console.log(`⏭️ Pulando linha ${i}: "${weightStr}"`);
+            continue;
+          }
+          
+          processedRows++;
           
           // Converter peso (pode ter vírgula como decimal)
           const weightMax = parseFloat(weightStr.replace(',', '.'));
@@ -263,12 +278,25 @@ serve(async (req) => {
           
           let pricesInRow = 0;
           
+          // Log para debug nas primeiras 2 linhas
+          if (processedRows <= 2) {
+            console.log(`📦 Processando peso ${weightMin}-${weightMax}kg, ${row.length} colunas na linha`);
+          }
+          
           // Processar cada coluna de preço (a partir da coluna B, índice 1)
           for (let j = 1; j < row.length && j < destRow.length; j++) {
             const priceValue = row[j];
             
+            // Log primeira célula para debug
+            if (processedRows === 1 && j === 1) {
+              console.log(`🔍 Primeira célula: coluna ${j}, valor="${priceValue}", tipo=${typeof priceValue}`);
+            }
+            
             // Pular células vazias
-            if (priceValue === null || priceValue === undefined || priceValue === '') continue;
+            if (priceValue === null || priceValue === undefined || priceValue === '') {
+              if (processedRows === 1 && j < 5) console.log(`⏭️ Célula vazia na coluna ${j}`);
+              continue;
+            }
             
             // Extrair preço (pode estar como número ou texto "R$ 39,60")
             let price = 0;
@@ -282,7 +310,14 @@ serve(async (req) => {
               price = parseFloat(priceStr);
             }
             
-            if (isNaN(price) || price === 0) continue;
+            if (processedRows === 1 && j === 1) {
+              console.log(`💰 Preço extraído: ${price} (original: "${priceValue}")`);
+            }
+            
+            if (isNaN(price) || price === 0) {
+              if (processedRows === 1 && j < 5) console.log(`⏭️ Preço inválido na coluna ${j}: ${price}`);
+              continue;
+            }
             
             // ORIGEM: sempre GO (Goiás)
             const originState = 'GO';
@@ -293,7 +328,14 @@ serve(async (req) => {
             // REGIÃO: tipo de tarifa completo (AC CAPITAL 1, AC INTERIOR 2, etc.)
             const tariffType = String(regionRow[j] || 'STANDARD').trim();
             
-            if (!destinationState) continue;
+            if (processedRows === 1 && j === 1) {
+              console.log(`📍 Estado: "${destinationState}", Tarifa: "${tariffType}"`);
+            }
+            
+            if (!destinationState) {
+              if (processedRows === 1 && j < 5) console.log(`⏭️ Estado vazio na coluna ${j}`);
+              continue;
+            }
             
             pricingData.push({
               origin_state: originState,
@@ -308,10 +350,13 @@ serve(async (req) => {
             totalPrices++;
           }
           
-          // Log removido para performance
+          // Log progresso a cada 50 linhas
+          if (processedRows % 50 === 0) {
+            console.log(`📈 Progresso: ${processedRows} linhas, ${totalPrices} preços`);
+          }
         }
         
-        console.log(`💰 ${pricingData.length} preços extraídos`);
+        console.log(`💰 ${pricingData.length} preços extraídos (${processedRows} linhas processadas)`);
         
         if (pricingData.length > 0) {
           // Inserir em lotes maiores (500) para performance
