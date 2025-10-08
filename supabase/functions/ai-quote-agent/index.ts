@@ -123,8 +123,19 @@ serve(async (req) => {
               tableData.pricing_data = [];
               
               for (const zone of (zones || [])) {
-                // Encontrar todos os preços aplicáveis para o tariff_type desta zona
-                const zonePrices = (pricing || []).filter(p => p.tariff_type === zone.tariff_type);
+                // CORRIGIDO: Combinar state + tariff_type para match com pricing
+                // Zone tem: state="AC", tariff_type="Capital 1"
+                // Pricing tem: tariff_type="AC CAPITAL 1"
+                const zoneTariffFormatted = `${zone.state} ${zone.tariff_type.toUpperCase()}`;
+                
+                // Encontrar todos os preços aplicáveis para este tariff_type combinado
+                const zonePrices = (pricing || []).filter(p => p.tariff_type === zoneTariffFormatted);
+                
+                if (zonePrices.length === 0) {
+                  // Tentar também sem o espaço extra no Interior (ex: "AC INTERIOR  1" vs "AC INTERIOR 1")
+                  const altFormat = zoneTariffFormatted.replace(/\s+/g, ' ');
+                  zonePrices.push(...(pricing || []).filter(p => p.tariff_type.replace(/\s+/g, ' ') === altFormat));
+                }
                 
                 for (const priceItem of zonePrices) {
                   // Criar um registro combinando zona + preço
