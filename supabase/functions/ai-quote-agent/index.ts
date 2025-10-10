@@ -242,8 +242,8 @@ serve(async (req) => {
           }
           
           const jadlogColumns: JadlogColumn[] = [];
-          for (let col = 0; col < row2.length; col++) {
-            if (row2[col] === destinationState && row3[col].includes('CAPITAL')) {
+          for (let col = 0; col < row1.length; col++) {
+            if (row1[col] === destinationState && row3[col].includes('CAPITAL')) {
               jadlogColumns.push({
                 columnIndex: col,
                 capitalType: row3[col],
@@ -256,6 +256,8 @@ serve(async (req) => {
           if (jadlogColumns.length === 0) {
             console.log(`[AI Quote Agent] ⚠️ Nenhuma coluna GO → ${destinationState} → CAPITAL encontrada`);
             tableData.pricing_data = []; // Garantir vazio mas não pular
+          } else {
+            console.log(`[AI Quote Agent] ✅ TOTAL: ${jadlogColumns.length} colunas Jadlog encontradas para ${destinationState}`);
           }
           
           console.log(`[AI Quote Agent] Total de colunas Jadlog encontradas: ${jadlogColumns.length}`);
@@ -364,6 +366,10 @@ serve(async (req) => {
               const abrangenciaText = await abrangenciaResponse.text();
               const abrangenciaLines = abrangenciaText.split('\n').filter(l => l.trim());
               
+              console.log(`[AI Quote Agent] 🔍 ALFA ABRANGENCIA: ${abrangenciaLines.length} linhas`);
+              console.log(`[AI Quote Agent] 🔍 Primeira linha ABRANGENCIA:`, abrangenciaLines[0]);
+              console.log(`[AI Quote Agent] 🔍 Segunda linha ABRANGENCIA:`, abrangenciaLines[1]);
+              
               // Verificar cada linha da aba ABRANGENCIA
               for (let i = 1; i < abrangenciaLines.length; i++) {
                 const cols = abrangenciaLines[i].split(',').map(c => c.trim().replace(/"/g, ''));
@@ -372,10 +378,14 @@ serve(async (req) => {
                 const cepInicial = cols[3]?.replace(/\D/g, '');
                 const cepFinal = cols[4]?.replace(/\D/g, '');
                 
+                console.log(`[AI Quote Agent] 🔍 Linha ${i}: UF_ORIGEM=${ufOrigem}, UF_DESTINO=${ufDestino}, CEP_INICIAL=${cepInicial}, CEP_FINAL=${cepFinal}`);
+                
                 if (ufOrigem === 'GO' && ufDestino === destinationState && cepInicial && cepFinal) {
                   const cepInicialNum = parseInt(cepInicial);
                   const cepFinalNum = parseInt(cepFinal);
                   const cepDestinoNum = parseInt(cleanDestinationCep);
+                  
+                  console.log(`[AI Quote Agent] 🎯 MATCH GO → ${destinationState}: Verificando se ${cepDestinoNum} está entre ${cepInicialNum} e ${cepFinalNum}`);
                   
                   if (cepDestinoNum >= cepInicialNum && cepDestinoNum <= cepFinalNum) {
                     alfaCoberturaCep = true;
@@ -384,6 +394,8 @@ serve(async (req) => {
                   }
                 }
               }
+            } else {
+              console.error(`[AI Quote Agent] ❌ Erro ao buscar ABRANGENCIA Alfa: status ${abrangenciaResponse.status}`);
             }
           } catch (err) {
             console.warn(`[AI Quote Agent] Erro ao verificar abrangência Alfa:`, err);
