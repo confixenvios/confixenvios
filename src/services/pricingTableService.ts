@@ -115,7 +115,10 @@ export class PricingTableService {
               details: aiError,
               context: aiError.context
             });
-          } else if (aiQuote?.success && aiQuote?.quote) {
+            // Se há erro na chamada da edge function, usar método tradicional
+            console.log('⚠️ [AI Agent] Erro na chamada, continuando com método tradicional...');
+          } else if (aiQuote?.success && aiQuote?.quote && aiQuote.quote.economicPrice > 0) {
+            // Verificação: a IA retornou uma resposta válida com preço > 0
             console.log('✅ [AI Agent] Cotação obtida via IA com sucesso!');
             console.log('💰 [AI Agent] Detalhes da cotação:', {
               economicPrice: aiQuote.quote.economicPrice,
@@ -123,6 +126,7 @@ export class PricingTableService {
               economicDays: aiQuote.quote.economicDays,
               expressDays: aiQuote.quote.expressDays,
               zone: aiQuote.quote.zone,
+              tableName: aiQuote.quote.selected_table_name,
               additionals: aiQuote.quote.additionals_applied,
               reasoning: aiQuote.quote.reasoning
             });
@@ -144,7 +148,13 @@ export class PricingTableService {
               appliedWeight: quote.peso_tarifavel || weight
             };
           } else {
-            console.warn('⚠️ [AI Agent] Resposta da IA sem sucesso ou incompleta:', aiQuote);
+            console.warn('⚠️ [AI Agent] Resposta da IA sem sucesso ou incompleta:', {
+              success: aiQuote?.success,
+              hasQuote: !!aiQuote?.quote,
+              economicPrice: aiQuote?.quote?.economicPrice,
+              fullResponse: aiQuote
+            });
+            console.log('⚠️ [AI Agent] Continuando com método tradicional...');
           }
         } catch (aiError: any) {
           console.error('❌ [AI Agent] Exceção ao chamar agente IA:', {

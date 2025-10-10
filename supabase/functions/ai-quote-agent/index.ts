@@ -937,6 +937,16 @@ serve(async (req) => {
           
           const final_price = base_price + valor_excedente + peso_adicional_taxa + alfa_weight_fraction_charge + insurance_value;
 
+          console.log(`[AI Quote Agent] 💰 ${table.name} - CÁLCULO FINAL:`);
+          console.log(`[AI Quote Agent]    Base: R$ ${base_price.toFixed(2)}`);
+          console.log(`[AI Quote Agent]    Excedente: R$ ${valor_excedente.toFixed(2)}`);
+          console.log(`[AI Quote Agent]    Taxa peso: R$ ${peso_adicional_taxa.toFixed(2)}`);
+          console.log(`[AI Quote Agent]    Fração Alfa: R$ ${alfa_weight_fraction_charge.toFixed(2)}`);
+          console.log(`[AI Quote Agent]    Seguro: R$ ${insurance_value.toFixed(2)}`);
+          console.log(`[AI Quote Agent]    ════════════════════════════`);
+          console.log(`[AI Quote Agent]    TOTAL: R$ ${final_price.toFixed(2)}`);
+          console.log(`[AI Quote Agent]    Prazo: ${priceRecord.delivery_days} dias`);
+
           // CONSIDERAÇÃO 4 (Diolog/Alfa): Informar se transporta químicos
           let transports_chemicals = 'Não transporta químicos';
           if (table.name.toLowerCase().includes('alfa')) {
@@ -968,7 +978,7 @@ serve(async (req) => {
             has_coverage: true,
             cubic_meter_equivalent: table.cubic_meter_kg_equivalent,
             transports_chemicals,
-            dimension_rules: dimension_rules.length > 0 ? dimension_rules.join('; ') : null,
+            dimension_rules: dimension_rules, // Manter como array, não converter para string
             volume_weight_rule: volume_weight_multiplier_applied ? 
               `Multiplicador ${table.distance_multiplier_value}x aplicado (volume >${table.distance_multiplier_threshold_km}kg)` : 
               (table.distance_multiplier_threshold_km ? 
@@ -1206,7 +1216,11 @@ FORMATO DE RESPOSTA (JSON válido):
     console.log('[AI Quote Agent] ==========================================');
     console.log('[AI Quote Agent] COTAÇÃO FINALIZADA COM SUCESSO');
     console.log(`[AI Quote Agent] Transportadora selecionada: ${selectedQuote.table_name}`);
-    console.log(`[AI Quote Agent] Preço final: R$ ${selectedQuote.final_price.toFixed(2)}`);
+    console.log(`[AI Quote Agent] ID da tabela: ${selectedQuote.table_id}`);
+    console.log(`[AI Quote Agent] Preço base: R$ ${selectedQuote.base_price.toFixed(2)}`);
+    console.log(`[AI Quote Agent] Excedente: R$ ${selectedQuote.valor_excedente?.toFixed(2) || '0.00'}`);
+    console.log(`[AI Quote Agent] Seguro: R$ ${selectedQuote.insurance_value?.toFixed(2) || '0.00'}`);
+    console.log(`[AI Quote Agent] Preço final CORRETO: R$ ${selectedQuote.final_price.toFixed(2)}`);
     console.log(`[AI Quote Agent] Prazo: ${selectedQuote.delivery_days} dias`);
     console.log(`[AI Quote Agent] Opções com cobertura: ${tablesWithCoverage.length}/${allTableQuotes.length}`);
     console.log('[AI Quote Agent] ==========================================');
@@ -1250,46 +1264,71 @@ FORMATO DE RESPOSTA (JSON válido):
 
     console.log('[AI Quote Agent] Quote processed successfully', {
       table: calculationResult.selected_table_name,
+      table_id: calculationResult.selected_table_id,
+      base_price: calculationResult.base_price,
       final_price: calculationResult.final_price,
+      delivery_days: calculationResult.delivery_days,
       reasoning: calculationResult.reasoning
     });
 
+    // DEBUG: Verificar se o preço retornado é o correto
+    console.log('[AI Quote Agent] 🔍 VERIFICAÇÃO FINAL ANTES DE RETORNAR:');
+    console.log(`[AI Quote Agent] calculationResult.selected_table_name: ${calculationResult.selected_table_name}`);
+    console.log(`[AI Quote Agent] calculationResult.final_price: R$ ${calculationResult.final_price.toFixed(2)}`);
+    console.log(`[AI Quote Agent] calculationResult.delivery_days: ${calculationResult.delivery_days} dias`);
+    console.log(`[AI Quote Agent] selectedQuote.table_name: ${selectedQuote.table_name}`);
+    console.log(`[AI Quote Agent] selectedQuote.final_price: R$ ${selectedQuote.final_price.toFixed(2)}`);
+    
+    // Verificação crítica: garantir que estamos retornando o preço da tabela selecionada
+    if (calculationResult.final_price !== selectedQuote.final_price) {
+      console.error('[AI Quote Agent] ⚠️⚠️⚠️ ERRO CRÍTICO: Preço final diferente do selectedQuote!');
+      console.error(`[AI Quote Agent] Corrigindo: ${calculationResult.final_price} → ${selectedQuote.final_price}`);
+      calculationResult.final_price = selectedQuote.final_price;
+    }
+    
+    const responsePayload = {
+      success: true,
+      quote: {
+        economicPrice: calculationResult.final_price,
+        economicDays: calculationResult.delivery_days,
+        expressPrice: calculationResult.final_price * 1.3,
+        expressDays: Math.max(1, calculationResult.delivery_days - 2),
+        zone: `Tabela: ${calculationResult.selected_table_name}`,
+        additionals_applied: [
+          ...(selectedQuote.excedente_kg > 0 ? [{
+            type: 'excess_weight',
+            value: selectedQuote.valor_excedente,
+            description: `Excedente de peso: ${selectedQuote.excedente_kg.toFixed(2)}kg`
+          }] : []),
+          ...(selectedQuote.insurance_value && selectedQuote.insurance_value > 0 ? [{
+            type: 'insurance',
+            value: selectedQuote.insurance_value,
+            description: `Seguro (1.3% do valor declarado)`
+          }] : [])
+        ],
+        reasoning: calculationResult.reasoning,
+        insuranceValue: selectedQuote.insurance_value || 0,
+        basePrice: calculationResult.base_price,
+        // Dados detalhados para histórico
+        selected_table_id: calculationResult.selected_table_id,
+        selected_table_name: calculationResult.selected_table_name,
+        final_price: calculationResult.final_price,
+        delivery_days: calculationResult.delivery_days,
+        peso_tarifavel: calculationResult.peso_tarifavel,
+        peso_cubado: calculationResult.peso_cubado,
+        peso_informado: calculationResult.peso_informado,
+        excedente_kg: calculationResult.excedente_kg,
+        valor_excedente: calculationResult.valor_excedente,
+        // Todas as opções analisadas para comparação
+        all_table_quotes: calculationResult.all_table_quotes,
+        tables_with_coverage_count: calculationResult.tables_with_coverage_count
+      },
+    };
+    
+    console.log('[AI Quote Agent] 📤 PAYLOAD DE RESPOSTA:', JSON.stringify(responsePayload, null, 2));
+    
     return new Response(
-      JSON.stringify({
-        success: true,
-        quote: {
-          economicPrice: calculationResult.final_price,
-          economicDays: calculationResult.delivery_days,
-          expressPrice: calculationResult.final_price * 1.3,
-          expressDays: Math.max(1, calculationResult.delivery_days - 2),
-          zone: `Tabela: ${calculationResult.selected_table_name}`,
-          additionals_applied: [
-            ...(selectedQuote.excedente_kg > 0 ? [{
-              type: 'excess_weight',
-              value: selectedQuote.valor_excedente,
-              description: `Excedente de peso: ${selectedQuote.excedente_kg.toFixed(2)}kg`
-            }] : []),
-            ...(selectedQuote.insurance_value && selectedQuote.insurance_value > 0 ? [{
-              type: 'insurance',
-              value: selectedQuote.insurance_value,
-              description: `Seguro (1.3% do valor declarado)`
-            }] : [])
-          ],
-          reasoning: calculationResult.reasoning,
-          insuranceValue: selectedQuote.insurance_value || 0,
-          basePrice: calculationResult.base_price,
-          // Dados detalhados para histórico
-          selected_table_id: calculationResult.selected_table_id,
-          selected_table_name: calculationResult.selected_table_name,
-          final_price: calculationResult.final_price,
-          delivery_days: calculationResult.delivery_days,
-          peso_tarifavel: calculationResult.peso_tarifavel,
-          peso_cubado: calculationResult.peso_cubado,
-          peso_informado: calculationResult.peso_informado,
-          excedente_kg: calculationResult.excedente_kg,
-          valor_excedente: calculationResult.valor_excedente
-        },
-      }),
+      JSON.stringify(responsePayload),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
         status: 200 
