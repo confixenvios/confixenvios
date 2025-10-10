@@ -975,6 +975,7 @@ serve(async (req) => {
     else {
       console.log('[AI Quote Agent] ⚡ MÚLTIPLAS tabelas com cobertura detectadas!');
       console.log('[AI Quote Agent] Chamando IA para escolher a melhor opção...');
+      console.log(`[AI Quote Agent] Configuração: modelo=${config.model || 'gpt-4o-mini'}, temperature=${config.temperature || 0.3}`);
       
       const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
       if (!OPENAI_API_KEY) {
@@ -984,46 +985,63 @@ serve(async (req) => {
         aiReasoning = `Selecionada opção mais econômica entre ${tablesWithCoverage.length} transportadoras disponíveis (IA indisponível). Transportadora: ${selectedQuote.table_name}.`;
       } else {
         try {
+          // Preparar análise detalhada de cada transportadora
+          const detailedAnalysis = tablesWithCoverage.map(q => ({
+            nome: q.table_name,
+            preco_final: `R$ ${q.final_price.toFixed(2)}`,
+            prazo_dias: q.delivery_days,
+            peso_tarifavel: `${q.peso_tarifavel}kg`,
+            preco_base: `R$ ${q.base_price.toFixed(2)}`,
+            valor_excedente: q.valor_excedente > 0 ? `R$ ${q.valor_excedente.toFixed(2)}` : 'Sem excedente',
+            seguro: `R$ ${q.insurance_value?.toFixed(2) || '0.00'}`,
+            regras_aplicadas: [
+              q.cubic_meter_equivalent ? `Peso cúbico: ${q.cubic_meter_equivalent}kg/m³` : null,
+              q.volume_weight_rule ? 'Regra de peso volumétrico aplicada' : null,
+              q.transports_chemicals ? 'Transporta químicos' : 'NÃO transporta químicos',
+              q.dimension_rules && q.dimension_rules.length > 0 ? q.dimension_rules.join('; ') : null
+            ].filter(Boolean)
+          }));
+          
+          const systemPrompt = config.system_prompt || 
+            'Você é um especialista em logística que escolhe a melhor transportadora considerando preço, prazo e regras específicas.';
+          
           const aiPrompt = `Você é um especialista em logística. Escolha a MELHOR transportadora entre as opções disponíveis.
 
 DADOS DO ENVIO:
+- CEP Origem: ${origin_cep}
 - CEP Destino: ${destination_cep}
-- Peso: ${total_weight}kg
-- Prioridade: ${config.priority_mode}
+- Peso Total: ${total_weight}kg
+- Valor da Mercadoria: R$ ${merchandise_value.toFixed(2)}
+- Prioridade Configurada: ${config.priority_mode}
 
 TRANSPORTADORAS DISPONÍVEIS (TODAS COM COBERTURA):
-${JSON.stringify(tablesWithCoverage.map(q => ({
-  table_id: q.table_id,
-  table_name: q.table_name,
-  price: q.final_price,
-  delivery_days: q.delivery_days,
-  weight: q.peso_tarifavel,
-  cubic_meter_equivalent: q.cubic_meter_equivalent,
-  transports_chemicals: q.transports_chemicals,
-  dimension_rules: q.dimension_rules,
-  volume_weight_rule: q.volume_weight_rule,
-  base_price: q.base_price,
-  excess_charge: q.valor_excedente
-})), null, 2)}
+${JSON.stringify(detailedAnalysis, null, 2)}
 
-CRITÉRIOS DE ESCOLHA (baseado em prioridade "${config.priority_mode}"):
-- "fastest": Escolha a com MENOR prazo (delivery_days)
-- "cheapest": Escolha a com MENOR preço (final_price)
-- "balanced": Balance preço e prazo (melhor custo-benefício)
+CRITÉRIOS DE DECISÃO:
+${config.priority_mode === 'fastest' ? 
+  '- PRIORIDADE MÁXIMA: Menor prazo de entrega (delivery_days)\n- SECUNDÁRIO: Preço competitivo' :
+config.priority_mode === 'cheapest' ?
+  '- PRIORIDADE MÁXIMA: Menor preço final (preco_final)\n- SECUNDÁRIO: Prazo razoável' :
+  '- PRIORIDADE: Equilibrar preço e prazo para melhor custo-benefício\n- Considerar diferença de dias vs diferença de preço'
+}
 
-REGRAS ESPECÍFICAS DAS TRANSPORTADORAS:
-- Cada transportadora tem regras diferentes (peso cúbico, dimensões, excedente, volume pesado, químicos)
-- Magalog: Peso cúbico 167 kg/m³, restrições de dimensões individuais e soma máxima
-- Diolog: Peso cúbico 250 kg/m³, multiplica frete se volume >100kg, cobra excedente, transporta químicos
-- Considere todas as regras aplicadas no cálculo do preço final
+CONSIDERAÇÕES ESPECÍFICAS:
+${config.consider_chemical_transport ? '- Cliente TRANSPORTA produtos químicos: dar preferência a transportadoras que aceitam' : '- Cliente NÃO transporta químicos'}
+${config.prefer_no_dimension_restrictions ? '- PREFERIR transportadoras sem muitas restrições de dimensões' : '- Restrições de dimensões não são um problema'}
+- Peso cúbico já foi calculado automaticamente para cada transportadora
+- Valores de excedente e seguro já estão incluídos no preço final
+- Considere as regras específicas aplicadas (listadas em regras_aplicadas)
 
-Considere todos os fatores: preço final, prazo, regras específicas de cada transportadora.
+INSTRUÇÕES FINAIS:
+1. Analise TODOS os fatores listados
+2. Para prioridade "balanced", considere se vale pagar R$ X a mais para economizar Y dias
+3. Retorne APENAS um JSON válido no formato abaixo
+4. Seja específico no raciocínio, mencionando números concretos (preços e dias)
 
-Retorne APENAS JSON válido:
+FORMATO DE RESPOSTA (JSON válido):
 {
-  "selected_table_id": "uuid-da-tabela",
-  "selected_table_name": "Nome da Tabela",
-  "reasoning": "Explicação breve da escolha considerando as regras específicas"
+  "selected_table_name": "Nome da Transportadora Escolhida",
+  "reasoning": "Explicação detalhada: [Transportadora] foi escolhida porque [razão específica com números]. Comparado com [outras opções], oferece [vantagem]. Prioridade ${config.priority_mode} foi considerada."
 }`;
 
           const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -1033,35 +1051,44 @@ Retorne APENAS JSON válido:
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'gpt-4o-mini',
+              model: config.model || 'gpt-4o-mini',
               messages: [
                 { 
                   role: 'system', 
-                  content: 'Você é um especialista em logística. Escolha a melhor transportadora baseado nos critérios fornecidos. Retorne APENAS JSON válido.' 
+                  content: systemPrompt
                 },
                 { role: 'user', content: aiPrompt }
               ],
-              max_tokens: 300,
-              temperature: 0.3,
+              max_tokens: config.max_tokens || 500,
+              temperature: config.temperature || 0.3,
               response_format: { type: "json_object" }
             }),
           });
 
           if (!aiResponse.ok) {
-            throw new Error(`AI API error: ${aiResponse.status}`);
+            const errorText = await aiResponse.text();
+            console.error('[AI Quote Agent] ❌ Erro na API da OpenAI:', errorText);
+            throw new Error(`AI API error: ${aiResponse.status} - ${errorText}`);
           }
 
           const aiData = await aiResponse.json();
+          console.log('[AI Quote Agent] ✅ Resposta da IA recebida:', JSON.stringify(aiData, null, 2));
+          
           const aiContent = aiData.choices?.[0]?.message?.content;
+          if (!aiContent) {
+            throw new Error('IA não retornou conteúdo válido');
+          }
+          
           const aiSelection = JSON.parse(aiContent);
           
-          selectedQuote = tablesWithCoverage.find(q => q.table_id === aiSelection.selected_table_id);
+          selectedQuote = tablesWithCoverage.find(q => q.table_name === aiSelection.selected_table_name);
           
           if (!selectedQuote) {
-            // Fallback: se IA retornar ID inválido, usar primeira opção
-            console.warn('[AI Quote Agent] ⚠️ IA retornou ID inválido, usando primeira opção');
+            // Fallback: se IA retornar nome inválido, usar primeira opção
+            console.warn('[AI Quote Agent] ⚠️ IA retornou nome inválido:', aiSelection.selected_table_name);
+            console.warn('[AI Quote Agent] Transportadoras disponíveis:', tablesWithCoverage.map(q => q.table_name));
             selectedQuote = tablesWithCoverage[0];
-            aiReasoning = `Primeira opção disponível (IA retornou resposta inválida). Transportadora: ${selectedQuote.table_name}.`;
+            aiReasoning = `Primeira opção disponível (IA retornou resposta inválida: "${aiSelection.selected_table_name}"). Transportadora: ${selectedQuote.table_name}.`;
           } else {
             aiReasoning = aiSelection.reasoning;
             console.log('[AI Quote Agent] ✅ IA escolheu:', selectedQuote.table_name);
@@ -1072,7 +1099,7 @@ Retorne APENAS JSON válido:
           console.error('[AI Quote Agent] ❌ Erro na IA:', aiError.message);
           console.log('[AI Quote Agent] Usando fallback: transportadora mais barata');
           selectedQuote = tablesWithCoverage.sort((a, b) => a.final_price - b.final_price)[0];
-          aiReasoning = `Selecionada opção mais econômica (erro na IA). Transportadora: ${selectedQuote.table_name}.`;
+          aiReasoning = `Selecionada opção mais econômica (erro na IA: ${aiError.message}). Transportadora: ${selectedQuote.table_name}.`;
         }
       }
     }

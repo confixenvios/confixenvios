@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { Bot, Settings, History } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 
 interface Config {
   id: string;
@@ -18,6 +20,12 @@ interface Config {
   weight_calculation_mode?: string;
   preferred_carriers: string[];
   additional_rules: string | null;
+  model?: string;
+  temperature?: number;
+  max_tokens?: number;
+  system_prompt?: string;
+  consider_chemical_transport?: boolean;
+  prefer_no_dimension_restrictions?: boolean;
 }
 
 interface QuoteLog {
@@ -123,10 +131,14 @@ const AdminAgenteIA = () => {
       </div>
 
       <Tabs defaultValue="config" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="config" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             Configuração
+          </TabsTrigger>
+          <TabsTrigger value="advanced" className="flex items-center gap-2">
+            <Bot className="h-4 w-4" />
+            IA Avançado
           </TabsTrigger>
           <TabsTrigger value="logs" className="flex items-center gap-2">
             <History className="h-4 w-4" />
@@ -204,6 +216,139 @@ const AdminAgenteIA = () => {
                   checked={config?.is_active || false}
                   onCheckedChange={(checked) => updateConfigMutation.mutate({ is_active: checked })}
                 />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="advanced" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configurações Avançadas da IA</CardTitle>
+              <CardDescription>
+                Configure o comportamento detalhado do modelo de IA usado para escolher a melhor transportadora
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label>Modelo da OpenAI</Label>
+                <Select 
+                  value={config?.model || "gpt-4o-mini"} 
+                  onValueChange={(value) => updateConfigMutation.mutate({ model: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gpt-4o">GPT-4o (Mais inteligente, mais caro)</SelectItem>
+                    <SelectItem value="gpt-4o-mini">GPT-4o-mini (Recomendado - Bom equilíbrio)</SelectItem>
+                    <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo (Mais rápido, mais barato)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Modelo usado para análise quando há múltiplas transportadoras com cobertura
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Temperature (Criatividade: {config?.temperature ?? 0.3})</Label>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={config?.temperature ?? 0.3}
+                  onChange={(e) => updateConfigMutation.mutate({ temperature: parseFloat(e.target.value) })}
+                  className="w-full h-2 bg-primary/20 rounded-lg appearance-none cursor-pointer"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Valores baixos (0-0.3): Respostas mais consistentes e previsíveis<br/>
+                  Valores altos (0.7-1.0): Respostas mais variadas e criativas
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Máximo de Tokens</Label>
+                <Select 
+                  value={String(config?.max_tokens || 500)} 
+                  onValueChange={(value) => updateConfigMutation.mutate({ max_tokens: parseInt(value) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="300">300 (Resposta curta)</SelectItem>
+                    <SelectItem value="500">500 (Recomendado)</SelectItem>
+                    <SelectItem value="800">800 (Resposta detalhada)</SelectItem>
+                    <SelectItem value="1000">1000 (Máximo detalhamento)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Quantidade máxima de tokens (palavras) na resposta da IA. Mais tokens = análise mais detalhada mas mais custosa.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Prompt do Sistema (Personalizado)</Label>
+                <Textarea
+                  value={config?.system_prompt || ''}
+                  onChange={(e) => {
+                    // Usar estado local para evitar chamadas excessivas
+                    const value = e.target.value;
+                    // Adicionar debounce manual aqui se necessário
+                  }}
+                  onBlur={(e) => {
+                    const value = e.target.value.trim();
+                    if (value && value !== config?.system_prompt) {
+                      updateConfigMutation.mutate({ system_prompt: value });
+                    }
+                  }}
+                  placeholder="Você é um especialista em logística que escolhe a melhor transportadora..."
+                  className="min-h-[100px] font-mono text-sm"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Prompt personalizado que define a personalidade e comportamento da IA. Deixe vazio para usar o padrão.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between space-x-2 pt-4 border-t">
+                <div className="space-y-0.5">
+                  <Label>Considerar Transporte de Químicos</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Dar preferência a transportadoras que aceitam produtos químicos
+                  </p>
+                </div>
+                <Switch
+                  checked={config?.consider_chemical_transport || false}
+                  onCheckedChange={(checked) => updateConfigMutation.mutate({ consider_chemical_transport: checked })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between space-x-2">
+                <div className="space-y-0.5">
+                  <Label>Evitar Restrições de Dimensões</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Preferir transportadoras com menos restrições de tamanho/dimensões
+                  </p>
+                </div>
+                <Switch
+                  checked={config?.prefer_no_dimension_restrictions !== false}
+                  onCheckedChange={(checked) => updateConfigMutation.mutate({ prefer_no_dimension_restrictions: checked })}
+                />
+              </div>
+
+              <div className="pt-4 border-t">
+                <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                    💡 Como funciona a IA?
+                  </p>
+                  <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
+                    <li>A IA é chamada apenas quando há <strong>múltiplas</strong> transportadoras com cobertura</li>
+                    <li>Se apenas 1 transportadora atende, ela é selecionada automaticamente (sem custo de IA)</li>
+                    <li>A IA analisa preço, prazo, regras específicas e suas preferências configuradas</li>
+                    <li>Consumo típico: ~300-500 tokens por decisão (~$0.001-0.002 USD por cotação)</li>
+                  </ul>
+                </div>
               </div>
             </CardContent>
           </Card>

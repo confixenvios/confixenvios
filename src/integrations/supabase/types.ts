@@ -82,31 +82,52 @@ export type Database = {
       ai_quote_config: {
         Row: {
           additional_rules: string | null
+          consider_chemical_transport: boolean | null
           created_at: string
+          decision_criteria: Json | null
           id: string
           is_active: boolean
+          max_tokens: number | null
+          model: string | null
+          prefer_no_dimension_restrictions: boolean | null
           preferred_carriers: Json | null
           priority_mode: string
+          system_prompt: string | null
+          temperature: number | null
           updated_at: string
           weight_calculation_mode: string
         }
         Insert: {
           additional_rules?: string | null
+          consider_chemical_transport?: boolean | null
           created_at?: string
+          decision_criteria?: Json | null
           id?: string
           is_active?: boolean
+          max_tokens?: number | null
+          model?: string | null
+          prefer_no_dimension_restrictions?: boolean | null
           preferred_carriers?: Json | null
           priority_mode?: string
+          system_prompt?: string | null
+          temperature?: number | null
           updated_at?: string
           weight_calculation_mode?: string
         }
         Update: {
           additional_rules?: string | null
+          consider_chemical_transport?: boolean | null
           created_at?: string
+          decision_criteria?: Json | null
           id?: string
           is_active?: boolean
+          max_tokens?: number | null
+          model?: string | null
+          prefer_no_dimension_restrictions?: boolean | null
           preferred_carriers?: Json | null
           priority_mode?: string
+          system_prompt?: string | null
+          temperature?: number | null
           updated_at?: string
           weight_calculation_mode?: string
         }
