@@ -814,6 +814,12 @@ export type Database = {
       pricing_tables: {
         Row: {
           ad_valorem_percentage: number | null
+          alfa_chemical_classes: string | null
+          alfa_cubic_weight_reference: number | null
+          alfa_distance_multiplier: number | null
+          alfa_distance_threshold_km: number | null
+          alfa_weight_fraction_charge: number | null
+          alfa_weight_fraction_kg: number | null
           chemical_classes_enabled: boolean | null
           cnpj: string | null
           company_branch_id: string | null
@@ -845,6 +851,12 @@ export type Database = {
         }
         Insert: {
           ad_valorem_percentage?: number | null
+          alfa_chemical_classes?: string | null
+          alfa_cubic_weight_reference?: number | null
+          alfa_distance_multiplier?: number | null
+          alfa_distance_threshold_km?: number | null
+          alfa_weight_fraction_charge?: number | null
+          alfa_weight_fraction_kg?: number | null
           chemical_classes_enabled?: boolean | null
           cnpj?: string | null
           company_branch_id?: string | null
@@ -876,6 +888,12 @@ export type Database = {
         }
         Update: {
           ad_valorem_percentage?: number | null
+          alfa_chemical_classes?: string | null
+          alfa_cubic_weight_reference?: number | null
+          alfa_distance_multiplier?: number | null
+          alfa_distance_threshold_km?: number | null
+          alfa_weight_fraction_charge?: number | null
+          alfa_weight_fraction_kg?: number | null
           chemical_classes_enabled?: boolean | null
           cnpj?: string | null
           company_branch_id?: string | null

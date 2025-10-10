@@ -158,6 +158,12 @@ serve(async (req) => {
         transports_chemical_classes: (table as any).transports_chemical_classes,
         peso_adicional_30_50kg: (table as any).peso_adicional_30_50kg || 55.00,
         peso_adicional_acima_50kg: (table as any).peso_adicional_acima_50kg || 100.00,
+        alfa_cubic_weight_reference: (table as any).alfa_cubic_weight_reference || 250,
+        alfa_distance_threshold_km: (table as any).alfa_distance_threshold_km || 100,
+        alfa_distance_multiplier: (table as any).alfa_distance_multiplier || 2,
+        alfa_weight_fraction_kg: (table as any).alfa_weight_fraction_kg || 100,
+        alfa_weight_fraction_charge: (table as any).alfa_weight_fraction_charge || 5.50,
+        alfa_chemical_classes: (table as any).alfa_chemical_classes || '8/9',
         pricing_data: []
       };
 
@@ -425,12 +431,16 @@ serve(async (req) => {
     for (const table of tablesWithData) {
       try {
         // Calcular peso tarifável
-        // total_volume já está em m³, então basta multiplicar pelo equivalente
-        const peso_cubado = total_volume * table.cubic_meter_kg_equivalent;
+        // ALFA: usa 250 kg/m³, outras usam o configurado (ex: Jadlog 167 kg/m³)
+        let cubic_equivalent = table.cubic_meter_kg_equivalent;
+        if (table.name.toLowerCase().includes('alfa')) {
+          cubic_equivalent = table.alfa_cubic_weight_reference || 250;
+        }
+        const peso_cubado = total_volume * cubic_equivalent;
         const peso_tarifavel = Math.max(total_weight, peso_cubado);
         
         console.log(`[AI Quote Agent] Buscando preço em ${table.name}:`);
-        console.log(`  - CEP: ${destination_cep}, Peso: ${peso_tarifavel}kg`);
+        console.log(`  - CEP: ${destination_cep}, Peso: ${peso_tarifavel}kg (Cubagem: ${cubic_equivalent} kg/m³)`);
         
         // VALIDAÇÃO DE DIMENSÕES (Magalog/Jadlog/outras transportadoras)
         let dimensions_valid = true;
@@ -584,10 +594,42 @@ serve(async (req) => {
             }
           }
           
+          // CONSIDERAÇÃO 3 (Alfa): Acrescentar taxa a cada fração de 100kg
+          let alfa_weight_fraction_charge = 0;
+          if (table.name.toLowerCase().includes('alfa')) {
+            const alfa_fraction_kg = table.alfa_weight_fraction_kg || 100;
+            const alfa_charge_per_fraction = table.alfa_weight_fraction_charge || 5.50;
+            
+            if (peso_tarifavel > 0) {
+              const num_fractions = Math.ceil(peso_tarifavel / alfa_fraction_kg);
+              alfa_weight_fraction_charge = num_fractions * alfa_charge_per_fraction;
+              console.log(`[AI Quote Agent] ${table.name} - CONSIDERAÇÃO 3: ${peso_tarifavel}kg em ${num_fractions} frações de ${alfa_fraction_kg}kg = R$ ${alfa_weight_fraction_charge.toFixed(2)}`);
+            }
+          }
+          
+          // CONSIDERAÇÃO 2 (Alfa): Multiplicador de distância por volume >100km
           // CONSIDERAÇÃO 2 (Diolog): Se algum VOLUME individual pesar mais de X kg, multiplicar frete
           let volume_weight_multiplier_applied = false;
-          if (table.distance_multiplier_threshold_km && table.distance_multiplier_value) {
-            // Verificar se algum volume individual excede o limite de peso
+          let alfa_distance_multiplier_applied = false;
+          
+          if (table.name.toLowerCase().includes('alfa')) {
+            // Para Alfa: aplicar multiplicador se houver volumes com distância >100km
+            // Nota: Isso requer dados de distância que não temos no contexto atual
+            // Por hora, aplicamos baseado no peso como proxy
+            const alfa_threshold_km = table.alfa_distance_threshold_km || 100;
+            const alfa_multiplier = table.alfa_distance_multiplier || 2;
+            
+            // TODO: Implementar lógica de distância real quando disponível
+            // Por ora, consideramos volume pesado como proxy de distância longa
+            const hasHeavyVolume = volumes_data.some((vol: any) => vol.weight > alfa_threshold_km);
+            
+            if (hasHeavyVolume) {
+              base_price = base_price * alfa_multiplier;
+              alfa_distance_multiplier_applied = true;
+              console.log(`[AI Quote Agent] ${table.name} - CONSIDERAÇÃO 2 aplicada: Volume pesado detectado (proxy distância >${alfa_threshold_km}km), frete multiplicado por ${alfa_multiplier}x`);
+            }
+          } else if (table.distance_multiplier_threshold_km && table.distance_multiplier_value) {
+            // Verificar se algum volume individual excede o limite de peso (Diolog)
             const hasHeavyVolume = volumes_data.some((vol: any) => vol.weight > table.distance_multiplier_threshold_km);
             
             if (hasHeavyVolume) {
@@ -604,12 +646,15 @@ serve(async (req) => {
             console.log(`[AI Quote Agent] 🛡️ Seguro calculado: R$ ${insurance_value.toFixed(2)} (1.3% de R$ ${merchandise_value.toFixed(2)})`);
           }
           
-          const final_price = base_price + valor_excedente + peso_adicional_taxa + insurance_value;
+          const final_price = base_price + valor_excedente + peso_adicional_taxa + alfa_weight_fraction_charge + insurance_value;
 
-          // CONSIDERAÇÃO 4 (Diolog): Informar se transporta químicos
-          const transports_chemicals = table.chemical_classes_enabled ? 
-            `Transporta químicos classes ${table.transports_chemical_classes}` : 
-            'Não transporta químicos';
+          // CONSIDERAÇÃO 4 (Diolog/Alfa): Informar se transporta químicos
+          let transports_chemicals = 'Não transporta químicos';
+          if (table.name.toLowerCase().includes('alfa')) {
+            transports_chemicals = `Transporta químicos classes ${table.alfa_chemical_classes || '8/9'}`;
+          } else if (table.chemical_classes_enabled) {
+            transports_chemicals = `Transporta químicos classes ${table.transports_chemical_classes}`;
+          }
           
           // Informações sobre restrições de dimensões
           const dimension_rules = [];

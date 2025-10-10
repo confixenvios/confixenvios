@@ -105,6 +105,12 @@ const AdminTabelas = () => {
     chemical_classes_enabled: boolean;
     peso_adicional_30_50kg: number;
     peso_adicional_acima_50kg: number;
+    alfa_cubic_weight_reference: number;
+    alfa_distance_threshold_km: number;
+    alfa_distance_multiplier: number;
+    alfa_weight_fraction_kg: number;
+    alfa_weight_fraction_charge: number;
+    alfa_chemical_classes: string;
   }>({
     name: '',
     company_branch_id: '',
@@ -124,7 +130,13 @@ const AdminTabelas = () => {
     transports_chemical_classes: '8/9',
     chemical_classes_enabled: false,
     peso_adicional_30_50kg: 55.00,
-    peso_adicional_acima_50kg: 100.00
+    peso_adicional_acima_50kg: 100.00,
+    alfa_cubic_weight_reference: 250,
+    alfa_distance_threshold_km: 100,
+    alfa_distance_multiplier: 2,
+    alfa_weight_fraction_kg: 100,
+    alfa_weight_fraction_charge: 5.50,
+    alfa_chemical_classes: '8/9'
   });
 
   const [availableSheets, setAvailableSheets] = useState<string[]>([]);
@@ -335,7 +347,13 @@ const AdminTabelas = () => {
         transports_chemical_classes: formData.transports_chemical_classes,
         chemical_classes_enabled: formData.chemical_classes_enabled,
         peso_adicional_30_50kg: formData.peso_adicional_30_50kg,
-        peso_adicional_acima_50kg: formData.peso_adicional_acima_50kg
+        peso_adicional_acima_50kg: formData.peso_adicional_acima_50kg,
+        alfa_cubic_weight_reference: formData.alfa_cubic_weight_reference,
+        alfa_distance_threshold_km: formData.alfa_distance_threshold_km,
+        alfa_distance_multiplier: formData.alfa_distance_multiplier,
+        alfa_weight_fraction_kg: formData.alfa_weight_fraction_kg,
+        alfa_weight_fraction_charge: formData.alfa_weight_fraction_charge,
+        alfa_chemical_classes: formData.alfa_chemical_classes
       };
 
       let error;
@@ -440,7 +458,13 @@ const AdminTabelas = () => {
       transports_chemical_classes: (table as any).transports_chemical_classes ?? '8/9',
       chemical_classes_enabled: (table as any).chemical_classes_enabled ?? false,
       peso_adicional_30_50kg: (table as any).peso_adicional_30_50kg ?? 55.00,
-      peso_adicional_acima_50kg: (table as any).peso_adicional_acima_50kg ?? 100.00
+      peso_adicional_acima_50kg: (table as any).peso_adicional_acima_50kg ?? 100.00,
+      alfa_cubic_weight_reference: (table as any).alfa_cubic_weight_reference ?? 250,
+      alfa_distance_threshold_km: (table as any).alfa_distance_threshold_km ?? 100,
+      alfa_distance_multiplier: (table as any).alfa_distance_multiplier ?? 2,
+      alfa_weight_fraction_kg: (table as any).alfa_weight_fraction_kg ?? 100,
+      alfa_weight_fraction_charge: (table as any).alfa_weight_fraction_charge ?? 5.50,
+      alfa_chemical_classes: (table as any).alfa_chemical_classes ?? '8/9'
     });
     setIsDialogOpen(true);
   };
@@ -465,7 +489,13 @@ const AdminTabelas = () => {
       transports_chemical_classes: '8/9',
       chemical_classes_enabled: false,
       peso_adicional_30_50kg: 55.00,
-      peso_adicional_acima_50kg: 100.00
+      peso_adicional_acima_50kg: 100.00,
+      alfa_cubic_weight_reference: 250,
+      alfa_distance_threshold_km: 100,
+      alfa_distance_multiplier: 2,
+      alfa_weight_fraction_kg: 100,
+      alfa_weight_fraction_charge: 5.50,
+      alfa_chemical_classes: '8/9'
     });
     setEditingTable(null);
     setAvailableSheets([]);
@@ -888,6 +918,110 @@ const AdminTabelas = () => {
                     </>
                   )}
 
+                  {/* Configurações específicas para Alfa */}
+                  {formData.name.toLowerCase().includes('alfa') && (
+                    <div className="space-y-4 border-t pt-4">
+                      <h3 className="font-semibold text-lg">Configurações Específicas - Alfa</h3>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="alfa_cubic_weight_reference">
+                            Referência de Peso Cubado (kg/m³)
+                          </Label>
+                          <Input
+                            id="alfa_cubic_weight_reference"
+                            type="number"
+                            step="0.01"
+                            value={formData.alfa_cubic_weight_reference}
+                            onChange={(e) => setFormData({ ...formData, alfa_cubic_weight_reference: parseFloat(e.target.value) || 250 })}
+                          />
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Consideração 1: Padrão 250 kg/m³
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="alfa_distance_threshold_km">
+                            Limite de Distância (km)
+                          </Label>
+                          <Input
+                            id="alfa_distance_threshold_km"
+                            type="number"
+                            step="1"
+                            value={formData.alfa_distance_threshold_km}
+                            onChange={(e) => setFormData({ ...formData, alfa_distance_threshold_km: parseFloat(e.target.value) || 100 })}
+                          />
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Consideração 2: A cada volume acima de 100 km
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="alfa_distance_multiplier">
+                            Multiplicador de Distância
+                          </Label>
+                          <Input
+                            id="alfa_distance_multiplier"
+                            type="number"
+                            step="0.1"
+                            value={formData.alfa_distance_multiplier}
+                            onChange={(e) => setFormData({ ...formData, alfa_distance_multiplier: parseFloat(e.target.value) || 2 })}
+                          />
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Multiplicar o frete por este valor
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="alfa_weight_fraction_kg">
+                            Fração de Peso (kg)
+                          </Label>
+                          <Input
+                            id="alfa_weight_fraction_kg"
+                            type="number"
+                            step="1"
+                            value={formData.alfa_weight_fraction_kg}
+                            onChange={(e) => setFormData({ ...formData, alfa_weight_fraction_kg: parseFloat(e.target.value) || 100 })}
+                          />
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Consideração 3: A cada fração de 100 kg
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="alfa_weight_fraction_charge">
+                            Taxa por Fração de Peso (R$)
+                          </Label>
+                          <Input
+                            id="alfa_weight_fraction_charge"
+                            type="number"
+                            step="0.01"
+                            value={formData.alfa_weight_fraction_charge}
+                            onChange={(e) => setFormData({ ...formData, alfa_weight_fraction_charge: parseFloat(e.target.value) || 5.50 })}
+                          />
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Acrescentar R$ 5,50 por fração
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="alfa_chemical_classes">
+                            Classes Químicas Transportadas
+                          </Label>
+                          <Input
+                            id="alfa_chemical_classes"
+                            value={formData.alfa_chemical_classes}
+                            onChange={(e) => setFormData({ ...formData, alfa_chemical_classes: e.target.value })}
+                          />
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Consideração 4: Classes 8/9
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Configurações específicas para Jadlog */}
                   {formData.name.toLowerCase().includes('jadlog') && (
                     <>
                       <div className="space-y-4 pt-4 border-t">
