@@ -287,56 +287,9 @@ const AdminAgenteIA = () => {
                             </div>
 
                             {log.all_options_analyzed?.all_quotes && Array.isArray(log.all_options_analyzed.all_quotes) && log.all_options_analyzed.all_quotes.length > 0 && (
-                              <div className="mt-4 space-y-2">
-                                <div className="text-sm font-semibold">Comparação de Tabelas Analisadas:</div>
-                                <div className="space-y-2">
-                                  {log.all_options_analyzed.all_quotes.map((quote: any) => (
-                                    <div 
-                                      key={quote.table_id} 
-                                      className={`p-3 rounded-lg border-2 ${
-                                        quote.table_name === log.selected_pricing_table_name 
-                                          ? 'bg-primary/10 border-primary' 
-                                          : 'bg-muted/30 border-muted'
-                                      }`}
-                                    >
-                                      <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-semibold">{quote.table_name}</span>
-                                          {quote.table_name === log.selected_pricing_table_name && (
-                                            <Badge variant="default" className="text-xs">ESCOLHIDA</Badge>
-                                          )}
-                                          {!quote.has_coverage && (
-                                            <Badge variant="destructive" className="text-xs">SEM COBERTURA</Badge>
-                                          )}
-                                        </div>
-                                        {quote.has_coverage && (
-                                          <div className="text-right">
-                                            <div className="font-bold text-lg">R$ {quote.final_price.toFixed(2)}</div>
-                                            <div className="text-xs text-muted-foreground">{quote.delivery_days} dias úteis</div>
-                                          </div>
-                                        )}
-                                      </div>
-                                      
-                                      {quote.has_coverage && (
-                                        <div className="grid grid-cols-2 gap-2 text-xs">
-                                          <div>
-                                            <span className="text-muted-foreground">Valor Base:</span>
-                                            <span className="ml-1 font-mono">R$ {quote.base_price.toFixed(2)}</span>
-                                          </div>
-                                          {quote.excedente_kg > 0 && (
-                                            <div>
-                                              <span className="text-muted-foreground">Excedente ({quote.excedente_kg.toFixed(1)}kg):</span>
-                                              <span className="ml-1 font-mono">R$ {quote.valor_excedente.toFixed(2)}</span>
-                                            </div>
-                                          )}
-                                        </div>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-
+                              <div className="mt-4 space-y-3">
                                 {log.all_options_analyzed.reasoning && (
-                                  <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                  <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                                     <div className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-1">
                                       Por que a IA escolheu {log.selected_pricing_table_name}?
                                     </div>
@@ -345,6 +298,76 @@ const AdminAgenteIA = () => {
                                     </div>
                                   </div>
                                 )}
+
+                                <div className="text-sm font-semibold">Comparação de Tabelas Analisadas:</div>
+                                <div className="space-y-2">
+                                  {log.all_options_analyzed.all_quotes.map((quote: any) => {
+                                    const isSelected = quote.table_name === log.selected_pricing_table_name;
+                                    return (
+                                      <div 
+                                        key={quote.table_id} 
+                                        className={`p-3 rounded-lg border-2 ${
+                                          isSelected
+                                            ? 'bg-primary/10 border-primary' 
+                                            : quote.has_coverage
+                                            ? 'bg-muted/30 border-muted'
+                                            : 'bg-destructive/5 border-destructive/20'
+                                        }`}
+                                      >
+                                        <div className="flex items-center justify-between mb-2">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-semibold">{quote.table_name}</span>
+                                            {isSelected && (
+                                              <Badge variant="default" className="text-xs">ESCOLHIDA</Badge>
+                                            )}
+                                          </div>
+                                          {quote.has_coverage && (
+                                            <div className="text-right">
+                                              <div className="font-bold text-lg">R$ {quote.final_price.toFixed(2)}</div>
+                                              <div className="text-xs text-muted-foreground">{quote.delivery_days} dias úteis</div>
+                                            </div>
+                                          )}
+                                        </div>
+                                        
+                                        {quote.has_coverage ? (
+                                          <div className="space-y-2">
+                                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                              <div>
+                                                <span className="text-muted-foreground">Valor Base:</span>
+                                                <span className="ml-1 font-mono">R$ {quote.base_price.toFixed(2)}</span>
+                                              </div>
+                                              {quote.excedente_kg > 0 && (
+                                                <div>
+                                                  <span className="text-muted-foreground">Excedente ({quote.excedente_kg.toFixed(1)}kg):</span>
+                                                  <span className="ml-1 font-mono">R$ {quote.valor_excedente.toFixed(2)}</span>
+                                                </div>
+                                              )}
+                                            </div>
+                                            {!isSelected && quote.has_coverage && (
+                                              <div className="mt-2 pt-2 border-t border-muted text-xs text-muted-foreground italic">
+                                                {quote.final_price > log.final_price 
+                                                  ? `⚠️ Não escolhida: Preço R$ ${(quote.final_price - log.final_price).toFixed(2)} mais caro que a opção selecionada`
+                                                  : quote.delivery_days > log.delivery_days
+                                                  ? `⚠️ Não escolhida: Prazo ${quote.delivery_days - log.delivery_days} dia(s) maior que a opção selecionada`
+                                                  : '⚠️ Não escolhida: Conforme critérios de priorização configurados'}
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <div className="space-y-1">
+                                            <Badge variant="destructive" className="text-xs">NÃO ATENDE</Badge>
+                                            <p className="text-xs text-muted-foreground mt-2">
+                                              ❌ Transportadora: <span className="font-semibold">{quote.table_name}</span>. Preço: <span className="font-semibold">Sem cobertura para CEP {log.destination_cep}</span>. Prazo: <span className="font-semibold">-</span>.
+                                            </p>
+                                            <p className="text-xs text-destructive italic mt-1">
+                                              Esta transportadora não atende a faixa de CEP do destino ou não possui tabela de preços para o peso informado.
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             )}
                           </div>
