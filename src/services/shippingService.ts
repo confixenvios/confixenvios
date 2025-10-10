@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { PricingTableService } from "./pricingTableService";
 
 export interface ShippingQuote {
   economicPrice: number;
@@ -25,7 +24,6 @@ export interface QuoteRequest {
   merchandiseValue?: number;
 }
 
-// Aparecida de Goiânia é sempre nossa origem
 const ORIGIN_CEP = "74900000";
 
 export const calculateShippingQuote = async ({
@@ -43,28 +41,90 @@ export const calculateShippingQuote = async ({
     console.log('📍 CEP:', destinyCep, '| Peso:', weight, 'kg');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    // Chamar o pricing service (já tem lógica de IA interna)
-    const multiTableQuote = await PricingTableService.getMultiTableQuote({ 
-      destinyCep, 
-      weight, 
-      quantity, 
-      length, 
-      width, 
-      height, 
-      merchandiseValue 
-    });
-
-    if (multiTableQuote) {
-      console.log('✅ [ShippingService] RESULTADO RECEBIDO:');
-      console.log('   📦 Transportadora:', multiTableQuote.tableName);
-      console.log('   💰 Preço:', multiTableQuote.economicPrice);
-      console.log('   📅 Prazo:', multiTableQuote.economicDays, 'dias');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      return multiTableQuote;
+    // Verificar se IA está ativa
+    const { data: aiConfig } = await supabase
+      .from('ai_quote_config')
+      .select('*')
+      .single();
+    
+    if (aiConfig?.is_active) {
+      console.log('🤖 [IA ATIVA] Chamando agente...');
+      
+      try {
+        let totalVolume = 0;
+        if (length && width && height) {
+          totalVolume = (length / 100) * (width / 100) * (height / 100) * quantity;
+        }
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        const { data: aiQuote, error: aiError } = await supabase.functions.invoke('ai-quote-agent', {
+          body: {
+            origin_cep: ORIGIN_CEP,
+            destination_cep: destinyCep,
+            total_weight: weight,
+            total_volume: totalVolume,
+            merchandise_value: merchandiseValue || 0,
+            user_id: user?.id || null,
+            session_id: (window as any).anonymousSessionId || null,
+            volumes_data: [{
+              weight,
+              length: length || 0,
+              width: width || 0,
+              height: height || 0,
+              quantity
+            }]
+          }
+        });
+        
+        console.log('📥 [IA] Resposta:', {
+          success: aiQuote?.success,
+          hasQuote: !!aiQuote?.quote,
+          error: aiError
+        });
+        
+        if (!aiError && aiQuote?.success && aiQuote?.quote) {
+          const quote = aiQuote.quote;
+          const price = quote.final_price || quote.economicPrice;
+          
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log('✅ [IA] SUCESSO!');
+          console.log('🏢 Transportadora:', quote.selected_table_name);
+          console.log('💰 Preço:', price);
+          console.log('📅 Prazo:', quote.economicDays || quote.delivery_days, 'dias');
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          
+          if (price && price > 0) {
+            return {
+              economicPrice: price,
+              expressPrice: quote.expressPrice || price * 1.3,
+              economicDays: quote.economicDays || quote.delivery_days,
+              expressDays: quote.expressDays || Math.max(1, (quote.delivery_days || quote.economicDays) - 2),
+              zone: `Tabela: ${quote.selected_table_name}`,
+              zoneName: quote.selected_table_name,
+              tableId: quote.selected_table_id || 'ai-agent',
+              tableName: quote.selected_table_name,
+              cnpj: '',
+              insuranceValue: quote.insuranceValue || 0,
+              basePrice: quote.basePrice || quote.base_price || price
+            };
+          }
+        }
+        
+        console.log('⚠️ [IA] Falhou - usando fallback');
+      } catch (err) {
+        console.error('❌ [IA] Erro:', err);
+      }
     }
 
-    console.error('❌ [ShippingService] Pricing service retornou NULL');
-    throw new Error('Serviço de cotação não disponível');
+    // Fallback: usar sistema legado
+    console.log('🔄 [Fallback] Usando sistema legado...');
+    return await calculateLegacyShippingQuote({ 
+      destinyCep, 
+      weight, 
+      quantity,
+      merchandiseValue 
+    });
     
   } catch (error) {
     console.error('❌ [ShippingService] ERRO:', error);
@@ -72,24 +132,20 @@ export const calculateShippingQuote = async ({
   }
 };
 
-// Função do sistema antigo renomeada
 const calculateLegacyShippingQuote = async ({
   destinyCep,
   weight,
   quantity = 1,
   merchandiseValue
 }: QuoteRequest): Promise<ShippingQuote> => {
-  console.log(`Calculando via sistema legado - CEP: ${destinyCep}, Peso: ${weight}kg`);
+  console.log(`[Legacy] Calculando - CEP: ${destinyCep}, Peso: ${weight}kg`);
   
-  // Remove formatação do CEP e garante 8 dígitos
   const cleanCep = destinyCep.replace(/\D/g, '').padStart(8, '0');
   
-  // Validar CEP primeiro
   if (cleanCep.length !== 8 || cleanCep === '00000000') {
-    throw new Error(`CEP ${destinyCep} é inválido. Verifique o formato e tente novamente.`);
+    throw new Error(`CEP ${destinyCep} é inválido.`);
   }
   
-  // Busca a zona de destino baseada no CEP
   const { data: zones, error: zoneError } = await supabase
     .from('shipping_zones_magalog')
     .select('*')
@@ -98,18 +154,15 @@ const calculateLegacyShippingQuote = async ({
     .limit(1);
 
   if (zoneError) {
-    console.error('Erro na consulta de zonas:', zoneError);
-    throw new Error(`Erro ao consultar zonas de entrega: ${zoneError.message}`);
+    throw new Error(`Erro ao consultar zonas: ${zoneError.message}`);
   }
 
   if (!zones || zones.length === 0) {
-    throw new Error(`CEP ${destinyCep} não é atendido pela nossa região de cobertura. Consulte outros CEPs próximos ou entre em contato conosco.`);
+    throw new Error(`CEP ${destinyCep} não é atendido.`);
   }
 
   const zone = zones[0];
-  console.log(`Zona encontrada: ${zone.zone_code} (${zone.state})`);
 
-  // Busca o preço baseado no peso e zona
   const { data: pricing, error: priceError } = await supabase
     .from('shipping_pricing_magalog')
     .select('*')
@@ -119,71 +172,45 @@ const calculateLegacyShippingQuote = async ({
     .limit(1);
 
   if (priceError) {
-    console.error('Erro na consulta de preços:', priceError);
-    throw new Error(`Erro ao consultar tabela de preços: ${priceError.message}`);
+    throw new Error(`Erro ao consultar preços: ${priceError.message}`);
   }
 
   let basePrice: number;
   let excessWeightCharge = 0;
-  const EXCESS_WEIGHT_THRESHOLD = 30; // kg
-  const EXCESS_WEIGHT_CHARGE_PER_KG = 10; // R$/kg
 
   if (!pricing || pricing.length === 0) {
-    // Se não encontrou faixa exata, buscar a maior faixa disponível para aplicar excesso
-    console.log(`⚠️ Peso ${weight}kg excede faixas disponíveis. Buscando maior faixa...`);
-    
-    const { data: maxWeightPricing, error: maxError } = await supabase
+    const { data: maxWeightPricing } = await supabase
       .from('shipping_pricing_magalog')
       .select('*')
       .eq('zone_code', zone.zone_code)
       .order('weight_max', { ascending: false })
       .limit(1);
 
-    if (maxError || !maxWeightPricing || maxWeightPricing.length === 0) {
-      throw new Error(
-        `Peso ${weight}kg não encontrado na tabela padrão para ${zone.state} ${zone.zone_type === 'CAP' ? 'Capital' : 'Interior'}. ` +
-        `Entre em contato conosco ou consulte nossas tabelas especiais de preço.`
-      );
+    if (!maxWeightPricing || maxWeightPricing.length === 0) {
+      throw new Error(`Peso ${weight}kg não encontrado na tabela.`);
     }
 
     basePrice = maxWeightPricing[0].price;
     
-    // Aplicar cargo de excesso se o peso ultrapassar o limite
-    if (weight > EXCESS_WEIGHT_THRESHOLD) {
-      const excessWeight = weight - EXCESS_WEIGHT_THRESHOLD;
-      excessWeightCharge = excessWeight * EXCESS_WEIGHT_CHARGE_PER_KG;
-      console.log(`💰 Peso excedente: ${excessWeight}kg × R$${EXCESS_WEIGHT_CHARGE_PER_KG} = R$${excessWeightCharge.toFixed(2)}`);
+    if (weight > 30) {
+      const excessWeight = weight - 30;
+      excessWeightCharge = excessWeight * 10;
     }
-    
-    console.log(`✅ Usando maior faixa disponível: até ${maxWeightPricing[0].weight_max}kg - Base: R$${basePrice} + Excesso: R$${excessWeightCharge.toFixed(2)}`);
   } else {
     basePrice = pricing[0].price;
-    console.log(`Preço base encontrado: R$ ${basePrice}`);
   }
   
-  // Multiplica o preço base pela quantidade de pacotes e adiciona cargo de excesso
   const basePriceWithQuantity = (basePrice + excessWeightCharge) * quantity;
   
-  console.log(`📦 Cálculo base: R$${basePrice.toFixed(2)} + R$${excessWeightCharge.toFixed(2)} (excesso) × ${quantity} (qtd) = R$${basePriceWithQuantity.toFixed(2)}`);
-  
-  // Calcular seguro (1.3% do valor da mercadoria declarada)
   let insuranceValue = 0;
   if (merchandiseValue && merchandiseValue > 0) {
-    const insurancePercentage = 0.013; // 1.3%
-    insuranceValue = merchandiseValue * insurancePercentage;
-    console.log(`🛡️ Valor da mercadoria: R$${merchandiseValue.toFixed(2)}`);
-    console.log(`🛡️ Seguro (1.3%): R$${insuranceValue.toFixed(2)}`);
+    insuranceValue = merchandiseValue * 0.013;
   }
   
-  // Preço econômico é o preço base da tabela + seguro
   const economicPrice = basePriceWithQuantity + insuranceValue;
-  
-  console.log(`✅ Preço Econômico Final: R$${basePriceWithQuantity.toFixed(2)} (tabela) + R$${insuranceValue.toFixed(2)} (seguro) = R$${economicPrice.toFixed(2)}`);
-  
-  // Preço expresso tem 60% de acréscimo sobre o preço base + seguro
   const expressPrice = (basePriceWithQuantity * 1.6) + insuranceValue;
 
-  const result = {
+  return {
     economicPrice: Number(economicPrice.toFixed(2)),
     expressPrice: Number(expressPrice.toFixed(2)),
     economicDays: zone.delivery_days,
@@ -196,9 +223,6 @@ const calculateLegacyShippingQuote = async ({
     insuranceValue: Number(insuranceValue.toFixed(2)),
     basePrice: Number(basePriceWithQuantity.toFixed(2))
   };
-  
-  console.log('Cotação calculada via sistema legado:', result);
-  return result;
 };
 
 export const validateCep = (cep: string): boolean => {
@@ -212,15 +236,14 @@ export const formatCep = (cep: string): string => {
   return `${cleanCep.slice(0, 5)}-${cleanCep.slice(5)}`;
 };
 
-// Utility para limpar cache de cotações
 export const clearQuoteCache = () => {
   const keys = [];
   for (let i = 0; i < sessionStorage.length; i++) {
     const key = sessionStorage.key(i);
-    if (key && (key.startsWith('pricing_fallback_') || key.startsWith('active_pricing_tables'))) {
+    if (key && (key.startsWith('pricing_') || key.includes('quote'))) {
       keys.push(key);
     }
   }
   keys.forEach(key => sessionStorage.removeItem(key));
-  console.log('Cache de cotações limpo:', keys.length, 'itens removidos');
+  console.log('Cache limpo:', keys.length, 'itens');
 };
