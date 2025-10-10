@@ -473,12 +473,28 @@ serve(async (req) => {
           let excedente_kg = 0;
           let valor_excedente = 0;
           
-          if (peso_tarifavel > table.excess_weight_threshold_kg) {
-            excedente_kg = peso_tarifavel - table.excess_weight_threshold_kg;
-            valor_excedente = excedente_kg * table.excess_weight_charge_per_kg;
+          // CONSIDERAÇÃO 3 (Diolog): A cada fração de peso excedente, acrescentar valor
+          if (table.excess_weight_threshold_kg && table.excess_weight_charge_per_kg) {
+            if (peso_tarifavel > table.excess_weight_threshold_kg) {
+              excedente_kg = peso_tarifavel - table.excess_weight_threshold_kg;
+              // Calcular quantas frações de threshold existem
+              const num_fracoes = Math.ceil(excedente_kg / table.excess_weight_threshold_kg);
+              valor_excedente = num_fracoes * table.excess_weight_charge_per_kg;
+              console.log(`[AI Quote Agent] ${table.name} - Excedente calculado: ${excedente_kg}kg em ${num_fracoes} frações de ${table.excess_weight_threshold_kg}kg = R$ ${valor_excedente.toFixed(2)}`);
+            }
           }
 
-          const base_price = priceRecord.price;
+          let base_price = priceRecord.price;
+          
+          // CONSIDERAÇÃO 2 (Diolog): Volume com mais de X KM, multiplicar frete
+          // Nota: Atualmente não temos dados de distância real, então esta regra será aplicada 
+          // baseada em configurações futuras ou cálculo de distância por CEP
+          let distance_multiplier_applied = false;
+          if (table.distance_multiplier_threshold_km && table.distance_multiplier_value) {
+            // TODO: Implementar cálculo de distância real entre CEPs
+            // Por enquanto, essa regra fica preparada para quando tivermos os dados de distância
+            console.log(`[AI Quote Agent] ${table.name} - Regra de distância configurada: >${table.distance_multiplier_threshold_km}km aplica multiplicador ${table.distance_multiplier_value}x`);
+          }
           
           // Calcular seguro (1.3% do valor da mercadoria)
           let insurance_value = 0;
@@ -488,6 +504,11 @@ serve(async (req) => {
           }
           
           const final_price = base_price + valor_excedente + insurance_value;
+
+          // CONSIDERAÇÃO 4 (Diolog): Informar se transporta químicos
+          const transports_chemicals = table.chemical_classes_enabled ? 
+            `Transporta químicos classes ${table.transports_chemical_classes}` : 
+            'Não transporta químicos';
 
           allTableQuotes.push({
             table_id: table.id,
@@ -499,10 +520,21 @@ serve(async (req) => {
             final_price,
             delivery_days: priceRecord.delivery_days,
             peso_tarifavel,
-            has_coverage: true
+            has_coverage: true,
+            cubic_meter_equivalent: table.cubic_meter_kg_equivalent,
+            transports_chemicals,
+            distance_rules: table.distance_multiplier_threshold_km ? 
+              `Multiplicador ${table.distance_multiplier_value}x para distâncias >${table.distance_multiplier_threshold_km}km` : 
+              null
           });
           
-          console.log(`[AI Quote Agent] ${table.name} - Cobertura ENCONTRADA para CEP ${destination_cep} e peso ${peso_tarifavel}kg - Preço: R$ ${final_price} (base: R$ ${base_price} + excedente: R$ ${valor_excedente} + seguro: R$ ${insurance_value})`);
+          console.log(`[AI Quote Agent] ${table.name} - Cobertura ENCONTRADA para CEP ${destination_cep} e peso ${peso_tarifavel}kg`);
+          console.log(`  - Equivalência cúbica: ${table.cubic_meter_kg_equivalent} kg/m³ (CONSIDERAÇÃO 1)`);
+          console.log(`  - Preço base: R$ ${base_price.toFixed(2)}`);
+          console.log(`  - Excedente: R$ ${valor_excedente.toFixed(2)} (CONSIDERAÇÃO 3)`);
+          console.log(`  - Seguro: R$ ${insurance_value.toFixed(2)}`);
+          console.log(`  - Preço final: R$ ${final_price.toFixed(2)}`);
+          console.log(`  - ${transports_chemicals} (CONSIDERAÇÃO 4)`);
         } else {
           // Tabela não tem cobertura para este CEP/peso
           allTableQuotes.push({
@@ -591,7 +623,12 @@ ${JSON.stringify(tablesWithCoverage.map(q => ({
   table_name: q.table_name,
   price: q.final_price,
   delivery_days: q.delivery_days,
-  weight: q.peso_tarifavel
+  weight: q.peso_tarifavel,
+  cubic_meter_equivalent: q.cubic_meter_equivalent,
+  transports_chemicals: q.transports_chemicals,
+  distance_rules: q.distance_rules,
+  base_price: q.base_price,
+  excess_charge: q.valor_excedente
 })), null, 2)}
 
 CRITÉRIOS DE ESCOLHA (baseado em prioridade "${config.priority_mode}"):
@@ -599,11 +636,17 @@ CRITÉRIOS DE ESCOLHA (baseado em prioridade "${config.priority_mode}"):
 - "cheapest": Escolha a com MENOR preço (final_price)
 - "balanced": Balance preço e prazo (melhor custo-benefício)
 
+REGRAS ESPECÍFICAS DAS TRANSPORTADORAS:
+- Diolog: Peso cúbico ${tablesWithCoverage.find(q => q.table_name.includes('Diolog'))?.cubic_meter_equivalent || 'N/A'} kg/m³
+- Cada transportadora pode ter regras diferentes de excedente e distância
+
+Considere todos os fatores: preço final, prazo, regras de excedente, e se transporta químicos (se relevante).
+
 Retorne APENAS JSON válido:
 {
   "selected_table_id": "uuid-da-tabela",
   "selected_table_name": "Nome da Tabela",
-  "reasoning": "Explicação breve da escolha"
+  "reasoning": "Explicação breve da escolha considerando as regras específicas"
 }`;
 
           const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
