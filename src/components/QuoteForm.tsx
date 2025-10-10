@@ -657,12 +657,10 @@ const QuoteForm = () => {
         merchandiseValue: merchandiseValue > 0 ? merchandiseValue : undefined
       });
 
-      console.log('🎯 [QuoteForm] Cotação recebida do serviço:', {
-        economicPrice: shippingQuote.economicPrice,
-        tableName: shippingQuote.tableName,
-        economicDays: shippingQuote.economicDays,
-        basePrice: shippingQuote.basePrice
-      });
+      console.log('🎯🎯🎯 [QuoteForm] RECEBEMOS shippingQuote do serviço:', JSON.stringify(shippingQuote, null, 2));
+      console.log('💰💰💰 [QuoteForm] PREÇO QUE SERÁ EXIBIDO:', shippingQuote.economicPrice);
+      console.log('🏢🏢🏢 [QuoteForm] TRANSPORTADORA:', shippingQuote.tableName);
+      console.log('📅📅📅 [QuoteForm] PRAZO:', shippingQuote.economicDays, 'dias');
 
       // Salvar todos os dados da cotação completa
       const completeQuoteData = {
@@ -685,10 +683,11 @@ const QuoteForm = () => {
         calculatedAt: new Date().toISOString()
       };
 
-      console.log('💾 [QuoteForm] Salvando dados completos:', {
-        economicPrice: completeQuoteData.shippingQuote.economicPrice,
-        tableName: completeQuoteData.shippingQuote.tableName
-      });
+      console.log('💾💾💾 [QuoteForm] DADOS COMPLETOS ANTES DE SALVAR:');
+      console.log('   ✅ economicPrice:', completeQuoteData.shippingQuote.economicPrice);
+      console.log('   ✅ tableName:', completeQuoteData.shippingQuote.tableName);
+      console.log('   ✅ economicDays:', completeQuoteData.shippingQuote.economicDays);
+      console.log('   ✅ Dados completos:', JSON.stringify(completeQuoteData.shippingQuote, null, 2));
 
       setQuoteData(completeQuoteData);
       
@@ -1283,6 +1282,14 @@ const QuoteForm = () => {
 
             {currentStep === 2 && quoteData && (
               <div className="space-y-6">
+                {(() => {
+                  console.log('🖼️🖼️🖼️ [QuoteForm STEP 2] RENDERIZANDO COM quoteData:', JSON.stringify(quoteData.shippingQuote, null, 2));
+                  console.log('💰💰💰 [QuoteForm STEP 2] PREÇO EXIBIDO:', quoteData.shippingQuote.economicPrice);
+                  console.log('🏢🏢🏢 [QuoteForm STEP 2] TRANSPORTADORA EXIBIDA:', quoteData.shippingQuote.tableName);
+                  console.log('📅📅📅 [QuoteForm STEP 2] PRAZO EXIBIDO:', quoteData.shippingQuote.economicDays, 'dias');
+                  return null;
+                })()}
+                
                 <div className="text-center mb-6">
                   <h3 className="text-xl font-semibold flex items-center justify-center space-x-2">
                     <Truck className="h-5 w-5 text-primary" />
