@@ -131,12 +131,21 @@ serve(async (req) => {
         // Mapear índices das colunas no cabeçalho
         const headers = jsonData[0].map(v => String(v).toLowerCase());
         const colOrigin = headers.findIndex(h => h.includes('origem'));
-        const colUF = headers.findIndex(h => h === 'uf' || (h.includes('uf') && !h.includes('destino')));
+        const colUF = headers.findIndex(h => h.includes('estado') || h === 'uf');
         const colCity = headers.findIndex(h => h.includes('cidade'));
         const colCEPStart = headers.findIndex(h => h.includes('cep') && h.includes('inicial'));
-        const colCEPEnd = headers.findIndex(h => h.includes('cep') && h.includes('final'));
+        const colCEPEnd = headers.findIndex(h => h.includes('cep') && (h.includes('final') || h.includes('fim')));
         const colPrazo = headers.findIndex(h => h.includes('prazo'));
-        const colTarifa = headers.findIndex(h => h.includes('tarifa'));
+        const colTarifa = headers.findIndex(h => h.includes('regiao') || h.includes('tarifa'));
+        
+        console.log(`🔍 Mapeamento de colunas:`);
+        console.log(`   Origem: índice ${colOrigin}`);
+        console.log(`   Estado/UF: índice ${colUF}`);
+        console.log(`   Cidade: índice ${colCity}`);
+        console.log(`   CEP Inicial: índice ${colCEPStart}`);
+        console.log(`   CEP Final: índice ${colCEPEnd}`);
+        console.log(`   Prazo: índice ${colPrazo}`);
+        console.log(`   Tarifa/Região: índice ${colTarifa}`);
         
         // Processar cada linha de dados (pulando cabeçalho)
         let processedZoneRows = 0;
