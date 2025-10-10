@@ -50,3 +50,9 @@ verify_jwt = false
 
 [functions.ai-quote-agent]
 verify_jwt = false
+
+[functions.import-jadlog-data]
+verify_jwt = true
+
+[functions.import-alfa-data]
+verify_jwt = true

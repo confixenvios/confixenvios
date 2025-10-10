@@ -180,6 +180,84 @@ export type Database = {
           },
         ]
       }
+      alfa_pricing: {
+        Row: {
+          created_at: string | null
+          destination_state: string
+          id: string
+          origin_state: string
+          price: number
+          tariff_type: string
+          updated_at: string | null
+          weight_max: number
+          weight_min: number
+        }
+        Insert: {
+          created_at?: string | null
+          destination_state: string
+          id?: string
+          origin_state?: string
+          price: number
+          tariff_type?: string
+          updated_at?: string | null
+          weight_max: number
+          weight_min: number
+        }
+        Update: {
+          created_at?: string | null
+          destination_state?: string
+          id?: string
+          origin_state?: string
+          price?: number
+          tariff_type?: string
+          updated_at?: string | null
+          weight_max?: number
+          weight_min?: number
+        }
+        Relationships: []
+      }
+      alfa_zones: {
+        Row: {
+          cep_end: string | null
+          cep_start: string | null
+          created_at: string | null
+          delivery_days: number
+          express_delivery_days: number
+          id: string
+          state: string
+          tariff_type: string
+          updated_at: string | null
+          zone_code: string
+          zone_type: string
+        }
+        Insert: {
+          cep_end?: string | null
+          cep_start?: string | null
+          created_at?: string | null
+          delivery_days?: number
+          express_delivery_days?: number
+          id?: string
+          state: string
+          tariff_type?: string
+          updated_at?: string | null
+          zone_code: string
+          zone_type?: string
+        }
+        Update: {
+          cep_end?: string | null
+          cep_start?: string | null
+          created_at?: string | null
+          delivery_days?: number
+          express_delivery_days?: number
+          id?: string
+          state?: string
+          tariff_type?: string
+          updated_at?: string | null
+          zone_code?: string
+          zone_type?: string
+        }
+        Relationships: []
+      }
       anonymous_sessions: {
         Row: {
           client_fingerprint: string | null

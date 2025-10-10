@@ -73,6 +73,30 @@ export const TableImportStatus = ({
             sheets: []
           });
         }
+      } else if (lowerTableName.includes('alfa')) {
+        // Contar registros da tabela Alfa
+        const { count: pricingCount, error: pricingError } = await supabase
+          .from('alfa_pricing')
+          .select('*', { count: 'exact', head: true });
+
+        const { count: zonesCount, error: zonesError } = await supabase
+          .from('alfa_zones')
+          .select('*', { count: 'exact', head: true });
+
+        if (pricingError || zonesError) {
+          throw pricingError || zonesError;
+        }
+
+        const total = (pricingCount || 0) + (zonesCount || 0);
+        setRecordCount(total);
+        
+        if (total > 0) {
+          setImportDetails({
+            pricing: pricingCount || 0,
+            zones: zonesCount || 0,
+            sheets: []
+          });
+        }
       } else if (lowerTableName.includes('magalog')) {
         // Contar registros da tabela Magalog - usando rpc para evitar problemas de tipo
         const { count: pricingCount } = await supabase
@@ -130,6 +154,27 @@ export const TableImportStatus = ({
           toast({
             title: "✅ Importação concluída!",
             description: `${data.imported_pricing} preços e ${data.imported_zones} zonas importados`,
+          });
+        }
+      } else if (lowerTableName.includes('alfa')) {
+        console.log('🚀 Iniciando importação Alfa...');
+        
+        const { data, error } = await supabase.functions.invoke('import-alfa-data');
+        
+        if (error) throw error;
+        
+        if (data.success) {
+          setImportDetails({
+            pricing: data.imported_pricing,
+            zones: data.imported_zones,
+            sheets: data.sheets_processed || []
+          });
+          
+          setRecordCount(data.imported_pricing + data.imported_zones);
+          
+          toast({
+            title: "✅ Importação concluída!",
+            description: `${data.imported_pricing} preços e ${data.imported_zones} zonas importados da Alfa`,
           });
         }
       } else {
