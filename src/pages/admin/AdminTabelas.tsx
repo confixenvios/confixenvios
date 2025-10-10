@@ -493,14 +493,14 @@ const AdminTabelas = () => {
                 Nova Tabela
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
               <DialogHeader>
                 <DialogTitle>
                   {editingTable ? 'Editar Tabela' : 'Nova Tabela de Preços'}
                 </DialogTitle>
               </DialogHeader>
               
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-2">
                 <div>
                   <Label htmlFor="name">Nome da Tabela</Label>
                   <Input
