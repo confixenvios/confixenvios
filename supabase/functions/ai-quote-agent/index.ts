@@ -203,15 +203,28 @@ serve(async (req) => {
           // Header na linha 29 (row 30 excel): ORIGEM, DESTINO, REGIÃO ATENDIDA, depois colunas PU até QM (estados/regiões)
           const headers = lines[28].split(',').map(h => h.trim().replace(/"/g, ''));
           console.log(`[AI Quote Agent] Headers Jadlog encontrados: ${headers.length} colunas`);
-          console.log(`[AI Quote Agent] Primeiras colunas:`, headers.slice(0, 10));
+          console.log(`[AI Quote Agent] Primeiras 10 colunas:`, headers.slice(0, 10));
+          console.log(`[AI Quote Agent] Colunas 10-20:`, headers.slice(10, 20));
+          console.log(`[AI Quote Agent] Procurando: GO + ${destinationState} + CAPITAL + 1`);
           
           // Procurar coluna que contenha "GO" e destinationState e "CAPITAL 1"
           let stateColumnIndex = -1;
           for (let i = 0; i < headers.length; i++) {
             const h = headers[i].toUpperCase();
-            if (h.includes('GO') && h.includes(destinationState) && h.includes('CAPITAL') && h.includes('1')) {
-              stateColumnIndex = i;
-              break;
+            console.log(`[AI Quote Agent] Col ${i}: "${h}"`);
+            
+            const hasGO = h.includes('GO');
+            const hasState = h.includes(destinationState);
+            const hasCapital = h.includes('CAPITAL');
+            const hasOne = h.includes('1');
+            
+            if (hasGO && hasState) {
+              console.log(`[AI Quote Agent]   -> Tem GO + ${destinationState}`);
+              if (hasCapital && hasOne) {
+                stateColumnIndex = i;
+                console.log(`[AI Quote Agent]   -> Tem CAPITAL + 1! SELECIONADA!`);
+                break;
+              }
             }
           }
           
@@ -315,19 +328,22 @@ serve(async (req) => {
           
           console.log(`[AI Quote Agent] Row 1 Alfa (${row1.length} cols):`, row1.slice(0, 15));
           console.log(`[AI Quote Agent] Row 2 Alfa (${row2.length} cols):`, row2.slice(0, 15));
+          console.log(`[AI Quote Agent] Procurando: GO ${destinationState} + CAPITAL`);
           
           // Procurar coluna: row1 = "GO XX" E row2 = "CAPITAL"
           let stateColumnIndex = -1;
           for (let i = 0; i < row1.length && i < row2.length; i++) {
-            const header1 = row1[i].toUpperCase().replace(/\s+/g, ' ');
-            const header2 = row2[i].toUpperCase();
+            const header1 = row1[i].toUpperCase().replace(/\s+/g, ' ').trim();
+            const header2 = row2[i].toUpperCase().trim();
             
-            // Procurar exatamente "GO SP", "GO ES", etc
-            const targetPattern = `GO ${destinationState}`;
-            if (header1 === targetPattern || header1 === `GO  ${destinationState}`) {
-              if (header2 === 'CAPITAL') {
+            console.log(`[AI Quote Agent] Col ${i}: "${header1}" / "${header2}"`);
+            
+            // Verificar se contém GO + estado destino na linha 1 E CAPITAL na linha 2
+            if (header1.includes('GO') && header1.includes(destinationState)) {
+              console.log(`[AI Quote Agent]   -> Linha 1 match GO+${destinationState}!`);
+              if (header2.includes('CAPITAL')) {
                 stateColumnIndex = i;
-                console.log(`[AI Quote Agent] ✅ MATCH: Col ${i}: "${row1[i]}" + "${row2[i]}"`);
+                console.log(`[AI Quote Agent]   -> Linha 2 match CAPITAL! SELECIONADA!`);
                 break;
               }
             }
