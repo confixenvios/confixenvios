@@ -148,6 +148,16 @@ serve(async (req) => {
         cubic_meter_kg_equivalent: table.cubic_meter_kg_equivalent || 167,
         excess_weight_threshold_kg: table.excess_weight_threshold_kg || 30,
         excess_weight_charge_per_kg: table.excess_weight_charge_per_kg || 10,
+        max_length_cm: table.max_length_cm,
+        max_width_cm: table.max_width_cm,
+        max_height_cm: table.max_height_cm,
+        max_dimension_sum_cm: (table as any).max_dimension_sum_cm,
+        distance_multiplier_threshold_km: (table as any).distance_multiplier_threshold_km,
+        distance_multiplier_value: (table as any).distance_multiplier_value,
+        chemical_classes_enabled: (table as any).chemical_classes_enabled,
+        transports_chemical_classes: (table as any).transports_chemical_classes,
+        peso_adicional_30_50kg: (table as any).peso_adicional_30_50kg || 55.00,
+        peso_adicional_acima_50kg: (table as any).peso_adicional_acima_50kg || 100.00,
         pricing_data: []
       };
 
@@ -422,36 +432,59 @@ serve(async (req) => {
         console.log(`[AI Quote Agent] Buscando preço em ${table.name}:`);
         console.log(`  - CEP: ${destination_cep}, Peso: ${peso_tarifavel}kg`);
         
-        // VALIDAÇÃO DE DIMENSÕES (Magalog/outras transportadoras)
+        // VALIDAÇÃO DE DIMENSÕES (Magalog/Jadlog/outras transportadoras)
         let dimensions_valid = true;
         let dimension_violation = '';
         
         if (table.max_length_cm || table.max_width_cm || table.max_height_cm || (table as any).max_dimension_sum_cm) {
           for (const vol of volumes_data) {
-            // Verificar dimensões individuais máximas
-            if (table.max_length_cm && vol.length > table.max_length_cm) {
-              dimensions_valid = false;
-              dimension_violation = `Comprimento ${vol.length}cm excede máximo de ${table.max_length_cm}cm`;
-              break;
-            }
-            if (table.max_width_cm && vol.width > table.max_width_cm) {
-              dimensions_valid = false;
-              dimension_violation = `Largura ${vol.width}cm excede máximo de ${table.max_width_cm}cm`;
-              break;
-            }
-            if (table.max_height_cm && vol.height > table.max_height_cm) {
-              dimensions_valid = false;
-              dimension_violation = `Altura ${vol.height}cm excede máximo de ${table.max_height_cm}cm`;
-              break;
-            }
-            
-            // CONSIDERAÇÃO 2 (Magalog): Verificar soma das dimensões
-            if ((table as any).max_dimension_sum_cm) {
-              const dimension_sum = vol.length + vol.width + vol.height;
-              if (dimension_sum > (table as any).max_dimension_sum_cm) {
+            // JADLOG: Validações específicas
+            if (table.name.toLowerCase().includes('jadlog')) {
+              // Verificar dimensão individual máxima (170cm)
+              const maxDimension = Math.max(vol.length, vol.width, vol.height);
+              if (table.max_length_cm && maxDimension > table.max_length_cm) {
                 dimensions_valid = false;
-                dimension_violation = `Soma das dimensões ${dimension_sum}cm (${vol.length}+${vol.width}+${vol.height}) excede máximo de ${(table as any).max_dimension_sum_cm}cm`;
+                dimension_violation = `Dimensão individual ${maxDimension}cm excede máximo de ${table.max_length_cm}cm`;
                 break;
+              }
+              
+              // Verificar soma das dimensões (240cm)
+              if ((table as any).max_dimension_sum_cm) {
+                const dimension_sum = vol.length + vol.width + vol.height;
+                if (dimension_sum > (table as any).max_dimension_sum_cm) {
+                  dimensions_valid = false;
+                  dimension_violation = `Soma das dimensões ${dimension_sum}cm (${vol.length}+${vol.width}+${vol.height}) excede máximo de ${(table as any).max_dimension_sum_cm}cm`;
+                  break;
+                }
+              }
+            }
+            // OUTRAS TRANSPORTADORAS: Validações padrão
+            else {
+              // Verificar dimensões individuais máximas
+              if (table.max_length_cm && vol.length > table.max_length_cm) {
+                dimensions_valid = false;
+                dimension_violation = `Comprimento ${vol.length}cm excede máximo de ${table.max_length_cm}cm`;
+                break;
+              }
+              if (table.max_width_cm && vol.width > table.max_width_cm) {
+                dimensions_valid = false;
+                dimension_violation = `Largura ${vol.width}cm excede máximo de ${table.max_width_cm}cm`;
+                break;
+              }
+              if (table.max_height_cm && vol.height > table.max_height_cm) {
+                dimensions_valid = false;
+                dimension_violation = `Altura ${vol.height}cm excede máximo de ${table.max_height_cm}cm`;
+                break;
+              }
+              
+              // CONSIDERAÇÃO 2 (Magalog): Verificar soma das dimensões
+              if ((table as any).max_dimension_sum_cm) {
+                const dimension_sum = vol.length + vol.width + vol.height;
+                if (dimension_sum > (table as any).max_dimension_sum_cm) {
+                  dimensions_valid = false;
+                  dimension_violation = `Soma das dimensões ${dimension_sum}cm (${vol.length}+${vol.width}+${vol.height}) excede máximo de ${(table as any).max_dimension_sum_cm}cm`;
+                  break;
+                }
               }
             }
           }
@@ -539,6 +572,18 @@ serve(async (req) => {
 
           let base_price = priceRecord.price;
           
+          // CONSIDERAÇÃO 2 (Jadlog): Taxas adicionais por peso
+          let peso_adicional_taxa = 0;
+          if (table.name.toLowerCase().includes('jadlog')) {
+            if (peso_tarifavel >= 30 && peso_tarifavel <= 50) {
+              peso_adicional_taxa = table.peso_adicional_30_50kg || 55.00;
+              console.log(`[AI Quote Agent] ${table.name} - Taxa adicional 30-50kg: R$ ${peso_adicional_taxa.toFixed(2)}`);
+            } else if (peso_tarifavel > 50) {
+              peso_adicional_taxa = table.peso_adicional_acima_50kg || 100.00;
+              console.log(`[AI Quote Agent] ${table.name} - Taxa adicional >50kg: R$ ${peso_adicional_taxa.toFixed(2)}`);
+            }
+          }
+          
           // CONSIDERAÇÃO 2 (Diolog): Se algum VOLUME individual pesar mais de X kg, multiplicar frete
           let volume_weight_multiplier_applied = false;
           if (table.distance_multiplier_threshold_km && table.distance_multiplier_value) {
@@ -559,7 +604,7 @@ serve(async (req) => {
             console.log(`[AI Quote Agent] 🛡️ Seguro calculado: R$ ${insurance_value.toFixed(2)} (1.3% de R$ ${merchandise_value.toFixed(2)})`);
           }
           
-          const final_price = base_price + valor_excedente + insurance_value;
+          const final_price = base_price + valor_excedente + peso_adicional_taxa + insurance_value;
 
           // CONSIDERAÇÃO 4 (Diolog): Informar se transporta químicos
           const transports_chemicals = table.chemical_classes_enabled ? 
@@ -581,6 +626,7 @@ serve(async (req) => {
             base_price,
             excedente_kg,
             valor_excedente,
+            peso_adicional_taxa,
             insurance_value,
             final_price,
             delivery_days: priceRecord.delivery_days,
@@ -599,6 +645,9 @@ serve(async (req) => {
           console.log(`[AI Quote Agent] ${table.name} - Cobertura ENCONTRADA para CEP ${destination_cep} e peso ${peso_tarifavel}kg`);
           console.log(`  - Equivalência cúbica: ${table.cubic_meter_kg_equivalent} kg/m³ (CONSIDERAÇÃO 1)`);
           console.log(`  - Volume pesado: ${volume_weight_multiplier_applied ? 'SIM - Multiplicador aplicado!' : 'Não'} (CONSIDERAÇÃO 2 Diolog)`);
+          if (peso_adicional_taxa > 0) {
+            console.log(`  - Taxa adicional peso: R$ ${peso_adicional_taxa.toFixed(2)} (CONSIDERAÇÃO 2 Jadlog)`);
+          }
           if (dimension_rules.length > 0) {
             console.log(`  - Restrições de dimensões: ${dimension_rules.join('; ')} (CONSIDERAÇÃO 2 Magalog)`);
           }
