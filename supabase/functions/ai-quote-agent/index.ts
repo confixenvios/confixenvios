@@ -171,64 +171,59 @@ serve(async (req) => {
       if (table.name.toLowerCase().includes('jadlog')) {
         console.log(`[AI Quote Agent] ⚡ Buscando Jadlog do Supabase por CEP ${destination_cep} e peso ${total_weight}kg`);
         try {
-          // 1. Buscar zonas que cobrem o CEP destino
-          console.log(`[AI Quote Agent] Query 1: Buscando zonas Jadlog para CEP ${cleanDestinationCep}, estado: ${destinationState}...`);
-          const { data: zones, error: zonesError } = await supabaseClient
-            .from('jadlog_zones')
-            .select('*')
-            .eq('state', destinationState)
-            .lte('cep_start', cleanDestinationCep)
-            .gte('cep_end', cleanDestinationCep)
-            .limit(10);
+          // 1. Buscar PRIMEIRO os preços para o estado e peso
+          console.log(`[AI Quote Agent] Query 1: Buscando preços Jadlog - estado: ${destinationState}, peso: ${total_weight}kg...`);
           
-          if (zonesError) {
-            console.error('[AI Quote Agent] ❌ Erro ao buscar zonas Jadlog:', zonesError);
+          const { data: prices, error: pricesError } = await supabaseClient
+            .from('jadlog_pricing')
+            .select('*')
+            .eq('destination_state', destinationState)
+            .lte('weight_min', total_weight)
+            .gte('weight_max', total_weight)
+            .limit(50);
+          
+          if (pricesError) {
+            console.error(`[AI Quote Agent] ❌ Erro ao buscar preços Jadlog:`, pricesError);
             tableData.pricing_data = [];
-          } else if (!zones || zones.length === 0) {
-            console.log(`[AI Quote Agent] ⚠️ Jadlog: Nenhuma zona encontrada para CEP ${cleanDestinationCep} (estado: ${destinationState})`);
+          } else if (!prices || prices.length === 0) {
+            console.log(`[AI Quote Agent] ⚠️ Jadlog: Nenhum preço encontrado para estado ${destinationState}, peso ${total_weight}kg`);
             tableData.pricing_data = [];
           } else {
-            console.log(`[AI Quote Agent] ✅ Jadlog: ${zones.length} zona(s) encontrada(s)`, zones.map(z => z.zone_code));
+            console.log(`[AI Quote Agent] ✅ Jadlog: ${prices.length} preço(s) encontrado(s)`);
             
-            // 2. Buscar TODOS os preços para o estado e peso (sem filtrar por tariff_type)
-            console.log(`[AI Quote Agent] Query 2: Buscando preços Jadlog - estado: ${destinationState}, peso: ${total_weight}kg...`);
-            
-            const { data: prices, error: pricesError } = await supabaseClient
-              .from('jadlog_pricing')
+            // 2. Tentar buscar zona específica para o CEP (para prazos mais precisos)
+            console.log(`[AI Quote Agent] Query 2: Buscando zona Jadlog para CEP ${cleanDestinationCep}...`);
+            const { data: zones } = await supabaseClient
+              .from('jadlog_zones')
               .select('*')
-              .eq('destination_state', destinationState)
-              .lte('weight_min', total_weight)
-              .gte('weight_max', total_weight)
-              .limit(50);
+              .eq('state', destinationState)
+              .lte('cep_start', cleanDestinationCep)
+              .gte('cep_end', cleanDestinationCep)
+              .limit(1);
             
-            if (pricesError) {
-              console.error(`[AI Quote Agent] ❌ Erro ao buscar preços Jadlog:`, pricesError);
-              tableData.pricing_data = [];
-            } else if (prices && prices.length > 0) {
-              console.log(`[AI Quote Agent] ✅ Jadlog: ${prices.length} preço(s) encontrado(s)`);
-              
-              // Usar a primeira zona encontrada para delivery_days
-              const zone = zones[0];
-              
-              prices.forEach(price => {
-                tableData.pricing_data.push({
-                  destination_cep: cleanDestinationCep,
-                  weight_min: price.weight_min,
-                  weight_max: price.weight_max,
-                  price: price.price,
-                  delivery_days: zone.delivery_days || 5,
-                  express_delivery_days: zone.express_delivery_days || 3,
-                  zone_code: zone.zone_code,
-                  state: zone.state,
-                  tariff_type: price.tariff_type,
-                  matches_cep: true,
-                  matches_weight: true
-                });
-                console.log(`[AI Quote Agent] ✅ Jadlog: R$ ${price.price} para ${price.weight_min}-${price.weight_max}kg, tipo: ${price.tariff_type}`);
+            // Se não encontrou zona específica, usar valores padrão
+            const deliveryDays = zones && zones.length > 0 ? zones[0].delivery_days : 5;
+            const expressDeliveryDays = zones && zones.length > 0 ? zones[0].express_delivery_days : 3;
+            const zoneCode = zones && zones.length > 0 ? zones[0].zone_code : `JADLOG-${destinationState}`;
+            
+            console.log(`[AI Quote Agent] 📍 Jadlog: Usando prazo ${deliveryDays} dias, zona ${zoneCode}`);
+            
+            prices.forEach(price => {
+              tableData.pricing_data.push({
+                destination_cep: cleanDestinationCep,
+                weight_min: price.weight_min,
+                weight_max: price.weight_max,
+                price: price.price,
+                delivery_days: deliveryDays,
+                express_delivery_days: expressDeliveryDays,
+                zone_code: zoneCode,
+                state: destinationState,
+                tariff_type: price.tariff_type,
+                matches_cep: true,
+                matches_weight: true
               });
-            } else {
-              console.log(`[AI Quote Agent] ⚠️ Jadlog: Nenhum preço encontrado para estado ${destinationState}, peso ${total_weight}kg`);
-            }
+              console.log(`[AI Quote Agent] ✅ Jadlog: R$ ${price.price} para ${price.weight_min}-${price.weight_max}kg, tipo: ${price.tariff_type}`);
+            });
             
             console.log(`[AI Quote Agent] ✅ Jadlog: ${tableData.pricing_data.length} registros totais do Supabase`);
           }
