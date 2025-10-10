@@ -866,8 +866,8 @@ serve(async (req) => {
           }
         }
         
-        // Encontrar registro de preço correspondente ao CEP e peso
-        const priceRecord = table.pricing_data.find(p => {
+        // Encontrar TODOS os registros de preço que batem com CEP e peso
+        const matchingPrices = table.pricing_data.filter(p => {
           // Verificar match de peso
           const weightMatch = peso_tarifavel >= p.weight_min && peso_tarifavel <= p.weight_max;
           
@@ -896,21 +896,33 @@ serve(async (req) => {
             cepMatch = cepPrefix.startsWith(recordCep.substring(0, 5));
           }
           
-          const finalMatch = weightMatch && cepMatch;
-          
-          // Log quando encontrar match
-          if (finalMatch) {
-            console.log(`[AI Quote Agent] ✅ MATCH encontrado em ${table.name}:`, {
-              cep: p.destination_cep,
-              peso: `${p.weight_min}-${p.weight_max}kg`,
-              price: p.price,
-              weightMatch,
-              cepMatch
-            });
-          }
-          
-          return finalMatch;
+          return weightMatch && cepMatch;
         });
+
+        // Ordenar por ESPECIFICIDADE: faixa de peso menor = mais específica
+        // Exemplo: 9-10kg é mais específica que 0-25kg
+        const sortedMatches = matchingPrices.sort((a, b) => {
+          const rangeA = a.weight_max - a.weight_min;
+          const rangeB = b.weight_max - b.weight_min;
+          return rangeA - rangeB; // Menor range primeiro
+        });
+
+        // Pegar o match MAIS ESPECÍFICO (menor faixa de peso)
+        const priceRecord = sortedMatches[0];
+
+        if (sortedMatches.length > 1) {
+          console.log(`[AI Quote Agent] 🎯 Múltiplos matches encontrados em ${table.name}, usando o mais específico:`);
+          sortedMatches.slice(0, 3).forEach(p => {
+            console.log(`[AI Quote Agent]    - Faixa ${p.weight_min}-${p.weight_max}kg: R$ ${p.price.toFixed(2)} (range: ${p.weight_max - p.weight_min}kg)`);
+          });
+          console.log(`[AI Quote Agent] ✅ Selecionado: ${priceRecord.weight_min}-${priceRecord.weight_max}kg = R$ ${priceRecord.price.toFixed(2)}`);
+        } else if (priceRecord) {
+          console.log(`[AI Quote Agent] ✅ MATCH encontrado em ${table.name}:`, {
+            cep: priceRecord.destination_cep,
+            peso: `${priceRecord.weight_min}-${priceRecord.weight_max}kg`,
+            price: priceRecord.price
+          });
+        }
 
         if (priceRecord) {
           // USAR APENAS O PREÇO DA TABELA - sem adicionar taxas extras
