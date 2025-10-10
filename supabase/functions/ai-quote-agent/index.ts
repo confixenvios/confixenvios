@@ -195,18 +195,28 @@ serve(async (req) => {
           const csvText = await response.text();
           const lines = csvText.split('\n').filter(l => l.trim());
           
+          console.log(`[AI Quote Agent] Jadlog: Total de ${lines.length} linhas na planilha`);
+          console.log(`[AI Quote Agent] DEBUG Jadlog - Primeiras 5 linhas (uppercase):`);
+          for (let i = 0; i < Math.min(5, lines.length); i++) {
+            console.log(`Linha ${i + 1}:`, lines[i].toUpperCase().substring(0, 200));
+          }
+          
           if (lines.length < 30) {
             console.log(`[AI Quote Agent] ⚠️ Planilha Jadlog vazia ou inválida (${lines.length} linhas)`);
             continue;
           }
 
           // Procurar linha que contém ORIGEM, DESTINO (header real)
+          // OU procurar linha que tenha múltiplos estados (GO, SP, MG, etc)
           let headerLineIndex = -1;
-          for (let i = 0; i < Math.min(30, lines.length); i++) {
+          for (let i = 0; i < Math.min(50, lines.length); i++) {
             const line = lines[i].toUpperCase();
-            if (line.includes('ORIGEM') && line.includes('DESTINO') && line.includes('REGIAO')) {
+            const hasOrigemDestino = line.includes('ORIGEM') && (line.includes('DESTINO') || line.includes('REGIÃO'));
+            const hasMultipleStates = ['GO', 'SP', 'MG', 'PR', 'RS'].filter(state => line.includes(state)).length >= 3;
+            
+            if (hasOrigemDestino || hasMultipleStates) {
               headerLineIndex = i;
-              console.log(`[AI Quote Agent] Header Jadlog encontrado na linha ${i + 1}`);
+              console.log(`[AI Quote Agent] ✅ Header Jadlog encontrado na linha ${i + 1} (origem+destino: ${hasOrigemDestino}, múltiplos estados: ${hasMultipleStates})`);
               break;
             }
           }
@@ -353,6 +363,13 @@ serve(async (req) => {
           const row4 = lines[3].split(',').map(c => c.trim().replace(/"/g, ''));
           const row5 = lines[4].split(',').map(c => c.trim().replace(/"/g, ''));
           
+          console.log(`[AI Quote Agent] DEBUG Alfa - Primeiras 10 colunas:`);
+          console.log(`Row1 (UF ORIGEM):`, row1.slice(0, 10));
+          console.log(`Row2 (UF DESTINO):`, row2.slice(0, 10));
+          console.log(`Row3 (REGIAO):`, row3.slice(0, 10));
+          console.log(`Row4 (INICIAL KG):`, row4.slice(0, 10));
+          console.log(`Row5 (PESO FINAL KG):`, row5.slice(0, 10));
+          
           // Encontrar coluna: GO → destinationState → CAPITAL
           let targetColumnIndex = -1;
           for (let col = 0; col < row1.length; col++) {
@@ -361,6 +378,7 @@ serve(async (req) => {
                 row3[col] === 'CAPITAL') {
               targetColumnIndex = col;
               console.log(`[AI Quote Agent] ✅ Coluna encontrada: GO → ${destinationState} → CAPITAL (coluna ${col})`);
+              console.log(`[AI Quote Agent] Valores nesta coluna - row4[${col}]: "${row4[col]}", row5[${col}]: "${row5[col]}"`);
               break;
             }
           }
@@ -378,12 +396,19 @@ serve(async (req) => {
           }
           
           const weightRanges: WeightRange[] = [];
+          console.log(`[AI Quote Agent] Extraindo faixas de peso para GO → ${destinationState} → CAPITAL...`);
+          
           for (let col = 0; col < row4.length; col++) {
             if (row1[col] === 'GO' && row2[col] === destinationState && row3[col] === 'CAPITAL') {
               const minStr = row4[col];
               const maxStr = row5[col];
+              
+              console.log(`[AI Quote Agent] Coluna ${col} - row4: "${minStr}", row5: "${maxStr}"`);
+              
               const min = parseFloat(minStr.replace(/[^\d,.]/g, '').replace(',', '.'));
               const max = parseFloat(maxStr.replace(/[^\d,.]/g, '').replace(',', '.'));
+              
+              console.log(`[AI Quote Agent] Coluna ${col} - parsed min: ${min}, parsed max: ${max}`);
               
               if (!isNaN(min) && !isNaN(max) && max > 0) {
                 weightRanges.push({
@@ -391,9 +416,14 @@ serve(async (req) => {
                   weight_min: min,
                   weight_max: max
                 });
+                console.log(`[AI Quote Agent] ✅ Adicionada faixa: ${min}-${max}kg (coluna ${col})`);
+              } else {
+                console.log(`[AI Quote Agent] ⚠️ Faixa inválida na coluna ${col}: min=${min}, max=${max}`);
               }
             }
           }
+          
+          console.log(`[AI Quote Agent] Total de faixas de peso encontradas: ${weightRanges.length}`);
           
           console.log(`[AI Quote Agent] Faixas de peso encontradas:`, weightRanges.map(r => `${r.weight_min}-${r.weight_max}kg`));
           
