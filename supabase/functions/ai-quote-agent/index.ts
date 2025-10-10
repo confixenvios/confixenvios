@@ -372,11 +372,23 @@ serve(async (req) => {
               
               // Verificar cada linha da aba ABRANGENCIA
               for (let i = 1; i < abrangenciaLines.length; i++) {
-                const cols = abrangenciaLines[i].split(',').map(c => c.trim().replace(/"/g, ''));
-                const ufOrigem = cols[0];
-                const ufDestino = cols[1];
-                const cepInicial = cols[3]?.replace(/\D/g, '');
-                const cepFinal = cols[4]?.replace(/\D/g, '');
+                const linha = abrangenciaLines[i];
+                console.log(`[AI Quote Agent] 🔍 Linha completa ${i}:`, linha);
+                
+                const cols = linha.split(',').map(c => c.trim().replace(/"/g, ''));
+                console.log(`[AI Quote Agent] 🔍 Colunas processadas:`, cols);
+                
+                // Tentar diferentes formatos de colunas
+                let ufOrigem = cols[0]?.toUpperCase();
+                let ufDestino = cols[1]?.toUpperCase();
+                let cepInicial = cols[2]?.replace(/\D/g, '');
+                let cepFinal = cols[3]?.replace(/\D/g, '');
+                
+                // Se não encontrou CEPs nas posições 2 e 3, tentar 3 e 4
+                if (!cepInicial || !cepFinal || cepInicial.length < 8 || cepFinal.length < 8) {
+                  cepInicial = cols[3]?.replace(/\D/g, '');
+                  cepFinal = cols[4]?.replace(/\D/g, '');
+                }
                 
                 console.log(`[AI Quote Agent] 🔍 Linha ${i}: UF_ORIGEM=${ufOrigem}, UF_DESTINO=${ufDestino}, CEP_INICIAL=${cepInicial}, CEP_FINAL=${cepFinal}`);
                 
