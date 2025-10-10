@@ -118,7 +118,7 @@ export class PricingTableService {
             // Se há erro na chamada da edge function, usar método tradicional
             console.log('⚠️ [AI Agent] Erro na chamada, continuando com método tradicional...');
           } else if (aiQuote?.success && aiQuote?.quote && (aiQuote.quote.final_price > 0 || aiQuote.quote.economicPrice > 0)) {
-            // ✅ IA RETORNOU SUCESSO - USAR ESSE RESULTADO
+            // ✅ IA RETORNOU SUCESSO - USAR ESSE RESULTADO E PARAR AQUI
             console.log('✅✅✅ [AI Agent] SUCESSO! Cotação obtida via IA!');
             console.log('💰 [AI Agent] Resposta COMPLETA da IA:', JSON.stringify(aiQuote.quote, null, 2));
             
@@ -134,7 +134,7 @@ export class PricingTableService {
             console.log('   ➡️ Transportadora ESCOLHIDA pela IA:', quote.selected_table_name);
             console.log('   ➡️ Prazo:', quote.economicDays || quote.delivery_days, 'dias');
             
-            const result = {
+            const aiResult = {
               economicPrice: selectedPrice, // ← PREÇO ESCOLHIDO PELA IA
               expressPrice: quote.expressPrice || selectedPrice * 1.3,
               economicDays: quote.economicDays || quote.delivery_days,
@@ -150,13 +150,16 @@ export class PricingTableService {
               appliedWeight: quote.peso_tarifavel || weight
             };
             
-            console.log('✅✅✅ [AI Agent] RETORNANDO RESULTADO FINAL:');
-            console.log('   🎯 economicPrice (preço que será exibido):', result.economicPrice);
-            console.log('   🎯 tableName (transportadora):', result.tableName);
-            console.log('   🎯 economicDays (prazo):', result.economicDays);
-            console.log('🚀🚀🚀 [AI Agent] MÉTODO TRADICIONAL NÃO SERÁ EXECUTADO - RETORNANDO AGORA!');
+            console.log('✅✅✅ [AI Agent] RETORNANDO RESULTADO FINAL DA IA:');
+            console.log('   🎯 economicPrice (preço que será exibido):', aiResult.economicPrice);
+            console.log('   🎯 tableName (transportadora):', aiResult.tableName);
+            console.log('   🎯 economicDays (prazo):', aiResult.economicDays);
+            console.log('🚀🚀🚀 [AI Agent] MÉTODO TRADICIONAL NÃO SERÁ EXECUTADO!');
             
-            return result;
+            // IMPORTANTE: Limpar cache para não usar dados antigos
+            sessionStorage.removeItem('active_pricing_tables');
+            
+            return aiResult; // ← RETORNAR AQUI E PARAR!
           } else {
             console.warn('⚠️ [AI Agent] Resposta da IA sem sucesso ou incompleta:', {
               success: aiQuote?.success,
