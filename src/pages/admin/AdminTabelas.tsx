@@ -549,7 +549,7 @@ const AdminTabelas = () => {
                             <SelectValue placeholder="Selecione uma aba ou deixe em branco para usar a primeira" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Primeira aba (padrão)</SelectItem>
+                            <SelectItem value="__default__">Primeira aba (padrão)</SelectItem>
                             {availableSheets.map((sheet) => (
                               <SelectItem key={sheet} value={sheet}>
                                 {sheet}
