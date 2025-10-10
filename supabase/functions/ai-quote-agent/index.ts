@@ -232,69 +232,74 @@ serve(async (req) => {
           console.error(`[AI Quote Agent] Erro ao processar Jadlog:`, error);
         }
       }
-      // TABELA ALFA: Buscar do Google Sheets (dados completos)
+      // TABELA ALFA: Query FILTRADA do Supabase (similar à Magalog)
       else if (table.name.toLowerCase().includes('alfa')) {
-        console.log(`[AI Quote Agent] 🔍 Buscando Alfa do Google Sheets...`);
+        console.log(`[AI Quote Agent] ⚡ OTIMIZADO: Buscando Alfa FILTRADO por CEP ${destination_cep} e peso ${total_weight}kg`);
         try {
-          const alfaSheetUrl = 'https://docs.google.com/spreadsheets/d/1SStSAWjYC_mLV9hQb3hyRduPxiLfzlC_q2tNr8STkUg/export?format=csv&gid=1706611173';
-          const response = await fetch(alfaSheetUrl);
+          // 1. Buscar zonas que cobrem o CEP destino
+          console.log(`[AI Quote Agent] Query 1: Buscando zonas Alfa para CEP ${cleanDestinationCep}, estado: ${destination_state}...`);
+          const { data: zones, error: zonesError } = await supabaseClient
+            .from('alfa_zones')
+            .select('*')
+            .eq('state', destination_state)
+            .lte('cep_start', cleanDestinationCep)
+            .gte('cep_end', cleanDestinationCep)
+            .limit(10);
           
-          if (!response.ok) {
-            console.error('[AI Quote Agent] ❌ Falha ao buscar Alfa Google Sheets');
+          if (zonesError) {
+            console.error('[AI Quote Agent] ❌ Erro ao buscar zonas Alfa:', zonesError);
+            tableData.pricing_data = [];
+          } else if (!zones || zones.length === 0) {
+            console.log(`[AI Quote Agent] ⚠️ Alfa: Nenhuma zona encontrada para CEP ${cleanDestinationCep} (estado: ${destination_state})`);
             tableData.pricing_data = [];
           } else {
-            const csvText = await response.text();
-            const lines = csvText.split('\n').filter(l => l.trim());
+            console.log(`[AI Quote Agent] ✅ Alfa: ${zones.length} zona(s) encontrada(s)`, zones.map(z => z.zone_code));
             
-            if (lines.length >= 3) {
-              const headerLine = lines[2];
-              const headers = parseCSVLine(headerLine);
+            // 2. Para cada zona encontrada, buscar preços
+            for (const zone of zones) {
+              console.log(`[AI Quote Agent] Query 2: Buscando preços Alfa - estado: ${zone.state}, tarifa: ${zone.tariff_type || 'CAPITAL'}, peso: ${total_weight}kg...`);
               
-              // Encontrar coluna DF CAPITAL  
-              let targetCol = -1;
-              for (let i = 0; i < headers.length; i++) {
-                if (headers[i] && headers[i].includes('DF') && headers[i].includes('CAPITAL')) {
-                  targetCol = i;
-                  console.log(`[AI Quote Agent] ✅ Alfa: Coluna DF CAPITAL encontrada: ${i}`);
-                  break;
-                }
-              }
+              const { data: prices, error: pricesError } = await supabaseClient
+                .from('alfa_pricing')
+                .select('*')
+                .eq('destination_state', zone.state)
+                .eq('tariff_type', zone.tariff_type || 'CAPITAL')
+                .lte('weight_min', total_weight)
+                .gte('weight_max', total_weight)
+                .limit(10);
               
-              if (targetCol >= 0) {
-                for (let i = 3; i < lines.length; i++) {
-                  const cols = parseCSVLine(lines[i]);
-                  if (cols.length < 3) continue;
+              if (pricesError) {
+                console.error(`[AI Quote Agent] ❌ Erro ao buscar preços Alfa:`, pricesError);
+              } else if (prices && prices.length > 0) {
+                console.log(`[AI Quote Agent] ✅ Alfa: ${prices.length} preço(s) encontrado(s)`);
+                
+                prices.forEach(price => {
+                  tableData.pricing_data.push({
+                    destination_cep: cleanDestinationCep,
+                    weight_min: price.weight_min,
+                    weight_max: price.weight_max,
+                    price: price.price,
+                    delivery_days: zone.delivery_days || 4,
+                    express_delivery_days: zone.express_delivery_days || 2,
+                    zone_code: zone.zone_code,
+                    state: zone.state,
+                    tariff_type: price.tariff_type,
+                    matches_cep: true,
+                    matches_weight: true
+                  });
                   
-                  const pesoInicial = parseFloat(cols[0]?.replace(',', '.') || '0');
-                  const pesoFinal = parseFloat(cols[1]?.replace(',', '.') || '0');
-                  const priceStr = cols[targetCol]?.trim() || '';
-                  const priceMatch = priceStr.match(/[\d,.]+/);
-                  
-                  if (priceMatch && total_weight > pesoInicial && total_weight <= pesoFinal) {
-                    const price = parseFloat(priceMatch[0].replace(/\./g, '').replace(',', '.'));
-                    tableData.pricing_data.push({
-                      destination_cep: cleanDestinationCep,
-                      weight_min: pesoInicial,
-                      weight_max: pesoFinal,
-                      price: price,
-                      delivery_days: 4,
-                      express_delivery_days: 2,
-                      zone_code: 'DF-CAPITAL',
-                      state: 'DF',
-                      tariff_type: 'CAPITAL',
-                      matches_cep: true,
-                      matches_weight: true
-                    });
-                    console.log(`[AI Quote Agent] ✅ Alfa: Preço R$ ${price} para ${pesoInicial}-${pesoFinal}kg`);
-                  }
-                }
+                  console.log(`[AI Quote Agent] ✅ Alfa: R$ ${price.price} para ${price.weight_min}-${price.weight_max}kg, zona ${zone.zone_code}`);
+                });
+              } else {
+                console.log(`[AI Quote Agent] ⚠️ Alfa: Nenhum preço encontrado para peso ${total_weight}kg na zona ${zone.zone_code}`);
               }
-              
-              console.log(`[AI Quote Agent] ✅ Alfa: ${tableData.pricing_data.length} registros do Google Sheets`);
             }
+            
+            console.log(`[AI Quote Agent] ✅ Alfa: ${tableData.pricing_data.length} registros totais do Supabase`);
           }
         } catch (error) {
           console.error(`[AI Quote Agent] Erro ao processar Alfa:`, error);
+          tableData.pricing_data = [];
         }
       }
       // TABELA MAGALOG: Query FILTRADA por CEP range e peso
