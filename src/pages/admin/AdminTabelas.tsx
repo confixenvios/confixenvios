@@ -670,16 +670,16 @@ const AdminTabelas = () => {
                       </div>
 
                       <div className="space-y-4 pt-4 border-t">
-                        <h3 className="font-semibold text-sm">Consideração 2: Volume com mais de 100 KM</h3>
+                        <h3 className="font-semibold text-sm">Consideração 2: Volume com mais de 100 KG</h3>
                         <p className="text-xs text-muted-foreground">
-                          A cada volume com mais de 100 km, multiplicar o frete
+                          A cada volume individual com mais de X kg, multiplicar o frete
                         </p>
                         
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label htmlFor="distance_threshold">Distância Limite (KM)</Label>
+                            <Label htmlFor="weight_threshold">Peso Limite por Volume (KG)</Label>
                             <Input
-                              id="distance_threshold"
+                              id="weight_threshold"
                               type="number"
                               step="1"
                               min="0"
@@ -687,12 +687,15 @@ const AdminTabelas = () => {
                               onChange={(e) => setFormData({...formData, distance_multiplier_threshold_km: parseFloat(e.target.value) || 0})}
                               placeholder="100"
                             />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Se um volume pesar mais que isso
+                            </p>
                           </div>
 
                           <div>
-                            <Label htmlFor="distance_multiplier">Multiplicador</Label>
+                            <Label htmlFor="weight_multiplier">Multiplicador</Label>
                             <Input
-                              id="distance_multiplier"
+                              id="weight_multiplier"
                               type="number"
                               step="0.1"
                               min="0"
@@ -701,7 +704,7 @@ const AdminTabelas = () => {
                               placeholder="2"
                             />
                             <p className="text-xs text-muted-foreground mt-1">
-                              Ex: 2 = multiplicar por 2
+                              Ex: 2 = multiplicar frete por 2
                             </p>
                           </div>
                         </div>

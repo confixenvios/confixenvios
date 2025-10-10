@@ -486,14 +486,17 @@ serve(async (req) => {
 
           let base_price = priceRecord.price;
           
-          // CONSIDERAÇÃO 2 (Diolog): Volume com mais de X KM, multiplicar frete
-          // Nota: Atualmente não temos dados de distância real, então esta regra será aplicada 
-          // baseada em configurações futuras ou cálculo de distância por CEP
-          let distance_multiplier_applied = false;
+          // CONSIDERAÇÃO 2 (Diolog): Se algum VOLUME individual pesar mais de X kg, multiplicar frete
+          let volume_weight_multiplier_applied = false;
           if (table.distance_multiplier_threshold_km && table.distance_multiplier_value) {
-            // TODO: Implementar cálculo de distância real entre CEPs
-            // Por enquanto, essa regra fica preparada para quando tivermos os dados de distância
-            console.log(`[AI Quote Agent] ${table.name} - Regra de distância configurada: >${table.distance_multiplier_threshold_km}km aplica multiplicador ${table.distance_multiplier_value}x`);
+            // Verificar se algum volume individual excede o limite de peso
+            const hasHeavyVolume = volumes_data.some((vol: any) => vol.weight > table.distance_multiplier_threshold_km);
+            
+            if (hasHeavyVolume) {
+              base_price = base_price * table.distance_multiplier_value;
+              volume_weight_multiplier_applied = true;
+              console.log(`[AI Quote Agent] ${table.name} - CONSIDERAÇÃO 2 aplicada: Volume pesado detectado (>${table.distance_multiplier_threshold_km}kg), frete multiplicado por ${table.distance_multiplier_value}x`);
+            }
           }
           
           // Calcular seguro (1.3% do valor da mercadoria)
@@ -523,13 +526,16 @@ serve(async (req) => {
             has_coverage: true,
             cubic_meter_equivalent: table.cubic_meter_kg_equivalent,
             transports_chemicals,
-            distance_rules: table.distance_multiplier_threshold_km ? 
-              `Multiplicador ${table.distance_multiplier_value}x para distâncias >${table.distance_multiplier_threshold_km}km` : 
-              null
+            volume_weight_rule: volume_weight_multiplier_applied ? 
+              `Multiplicador ${table.distance_multiplier_value}x aplicado (volume >${table.distance_multiplier_threshold_km}kg)` : 
+              (table.distance_multiplier_threshold_km ? 
+                `Multiplica ${table.distance_multiplier_value}x se volume >${table.distance_multiplier_threshold_km}kg` : 
+                null)
           });
           
           console.log(`[AI Quote Agent] ${table.name} - Cobertura ENCONTRADA para CEP ${destination_cep} e peso ${peso_tarifavel}kg`);
           console.log(`  - Equivalência cúbica: ${table.cubic_meter_kg_equivalent} kg/m³ (CONSIDERAÇÃO 1)`);
+          console.log(`  - Volume pesado: ${volume_weight_multiplier_applied ? 'SIM - Multiplicador aplicado!' : 'Não'} (CONSIDERAÇÃO 2)`);
           console.log(`  - Preço base: R$ ${base_price.toFixed(2)}`);
           console.log(`  - Excedente: R$ ${valor_excedente.toFixed(2)} (CONSIDERAÇÃO 3)`);
           console.log(`  - Seguro: R$ ${insurance_value.toFixed(2)}`);
@@ -626,7 +632,7 @@ ${JSON.stringify(tablesWithCoverage.map(q => ({
   weight: q.peso_tarifavel,
   cubic_meter_equivalent: q.cubic_meter_equivalent,
   transports_chemicals: q.transports_chemicals,
-  distance_rules: q.distance_rules,
+  volume_weight_rule: q.volume_weight_rule,
   base_price: q.base_price,
   excess_charge: q.valor_excedente
 })), null, 2)}
@@ -638,9 +644,10 @@ CRITÉRIOS DE ESCOLHA (baseado em prioridade "${config.priority_mode}"):
 
 REGRAS ESPECÍFICAS DAS TRANSPORTADORAS:
 - Diolog: Peso cúbico ${tablesWithCoverage.find(q => q.table_name.includes('Diolog'))?.cubic_meter_equivalent || 'N/A'} kg/m³
-- Cada transportadora pode ter regras diferentes de excedente e distância
+- Cada transportadora pode ter regras diferentes de excedente, volume pesado, e químicos
+- Considere se a regra de volume pesado foi aplicada (multiplica o frete)
 
-Considere todos os fatores: preço final, prazo, regras de excedente, e se transporta químicos (se relevante).
+Considere todos os fatores: preço final, prazo, regras de excedente/volume, e se transporta químicos (se relevante).
 
 Retorne APENAS JSON válido:
 {
