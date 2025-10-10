@@ -37,8 +37,8 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // URL da planilha do Google Sheets da Alfa
-    const GOOGLE_SHEETS_ID = '1cAH3flP8wmCiDvngG0VUvDOTfBjrHEB7ZCRnwB6NHXk';
+    // URL da planilha do Google Sheets da Alfa (nova planilha correta)
+    const GOOGLE_SHEETS_ID = '1SStSAWjYC_mLV9hQb3hyRduPxiLfzlC_q2tNr8STkUg';
     const xlsxUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=xlsx`;
     
     console.log('🔍 Iniciando importação da tabela Alfa via XLSX...');
@@ -128,24 +128,29 @@ serve(async (req) => {
         console.log('🗺️ Processando aba de ABRANGÊNCIA (prazos de entrega)...');
         const zonesData: AlfaZoneRow[] = [];
         
-        // Mapear índices das colunas no cabeçalho
-        const headers = jsonData[0].map(v => String(v).toLowerCase());
-        const colOrigin = headers.findIndex(h => h.includes('origem'));
-        const colUF = headers.findIndex(h => h.includes('estado') || h === 'uf');
-        const colCity = headers.findIndex(h => h.includes('cidade'));
-        const colCEPStart = headers.findIndex(h => h.includes('cep') && h.includes('inicial'));
-        const colCEPEnd = headers.findIndex(h => h.includes('cep') && (h.includes('final') || h.includes('fim')));
-        const colPrazo = headers.findIndex(h => h.includes('prazo'));
-        const colTarifa = headers.findIndex(h => h.includes('regiao') || h.includes('tarifa'));
+        // Mapear índices das colunas no cabeçalho da ALFA
+        // Estrutura: UF ORIGEM | UF DESTINO | CIDADE DESTINO | CEP INICIAL | CEP FINAL | PRAZO | REGIAO ATENDIDA
+        const headers = jsonData[0].map(v => String(v).toLowerCase().trim());
         
-        console.log(`🔍 Mapeamento de colunas:`);
-        console.log(`   Origem: índice ${colOrigin}`);
-        console.log(`   Estado/UF: índice ${colUF}`);
-        console.log(`   Cidade: índice ${colCity}`);
-        console.log(`   CEP Inicial: índice ${colCEPStart}`);
-        console.log(`   CEP Final: índice ${colCEPEnd}`);
-        console.log(`   Prazo: índice ${colPrazo}`);
-        console.log(`   Tarifa/Região: índice ${colTarifa}`);
+        console.log(`🔍 Cabeçalhos encontrados:`, headers.slice(0, 8));
+        
+        // Buscar coluna "UF DESTINO" especificamente (não confundir com "UF ORIGEM")
+        const colUFDestino = headers.findIndex(h => h.includes('destino') && (h.includes('uf') || h.includes('estado')));
+        const colOrigemUF = headers.findIndex(h => h.includes('origem') && (h.includes('uf') || h.includes('estado')));
+        const colCity = headers.findIndex(h => h.includes('cidade') && h.includes('destino'));
+        const colCEPStart = headers.findIndex(h => h.includes('cep') && h.includes('inicial'));
+        const colCEPEnd = headers.findIndex(h => h.includes('cep') && h.includes('final'));
+        const colPrazo = headers.findIndex(h => h.includes('prazo') && !h.includes('previsao'));
+        const colRegiao = headers.findIndex(h => h.includes('regiao') && h.includes('atendida'));
+        
+        console.log(`🔍 Mapeamento de colunas ALFA:`);
+        console.log(`   UF Origem: índice ${colOrigemUF} (coluna ${String.fromCharCode(65 + colOrigemUF)})`);
+        console.log(`   UF Destino: índice ${colUFDestino} (coluna ${String.fromCharCode(65 + colUFDestino)})`);
+        console.log(`   Cidade Destino: índice ${colCity} (coluna ${String.fromCharCode(65 + colCity)})`);
+        console.log(`   CEP Inicial: índice ${colCEPStart} (coluna ${String.fromCharCode(65 + colCEPStart)})`);
+        console.log(`   CEP Final: índice ${colCEPEnd} (coluna ${String.fromCharCode(65 + colCEPEnd)})`);
+        console.log(`   Prazo: índice ${colPrazo} (coluna ${String.fromCharCode(65 + colPrazo)})`);
+        console.log(`   Região Atendida: índice ${colRegiao} (coluna ${String.fromCharCode(65 + colRegiao)})`);
         
         // Processar cada linha de dados (pulando cabeçalho)
         let processedZoneRows = 0;
@@ -155,50 +160,52 @@ serve(async (req) => {
           const row = jsonData[i];
           if (!row || row.length < 5) continue;
           
-          const origin = colOrigin !== -1 ? String(row[colOrigin] || 'GO').trim().toUpperCase() : 'GO';
-          const state = colUF !== -1 ? String(row[colUF] || '').trim().toUpperCase() : '';
+          const origemUF = colOrigemUF !== -1 ? String(row[colOrigemUF] || 'GO').trim().toUpperCase() : 'GO';
+          const destinoUF = colUFDestino !== -1 ? String(row[colUFDestino] || '').trim().toUpperCase() : '';
           const city = colCity !== -1 ? String(row[colCity] || '').trim() : '';
           const cepStart = colCEPStart !== -1 ? String(row[colCEPStart] || '').trim().replace(/\D/g, '') : '';
           const cepEnd = colCEPEnd !== -1 ? String(row[colCEPEnd] || '').trim().replace(/\D/g, '') : '';
           const prazo = colPrazo !== -1 ? parseInt(String(row[colPrazo] || '5')) : 5;
-          const tarifa = colTarifa !== -1 ? String(row[colTarifa] || 'STANDARD').trim() : 'STANDARD';
+          const regiaoAtendida = colRegiao !== -1 ? String(row[colRegiao] || 'STANDARD').trim().toUpperCase() : 'STANDARD';
           
           // Log primeiras linhas para debug
-          if (i <= 3) {
-            console.log(`📝 Linha ${i} - Estado: "${state}" (len: ${state.length}), CEP inicial: "${cepStart}" (len: ${cepStart.length}), CEP final: "${cepEnd}" (len: ${cepEnd.length})`);
+          if (i <= 5) {
+            console.log(`📝 Linha ${i} - Origem: "${origemUF}", Destino: "${destinoUF}", Cidade: "${city}", CEP: ${cepStart}-${cepEnd}, Prazo: ${prazo}, Região: "${regiaoAtendida}"`);
           }
           
-          // Validar dados essenciais - CEPs devem ter pelo menos 5 dígitos
-          if (!state || state.length !== 2 || !cepStart || !cepEnd || cepStart.length < 5 || cepEnd.length < 5) {
+          // Validar dados essenciais - CEPs devem ter exatamente 8 dígitos (ou pelo menos 5)
+          if (!destinoUF || destinoUF.length !== 2 || !cepStart || !cepEnd || cepStart.length < 5 || cepEnd.length < 5) {
             rejectedZoneRows++;
             if (rejectedZoneRows <= 5) {
-              console.log(`❌ Linha ${i} rejeitada - Estado: "${state}" (len: ${state.length}), CEP inicial: "${cepStart}" (len: ${cepStart.length}), CEP final: "${cepEnd}" (len: ${cepEnd.length})`);
+              console.log(`❌ Linha ${i} rejeitada - UF Destino: "${destinoUF}" (len: ${destinoUF.length}), CEP inicial: "${cepStart}" (len: ${cepStart.length}), CEP final: "${cepEnd}" (len: ${cepEnd.length})`);
             }
             continue;
           }
           
           processedZoneRows++;
           
-          // Criar código único para a zona
-          const zoneCode = `${origin}-${state}-${cepStart.substring(0, 5)}`;
+          // Criar código único para a zona baseado na estrutura ALFA
+          const zoneCode = `ALFA-${destinoUF}-${regiaoAtendida}`;
           
           zonesData.push({
             zone_code: zoneCode,
-            state: state,
-            zone_type: city || 'STANDARD',
-            tariff_type: tarifa,
+            state: destinoUF,
+            zone_type: regiaoAtendida,
+            tariff_type: city || 'STANDARD',
             cep_start: cepStart.padStart(8, '0'),
             cep_end: cepEnd.padStart(8, '0'),
             delivery_days: isNaN(prazo) ? 5 : prazo,
-            express_delivery_days: isNaN(prazo) ? 3 : Math.max(1, prazo - 2)
+            express_delivery_days: isNaN(prazo) ? 4 : Math.max(1, prazo - 1)
           });
         }
         
-        // Remover duplicatas
+        // Remover duplicatas baseado em CEP
         const uniqueZones = new Map();
         zonesData.forEach(zone => {
-          const key = `${zone.state}-${zone.zone_type}-${zone.tariff_type}`;
-          uniqueZones.set(key, zone);
+          const key = `${zone.state}-${zone.cep_start}-${zone.cep_end}`;
+          if (!uniqueZones.has(key)) {
+            uniqueZones.set(key, zone);
+          }
         });
         const uniqueZonesArray = Array.from(uniqueZones.values());
         
