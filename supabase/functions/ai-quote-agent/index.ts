@@ -200,45 +200,56 @@ serve(async (req) => {
             continue;
           }
 
-          // Header na linha 29 (row 30 excel): ORIGEM, DESTINO, REGIÃO ATENDIDA, depois colunas PU até QM (estados/regiões)
-          const headers = lines[28].split(',').map(h => h.trim().replace(/"/g, ''));
-          console.log(`[AI Quote Agent] Headers Jadlog encontrados: ${headers.length} colunas`);
-          console.log(`[AI Quote Agent] Primeiras 10 colunas:`, headers.slice(0, 10));
-          console.log(`[AI Quote Agent] Colunas 10-20:`, headers.slice(10, 20));
-          console.log(`[AI Quote Agent] Procurando: GO + ${destinationState} + CAPITAL + 1`);
+          // Procurar linha que contém ORIGEM, DESTINO (header real)
+          let headerLineIndex = -1;
+          for (let i = 0; i < Math.min(30, lines.length); i++) {
+            const line = lines[i].toUpperCase();
+            if (line.includes('ORIGEM') && line.includes('DESTINO') && line.includes('REGIAO')) {
+              headerLineIndex = i;
+              console.log(`[AI Quote Agent] Header Jadlog encontrado na linha ${i + 1}`);
+              break;
+            }
+          }
           
-          // Procurar coluna que contenha "GO" e destinationState e "CAPITAL 1"
+          if (headerLineIndex === -1) {
+            console.log(`[AI Quote Agent] ⚠️ Linha de header ORIGEM/DESTINO não encontrada na Jadlog`);
+            continue;
+          }
+
+          const headers = lines[headerLineIndex].split(',').map(h => h.trim().replace(/"/g, ''));
+          console.log(`[AI Quote Agent] Headers Jadlog: ${headers.length} colunas`);
+          console.log(`[AI Quote Agent] Primeiras 5 colunas:`, headers.slice(0, 5));
+          console.log(`[AI Quote Agent] Procurando coluna com: GO→${destinationState} ou GO ${destinationState}`);
+          
+          // Procurar coluna GO → SP CAPITAL 1
           let stateColumnIndex = -1;
           for (let i = 0; i < headers.length; i++) {
             const h = headers[i].toUpperCase();
-            console.log(`[AI Quote Agent] Col ${i}: "${h}"`);
             
+            // Aceitar tanto "GO→SP" quanto "GO SP"
             const hasGO = h.includes('GO');
             const hasState = h.includes(destinationState);
             const hasCapital = h.includes('CAPITAL');
             const hasOne = h.includes('1');
             
-            if (hasGO && hasState) {
-              console.log(`[AI Quote Agent]   -> Tem GO + ${destinationState}`);
-              if (hasCapital && hasOne) {
-                stateColumnIndex = i;
-                console.log(`[AI Quote Agent]   -> Tem CAPITAL + 1! SELECIONADA!`);
-                break;
-              }
+            if (hasGO && hasState && hasCapital && hasOne) {
+              stateColumnIndex = i;
+              console.log(`[AI Quote Agent] ✅ Coluna Jadlog encontrada: "${headers[i]}" (index ${i})`);
+              break;
             }
           }
           
           if (stateColumnIndex === -1) {
             console.log(`[AI Quote Agent] ⚠️ Coluna GO→${destinationState} CAPITAL 1 não encontrada na Jadlog`);
-            console.log(`[AI Quote Agent] Headers completos:`, headers);
+            console.log(`[AI Quote Agent] Amostra de headers:`, headers.slice(0, 20));
             continue;
           }
 
-          console.log(`[AI Quote Agent] ✅ Coluna Jadlog encontrada: "${headers[stateColumnIndex]}" (index ${stateColumnIndex})`);
-
-          // Processar linhas de peso (row 30 em diante no Excel = index 29+ no array)
+          // Processar linhas de peso (próximas linhas após header)
           let recordCount = 0;
-          for (let i = 29; i < lines.length && i < 59; i++) { // Apenas linhas 30-59 (pesos 18-47kg)
+          const dataStartLine = headerLineIndex + 1;
+          
+          for (let i = dataStartLine; i < lines.length && recordCount < 50; i++) {
             const cols = lines[i].split(',').map(c => c.trim().replace(/"/g, ''));
             
             const weightStart = cols[0]; // Coluna A
@@ -321,44 +332,63 @@ serve(async (req) => {
             continue;
           }
 
-          // Row 1 (index 0): ORIGEM, DESTINO, GO ES, GO ES, GO GO, GO MG, etc
-          // Row 2 (index 1): INTERIOR, CAPITAL, INTERIOR, CAPITAL, CAPITAL, CAPITAL, etc
+          // Row 1 e Row 2: UF ORIGEM/DESTINO e estados
           const row1 = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
           const row2 = lines[1].split(',').map(h => h.trim().replace(/"/g, ''));
           
-          console.log(`[AI Quote Agent] Row 1 Alfa (${row1.length} cols):`, row1.slice(0, 15));
-          console.log(`[AI Quote Agent] Row 2 Alfa (${row2.length} cols):`, row2.slice(0, 15));
-          console.log(`[AI Quote Agent] Procurando: GO ${destinationState} + CAPITAL`);
+          console.log(`[AI Quote Agent] Alfa: Procurando estado ${destinationState} nas colunas`);
+          console.log(`[AI Quote Agent] Total de colunas: ${row1.length}`);
           
-          // Procurar coluna: row1 = "GO XX" E row2 = "CAPITAL"
+          // Procurar coluna onde row2 (UF DESTINO) = destinationState
           let stateColumnIndex = -1;
           for (let i = 0; i < row1.length && i < row2.length; i++) {
-            const header1 = row1[i].toUpperCase().replace(/\s+/g, ' ').trim();
-            const header2 = row2[i].toUpperCase().trim();
+            const ufOrigem = row1[i].toUpperCase().trim();
+            const ufDestino = row2[i].toUpperCase().trim();
             
-            console.log(`[AI Quote Agent] Col ${i}: "${header1}" / "${header2}"`);
+            // Procurar: UF ORIGEM = "GO" E UF DESTINO = "SP" (ou outro estado)
+            if (ufOrigem === 'GO' && ufDestino === destinationState) {
+              stateColumnIndex = i;
+              console.log(`[AI Quote Agent] ✅ Coluna Alfa encontrada: Col ${i} (GO → ${destinationState})`);
+              break;
+            }
+          }
+          
+          if (stateColumnIndex === -1) {
+            console.log(`[AI Quote Agent] ⚠️ Coluna GO→${destinationState} não encontrada na Alfa`);
+            console.log(`[AI Quote Agent] Todas as colunas da linha 1:`, row1);
+            console.log(`[AI Quote Agent] Todas as colunas da linha 2:`, row2);
+            continue;
+          }
+
+          console.log(`[AI Quote Agent] ✅ Usando coluna ${stateColumnIndex} da Alfa`);
+
+          // Processar linhas de peso (row 3+ = index 2+)
+          // Linha 3 tem os tipos: INTERIOR, CAPITAL, etc
+          const row3 = lines[2].split(',').map(h => h.trim().replace(/"/g, ''));
+          const tipoRegiao = row3[stateColumnIndex]?.toUpperCase() || '';
+          
+          console.log(`[AI Quote Agent] Tipo de região na coluna selecionada: "${tipoRegiao}"`);
+          
+          // Se não for CAPITAL, procurar outra coluna
+          if (!tipoRegiao.includes('CAPITAL')) {
+            console.log(`[AI Quote Agent] ⚠️ Coluna ${stateColumnIndex} não é CAPITAL, procurando próxima...`);
             
-            // Verificar se contém GO + estado destino na linha 1 E CAPITAL na linha 2
-            if (header1.includes('GO') && header1.includes(destinationState)) {
-              console.log(`[AI Quote Agent]   -> Linha 1 match GO+${destinationState}!`);
-              if (header2.includes('CAPITAL')) {
+            // Procurar próxima coluna GO → SP que seja CAPITAL
+            for (let i = stateColumnIndex + 1; i < row1.length && i < row2.length; i++) {
+              const ufOrigem = row1[i].toUpperCase().trim();
+              const ufDestino = row2[i].toUpperCase().trim();
+              const tipo = lines[2].split(',')[i]?.trim().replace(/"/g, '').toUpperCase() || '';
+              
+              if (ufOrigem === 'GO' && ufDestino === destinationState && tipo.includes('CAPITAL')) {
                 stateColumnIndex = i;
-                console.log(`[AI Quote Agent]   -> Linha 2 match CAPITAL! SELECIONADA!`);
+                console.log(`[AI Quote Agent] ✅ Nova coluna Alfa encontrada: Col ${i} (GO → ${destinationState} CAPITAL)`);
                 break;
               }
             }
           }
           
-          if (stateColumnIndex === -1) {
-            console.log(`[AI Quote Agent] ⚠️ Coluna GO ${destinationState} CAPITAL não encontrada na Alfa`);
-            continue;
-          }
-
-          console.log(`[AI Quote Agent] ✅ Coluna Alfa selecionada: [${stateColumnIndex}] "${row1[stateColumnIndex]}" / "${row2[stateColumnIndex]}"`);
-
-          // Processar linhas de peso (row 3+ = index 2+)
           let recordCount = 0;
-          for (let i = 2; i < lines.length; i++) {
+          for (let i = 3; i < lines.length; i++) {
             const cols = lines[i].split(',').map(c => c.trim().replace(/"/g, ''));
             
             const weightStr = cols[1]; // Coluna B (peso máximo: 19, 20, 21...)
