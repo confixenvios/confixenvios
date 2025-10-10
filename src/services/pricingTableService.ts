@@ -109,92 +109,61 @@ export class PricingTableService {
             fullResponse: aiQuote 
           });
           
+          // Verificar erro primeiro
           if (aiError) {
-            console.error('❌ [AI Agent] Erro ao chamar agente IA:', {
-              message: aiError.message,
-              details: aiError,
-              context: aiError.context
-            });
-            // Se há erro na chamada da edge function, usar método tradicional
-            console.log('⚠️ [AI Agent] Erro na chamada, continuando com método tradicional...');
-          } else if (aiQuote?.success && aiQuote?.quote && (aiQuote.quote.final_price > 0 || aiQuote.quote.economicPrice > 0)) {
-            // ✅ IA RETORNOU SUCESSO - USAR ESSE RESULTADO E PARAR AQUI
-            console.log('✅✅✅ [AI Agent] SUCESSO! Cotação obtida via IA!');
-            console.log('💰 [AI Agent] Resposta COMPLETA da IA:', JSON.stringify(aiQuote.quote, null, 2));
-            
-            const quote = aiQuote.quote;
-            
-            // 🎯 CRÍTICO: Usar SEMPRE o final_price que é o preço ESCOLHIDO pela IA
-            const selectedPrice = quote.final_price || quote.economicPrice || 0;
-            
-            console.log('🔍🔍🔍 [AI Agent] PREÇOS DETECTADOS:');
-            console.log('   ➡️ quote.final_price:', quote.final_price);
-            console.log('   ➡️ quote.economicPrice:', quote.economicPrice);
-            console.log('   ➡️ selectedPrice (SERÁ USADO):', selectedPrice);
-            console.log('   ➡️ Transportadora ESCOLHIDA pela IA:', quote.selected_table_name);
-            console.log('   ➡️ Prazo:', quote.economicDays || quote.delivery_days, 'dias');
-            
-            const aiResult = {
-              economicPrice: selectedPrice, // ← PREÇO ESCOLHIDO PELA IA
-              expressPrice: quote.expressPrice || selectedPrice * 1.3,
-              economicDays: quote.economicDays || quote.delivery_days,
-              expressDays: quote.expressDays || Math.max(1, (quote.delivery_days || quote.economicDays) - 2),
-              zone: quote.zone || `Tabela: ${quote.selected_table_name}`,
-              zoneName: quote.selected_table_name || 'Agente IA',
-              tableId: quote.selected_table_id || 'ai-agent',
-              tableName: quote.selected_table_name || 'Agente IA',
-              cnpj: '',
-              insuranceValue: quote.insuranceValue || 0,
-              basePrice: quote.basePrice || quote.base_price || selectedPrice,
-              cubicWeight: quote.peso_cubado,
-              appliedWeight: quote.peso_tarifavel || weight
-            };
-            
-            console.log('✅✅✅ [AI Agent] RETORNANDO RESULTADO FINAL DA IA:');
-            console.log('   🎯 economicPrice (preço que será exibido):', aiResult.economicPrice);
-            console.log('   🎯 tableName (transportadora):', aiResult.tableName);
-            console.log('   🎯 economicDays (prazo):', aiResult.economicDays);
-            console.log('🚀🚀🚀 [AI Agent] ⬇️⬇️⬇️ EXECUTANDO RETURN AGORA ⬇️⬇️⬇️');
-            
-            // IMPORTANTE: Limpar cache para não usar dados antigos
-            sessionStorage.removeItem('active_pricing_tables');
-            
-            const finalReturn = aiResult;
-            console.log('🎯 [AI Agent] CONFIRMAÇÃO FINAL - Objeto que será retornado:', JSON.stringify(finalReturn, null, 2));
-            console.log('🎯 [AI Agent] SE VOCÊ VER ESTE LOG, O RETURN VAI ACONTECER AGORA!');
-            
-            return finalReturn; // ← RETORNAR AQUI E PARAR!
-          } else {
-            console.warn('⚠️ [AI Agent] Resposta da IA sem sucesso ou incompleta:', {
-              success: aiQuote?.success,
-              hasQuote: !!aiQuote?.quote,
-              economicPrice: aiQuote?.quote?.economicPrice,
-              fullResponse: aiQuote
-            });
-            console.log('⚠️ [AI Agent] Continuando com método tradicional...');
+            console.error('❌ [AI Agent] Erro na chamada:', aiError);
+            throw new Error(`Erro na IA: ${aiError.message}`);
           }
+          
+          // Verificar se IA retornou sucesso
+          if (!aiQuote?.success || !aiQuote?.quote) {
+            console.warn('⚠️ [AI Agent] IA não retornou cotação válida');
+            throw new Error('IA não retornou cotação válida');
+          }
+          
+          const quote = aiQuote.quote;
+          const selectedPrice = quote.final_price || quote.economicPrice || 0;
+          
+          // Verificar se o preço é válido
+          if (selectedPrice <= 0) {
+            console.warn('⚠️ [AI Agent] Preço inválido retornado pela IA');
+            throw new Error('Preço inválido');
+          }
+          
+          console.log('✅ [AI Agent] SUCESSO!');
+          console.log('💰 Preço escolhido pela IA:', selectedPrice);
+          console.log('🏢 Transportadora escolhida:', quote.selected_table_name);
+          console.log('📅 Prazo:', quote.economicDays || quote.delivery_days, 'dias');
+          
+          const aiResult = {
+            economicPrice: selectedPrice,
+            expressPrice: quote.expressPrice || selectedPrice * 1.3,
+            economicDays: quote.economicDays || quote.delivery_days,
+            expressDays: quote.expressDays || Math.max(1, (quote.delivery_days || quote.economicDays) - 2),
+            zone: quote.zone || `Tabela: ${quote.selected_table_name}`,
+            zoneName: quote.selected_table_name || 'Agente IA',
+            tableId: quote.selected_table_id || 'ai-agent',
+            tableName: quote.selected_table_name || 'Agente IA',
+            cnpj: '',
+            insuranceValue: quote.insuranceValue || 0,
+            basePrice: quote.basePrice || quote.base_price || selectedPrice,
+            cubicWeight: quote.peso_cubado,
+            appliedWeight: quote.peso_tarifavel || weight
+          };
+          
+          console.log('🎯 [AI Agent] RESULTADO FINAL:', JSON.stringify(aiResult, null, 2));
+          
+          // ✅ RETORNAR IMEDIATAMENTE
+          return aiResult;
         } catch (aiError: any) {
-          console.error('❌ [AI Agent] Exceção ao chamar agente IA:', {
-            message: aiError?.message,
-            stack: aiError?.stack,
-            full: aiError
-          });
-          console.log('⚠️ [AI Agent] Erro capturado, continuando com método tradicional...');
+          console.error('❌ [AI Agent] Erro:', aiError?.message);
+          console.log('⚠️ [AI Agent] Usando método tradicional...');
         }
-        
-        console.log('⚠️ [AI Agent] Saiu do try-catch da IA - continuando com método tradicional...');
-        console.log('⚠️ [AI Agent] SE VOCÊ VÊ ESTE LOG, SIGNIFICA QUE O RETURN DA IA NÃO FOI EXECUTADO!');
       } else {
-        console.log('🔧 [AI Agent] Agente IA está INATIVO - usando método tradicional');
-        if (aiConfigError) {
-          console.error('⚠️ [AI Agent] Erro ao buscar config:', aiConfigError);
-        }
+        console.log('🔧 [AI Agent] Agente IA inativo - usando método tradicional');
       }
       
-      console.log('🔄 [PricingTableService] INICIANDO MÉTODO TRADICIONAL...');
-      console.log('🔄 [PricingTableService] ESTE LOG SÓ DEVE APARECER SE A IA FALHOU OU ESTÁ INATIVA!');
-      
-      // PASSO 2: Método tradicional - buscar e processar tabelas manualmente
+      // PASSO 2: Método tradicional
       // OTIMIZAÇÃO: Cache para evitar chamadas repetidas desnecessárias
       const cacheKey = 'active_pricing_tables';
       const cachedTables = sessionStorage.getItem(cacheKey);
