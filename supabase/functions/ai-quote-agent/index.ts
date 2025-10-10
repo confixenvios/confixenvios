@@ -854,79 +854,11 @@ serve(async (req) => {
         });
 
         if (priceRecord) {
-          // Calcular excedente de peso se aplicável
-          let excedente_kg = 0;
-          let valor_excedente = 0;
-          
-          // CONSIDERAÇÃO 3 (Diolog): A cada fração de peso excedente, acrescentar valor
-          if (table.excess_weight_threshold_kg && table.excess_weight_charge_per_kg) {
-            if (peso_tarifavel > table.excess_weight_threshold_kg) {
-              excedente_kg = peso_tarifavel - table.excess_weight_threshold_kg;
-              // Calcular quantas frações de threshold existem
-              const num_fracoes = Math.ceil(excedente_kg / table.excess_weight_threshold_kg);
-              valor_excedente = num_fracoes * table.excess_weight_charge_per_kg;
-              console.log(`[AI Quote Agent] ${table.name} - Excedente calculado: ${excedente_kg}kg em ${num_fracoes} frações de ${table.excess_weight_threshold_kg}kg = R$ ${valor_excedente.toFixed(2)}`);
-            }
-          }
-
+          // USAR APENAS O PREÇO DA TABELA - sem adicionar taxas extras
+          // Os preços na tabela já incluem todos os custos necessários
           let base_price = priceRecord.price;
           
-          // CONSIDERAÇÃO 2 (Jadlog): Taxas adicionais por peso
-          let peso_adicional_taxa = 0;
-          if (table.name.toLowerCase().includes('jadlog')) {
-            if (peso_tarifavel >= 30 && peso_tarifavel <= 50) {
-              peso_adicional_taxa = table.peso_adicional_30_50kg || 55.00;
-              console.log(`[AI Quote Agent] ${table.name} - Taxa adicional 30-50kg: R$ ${peso_adicional_taxa.toFixed(2)}`);
-            } else if (peso_tarifavel > 50) {
-              peso_adicional_taxa = table.peso_adicional_acima_50kg || 100.00;
-              console.log(`[AI Quote Agent] ${table.name} - Taxa adicional >50kg: R$ ${peso_adicional_taxa.toFixed(2)}`);
-            }
-          }
-          
-          // CONSIDERAÇÃO 3 (Alfa): Acrescentar taxa a cada fração de 100kg
-          let alfa_weight_fraction_charge = 0;
-          if (table.name.toLowerCase().includes('alfa')) {
-            const alfa_fraction_kg = table.alfa_weight_fraction_kg || 100;
-            const alfa_charge_per_fraction = table.alfa_weight_fraction_charge || 5.50;
-            
-            if (peso_tarifavel > 0) {
-              const num_fractions = Math.ceil(peso_tarifavel / alfa_fraction_kg);
-              alfa_weight_fraction_charge = num_fractions * alfa_charge_per_fraction;
-              console.log(`[AI Quote Agent] ${table.name} - CONSIDERAÇÃO 3: ${peso_tarifavel}kg em ${num_fractions} frações de ${alfa_fraction_kg}kg = R$ ${alfa_weight_fraction_charge.toFixed(2)}`);
-            }
-          }
-          
-          // CONSIDERAÇÃO 2 (Alfa): Multiplicador de distância por volume >100km
-          // CONSIDERAÇÃO 2 (Diolog): Se algum VOLUME individual pesar mais de X kg, multiplicar frete
-          let volume_weight_multiplier_applied = false;
-          let alfa_distance_multiplier_applied = false;
-          
-          if (table.name.toLowerCase().includes('alfa')) {
-            // Para Alfa: aplicar multiplicador se houver volumes com distância >100km
-            // Nota: Isso requer dados de distância que não temos no contexto atual
-            // Por hora, aplicamos baseado no peso como proxy
-            const alfa_threshold_km = table.alfa_distance_threshold_km || 100;
-            const alfa_multiplier = table.alfa_distance_multiplier || 2;
-            
-            // TODO: Implementar lógica de distância real quando disponível
-            // Por ora, consideramos volume pesado como proxy de distância longa
-            const hasHeavyVolume = volumes_data.some((vol: any) => vol.weight > alfa_threshold_km);
-            
-            if (hasHeavyVolume) {
-              base_price = base_price * alfa_multiplier;
-              alfa_distance_multiplier_applied = true;
-              console.log(`[AI Quote Agent] ${table.name} - CONSIDERAÇÃO 2 aplicada: Volume pesado detectado (proxy distância >${alfa_threshold_km}km), frete multiplicado por ${alfa_multiplier}x`);
-            }
-          } else if (table.distance_multiplier_threshold_km && table.distance_multiplier_value) {
-            // Verificar se algum volume individual excede o limite de peso (Diolog)
-            const hasHeavyVolume = volumes_data.some((vol: any) => vol.weight > table.distance_multiplier_threshold_km);
-            
-            if (hasHeavyVolume) {
-              base_price = base_price * table.distance_multiplier_value;
-              volume_weight_multiplier_applied = true;
-              console.log(`[AI Quote Agent] ${table.name} - CONSIDERAÇÃO 2 aplicada: Volume pesado detectado (>${table.distance_multiplier_threshold_km}kg), frete multiplicado por ${table.distance_multiplier_value}x`);
-            }
-          }
+          console.log(`[AI Quote Agent] 📋 ${table.name} - PREÇO DA TABELA: R$ ${base_price.toFixed(2)} para ${peso_tarifavel}kg`);
           
           // Calcular seguro (1.3% do valor da mercadoria)
           let insurance_value = 0;
@@ -935,14 +867,11 @@ serve(async (req) => {
             console.log(`[AI Quote Agent] 🛡️ Seguro calculado: R$ ${insurance_value.toFixed(2)} (1.3% de R$ ${merchandise_value.toFixed(2)})`);
           }
           
-          const final_price = base_price + valor_excedente + peso_adicional_taxa + alfa_weight_fraction_charge + insurance_value;
+          const final_price = base_price + insurance_value;
 
           console.log(`[AI Quote Agent] 💰 ${table.name} - CÁLCULO FINAL:`);
-          console.log(`[AI Quote Agent]    Base: R$ ${base_price.toFixed(2)}`);
-          console.log(`[AI Quote Agent]    Excedente: R$ ${valor_excedente.toFixed(2)}`);
-          console.log(`[AI Quote Agent]    Taxa peso: R$ ${peso_adicional_taxa.toFixed(2)}`);
-          console.log(`[AI Quote Agent]    Fração Alfa: R$ ${alfa_weight_fraction_charge.toFixed(2)}`);
-          console.log(`[AI Quote Agent]    Seguro: R$ ${insurance_value.toFixed(2)}`);
+          console.log(`[AI Quote Agent]    Preço Base (tabela): R$ ${base_price.toFixed(2)}`);
+          console.log(`[AI Quote Agent]    Seguro (1.3%): R$ ${insurance_value.toFixed(2)}`);
           console.log(`[AI Quote Agent]    ════════════════════════════`);
           console.log(`[AI Quote Agent]    TOTAL: R$ ${final_price.toFixed(2)}`);
           console.log(`[AI Quote Agent]    Prazo: ${priceRecord.delivery_days} dias`);
@@ -968,9 +897,9 @@ serve(async (req) => {
             table_id: table.id,
             table_name: table.name,
             base_price,
-            excedente_kg,
-            valor_excedente,
-            peso_adicional_taxa,
+            excedente_kg: 0,
+            valor_excedente: 0,
+            peso_adicional_taxa: 0,
             insurance_value,
             final_price,
             delivery_days: priceRecord.delivery_days,
@@ -979,27 +908,20 @@ serve(async (req) => {
             cubic_meter_equivalent: table.cubic_meter_kg_equivalent,
             transports_chemicals,
             dimension_rules: dimension_rules, // Manter como array, não converter para string
-            volume_weight_rule: volume_weight_multiplier_applied ? 
-              `Multiplicador ${table.distance_multiplier_value}x aplicado (volume >${table.distance_multiplier_threshold_km}kg)` : 
-              (table.distance_multiplier_threshold_km ? 
-                `Multiplica ${table.distance_multiplier_value}x se volume >${table.distance_multiplier_threshold_km}kg` : 
-                null)
+            volume_weight_rule: table.distance_multiplier_threshold_km ? 
+              `Multiplica ${table.distance_multiplier_value}x se volume >${table.distance_multiplier_threshold_km}kg` : 
+              null
           });
           
           console.log(`[AI Quote Agent] ${table.name} - Cobertura ENCONTRADA para CEP ${destination_cep} e peso ${peso_tarifavel}kg`);
-          console.log(`  - Equivalência cúbica: ${table.cubic_meter_kg_equivalent} kg/m³ (CONSIDERAÇÃO 1)`);
-          console.log(`  - Volume pesado: ${volume_weight_multiplier_applied ? 'SIM - Multiplicador aplicado!' : 'Não'} (CONSIDERAÇÃO 2 Diolog)`);
-          if (peso_adicional_taxa > 0) {
-            console.log(`  - Taxa adicional peso: R$ ${peso_adicional_taxa.toFixed(2)} (CONSIDERAÇÃO 2 Jadlog)`);
-          }
+          console.log(`  - Equivalência cúbica: ${table.cubic_meter_kg_equivalent} kg/m³`);
           if (dimension_rules.length > 0) {
-            console.log(`  - Restrições de dimensões: ${dimension_rules.join('; ')} (CONSIDERAÇÃO 2 Magalog)`);
+            console.log(`  - Restrições de dimensões: ${dimension_rules.join('; ')}`);
           }
-          console.log(`  - Preço base: R$ ${base_price.toFixed(2)}`);
-          console.log(`  - Excedente: R$ ${valor_excedente.toFixed(2)} (CONSIDERAÇÃO 3 Diolog)`);
+          console.log(`  - Preço da tabela: R$ ${base_price.toFixed(2)}`);
           console.log(`  - Seguro: R$ ${insurance_value.toFixed(2)}`);
           console.log(`  - Preço final: R$ ${final_price.toFixed(2)}`);
-          console.log(`  - ${transports_chemicals} (CONSIDERAÇÃO 4 Diolog)`);
+          console.log(`  - ${transports_chemicals}`);
         } else {
           // Tabela não tem cobertura para este CEP/peso
           allTableQuotes.push({
@@ -1082,12 +1004,10 @@ serve(async (req) => {
             preco_final: `R$ ${q.final_price.toFixed(2)}`,
             prazo_dias: q.delivery_days,
             peso_tarifavel: `${q.peso_tarifavel}kg`,
-            preco_base: `R$ ${q.base_price.toFixed(2)}`,
-            valor_excedente: q.valor_excedente > 0 ? `R$ ${q.valor_excedente.toFixed(2)}` : 'Sem excedente',
+            preco_base_tabela: `R$ ${q.base_price.toFixed(2)}`,
             seguro: `R$ ${q.insurance_value?.toFixed(2) || '0.00'}`,
             regras_aplicadas: [
               q.cubic_meter_equivalent ? `Peso cúbico: ${q.cubic_meter_equivalent}kg/m³` : null,
-              q.volume_weight_rule ? 'Regra de peso volumétrico aplicada' : null,
               q.transports_chemicals ? 'Transporta químicos' : 'NÃO transporta químicos',
               q.dimension_rules && q.dimension_rules.length > 0 ? q.dimension_rules.join('; ') : null
             ].filter(Boolean)
@@ -1120,11 +1040,11 @@ CONSIDERAÇÕES ESPECÍFICAS:
 ${config.consider_chemical_transport ? '- Cliente TRANSPORTA produtos químicos: dar preferência a transportadoras que aceitam' : '- Cliente NÃO transporta químicos'}
 ${config.prefer_no_dimension_restrictions ? '- PREFERIR transportadoras sem muitas restrições de dimensões' : '- Restrições de dimensões não são um problema'}
 - Peso cúbico já foi calculado automaticamente para cada transportadora
-- Valores de excedente e seguro já estão incluídos no preço final
+- Seguro (1.3%) já está incluído no preço final
 - Considere as regras específicas aplicadas (listadas em regras_aplicadas)
 
 INSTRUÇÕES FINAIS:
-1. **REGRA CRÍTICA**: Use APENAS os valores de "preco_final" fornecidos. NUNCA invente, calcule ou estime valores diferentes. Os preços já incluem TODOS os adicionais (seguro, excedente, peso cúbico)
+1. **REGRA CRÍTICA**: Use APENAS os valores de "preco_final" fornecidos. NUNCA invente, calcule ou estime valores diferentes. Os preços vêm direto das tabelas oficiais e já incluem seguro.
 2. Analise TODOS os fatores listados acima
 3. Para prioridade "balanced", considere se vale pagar R$ X a mais para economizar Y dias
 4. Retorne APENAS um JSON válido no formato abaixo
