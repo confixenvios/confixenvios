@@ -188,6 +188,14 @@ const AdminTabelas = () => {
               .from('jadlog_zones')
               .select('*', { count: 'exact', head: true });
             counts[table.id] = (pricingCount || 0) + (zonesCount || 0);
+          } else if (lowerName.includes('alfa')) {
+            const { count: pricingCount } = await supabase
+              .from('alfa_pricing')
+              .select('*', { count: 'exact', head: true });
+            const { count: zonesCount } = await supabase
+              .from('alfa_zones')
+              .select('*', { count: 'exact', head: true });
+            counts[table.id] = (pricingCount || 0) + (zonesCount || 0);
           } else if (lowerName.includes('magalog')) {
             const { count: pricingCount } = await supabase
               .from('shipping_pricing_magalog' as any)
@@ -205,60 +213,6 @@ const AdminTabelas = () => {
       toast({
         title: "Erro",
         description: "Erro ao carregar as tabelas de preços",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleReimportJadlogAlfa = async () => {
-    setIsLoading(true);
-    
-    try {
-      toast({
-        title: "🔄 Reimportação Iniciada",
-        description: "Reimportando dados completos de Jadlog e Alfa...",
-      });
-
-      console.log('📦 Iniciando reimportação de Jadlog e Alfa...');
-
-      // Reimportar Jadlog
-      const { data: jadlogData, error: jadlogError } = await supabase.functions.invoke('import-jadlog-data', {
-        body: {}
-      });
-
-      if (jadlogError) {
-        console.error('❌ Erro ao reimportar Jadlog:', jadlogError);
-        throw new Error(`Erro Jadlog: ${jadlogError.message}`);
-      }
-
-      console.log('✅ Jadlog reimportado:', jadlogData);
-
-      // Reimportar Alfa
-      const { data: alfaData, error: alfaError } = await supabase.functions.invoke('import-alfa-data', {
-        body: {}
-      });
-
-      if (alfaError) {
-        console.error('❌ Erro ao reimportar Alfa:', alfaError);
-        throw new Error(`Erro Alfa: ${alfaError.message}`);
-      }
-
-      console.log('✅ Alfa reimportado:', alfaData);
-
-      toast({
-        title: "✅ Reimportação Concluída",
-        description: `Jadlog: ${jadlogData?.zones_imported || 0} zonas, ${jadlogData?.pricing_imported || 0} preços | Alfa: ${alfaData?.zones_imported || 0} zonas, ${alfaData?.pricing_imported || 0} preços`,
-      });
-
-      // Recarregar dados
-      fetchData();
-    } catch (error) {
-      console.error('❌ Erro na reimportação:', error);
-      toast({
-        title: "Erro na Reimportação",
-        description: error instanceof Error ? error.message : "Erro ao reimportar tabelas",
         variant: "destructive"
       });
     } finally {
@@ -1193,26 +1147,15 @@ const AdminTabelas = () => {
                 <FileSpreadsheet className="w-5 h-5 mr-2" />
                 Tabelas Cadastradas
               </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant="default"
-                  onClick={handleReimportJadlogAlfa}
-                  disabled={isLoading}
-                  className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600"
-                >
-                  <Database className="w-4 h-4 mr-2" />
-                  {isLoading ? 'Reimportando...' : '🔄 Reimportar Jadlog & Alfa'}
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={handleUpdateAllTables}
-                  disabled={isLoading}
-                  className="bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 border-primary/30"
-                >
-                  <Database className="w-4 h-4 mr-2" />
-                  {isLoading ? 'Atualizando...' : '🔄 Atualizar Tabelas'}
-                </Button>
-              </div>
+              <Button 
+                variant="outline"
+                onClick={handleUpdateAllTables}
+                disabled={isLoading}
+                className="bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 border-primary/30"
+              >
+                <Database className="w-4 h-4 mr-2" />
+                {isLoading ? 'Atualizando...' : '🔄 Atualizar Tabelas'}
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent>
