@@ -120,26 +120,22 @@ export class PricingTableService {
           } else if (aiQuote?.success && aiQuote?.quote && aiQuote.quote.economicPrice > 0) {
             // Verificação: a IA retornou uma resposta válida com preço > 0
             console.log('✅ [AI Agent] Cotação obtida via IA com sucesso!');
-            console.log('💰 [AI Agent] Detalhes da cotação:', {
-              economicPrice: aiQuote.quote.economicPrice,
-              expressPrice: aiQuote.quote.expressPrice,
-              economicDays: aiQuote.quote.economicDays,
-              expressDays: aiQuote.quote.expressDays,
-              zone: aiQuote.quote.zone,
-              tableName: aiQuote.quote.selected_table_name,
-              additionals: aiQuote.quote.additionals_applied,
-              reasoning: aiQuote.quote.reasoning
-            });
+            console.log('💰 [AI Agent] Resposta COMPLETA da IA:', aiQuote.quote);
             
             const quote = aiQuote.quote;
             
-            // ✅ GARANTIR que o preço mostrado seja SEMPRE o da opção escolhida pela IA
+            // 🎯 CRÍTICO: Usar SEMPRE o final_price que é o preço da opção ESCOLHIDA pela IA
             const selectedPrice = quote.final_price || quote.economicPrice;
-            console.log('🎯 [AI Agent] Preço SELECIONADO pela IA:', selectedPrice);
-            console.log('📊 [AI Agent] Transportadora ESCOLHIDA:', quote.selected_table_name);
             
-            return {
-              economicPrice: selectedPrice, // ← SEMPRE usar o preço da opção escolhida pela IA
+            console.log('🔍 [AI Agent] DEBUG - Verificando preços:');
+            console.log('   - quote.final_price:', quote.final_price);
+            console.log('   - quote.economicPrice:', quote.economicPrice);
+            console.log('   - selectedPrice (será usado):', selectedPrice);
+            console.log('   - Transportadora escolhida:', quote.selected_table_name);
+            console.log('   - Prazo:', quote.economicDays || quote.delivery_days, 'dias');
+            
+            const result = {
+              economicPrice: selectedPrice, // ← PREÇO DA OPÇÃO ESCOLHIDA PELA IA
               expressPrice: quote.expressPrice || selectedPrice * 1.3,
               economicDays: quote.economicDays || quote.delivery_days,
               expressDays: quote.expressDays || Math.max(1, (quote.delivery_days || quote.economicDays) - 2),
@@ -153,6 +149,14 @@ export class PricingTableService {
               cubicWeight: quote.peso_cubado,
               appliedWeight: quote.peso_tarifavel || weight
             };
+            
+            console.log('✅ [AI Agent] Retornando para o formulário:', {
+              economicPrice: result.economicPrice,
+              tableName: result.tableName,
+              economicDays: result.economicDays
+            });
+            
+            return result;
           } else {
             console.warn('⚠️ [AI Agent] Resposta da IA sem sucesso ou incompleta:', {
               success: aiQuote?.success,

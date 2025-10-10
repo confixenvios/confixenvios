@@ -614,6 +614,21 @@ const QuoteForm = () => {
         quantity 
       });
 
+      // 🧹 SEMPRE limpar caches relacionados a cotações antes de calcular nova
+      console.log('🧹 [QuoteForm] Limpando caches para garantir cotação fresca...');
+      sessionStorage.removeItem('completeQuoteData');
+      sessionStorage.removeItem('quoteData');
+      sessionStorage.removeItem('selectedQuote');
+      
+      // Limpar também caches do pricing service
+      const cacheKeys = Object.keys(sessionStorage);
+      cacheKeys.forEach(key => {
+        if (key.startsWith('pricing_') || key.includes('_quote') || key.includes('Quote')) {
+          sessionStorage.removeItem(key);
+          console.log('🧹 Cache removido:', key);
+        }
+      });
+
       // Limpar cache antigo se necessário (cache de mais de 10 minutos)
       const lastCacheCheck = sessionStorage.getItem('last_cache_check');
       const now = Date.now();
@@ -642,6 +657,13 @@ const QuoteForm = () => {
         merchandiseValue: merchandiseValue > 0 ? merchandiseValue : undefined
       });
 
+      console.log('🎯 [QuoteForm] Cotação recebida do serviço:', {
+        economicPrice: shippingQuote.economicPrice,
+        tableName: shippingQuote.tableName,
+        economicDays: shippingQuote.economicDays,
+        basePrice: shippingQuote.basePrice
+      });
+
       // Salvar todos os dados da cotação completa
       const completeQuoteData = {
         // Dados da cotação original
@@ -663,6 +685,11 @@ const QuoteForm = () => {
         calculatedAt: new Date().toISOString()
       };
 
+      console.log('💾 [QuoteForm] Salvando dados completos:', {
+        economicPrice: completeQuoteData.shippingQuote.economicPrice,
+        tableName: completeQuoteData.shippingQuote.tableName
+      });
+
       setQuoteData(completeQuoteData);
       
       // Salvar no sessionStorage para uso posterior
@@ -672,7 +699,7 @@ const QuoteForm = () => {
       
       toast({
         title: "Cotação calculada com sucesso!",
-        description: `Preço: R$ ${shippingQuote.economicPrice.toFixed(2)} - Escolha uma opção de coleta`,
+        description: `${shippingQuote.tableName || 'Frete'}: R$ ${shippingQuote.economicPrice.toFixed(2)} - Escolha uma opção de coleta`,
       });
 
     } catch (error) {
