@@ -167,180 +167,213 @@ serve(async (req) => {
         pricing_data: []
       };
 
-      // TABELA JADLOG: Buscar TODOS os dados do estado (sem filtros restritivos)
-      if (table.name.toLowerCase().includes('jadlog')) {
-        console.log(`[AI Quote Agent] 📊 Buscando TODOS os dados Jadlog para estado ${destinationState}`);
+      // TABELA JADLOG: Processar Google Sheets com estrutura específica
+      if (table.name.toLowerCase().includes('jadlog') && table.source_type === 'google_sheets' && table.google_sheets_url) {
+        console.log(`[AI Quote Agent] 📊 Processando Jadlog do Google Sheets para estado ${destinationState}`);
         try {
           if (!destinationState || destinationState === 'UNKNOWN') {
             console.log(`[AI Quote Agent] ⚠️ Estado não identificado para CEP ${destination_cep}`);
             continue;
           }
 
-          // 1. Buscar TODAS as zonas do estado de destino (SEM filtro de CEP)
-          console.log(`[AI Quote Agent] Query 1: Buscando TODAS zonas Jadlog para estado ${destinationState}...`);
-          const { data: zones, error: zonesError } = await supabaseClient
-            .from('jadlog_zones')
-            .select('*')
-            .eq('state', destinationState);
-
-          if (zonesError) {
-            console.error(`[AI Quote Agent] Erro ao buscar jadlog_zones:`, zonesError);
+          let sheetUrl = table.google_sheets_url;
+          const spreadsheetIdMatch = sheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+          const gidMatch = sheetUrl.match(/[#&]gid=([0-9]+)/);
+          
+          if (spreadsheetIdMatch) {
+            const spreadsheetId = spreadsheetIdMatch[1];
+            let gid = gidMatch ? gidMatch[1] : '0';
+            sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
+          }
+          
+          const response = await fetch(sheetUrl);
+          if (!response.ok) {
+            console.error(`[AI Quote Agent] Falha ao buscar Jadlog Sheets, status: ${response.status}`);
             continue;
           }
 
-          if (!zones || zones.length === 0) {
-            console.log(`[AI Quote Agent] ⚠️ Nenhuma zona Jadlog encontrada para estado ${destinationState}`);
+          const csvText = await response.text();
+          const lines = csvText.split('\n').filter(l => l.trim());
+          
+          if (lines.length < 2) {
+            console.log(`[AI Quote Agent] ⚠️ Planilha Jadlog vazia ou inválida`);
             continue;
           }
 
-          console.log(`[AI Quote Agent] ✅ ${zones.length} zonas Jadlog encontradas para ${destinationState}`);
-
-          // 2. Buscar TODOS os preços para GO → destination_state (SEM filtro de peso)
-          console.log(`[AI Quote Agent] Query 2: Buscando TODOS preços Jadlog GO→${destinationState}...`);
-          const { data: pricing, error: pricingError } = await supabaseClient
-            .from('jadlog_pricing')
-            .select('*')
-            .eq('origin_state', 'GO')
-            .eq('destination_state', destinationState);
-
-          if (pricingError) {
-            console.error(`[AI Quote Agent] Erro ao buscar jadlog_pricing:`, pricingError);
+          // Header da Jadlog: A, B, ORIGEM, DESTINO, REGIAO ATENDIDA, depois as colunas de estados
+          const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+          
+          // Encontrar coluna do estado destino (ex: "GO→SP CAPITAL 1")
+          const stateColumnPattern = new RegExp(`GO.*${destinationState}.*CAPITAL`, 'i');
+          const stateColumnIndex = headers.findIndex(h => stateColumnPattern.test(h));
+          
+          if (stateColumnIndex === -1) {
+            console.log(`[AI Quote Agent] ⚠️ Coluna GO→${destinationState} não encontrada na planilha Jadlog`);
+            console.log(`[AI Quote Agent] Headers disponíveis:`, headers.slice(5, 10));
             continue;
           }
 
-          if (!pricing || pricing.length === 0) {
-            console.log(`[AI Quote Agent] ⚠️ Nenhum preço Jadlog encontrado para GO→${destinationState}`);
-            continue;
-          }
+          console.log(`[AI Quote Agent] ✅ Coluna encontrada: ${headers[stateColumnIndex]} (index ${stateColumnIndex})`);
 
-          console.log(`[AI Quote Agent] ✅ ${pricing.length} preços Jadlog encontrados para GO→${destinationState}`);
-
-          // 3. Combinar TODAS as zonas com TODOS os preços (filtrar em memória depois)
-          for (const zone of zones) {
-            // Verificar se o CEP buscado está na faixa desta zona
+          // Processar linhas de peso
+          for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(',').map(c => c.trim().replace(/"/g, ''));
+            
+            const weightRange = cols[1]; // Coluna B tem faixa de peso (ex: "21-22")
+            const priceStr = cols[stateColumnIndex];
+            
+            if (!weightRange || !priceStr) continue;
+            
+            const price = parseFloat(priceStr.replace(/[^\d,.]/g, '').replace(',', '.'));
+            if (isNaN(price) || price <= 0) continue;
+            
+            // Parse weight range (ex: "21-22" ou "29-30")
+            const weightMatch = weightRange.match(/(\d+)[^0-9]+(\d+)/);
+            if (!weightMatch) continue;
+            
+            const weight_min = parseFloat(weightMatch[1]);
+            const weight_max = parseFloat(weightMatch[2]);
+            
+            // CEP 01307-001 está em SP Capital 1, que atende 01000-000 até 05999-999
+            const cepInicio = destinationState === 'SP' ? '01000000' : '00000000';
+            const cepFim = destinationState === 'SP' ? '05999999' : '99999999';
+            
             const cepNumerico = parseInt(cleanDestinationCep);
-            const cepStartNum = parseInt(zone.cep_start || '0');
-            const cepEndNum = parseInt(zone.cep_end || '99999999');
+            const cepInicioNum = parseInt(cepInicio);
+            const cepFimNum = parseInt(cepFim);
             
-            const cepNaFaixa = cepNumerico >= cepStartNum && cepNumerico <= cepEndNum;
+            const cepNaFaixa = cepNumerico >= cepInicioNum && cepNumerico <= cepFimNum;
+            const pesoNaFaixa = total_weight >= weight_min && total_weight <= weight_max;
             
-            for (const priceItem of pricing) {
-              // Verificar se o peso está na faixa
-              const pesoNaFaixa = total_weight >= priceItem.weight_min && total_weight <= priceItem.weight_max;
-              
-              // Adicionar TODOS os registros (filtrar depois na busca de preço)
-              tableData.pricing_data.push({
-                destination_cep: `${zone.cep_start}-${zone.cep_end}`,
-                cep_start: zone.cep_start,
-                cep_end: zone.cep_end,
-                weight_min: priceItem.weight_min,
-                weight_max: priceItem.weight_max,
-                price: priceItem.price,
-                delivery_days: zone.delivery_days,
-                express_delivery_days: zone.express_delivery_days,
-                zone_code: zone.zone_code,
-                tariff_type: zone.tariff_type,
-                state: zone.state,
-                origin_state: priceItem.origin_state,
-                destination_state: priceItem.destination_state,
-                // Flags para ajudar na busca
-                matches_cep: cepNaFaixa,
-                matches_weight: pesoNaFaixa
-              });
-            }
+            tableData.pricing_data.push({
+              destination_cep: `${cepInicio}-${cepFim}`,
+              cep_start: cepInicio,
+              cep_end: cepFim,
+              weight_min,
+              weight_max,
+              price,
+              delivery_days: 3,
+              express_delivery_days: 2,
+              zone_code: `${destinationState}_CAPITAL`,
+              state: destinationState,
+              matches_cep: cepNaFaixa,
+              matches_weight: pesoNaFaixa
+            });
           }
 
-          console.log(`[AI Quote Agent] ✅ ${table.name}: ${tableData.pricing_data.length} registros combinados (zonas x preços)`);
+          console.log(`[AI Quote Agent] ✅ Jadlog: ${tableData.pricing_data.length} registros processados da planilha`);
         } catch (error) {
-          console.error(`[AI Quote Agent] Erro ao processar Jadlog:`, error);
+          console.error(`[AI Quote Agent] Erro ao processar Jadlog Google Sheets:`, error);
         }
       }
-      // TABELA ALFA: Buscar TODOS os dados do estado (similar ao Jadlog)
-      else if (table.name.toLowerCase().includes('alfa')) {
-        console.log(`[AI Quote Agent] 📊 Buscando TODOS os dados Alfa para estado ${destinationState}`);
+      // TABELA ALFA: Processar Google Sheets com estrutura específica
+      else if (table.name.toLowerCase().includes('alfa') && table.source_type === 'google_sheets' && table.google_sheets_url) {
+        console.log(`[AI Quote Agent] 📊 Processando Alfa do Google Sheets para estado ${destinationState}`);
         try {
           if (!destinationState || destinationState === 'UNKNOWN') {
             console.log(`[AI Quote Agent] ⚠️ Estado não identificado para CEP ${destination_cep}`);
             continue;
           }
 
-          // 1. Buscar TODAS as zonas do estado de destino
-          console.log(`[AI Quote Agent] Query 1: Buscando TODAS zonas Alfa para estado ${destinationState}...`);
-          const { data: zones, error: zonesError } = await supabaseClient
-            .from('alfa_zones')
-            .select('*')
-            .eq('state', destinationState);
-
-          if (zonesError) {
-            console.error(`[AI Quote Agent] Erro ao buscar alfa_zones:`, zonesError);
+          let sheetUrl = table.google_sheets_url;
+          const spreadsheetIdMatch = sheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+          const gidMatch = sheetUrl.match(/[#&]gid=([0-9]+)/);
+          
+          if (spreadsheetIdMatch) {
+            const spreadsheetId = spreadsheetIdMatch[1];
+            let gid = gidMatch ? gidMatch[1] : '0';
+            sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
+          }
+          
+          const response = await fetch(sheetUrl);
+          if (!response.ok) {
+            console.error(`[AI Quote Agent] Falha ao buscar Alfa Sheets, status: ${response.status}`);
             continue;
           }
 
-          if (!zones || zones.length === 0) {
-            console.log(`[AI Quote Agent] ⚠️ Nenhuma zona Alfa encontrada para estado ${destinationState}`);
+          const csvText = await response.text();
+          const lines = csvText.split('\n').filter(l => l.trim());
+          
+          if (lines.length < 3) {
+            console.log(`[AI Quote Agent] ⚠️ Planilha Alfa vazia ou inválida`);
             continue;
           }
 
-          console.log(`[AI Quote Agent] ✅ ${zones.length} zonas Alfa encontradas para ${destinationState}`);
-
-          // 2. Buscar TODOS os preços para GO → destination_state
-          console.log(`[AI Quote Agent] Query 2: Buscando TODOS preços Alfa GO→${destinationState}...`);
-          const { data: pricing, error: pricingError } = await supabaseClient
-            .from('alfa_pricing')
-            .select('*')
-            .eq('origin_state', 'GO')
-            .eq('destination_state', destinationState);
-
-          if (pricingError) {
-            console.error(`[AI Quote Agent] Erro ao buscar alfa_pricing:`, pricingError);
-            continue;
-          }
-
-          if (!pricing || pricing.length === 0) {
-            console.log(`[AI Quote Agent] ⚠️ Nenhum preço Alfa encontrado para GO→${destinationState}`);
-            continue;
-          }
-
-          console.log(`[AI Quote Agent] ✅ ${pricing.length} preços Alfa encontrados para GO→${destinationState}`);
-
-          // 3. Combinar TODAS as zonas com TODOS os preços
-          for (const zone of zones) {
-            // Verificar se o CEP buscado está na faixa desta zona
-            const cepNumerico = parseInt(cleanDestinationCep);
-            const cepStartNum = parseInt(zone.cep_start || '0');
-            const cepEndNum = parseInt(zone.cep_end || '99999999');
+          // Linha 1: GO ES CAPITAL, GO ES INTERIOR, etc.
+          // Linha 2: INTERIOR, CAPITAL, CAPITAL, etc.
+          const line1 = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+          const line2 = lines[1].split(',').map(h => h.trim().replace(/"/g, ''));
+          
+          // Procurar coluna que combina estado + tipo (CAPITAL/INTERIOR)
+          let stateColumnIndex = -1;
+          for (let i = 0; i < line1.length; i++) {
+            const header1 = line1[i].toUpperCase();
+            const header2 = line2[i].toUpperCase();
             
-            const cepNaFaixa = cepNumerico >= cepStartNum && cepNumerico <= cepEndNum;
-            
-            for (const priceItem of pricing) {
-              // Verificar se o peso está na faixa
-              const pesoNaFaixa = total_weight >= priceItem.weight_min && total_weight <= priceItem.weight_max;
-              
-              // Adicionar TODOS os registros (filtrar depois na busca de preço)
-              tableData.pricing_data.push({
-                destination_cep: `${zone.cep_start}-${zone.cep_end}`,
-                cep_start: zone.cep_start,
-                cep_end: zone.cep_end,
-                weight_min: priceItem.weight_min,
-                weight_max: priceItem.weight_max,
-                price: priceItem.price,
-                delivery_days: zone.delivery_days,
-                express_delivery_days: zone.express_delivery_days,
-                zone_code: zone.zone_code,
-                tariff_type: zone.tariff_type,
-                state: zone.state,
-                origin_state: priceItem.origin_state,
-                destination_state: priceItem.destination_state,
-                // Flags para ajudar na busca
-                matches_cep: cepNaFaixa,
-                matches_weight: pesoNaFaixa
-              });
+            // Procurar "GO ES" ou "GO SP" etc na linha 1
+            if (header1.includes('GO') && header1.includes(destinationState)) {
+              // Para capital, procurar coluna CAPITAL
+              if (header2.includes('CAPITAL')) {
+                stateColumnIndex = i;
+                break;
+              }
             }
           }
+          
+          if (stateColumnIndex === -1) {
+            console.log(`[AI Quote Agent] ⚠️ Coluna GO→${destinationState} CAPITAL não encontrada na Alfa`);
+            continue;
+          }
 
-          console.log(`[AI Quote Agent] ✅ ${table.name}: ${tableData.pricing_data.length} registros combinados (zonas x preços)`);
+          console.log(`[AI Quote Agent] ✅ Coluna Alfa encontrada: ${line1[stateColumnIndex]} ${line2[stateColumnIndex]} (index ${stateColumnIndex})`);
+
+          // Processar linhas de peso (começando da linha 3)
+          for (let i = 2; i < lines.length; i++) {
+            const cols = lines[i].split(',').map(c => c.trim().replace(/"/g, ''));
+            
+            const weightRange = cols[1]; // Coluna B tem peso (ex: "30")
+            const priceStr = cols[stateColumnIndex];
+            
+            if (!weightRange || !priceStr) continue;
+            
+            const price = parseFloat(priceStr.replace(/[^\d,.]/g, '').replace(',', '.'));
+            if (isNaN(price) || price <= 0) continue;
+            
+            const weight_max = parseFloat(weightRange);
+            const weight_min = i === 2 ? 0 : parseFloat(lines[i-1].split(',')[1] || '0');
+            
+            if (isNaN(weight_max)) continue;
+            
+            // CEP Capital: 01000000-05999999 para SP
+            const cepInicio = destinationState === 'SP' ? '01000000' : '00000000';
+            const cepFim = destinationState === 'SP' ? '05999999' : '99999999';
+            
+            const cepNumerico = parseInt(cleanDestinationCep);
+            const cepInicioNum = parseInt(cepInicio);
+            const cepFimNum = parseInt(cepFim);
+            
+            const cepNaFaixa = cepNumerico >= cepInicioNum && cepNumerico <= cepFimNum;
+            const pesoNaFaixa = total_weight > weight_min && total_weight <= weight_max;
+            
+            tableData.pricing_data.push({
+              destination_cep: `${cepInicio}-${cepFim}`,
+              cep_start: cepInicio,
+              cep_end: cepFim,
+              weight_min,
+              weight_max,
+              price,
+              delivery_days: 4,
+              express_delivery_days: 3,
+              zone_code: `${destinationState}_CAPITAL`,
+              state: destinationState,
+              matches_cep: cepNaFaixa,
+              matches_weight: pesoNaFaixa
+            });
+          }
+
+          console.log(`[AI Quote Agent] ✅ Alfa: ${tableData.pricing_data.length} registros processados da planilha`);
         } catch (error) {
-          console.error(`[AI Quote Agent] Erro ao processar Alfa:`, error);
+          console.error(`[AI Quote Agent] Erro ao processar Alfa Google Sheets:`, error);
         }
       }
       // TABELA MAGALOG: Query FILTRADA por CEP range e peso
