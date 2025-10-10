@@ -286,7 +286,14 @@ serve(async (req) => {
               const price = parseFloat(priceStr.replace(/[^\d,.]/g, '').replace(',', '.'));
               if (isNaN(price) || price <= 0) continue;
               
+              // Para 10kg: deve estar na faixa [10-20], não [5-10]
+              // Portanto: peso > min E peso <= max
               const pesoNaFaixa = total_weight > range.weight_min && total_weight <= range.weight_max;
+              
+              // Log detalhado quando há match
+              if (pesoNaFaixa) {
+                console.log(`[AI Quote Agent] 🎯 Jadlog MATCH: Peso ${total_weight}kg na faixa [${range.weight_min}-${range.weight_max}kg] coluna ${jadlogCol.capitalType} = R$ ${price.toFixed(2)}`);
+              }
               
               tableData.pricing_data.push({
                 destination_cep: destinationState,
@@ -392,12 +399,10 @@ serve(async (req) => {
 
           console.log(`[AI Quote Agent] Total de colunas Alfa: ${alfaColumns.length}`);
           
-          // Extrair faixas de peso das linhas 4+ (coluna A = peso inicial, coluna B = peso final não existe mais)
-          // Na verdade, as faixas de peso estão IMPLÍCITAS nas linhas
-          // Linha 4: 0,001
-          // Linha 5: 5,00
-          // Linha 6: 10,00
-          // etc
+          // Extrair faixas de peso das linhas 4+ 
+          // Coluna A (índice 0): PESO INICIAL (KG)
+          // Coluna B (índice 1): PESO FINAL (KG)
+          // Coluna E+ (índice 4+): Preços para cada destino
           
           interface WeightRange {
             weight_min: number;
@@ -406,24 +411,24 @@ serve(async (req) => {
           }
           
           const weightRanges: WeightRange[] = [];
-          let lastMax = 0;
           
           for (let i = 3; i < lines.length; i++) {
             const cols = lines[i].split(',').map(c => c.trim().replace(/"/g, ''));
-            const weightStr = cols[0]; // Coluna A
+            const minStr = cols[0]; // Coluna A (PESO INICIAL)
+            const maxStr = cols[1]; // Coluna B (PESO FINAL)
             
-            if (!weightStr || weightStr.toUpperCase().includes('ADICIONAL')) break;
+            if (!minStr || minStr.toUpperCase().includes('ADICIONAL')) break;
             
-            const weight = parseFloat(weightStr.replace(/[^\d,.]/g, '').replace(',', '.'));
-            if (isNaN(weight) || weight <= 0) continue;
+            const min = parseFloat(minStr.replace(/[^\d,.]/g, '').replace(',', '.'));
+            const max = parseFloat(maxStr.replace(/[^\d,.]/g, '').replace(',', '.'));
+            
+            if (isNaN(min) || isNaN(max) || max <= 0) continue;
             
             weightRanges.push({
-              weight_min: lastMax,
-              weight_max: weight,
+              weight_min: min,
+              weight_max: max,
               lineIndex: i
             });
-            
-            lastMax = weight;
           }
           
           console.log(`[AI Quote Agent] Faixas de peso Alfa:`, weightRanges.map(r => `${r.weight_min}-${r.weight_max}kg`).slice(0, 5));
@@ -440,7 +445,14 @@ serve(async (req) => {
               const price = parseFloat(priceStr.replace(/[^\d,.]/g, '').replace(',', '.'));
               if (isNaN(price) || price <= 0) continue;
               
+              // Para 10kg: deve estar na faixa [10-20], não [5-10]
+              // Portanto: peso > min E peso <= max
               const pesoNaFaixa = total_weight > range.weight_min && total_weight <= range.weight_max;
+              
+              // Log detalhado quando há match
+              if (pesoNaFaixa) {
+                console.log(`[AI Quote Agent] 🎯 Alfa MATCH: Peso ${total_weight}kg na faixa [${range.weight_min}-${range.weight_max}kg] = R$ ${price.toFixed(2)}`);
+              }
               
               tableData.pricing_data.push({
                 destination_cep: destinationState,
@@ -1003,7 +1015,7 @@ serve(async (req) => {
           }));
           
           const systemPrompt = config.system_prompt || 
-            'Você é um especialista em logística que escolhe a melhor transportadora considerando preço, prazo e regras específicas.';
+            'Você é um especialista em logística que escolhe a melhor transportadora. REGRA ABSOLUTA: Use apenas valores fornecidos, nunca invente preços.';
           
           const aiPrompt = `Você é um especialista em logística. Escolha a MELHOR transportadora entre as opções disponíveis.
 
@@ -1033,10 +1045,11 @@ ${config.prefer_no_dimension_restrictions ? '- PREFERIR transportadoras sem muit
 - Considere as regras específicas aplicadas (listadas em regras_aplicadas)
 
 INSTRUÇÕES FINAIS:
-1. Analise TODOS os fatores listados
-2. Para prioridade "balanced", considere se vale pagar R$ X a mais para economizar Y dias
-3. Retorne APENAS um JSON válido no formato abaixo
-4. Seja específico no raciocínio, mencionando números concretos (preços e dias)
+1. **REGRA CRÍTICA**: Use APENAS os valores de "preco_final" fornecidos. NUNCA invente, calcule ou estime valores diferentes. Os preços já incluem TODOS os adicionais (seguro, excedente, peso cúbico)
+2. Analise TODOS os fatores listados acima
+3. Para prioridade "balanced", considere se vale pagar R$ X a mais para economizar Y dias
+4. Retorne APENAS um JSON válido no formato abaixo
+5. Seja específico no raciocínio, mencionando os valores EXATOS de "preco_final" que aparecem nas opções
 
 FORMATO DE RESPOSTA (JSON válido):
 {
