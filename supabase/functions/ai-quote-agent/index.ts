@@ -237,11 +237,11 @@ serve(async (req) => {
         console.log(`[AI Quote Agent] ⚡ OTIMIZADO: Buscando Alfa FILTRADO por CEP ${destination_cep} e peso ${total_weight}kg`);
         try {
           // 1. Buscar zonas que cobrem o CEP destino
-          console.log(`[AI Quote Agent] Query 1: Buscando zonas Alfa para CEP ${cleanDestinationCep}, estado: ${destination_state}...`);
+          console.log(`[AI Quote Agent] Query 1: Buscando zonas Alfa para CEP ${cleanDestinationCep}, estado: ${destinationState}...`);
           const { data: zones, error: zonesError } = await supabaseClient
             .from('alfa_zones')
             .select('*')
-            .eq('state', destination_state)
+            .eq('state', destinationState)
             .lte('cep_start', cleanDestinationCep)
             .gte('cep_end', cleanDestinationCep)
             .limit(10);
@@ -250,7 +250,7 @@ serve(async (req) => {
             console.error('[AI Quote Agent] ❌ Erro ao buscar zonas Alfa:', zonesError);
             tableData.pricing_data = [];
           } else if (!zones || zones.length === 0) {
-            console.log(`[AI Quote Agent] ⚠️ Alfa: Nenhuma zona encontrada para CEP ${cleanDestinationCep} (estado: ${destination_state})`);
+            console.log(`[AI Quote Agent] ⚠️ Alfa: Nenhuma zona encontrada para CEP ${cleanDestinationCep} (estado: ${destinationState})`);
             tableData.pricing_data = [];
           } else {
             console.log(`[AI Quote Agent] ✅ Alfa: ${zones.length} zona(s) encontrada(s)`, zones.map(z => z.zone_code));
