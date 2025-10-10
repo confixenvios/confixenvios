@@ -154,12 +154,16 @@ export class PricingTableService {
             console.log('   🎯 economicPrice (preço que será exibido):', aiResult.economicPrice);
             console.log('   🎯 tableName (transportadora):', aiResult.tableName);
             console.log('   🎯 economicDays (prazo):', aiResult.economicDays);
-            console.log('🚀🚀🚀 [AI Agent] MÉTODO TRADICIONAL NÃO SERÁ EXECUTADO!');
+            console.log('🚀🚀🚀 [AI Agent] ⬇️⬇️⬇️ EXECUTANDO RETURN AGORA ⬇️⬇️⬇️');
             
             // IMPORTANTE: Limpar cache para não usar dados antigos
             sessionStorage.removeItem('active_pricing_tables');
             
-            return aiResult; // ← RETORNAR AQUI E PARAR!
+            const finalReturn = aiResult;
+            console.log('🎯 [AI Agent] CONFIRMAÇÃO FINAL - Objeto que será retornado:', JSON.stringify(finalReturn, null, 2));
+            console.log('🎯 [AI Agent] SE VOCÊ VER ESTE LOG, O RETURN VAI ACONTECER AGORA!');
+            
+            return finalReturn; // ← RETORNAR AQUI E PARAR!
           } else {
             console.warn('⚠️ [AI Agent] Resposta da IA sem sucesso ou incompleta:', {
               success: aiQuote?.success,
@@ -175,15 +179,20 @@ export class PricingTableService {
             stack: aiError?.stack,
             full: aiError
           });
+          console.log('⚠️ [AI Agent] Erro capturado, continuando com método tradicional...');
         }
         
-        console.log('⚠️ [AI Agent] Agente IA falhou, continuando com método tradicional...');
+        console.log('⚠️ [AI Agent] Saiu do try-catch da IA - continuando com método tradicional...');
+        console.log('⚠️ [AI Agent] SE VOCÊ VÊ ESTE LOG, SIGNIFICA QUE O RETURN DA IA NÃO FOI EXECUTADO!');
       } else {
         console.log('🔧 [AI Agent] Agente IA está INATIVO - usando método tradicional');
         if (aiConfigError) {
           console.error('⚠️ [AI Agent] Erro ao buscar config:', aiConfigError);
         }
       }
+      
+      console.log('🔄 [PricingTableService] INICIANDO MÉTODO TRADICIONAL...');
+      console.log('🔄 [PricingTableService] ESTE LOG SÓ DEVE APARECER SE A IA FALHOU OU ESTÁ INATIVA!');
       
       // PASSO 2: Método tradicional - buscar e processar tabelas manualmente
       // OTIMIZAÇÃO: Cache para evitar chamadas repetidas desnecessárias
