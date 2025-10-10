@@ -1293,8 +1293,12 @@ const QuoteForm = () => {
                       <div className="flex items-center space-x-3">
                         <DollarSign className="h-5 w-5 text-success" />
                         <div>
-                          <div className="font-semibold">Frete Padrão</div>
-                          <div className="text-sm text-muted-foreground">Entrega padrão com melhor custo-benefício</div>
+                          <div className="font-semibold">
+                            {quoteData.shippingQuote.tableName || 'Frete Padrão'}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Melhor custo-benefício selecionado
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">

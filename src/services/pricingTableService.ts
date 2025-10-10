@@ -132,18 +132,24 @@ export class PricingTableService {
             });
             
             const quote = aiQuote.quote;
+            
+            // ✅ GARANTIR que o preço mostrado seja SEMPRE o da opção escolhida pela IA
+            const selectedPrice = quote.final_price || quote.economicPrice;
+            console.log('🎯 [AI Agent] Preço SELECIONADO pela IA:', selectedPrice);
+            console.log('📊 [AI Agent] Transportadora ESCOLHIDA:', quote.selected_table_name);
+            
             return {
-              economicPrice: quote.economicPrice,
-              expressPrice: quote.expressPrice,
-              economicDays: quote.economicDays,
-              expressDays: quote.expressDays,
-              zone: quote.zone || 'IA',
-              zoneName: quote.zone || 'Agente IA',
+              economicPrice: selectedPrice, // ← SEMPRE usar o preço da opção escolhida pela IA
+              expressPrice: quote.expressPrice || selectedPrice * 1.3,
+              economicDays: quote.economicDays || quote.delivery_days,
+              expressDays: quote.expressDays || Math.max(1, (quote.delivery_days || quote.economicDays) - 2),
+              zone: quote.zone || `Tabela: ${quote.selected_table_name}`,
+              zoneName: quote.selected_table_name || 'Agente IA',
               tableId: quote.selected_table_id || 'ai-agent',
               tableName: quote.selected_table_name || 'Agente IA',
               cnpj: '',
               insuranceValue: quote.insuranceValue || 0,
-              basePrice: quote.basePrice || quote.economicPrice,
+              basePrice: quote.basePrice || quote.base_price || selectedPrice,
               cubicWeight: quote.peso_cubado,
               appliedWeight: quote.peso_tarifavel || weight
             };
