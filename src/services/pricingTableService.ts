@@ -117,7 +117,7 @@ export class PricingTableService {
             });
             // Se há erro na chamada da edge function, usar método tradicional
             console.log('⚠️ [AI Agent] Erro na chamada, continuando com método tradicional...');
-          } else if (aiQuote?.success && aiQuote?.quote && aiQuote.quote.economicPrice > 0) {
+          } else if (aiQuote?.success && aiQuote?.quote && (aiQuote.quote.final_price > 0 || aiQuote.quote.economicPrice > 0)) {
             // Verificação: a IA retornou uma resposta válida com preço > 0
             console.log('✅ [AI Agent] Cotação obtida via IA com sucesso!');
             console.log('💰 [AI Agent] Resposta COMPLETA da IA:', aiQuote.quote);
@@ -125,7 +125,7 @@ export class PricingTableService {
             const quote = aiQuote.quote;
             
             // 🎯 CRÍTICO: Usar SEMPRE o final_price que é o preço da opção ESCOLHIDA pela IA
-            const selectedPrice = quote.final_price || quote.economicPrice;
+            const selectedPrice = quote.final_price || quote.economicPrice || 0;
             
             console.log('🔍 [AI Agent] DEBUG - Verificando preços:');
             console.log('   - quote.final_price:', quote.final_price);
