@@ -567,7 +567,7 @@ const AdminTabelas = () => {
                     </>
                   )}
 
-                  {formData.name.toLowerCase().includes('jadlog') && (
+                  {formData.name.toLowerCase().includes('diolog') && (
                     <>
                       <div className="space-y-4 pt-4 border-t">
                         <h3 className="font-semibold text-sm">Regras de Precificação</h3>
