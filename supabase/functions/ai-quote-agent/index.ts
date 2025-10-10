@@ -173,7 +173,7 @@ serve(async (req) => {
         try {
           if (!destinationState || destinationState === 'UNKNOWN') {
             console.log(`[AI Quote Agent] ⚠️ Estado não identificado para CEP ${destination_cep}`);
-            continue;
+            tableData.pricing_data = []; // Garantir vazio mas não pular
           }
 
           let sheetUrl = table.google_sheets_url;
@@ -189,7 +189,7 @@ serve(async (req) => {
           const response = await fetch(sheetUrl);
           if (!response.ok) {
             console.error(`[AI Quote Agent] Falha ao buscar Jadlog Sheets, status: ${response.status}`);
-            continue;
+            tableData.pricing_data = []; // Garantir vazio mas não pular
           }
 
           const csvText = await response.text();
@@ -197,7 +197,7 @@ serve(async (req) => {
           
           if (lines.length < 30) {
             console.log(`[AI Quote Agent] ⚠️ Planilha Jadlog vazia ou inválida (${lines.length} linhas)`);
-            continue;
+            tableData.pricing_data = []; // Garantir vazio mas não pular
           }
 
           console.log(`[AI Quote Agent] Jadlog: Total de ${lines.length} linhas`);
@@ -210,7 +210,7 @@ serve(async (req) => {
           
           if (lines.length < 5) {
             console.log(`[AI Quote Agent] ⚠️ Planilha Jadlog incompleta`);
-            continue;
+            tableData.pricing_data = []; // Garantir vazio mas não pular
           }
           
           const row1 = lines[0].split(',').map(c => c.trim().replace(/"/g, '').toUpperCase());
@@ -255,7 +255,7 @@ serve(async (req) => {
           
           if (jadlogColumns.length === 0) {
             console.log(`[AI Quote Agent] ⚠️ Nenhuma coluna GO → ${destinationState} → CAPITAL encontrada`);
-            continue;
+            tableData.pricing_data = []; // Garantir vazio mas não pular
           }
           
           console.log(`[AI Quote Agent] Total de colunas Jadlog encontradas: ${jadlogColumns.length}`);
@@ -343,7 +343,7 @@ serve(async (req) => {
         try {
           if (!destinationState || destinationState === 'UNKNOWN') {
             console.log(`[AI Quote Agent] ⚠️ Estado não identificado para CEP ${destination_cep}`);
-            continue;
+            tableData.pricing_data = []; // Garantir vazio mas não pular
           }
 
           // Primeiro, verificar cobertura de CEP na aba ABRANGENCIA
@@ -408,7 +408,7 @@ serve(async (req) => {
           const response = await fetch(sheetUrl);
           if (!response.ok) {
             console.error(`[AI Quote Agent] Falha ao buscar Alfa Sheets, status: ${response.status}`);
-            continue;
+            tableData.pricing_data = []; // Garantir vazio mas não pular
           }
 
           const csvText = await response.text();
@@ -416,7 +416,7 @@ serve(async (req) => {
           
           if (lines.length < 5) {
             console.log(`[AI Quote Agent] ⚠️ Planilha Alfa vazia ou inválida (${lines.length} linhas)`);
-            continue;
+            tableData.pricing_data = []; // Garantir vazio mas não pular
           }
 
           console.log(`[AI Quote Agent] Alfa: Total de ${lines.length} linhas na planilha`);
@@ -431,7 +431,7 @@ serve(async (req) => {
           
           if (lines.length < 6) {
             console.log(`[AI Quote Agent] ⚠️ Planilha Alfa inválida (menos de 6 linhas)`);
-            continue;
+            tableData.pricing_data = []; // Garantir vazio mas não pular
           }
 
           const row1 = lines[0].split(',').map(c => c.trim().replace(/"/g, '').toUpperCase());
@@ -562,12 +562,12 @@ serve(async (req) => {
 
           if (zonesError) {
             console.error(`[AI Quote Agent] Erro ao buscar shipping_zones_magalog:`, zonesError);
-            continue;
+            tableData.pricing_data = []; // Garantir vazio mas não pular
           }
 
           if (!zones || zones.length === 0) {
             console.log(`[AI Quote Agent] ⚠️ Nenhuma zona Magalog encontrada para CEP ${destination_cep}`);
-            continue;
+            tableData.pricing_data = []; // Garantir vazio mas não pular
           }
 
           console.log(`[AI Quote Agent] ✅ ${zones.length} zonas Magalog encontradas`);
