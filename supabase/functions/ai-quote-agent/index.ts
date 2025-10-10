@@ -390,8 +390,9 @@ serve(async (req) => {
           }
           
           if (!alfaCoberturaCep) {
-            console.log(`[AI Quote Agent] ❌ Alfa NÃO ATENDE CEP ${destination_cep} - pulando tabela`);
-            continue;
+            console.log(`[AI Quote Agent] ❌ Alfa NÃO ATENDE CEP ${destination_cep}`);
+            // Não usar continue - adicionar ao array com has_coverage: false
+            tableData.pricing_data = []; // Garantir que não tenha dados
           }
 
           // Se chegou aqui, Alfa atende o CEP - buscar preços
@@ -463,7 +464,7 @@ serve(async (req) => {
           
           if (alfaColumns.length === 0) {
             console.log(`[AI Quote Agent] ⚠️ Nenhuma coluna GO → ${destinationState} → CAPITAL encontrada na Alfa`);
-            continue;
+            // Não usar continue - deixar tableData.pricing_data vazio
           }
 
           console.log(`[AI Quote Agent] Total de colunas Alfa: ${alfaColumns.length}`);
@@ -689,9 +690,8 @@ serve(async (req) => {
         }
       }
 
-      if (tableData.pricing_data.length > 0) {
-        tablesWithData.push(tableData);
-      }
+      // SEMPRE adicionar tabela ao array, mesmo sem dados (para mostrar todas as opções)
+      tablesWithData.push(tableData);
     }
 
     console.log('[AI Quote Agent] Total de tabelas com dados:', tablesWithData.length);
@@ -924,34 +924,43 @@ serve(async (req) => {
           console.log(`  - ${transports_chemicals}`);
         } else {
           // Tabela não tem cobertura para este CEP/peso
-          allTableQuotes.push({
-          table_id: table.id,
-          table_name: table.name,
-          base_price: 0,
-          excedente_kg: 0,
-          valor_excedente: 0,
-          insurance_value: 0,
-          final_price: 0,
-            delivery_days: 0,
-            peso_tarifavel: 0,
-            has_coverage: false
-          });
-          
           console.log(`[AI Quote Agent] ${table.name} - Sem cobertura para CEP ${destination_cep} e peso ${peso_tarifavel}kg`);
-        }
-      } catch (error) {
-        console.error(`[AI Quote Agent] Error calculating price for table ${table.name}:`, error);
-        allTableQuotes.push({
+          
+          allTableQuotes.push({
             table_id: table.id,
             table_name: table.name,
             base_price: 0,
             excedente_kg: 0,
             valor_excedente: 0,
+            peso_adicional_taxa: 0,
             insurance_value: 0,
             final_price: 0,
+            delivery_days: 0,
+            peso_tarifavel: 0,
+            has_coverage: false,
+            cubic_meter_equivalent: table.cubic_meter_kg_equivalent || 0,
+            transports_chemicals: 'Sem cobertura para este CEP',
+            dimension_rules: []
+          });
+        }
+      } catch (error) {
+        console.error(`[AI Quote Agent] Erro ao calcular preço para ${table.name}:`, error);
+        
+        allTableQuotes.push({
+          table_id: table.id,
+          table_name: table.name,
+          base_price: 0,
+          excedente_kg: 0,
+          valor_excedente: 0,
+          peso_adicional_taxa: 0,
+          insurance_value: 0,
+          final_price: 0,
           delivery_days: 0,
           peso_tarifavel: 0,
           has_coverage: false,
+          cubic_meter_equivalent: table.cubic_meter_kg_equivalent || 0,
+          transports_chemicals: 'Erro ao processar',
+          dimension_rules: [],
           error: error.message
         });
       }
@@ -992,10 +1001,18 @@ serve(async (req) => {
       
       const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
       if (!OPENAI_API_KEY) {
-        // Fallback: escolher a mais barata se IA não disponível
-        console.warn('[AI Quote Agent] ⚠️ OpenAI API Key não encontrada, usando fallback (mais barata)');
-        selectedQuote = tablesWithCoverage.sort((a, b) => a.final_price - b.final_price)[0];
-        aiReasoning = `Selecionada opção mais econômica entre ${tablesWithCoverage.length} transportadoras disponíveis (IA indisponível). Transportadora: ${selectedQuote.table_name}.`;
+        // Fallback: escolher melhor custo-benefício (mais barata com melhor prazo)
+        console.warn('[AI Quote Agent] ⚠️ OpenAI API Key não encontrada, usando fallback (melhor custo-benefício)');
+        
+        // Ordenar por: 1) Preço (crescente), 2) Prazo (crescente)
+        const sortedOptions = tablesWithCoverage.sort((a, b) => {
+          const priceDiff = a.final_price - b.final_price;
+          if (Math.abs(priceDiff) > 5) return priceDiff; // Se diferença > R$5, priorizar preço
+          return a.delivery_days - b.delivery_days; // Senão, priorizar prazo
+        });
+        
+        selectedQuote = sortedOptions[0];
+        aiReasoning = `Melhor custo-benefício entre ${tablesWithCoverage.length} transportadoras (IA indisponível): ${selectedQuote.table_name} - R$ ${selectedQuote.final_price.toFixed(2)} em ${selectedQuote.delivery_days} dias.`;
       } else {
         try {
           // Preparar análise detalhada de cada transportadora
