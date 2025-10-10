@@ -191,7 +191,7 @@ serve(async (req) => {
             zone_code: zoneCode,
             state: destinoUF,
             zone_type: regiaoAtendida,
-            tariff_type: city || 'STANDARD',
+            tariff_type: regiaoAtendida || 'STANDARD', // CORRIGIDO: usar regiaoAtendida (CAPITAL/INTERIOR) ao invés de city
             cep_start: cepStart.padStart(8, '0'),
             cep_end: cepEnd.padStart(8, '0'),
             delivery_days: isNaN(prazo) ? 5 : prazo,
