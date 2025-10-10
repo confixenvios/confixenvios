@@ -56,3 +56,15 @@ verify_jwt = true
 
 [functions.import-alfa-data]
 verify_jwt = true
+
+[functions.reimport-pricing-tables]
+verify_jwt = true
+
+[functions.auto-webhook-dispatcher]
+verify_jwt = false
+
+[functions.test-webhook-url]
+verify_jwt = false
+
+[functions.secure-tracking]
+verify_jwt = false
