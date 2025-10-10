@@ -255,6 +255,94 @@ serve(async (req) => {
           console.error(`[AI Quote Agent] Erro ao processar Jadlog:`, error);
         }
       }
+      // TABELA ALFA: Buscar TODOS os dados do estado (similar ao Jadlog)
+      else if (table.name.toLowerCase().includes('alfa')) {
+        console.log(`[AI Quote Agent] 📊 Buscando TODOS os dados Alfa para estado ${destinationState}`);
+        try {
+          if (!destinationState || destinationState === 'UNKNOWN') {
+            console.log(`[AI Quote Agent] ⚠️ Estado não identificado para CEP ${destination_cep}`);
+            continue;
+          }
+
+          // 1. Buscar TODAS as zonas do estado de destino
+          console.log(`[AI Quote Agent] Query 1: Buscando TODAS zonas Alfa para estado ${destinationState}...`);
+          const { data: zones, error: zonesError } = await supabaseClient
+            .from('alfa_zones')
+            .select('*')
+            .eq('state', destinationState);
+
+          if (zonesError) {
+            console.error(`[AI Quote Agent] Erro ao buscar alfa_zones:`, zonesError);
+            continue;
+          }
+
+          if (!zones || zones.length === 0) {
+            console.log(`[AI Quote Agent] ⚠️ Nenhuma zona Alfa encontrada para estado ${destinationState}`);
+            continue;
+          }
+
+          console.log(`[AI Quote Agent] ✅ ${zones.length} zonas Alfa encontradas para ${destinationState}`);
+
+          // 2. Buscar TODOS os preços para GO → destination_state
+          console.log(`[AI Quote Agent] Query 2: Buscando TODOS preços Alfa GO→${destinationState}...`);
+          const { data: pricing, error: pricingError } = await supabaseClient
+            .from('alfa_pricing')
+            .select('*')
+            .eq('origin_state', 'GO')
+            .eq('destination_state', destinationState);
+
+          if (pricingError) {
+            console.error(`[AI Quote Agent] Erro ao buscar alfa_pricing:`, pricingError);
+            continue;
+          }
+
+          if (!pricing || pricing.length === 0) {
+            console.log(`[AI Quote Agent] ⚠️ Nenhum preço Alfa encontrado para GO→${destinationState}`);
+            continue;
+          }
+
+          console.log(`[AI Quote Agent] ✅ ${pricing.length} preços Alfa encontrados para GO→${destinationState}`);
+
+          // 3. Combinar TODAS as zonas com TODOS os preços
+          for (const zone of zones) {
+            // Verificar se o CEP buscado está na faixa desta zona
+            const cepNumerico = parseInt(cleanDestinationCep);
+            const cepStartNum = parseInt(zone.cep_start || '0');
+            const cepEndNum = parseInt(zone.cep_end || '99999999');
+            
+            const cepNaFaixa = cepNumerico >= cepStartNum && cepNumerico <= cepEndNum;
+            
+            for (const priceItem of pricing) {
+              // Verificar se o peso está na faixa
+              const pesoNaFaixa = total_weight >= priceItem.weight_min && total_weight <= priceItem.weight_max;
+              
+              // Adicionar TODOS os registros (filtrar depois na busca de preço)
+              tableData.pricing_data.push({
+                destination_cep: `${zone.cep_start}-${zone.cep_end}`,
+                cep_start: zone.cep_start,
+                cep_end: zone.cep_end,
+                weight_min: priceItem.weight_min,
+                weight_max: priceItem.weight_max,
+                price: priceItem.price,
+                delivery_days: zone.delivery_days,
+                express_delivery_days: zone.express_delivery_days,
+                zone_code: zone.zone_code,
+                tariff_type: zone.tariff_type,
+                state: zone.state,
+                origin_state: priceItem.origin_state,
+                destination_state: priceItem.destination_state,
+                // Flags para ajudar na busca
+                matches_cep: cepNaFaixa,
+                matches_weight: pesoNaFaixa
+              });
+            }
+          }
+
+          console.log(`[AI Quote Agent] ✅ ${table.name}: ${tableData.pricing_data.length} registros combinados (zonas x preços)`);
+        } catch (error) {
+          console.error(`[AI Quote Agent] Erro ao processar Alfa:`, error);
+        }
+      }
       // TABELA MAGALOG: Query FILTRADA por CEP range e peso
       else if (table.name.toLowerCase().includes('magalog')) {
         console.log(`[AI Quote Agent] ⚡ OTIMIZADO: Buscando Magalog FILTRADO por CEP ${destination_cep} e peso ${total_weight}kg`);
