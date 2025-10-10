@@ -167,69 +167,74 @@ serve(async (req) => {
         pricing_data: []
       };
 
-      // TABELA JADLOG: Buscar do Google Sheets (dados completos)
+      // TABELA JADLOG: Buscar do Supabase (tabelas jadlog_zones e jadlog_pricing)
       if (table.name.toLowerCase().includes('jadlog')) {
-        console.log(`[AI Quote Agent] 🔍 Buscando Jadlog do Google Sheets...`);
+        console.log(`[AI Quote Agent] ⚡ Buscando Jadlog do Supabase por CEP ${destination_cep} e peso ${total_weight}kg`);
         try {
-          const jadlogSheetUrl = 'https://docs.google.com/spreadsheets/d/1GPAhV94gwZWkVGsO-ribwjAJNQJGAF2RAX79WXOajtc/export?format=csv&gid=1706611173';
-          const response = await fetch(jadlogSheetUrl);
+          // 1. Buscar zonas que cobrem o CEP destino
+          console.log(`[AI Quote Agent] Query 1: Buscando zonas Jadlog para CEP ${cleanDestinationCep}, estado: ${destinationState}...`);
+          const { data: zones, error: zonesError } = await supabaseClient
+            .from('jadlog_zones')
+            .select('*')
+            .eq('state', destinationState)
+            .lte('cep_start', cleanDestinationCep)
+            .gte('cep_end', cleanDestinationCep)
+            .limit(10);
           
-          if (!response.ok) {
-            console.error('[AI Quote Agent] ❌ Falha ao buscar Jadlog Google Sheets');
+          if (zonesError) {
+            console.error('[AI Quote Agent] ❌ Erro ao buscar zonas Jadlog:', zonesError);
+            tableData.pricing_data = [];
+          } else if (!zones || zones.length === 0) {
+            console.log(`[AI Quote Agent] ⚠️ Jadlog: Nenhuma zona encontrada para CEP ${cleanDestinationCep} (estado: ${destinationState})`);
             tableData.pricing_data = [];
           } else {
-            const csvText = await response.text();
-            const lines = csvText.split('\n').filter(l => l.trim());
+            console.log(`[AI Quote Agent] ✅ Jadlog: ${zones.length} zona(s) encontrada(s)`, zones.map(z => z.zone_code));
             
-            if (lines.length >= 3) {
-              const headerLine = lines[2];
-              const headers = parseCSVLine(headerLine);
+            // 2. Buscar TODOS os preços para o estado e peso (sem filtrar por tariff_type)
+            console.log(`[AI Quote Agent] Query 2: Buscando preços Jadlog - estado: ${destinationState}, peso: ${total_weight}kg...`);
+            
+            const { data: prices, error: pricesError } = await supabaseClient
+              .from('jadlog_pricing')
+              .select('*')
+              .eq('destination_state', destinationState)
+              .lte('weight_min', total_weight)
+              .gte('weight_max', total_weight)
+              .limit(50);
+            
+            if (pricesError) {
+              console.error(`[AI Quote Agent] ❌ Erro ao buscar preços Jadlog:`, pricesError);
+              tableData.pricing_data = [];
+            } else if (prices && prices.length > 0) {
+              console.log(`[AI Quote Agent] ✅ Jadlog: ${prices.length} preço(s) encontrado(s)`);
               
-              // Encontrar coluna DF CAPITAL
-              let targetCol = -1;
-              for (let i = 0; i < headers.length; i++) {
-                if (headers[i] && headers[i].includes('DF') && headers[i].includes('CAPITAL')) {
-                  targetCol = i;
-                  console.log(`[AI Quote Agent] ✅ Jadlog: Coluna DF CAPITAL encontrada: ${i}`);
-                  break;
-                }
-              }
+              // Usar a primeira zona encontrada para delivery_days
+              const zone = zones[0];
               
-              if (targetCol >= 0) {
-                for (let i = 3; i < lines.length; i++) {
-                  const cols = parseCSVLine(lines[i]);
-                  if (cols.length < 3) continue;
-                  
-                  const pesoInicial = parseFloat(cols[0]?.replace(',', '.') || '0');
-                  const pesoFinal = parseFloat(cols[1]?.replace(',', '.') || '0');
-                  const priceStr = cols[targetCol]?.trim() || '';
-                  const priceMatch = priceStr.match(/[\d,.]+/);
-                  
-                  if (priceMatch && total_weight > pesoInicial && total_weight <= pesoFinal) {
-                    const price = parseFloat(priceMatch[0].replace(/\./g, '').replace(',', '.'));
-                    tableData.pricing_data.push({
-                      destination_cep: cleanDestinationCep,
-                      weight_min: pesoInicial,
-                      weight_max: pesoFinal,
-                      price: price,
-                      delivery_days: 5,
-                      express_delivery_days: 3,
-                      zone_code: 'DF-CAPITAL',
-                      state: 'DF',
-                      tariff_type: 'CAPITAL',
-                      matches_cep: true,
-                      matches_weight: true
-                    });
-                    console.log(`[AI Quote Agent] ✅ Jadlog: Preço R$ ${price} para ${pesoInicial}-${pesoFinal}kg`);
-                  }
-                }
-              }
-              
-              console.log(`[AI Quote Agent] ✅ Jadlog: ${tableData.pricing_data.length} registros do Google Sheets`);
+              prices.forEach(price => {
+                tableData.pricing_data.push({
+                  destination_cep: cleanDestinationCep,
+                  weight_min: price.weight_min,
+                  weight_max: price.weight_max,
+                  price: price.price,
+                  delivery_days: zone.delivery_days || 5,
+                  express_delivery_days: zone.express_delivery_days || 3,
+                  zone_code: zone.zone_code,
+                  state: zone.state,
+                  tariff_type: price.tariff_type,
+                  matches_cep: true,
+                  matches_weight: true
+                });
+                console.log(`[AI Quote Agent] ✅ Jadlog: R$ ${price.price} para ${price.weight_min}-${price.weight_max}kg, tipo: ${price.tariff_type}`);
+              });
+            } else {
+              console.log(`[AI Quote Agent] ⚠️ Jadlog: Nenhum preço encontrado para estado ${destinationState}, peso ${total_weight}kg`);
             }
+            
+            console.log(`[AI Quote Agent] ✅ Jadlog: ${tableData.pricing_data.length} registros totais do Supabase`);
           }
         } catch (error) {
-          console.error(`[AI Quote Agent] Erro ao processar Jadlog:`, error);
+          console.error(`[AI Quote Agent] ❌ Erro ao processar Jadlog:`, error);
+          tableData.pricing_data = [];
         }
       }
       // TABELA ALFA: Query FILTRADA do Supabase (similar à Magalog)
