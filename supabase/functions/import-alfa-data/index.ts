@@ -231,18 +231,24 @@ serve(async (req) => {
         console.log('💰 Processando aba de PREÇOS (valores de frete)...');
         const pricingData: AlfaPricingRow[] = [];
         
-        // Estrutura similar à Jadlog:
-        // Linha 0: Estados
-        // Linha 1 ou 2: Tipos de tarifa
-        // Dados começam após header
+        // Estrutura da Alfa:
+        // Linha 0: "UF ORIGEM" + valores (ex: GO)
+        // Linha 1: "UF DESTINO" + valores (ex: DF, SP, etc.)
+        // Linha 2: Tipos de tarifa (ex: CAPITAL, INTERIOR, etc.)
+        // Linha 3: "PESO INICIAL (KG)", "PESO FINAL (KG)"
+        // Dados começam na linha 4
         
-        const stateRow = jsonData[0];
-        const tariffRow = jsonData[2] || jsonData[1];
+        const originRow = jsonData[0];      // Linha com UF origem
+        const stateRow = jsonData[1];       // Linha com UF destino (DF, SP, etc.)
+        const tariffRow = jsonData[2];      // Linha com tipo tarifa (CAPITAL, INTERIOR)
+        const headerRow = jsonData[3];      // Cabeçalho peso
         const firstDataRowIndex = 4;
         
         console.log(`📍 Estrutura Alfa`);
-        console.log(`📍 Linha 0 - Origem/Regiões:`, stateRow?.slice(0, 10));
-        console.log(`📍 Linha 2 - Códigos Tarifa:`, tariffRow?.slice(0, 10));
+        console.log(`📍 Linha 0 - UF Origem:`, originRow?.slice(0, 10));
+        console.log(`📍 Linha 1 - UF Destino:`, stateRow?.slice(0, 10));
+        console.log(`📍 Linha 2 - Tipo Tarifa:`, tariffRow?.slice(0, 10));
+        console.log(`📍 Linha 3 - Cabeçalho:`, headerRow?.slice(0, 10));
         console.log(`📍 Primeira linha de dados (índice ${firstDataRowIndex}):`, jsonData[firstDataRowIndex]?.slice(0, 10));
         
         let processedRows = 0;
@@ -295,19 +301,23 @@ serve(async (req) => {
             }
             
             const originState = 'GO'; // Alfa opera de GO
-            const tariffCode = String(tariffRow[j] || 'STANDARD').trim();
-            const destinationRegion = String(stateRow[j] || '').trim();
+            const destinationState = String(stateRow[j] || '').trim().toUpperCase(); // UF Destino (linha 1)
+            const tariffType = String(tariffRow[j] || 'STANDARD').trim().toUpperCase(); // Tipo tarifa (linha 2)
             
-            // Alfa usa códigos de tarifa como SPCAP.01, SPMET.01, etc.
-            // Não validar por tamanho de estado
-            if (!tariffCode || !destinationRegion) {
+            // Validar que tem estado de destino válido (2 letras: DF, SP, MG, etc.)
+            if (!destinationState || destinationState.length !== 2) {
               continue;
+            }
+            
+            // Log das primeiras 5 colunas para debug
+            if (processedRows <= 5 && j >= priceStartCol && j <= priceStartCol + 5) {
+              console.log(`   Coluna ${String.fromCharCode(65 + j)} (${j}): Estado="${destinationState}", Tarifa="${tariffType}", Preço=${price}`);
             }
             
             pricingData.push({
               origin_state: originState,
-              destination_state: destinationRegion, // ✅ Região é o estado de destino
-              tariff_type: tariffCode, // ✅ Código de tarifa é o tipo de tarifa
+              destination_state: destinationState, // ✅ Estado de destino (DF, SP, etc.)
+              tariff_type: tariffType, // ✅ Tipo de tarifa (CAPITAL, INTERIOR, etc.)
               weight_min: weightMin,
               weight_max: weightMax,
               price: price
