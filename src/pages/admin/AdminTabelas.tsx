@@ -417,7 +417,7 @@ const AdminTabelas = () => {
       google_sheets_url: '',
       sheet_name: '',
       file: null,
-      cubic_meter_kg_equivalent: 167,
+      cubic_meter_kg_equivalent: 250,
       max_length_cm: 200,
       max_width_cm: 200,
       max_height_cm: 200
@@ -567,75 +567,79 @@ const AdminTabelas = () => {
                     </>
                   )}
 
-                  <div className="space-y-4 pt-4 border-t">
-                    <h3 className="font-semibold text-sm">Regras de Precificação</h3>
-                    
-                    <div className="grid grid-cols-1 gap-4">
-                      <div>
-                        <Label htmlFor="cubic_meter">Equivalência Cúbica (kg/m³)</Label>
-                        <Input
-                          id="cubic_meter"
-                          type="number"
-                          step="1"
-                          min="0"
-                          value={formData.cubic_meter_kg_equivalent}
-                          onChange={(e) => setFormData({...formData, cubic_meter_kg_equivalent: parseFloat(e.target.value) || 0})}
-                          placeholder="167"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Quantos kg equivalem a 1 metro cúbico (ex: 167 significa que 1m³ = 167kg)
+                  {formData.name.toLowerCase().includes('jadlog') && (
+                    <>
+                      <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-semibold text-sm">Regras de Precificação</h3>
+                        
+                        <div className="grid grid-cols-1 gap-4">
+                          <div>
+                            <Label htmlFor="cubic_meter">Equivalência Cúbica (kg/m³)</Label>
+                            <Input
+                              id="cubic_meter"
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={formData.cubic_meter_kg_equivalent}
+                              onChange={(e) => setFormData({...formData, cubic_meter_kg_equivalent: parseFloat(e.target.value) || 0})}
+                              placeholder="250"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Quantos kg equivalem a 1 metro cúbico (ex: 167 significa que 1m³ = 167kg)
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-semibold text-sm">Restrições de Dimensões</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Se alguma dimensão exceder os limites, o frete não será calculado
                         </p>
-                      </div>
-                    </div>
-                  </div>
+                        
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <Label htmlFor="max_length">Comprimento Máx. (cm)</Label>
+                            <Input
+                              id="max_length"
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={formData.max_length_cm}
+                              onChange={(e) => setFormData({...formData, max_length_cm: parseFloat(e.target.value) || 0})}
+                              placeholder="200"
+                            />
+                          </div>
 
-                  <div className="space-y-4 pt-4 border-t">
-                    <h3 className="font-semibold text-sm">Restrições de Dimensões</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Se alguma dimensão exceder os limites, o frete não será calculado
-                    </p>
-                    
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <Label htmlFor="max_length">Comprimento Máx. (cm)</Label>
-                        <Input
-                          id="max_length"
-                          type="number"
-                          step="1"
-                          min="0"
-                          value={formData.max_length_cm}
-                          onChange={(e) => setFormData({...formData, max_length_cm: parseFloat(e.target.value) || 0})}
-                          placeholder="200"
-                        />
-                      </div>
+                          <div>
+                            <Label htmlFor="max_width">Largura Máx. (cm)</Label>
+                            <Input
+                              id="max_width"
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={formData.max_width_cm}
+                              onChange={(e) => setFormData({...formData, max_width_cm: parseFloat(e.target.value) || 0})}
+                              placeholder="200"
+                            />
+                          </div>
 
-                      <div>
-                        <Label htmlFor="max_width">Largura Máx. (cm)</Label>
-                        <Input
-                          id="max_width"
-                          type="number"
-                          step="1"
-                          min="0"
-                          value={formData.max_width_cm}
-                          onChange={(e) => setFormData({...formData, max_width_cm: parseFloat(e.target.value) || 0})}
-                          placeholder="200"
-                        />
+                          <div>
+                            <Label htmlFor="max_height">Altura Máx. (cm)</Label>
+                            <Input
+                              id="max_height"
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={formData.max_height_cm}
+                              onChange={(e) => setFormData({...formData, max_height_cm: parseFloat(e.target.value) || 0})}
+                              placeholder="200"
+                            />
+                          </div>
+                        </div>
                       </div>
-
-                      <div>
-                        <Label htmlFor="max_height">Altura Máx. (cm)</Label>
-                        <Input
-                          id="max_height"
-                          type="number"
-                          step="1"
-                          min="0"
-                          value={formData.max_height_cm}
-                          onChange={(e) => setFormData({...formData, max_height_cm: parseFloat(e.target.value) || 0})}
-                          placeholder="200"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                    </>
+                  )}
 
                   <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
