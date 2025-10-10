@@ -463,7 +463,7 @@ const AdminAgenteIA = () => {
                                           <div className="flex items-center gap-2">
                                             <span className="font-semibold">{quote.table_name}</span>
                                             {isSelected && (
-                                              <Badge variant="default" className="text-xs">ESCOLHIDA</Badge>
+                                              <Badge className="text-xs bg-green-600 hover:bg-green-700 text-white">ESCOLHIDA</Badge>
                                             )}
                                           </div>
                                           {quote.has_coverage && (
