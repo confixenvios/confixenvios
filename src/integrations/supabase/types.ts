@@ -814,10 +814,13 @@ export type Database = {
       pricing_tables: {
         Row: {
           ad_valorem_percentage: number | null
+          chemical_classes_enabled: boolean | null
           cnpj: string | null
           company_branch_id: string | null
           created_at: string
           cubic_meter_kg_equivalent: number | null
+          distance_multiplier_threshold_km: number | null
+          distance_multiplier_value: number | null
           excess_weight_charge_per_kg: number | null
           excess_weight_threshold_kg: number | null
           file_url: string | null
@@ -832,16 +835,20 @@ export type Database = {
           name: string
           sheet_name: string | null
           source_type: string
+          transports_chemical_classes: string | null
           updated_at: string
           validation_errors: Json | null
           validation_status: string | null
         }
         Insert: {
           ad_valorem_percentage?: number | null
+          chemical_classes_enabled?: boolean | null
           cnpj?: string | null
           company_branch_id?: string | null
           created_at?: string
           cubic_meter_kg_equivalent?: number | null
+          distance_multiplier_threshold_km?: number | null
+          distance_multiplier_value?: number | null
           excess_weight_charge_per_kg?: number | null
           excess_weight_threshold_kg?: number | null
           file_url?: string | null
@@ -856,16 +863,20 @@ export type Database = {
           name: string
           sheet_name?: string | null
           source_type: string
+          transports_chemical_classes?: string | null
           updated_at?: string
           validation_errors?: Json | null
           validation_status?: string | null
         }
         Update: {
           ad_valorem_percentage?: number | null
+          chemical_classes_enabled?: boolean | null
           cnpj?: string | null
           company_branch_id?: string | null
           created_at?: string
           cubic_meter_kg_equivalent?: number | null
+          distance_multiplier_threshold_km?: number | null
+          distance_multiplier_value?: number | null
           excess_weight_charge_per_kg?: number | null
           excess_weight_threshold_kg?: number | null
           file_url?: string | null
@@ -880,6 +891,7 @@ export type Database = {
           name?: string
           sheet_name?: string | null
           source_type?: string
+          transports_chemical_classes?: string | null
           updated_at?: string
           validation_errors?: Json | null
           validation_status?: string | null

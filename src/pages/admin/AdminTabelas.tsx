@@ -96,6 +96,12 @@ const AdminTabelas = () => {
     max_length_cm: number;
     max_width_cm: number;
     max_height_cm: number;
+    excess_weight_threshold_kg: number;
+    excess_weight_charge_per_kg: number;
+    distance_multiplier_threshold_km: number;
+    distance_multiplier_value: number;
+    transports_chemical_classes: string;
+    chemical_classes_enabled: boolean;
   }>({
     name: '',
     company_branch_id: '',
@@ -103,10 +109,16 @@ const AdminTabelas = () => {
     google_sheets_url: '',
     sheet_name: '',
     file: null,
-    cubic_meter_kg_equivalent: 167,
+    cubic_meter_kg_equivalent: 250,
     max_length_cm: 200,
     max_width_cm: 200,
-    max_height_cm: 200
+    max_height_cm: 200,
+    excess_weight_threshold_kg: 100,
+    excess_weight_charge_per_kg: 5.50,
+    distance_multiplier_threshold_km: 100,
+    distance_multiplier_value: 2.0,
+    transports_chemical_classes: '8/9',
+    chemical_classes_enabled: false
   });
 
   const [availableSheets, setAvailableSheets] = useState<string[]>([]);
@@ -302,13 +314,19 @@ const AdminTabelas = () => {
         source_type: formData.source_type,
         file_url: formData.source_type === 'upload' ? fileUrl : null,
         google_sheets_url: formData.source_type === 'google_sheets' ? formData.google_sheets_url : null,
-        sheet_name: formData.source_type === 'google_sheets' && formData.sheet_name ? formData.sheet_name : null,
+        sheet_name: formData.source_type === 'google_sheets' && formData.sheet_name && formData.sheet_name !== '__default__' ? formData.sheet_name : null,
         is_active: true,
         validation_status: 'pending',
         cubic_meter_kg_equivalent: formData.cubic_meter_kg_equivalent,
         max_length_cm: formData.max_length_cm > 0 ? formData.max_length_cm : null,
         max_width_cm: formData.max_width_cm > 0 ? formData.max_width_cm : null,
-        max_height_cm: formData.max_height_cm > 0 ? formData.max_height_cm : null
+        max_height_cm: formData.max_height_cm > 0 ? formData.max_height_cm : null,
+        excess_weight_threshold_kg: formData.excess_weight_threshold_kg,
+        excess_weight_charge_per_kg: formData.excess_weight_charge_per_kg,
+        distance_multiplier_threshold_km: formData.distance_multiplier_threshold_km,
+        distance_multiplier_value: formData.distance_multiplier_value,
+        transports_chemical_classes: formData.transports_chemical_classes,
+        chemical_classes_enabled: formData.chemical_classes_enabled
       };
 
       let error;
@@ -401,10 +419,16 @@ const AdminTabelas = () => {
       google_sheets_url: table.google_sheets_url || '',
       sheet_name: table.sheet_name || '',
       file: null,
-      cubic_meter_kg_equivalent: table.cubic_meter_kg_equivalent ?? 167,
+      cubic_meter_kg_equivalent: table.cubic_meter_kg_equivalent ?? 250,
       max_length_cm: table.max_length_cm ?? 200,
       max_width_cm: table.max_width_cm ?? 200,
-      max_height_cm: table.max_height_cm ?? 200
+      max_height_cm: table.max_height_cm ?? 200,
+      excess_weight_threshold_kg: table.excess_weight_threshold_kg ?? 100,
+      excess_weight_charge_per_kg: table.excess_weight_charge_per_kg ?? 5.50,
+      distance_multiplier_threshold_km: (table as any).distance_multiplier_threshold_km ?? 100,
+      distance_multiplier_value: (table as any).distance_multiplier_value ?? 2.0,
+      transports_chemical_classes: (table as any).transports_chemical_classes ?? '8/9',
+      chemical_classes_enabled: (table as any).chemical_classes_enabled ?? false
     });
     setIsDialogOpen(true);
   };
@@ -420,7 +444,13 @@ const AdminTabelas = () => {
       cubic_meter_kg_equivalent: 250,
       max_length_cm: 200,
       max_width_cm: 200,
-      max_height_cm: 200
+      max_height_cm: 200,
+      excess_weight_threshold_kg: 100,
+      excess_weight_charge_per_kg: 5.50,
+      distance_multiplier_threshold_km: 100,
+      distance_multiplier_value: 2.0,
+      transports_chemical_classes: '8/9',
+      chemical_classes_enabled: false
     });
     setEditingTable(null);
     setAvailableSheets([]);
@@ -636,6 +666,117 @@ const AdminTabelas = () => {
                               placeholder="200"
                             />
                           </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-semibold text-sm">Consideração 2: Volume com mais de 100 KM</h3>
+                        <p className="text-xs text-muted-foreground">
+                          A cada volume com mais de 100 km, multiplicar o frete
+                        </p>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="distance_threshold">Distância Limite (KM)</Label>
+                            <Input
+                              id="distance_threshold"
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={formData.distance_multiplier_threshold_km}
+                              onChange={(e) => setFormData({...formData, distance_multiplier_threshold_km: parseFloat(e.target.value) || 0})}
+                              placeholder="100"
+                            />
+                          </div>
+
+                          <div>
+                            <Label htmlFor="distance_multiplier">Multiplicador</Label>
+                            <Input
+                              id="distance_multiplier"
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              value={formData.distance_multiplier_value}
+                              onChange={(e) => setFormData({...formData, distance_multiplier_value: parseFloat(e.target.value) || 0})}
+                              placeholder="2"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Ex: 2 = multiplicar por 2
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-semibold text-sm">Consideração 3: Fração de Peso Excedente</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Acrescentar a cada fração de peso excedente
+                        </p>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="excess_threshold">Fração de Peso (KG)</Label>
+                            <Input
+                              id="excess_threshold"
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={formData.excess_weight_threshold_kg}
+                              onChange={(e) => setFormData({...formData, excess_weight_threshold_kg: parseFloat(e.target.value) || 0})}
+                              placeholder="100"
+                            />
+                          </div>
+
+                          <div>
+                            <Label htmlFor="excess_charge">Valor por Fração (R$)</Label>
+                            <Input
+                              id="excess_charge"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={formData.excess_weight_charge_per_kg}
+                              onChange={(e) => setFormData({...formData, excess_weight_charge_per_kg: parseFloat(e.target.value) || 0})}
+                              placeholder="5.50"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Ex: R$ 5,50 a cada 100 kg
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-semibold text-sm">Consideração 4: Transporte de Químicos</h3>
+                        
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="chemical_enabled"
+                              checked={formData.chemical_classes_enabled}
+                              onChange={(e) => setFormData({...formData, chemical_classes_enabled: e.target.checked})}
+                              className="w-4 h-4"
+                            />
+                            <Label htmlFor="chemical_enabled" className="cursor-pointer">
+                              Transporta produtos químicos
+                            </Label>
+                          </div>
+
+                          {formData.chemical_classes_enabled && (
+                            <div>
+                              <Label htmlFor="chemical_classes">Classes Transportadas</Label>
+                              <Input
+                                id="chemical_classes"
+                                type="text"
+                                value={formData.transports_chemical_classes}
+                                onChange={(e) => setFormData({...formData, transports_chemical_classes: e.target.value})}
+                                placeholder="8/9"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Ex: 8 / 9 (classes de produtos químicos)
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </>
