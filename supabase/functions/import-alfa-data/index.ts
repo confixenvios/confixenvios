@@ -139,6 +139,9 @@ serve(async (req) => {
         const colTarifa = headers.findIndex(h => h.includes('tarifa'));
         
         // Processar cada linha de dados (pulando cabeçalho)
+        let processedZoneRows = 0;
+        let rejectedZoneRows = 0;
+        
         for (let i = 1; i < jsonData.length; i++) {
           const row = jsonData[i];
           if (!row || row.length < 5) continue;
@@ -151,10 +154,21 @@ serve(async (req) => {
           const prazo = colPrazo !== -1 ? parseInt(String(row[colPrazo] || '5')) : 5;
           const tarifa = colTarifa !== -1 ? String(row[colTarifa] || 'STANDARD').trim() : 'STANDARD';
           
+          // Log primeiras linhas para debug
+          if (i <= 3) {
+            console.log(`📝 Linha ${i} - Estado: "${state}" (len: ${state.length}), CEP inicial: "${cepStart}" (len: ${cepStart.length}), CEP final: "${cepEnd}" (len: ${cepEnd.length})`);
+          }
+          
           // Validar dados essenciais - CEPs devem ter pelo menos 5 dígitos
           if (!state || state.length !== 2 || !cepStart || !cepEnd || cepStart.length < 5 || cepEnd.length < 5) {
+            rejectedZoneRows++;
+            if (rejectedZoneRows <= 5) {
+              console.log(`❌ Linha ${i} rejeitada - Estado: "${state}" (len: ${state.length}), CEP inicial: "${cepStart}" (len: ${cepStart.length}), CEP final: "${cepEnd}" (len: ${cepEnd.length})`);
+            }
             continue;
           }
+          
+          processedZoneRows++;
           
           // Criar código único para a zona
           const zoneCode = `${origin}-${state}-${cepStart.substring(0, 5)}`;
@@ -179,7 +193,8 @@ serve(async (req) => {
         });
         const uniqueZonesArray = Array.from(uniqueZones.values());
         
-        console.log(`📦 ${uniqueZonesArray.length} zonas únicas`);
+        console.log(`📊 Total processado: ${processedZoneRows} linhas aceitas, ${rejectedZoneRows} linhas rejeitadas`);
+        console.log(`📦 ${uniqueZonesArray.length} zonas únicas após remoção de duplicatas`);
         
         if (uniqueZonesArray.length > 0) {
           // Inserir em lotes (500)
