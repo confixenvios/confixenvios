@@ -195,48 +195,56 @@ serve(async (req) => {
           const csvText = await response.text();
           const lines = csvText.split('\n').filter(l => l.trim());
           
-          if (lines.length < 2) {
-            console.log(`[AI Quote Agent] ⚠️ Planilha Jadlog vazia ou inválida`);
+          if (lines.length < 30) {
+            console.log(`[AI Quote Agent] ⚠️ Planilha Jadlog vazia ou inválida (${lines.length} linhas)`);
             continue;
           }
 
-          // Header da Jadlog: A, B, ORIGEM, DESTINO, REGIAO ATENDIDA, depois as colunas de estados
-          const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+          // Header na linha 29 (row 30 excel): ORIGEM, DESTINO, REGIÃO ATENDIDA, depois colunas PU até QM (estados/regiões)
+          const headers = lines[28].split(',').map(h => h.trim().replace(/"/g, ''));
+          console.log(`[AI Quote Agent] Headers Jadlog encontrados: ${headers.length} colunas`);
+          console.log(`[AI Quote Agent] Primeiras colunas:`, headers.slice(0, 10));
           
-          // Encontrar coluna do estado destino (ex: "GO→SP CAPITAL 1")
-          const stateColumnPattern = new RegExp(`GO.*${destinationState}.*CAPITAL`, 'i');
-          const stateColumnIndex = headers.findIndex(h => stateColumnPattern.test(h));
+          // Procurar coluna que contenha "GO" e destinationState e "CAPITAL 1"
+          let stateColumnIndex = -1;
+          for (let i = 0; i < headers.length; i++) {
+            const h = headers[i].toUpperCase();
+            if (h.includes('GO') && h.includes(destinationState) && h.includes('CAPITAL') && h.includes('1')) {
+              stateColumnIndex = i;
+              break;
+            }
+          }
           
           if (stateColumnIndex === -1) {
-            console.log(`[AI Quote Agent] ⚠️ Coluna GO→${destinationState} não encontrada na planilha Jadlog`);
-            console.log(`[AI Quote Agent] Headers disponíveis:`, headers.slice(5, 10));
+            console.log(`[AI Quote Agent] ⚠️ Coluna GO→${destinationState} CAPITAL 1 não encontrada na Jadlog`);
+            console.log(`[AI Quote Agent] Headers completos:`, headers);
             continue;
           }
 
-          console.log(`[AI Quote Agent] ✅ Coluna encontrada: ${headers[stateColumnIndex]} (index ${stateColumnIndex})`);
+          console.log(`[AI Quote Agent] ✅ Coluna Jadlog encontrada: "${headers[stateColumnIndex]}" (index ${stateColumnIndex})`);
 
-          // Processar linhas de peso
-          for (let i = 1; i < lines.length; i++) {
+          // Processar linhas de peso (row 30 em diante no Excel = index 29+ no array)
+          let recordCount = 0;
+          for (let i = 29; i < lines.length && i < 59; i++) { // Apenas linhas 30-59 (pesos 18-47kg)
             const cols = lines[i].split(',').map(c => c.trim().replace(/"/g, ''));
             
-            const weightRange = cols[1]; // Coluna B tem faixa de peso (ex: "21-22")
+            const weightStart = cols[0]; // Coluna A
+            const weightEnd = cols[1];   // Coluna B
             const priceStr = cols[stateColumnIndex];
             
-            if (!weightRange || !priceStr) continue;
+            if (!weightStart || !weightEnd || !priceStr) continue;
             
             const price = parseFloat(priceStr.replace(/[^\d,.]/g, '').replace(',', '.'));
             if (isNaN(price) || price <= 0) continue;
             
-            // Parse weight range (ex: "21-22" ou "29-30")
-            const weightMatch = weightRange.match(/(\d+)[^0-9]+(\d+)/);
-            if (!weightMatch) continue;
+            const weight_min = parseFloat(weightStart);
+            const weight_max = parseFloat(weightEnd);
             
-            const weight_min = parseFloat(weightMatch[1]);
-            const weight_max = parseFloat(weightMatch[2]);
+            if (isNaN(weight_min) || isNaN(weight_max)) continue;
             
-            // CEP 01307-001 está em SP Capital 1, que atende 01000-000 até 05999-999
-            const cepInicio = destinationState === 'SP' ? '01000000' : '00000000';
-            const cepFim = destinationState === 'SP' ? '05999999' : '99999999';
+            // SP Capital 1: CEPs 01000-000 até 05999-999
+            const cepInicio = '01000000';
+            const cepFim = '05999999';
             
             const cepNumerico = parseInt(cleanDestinationCep);
             const cepInicioNum = parseInt(cepInicio);
@@ -254,14 +262,15 @@ serve(async (req) => {
               price,
               delivery_days: 3,
               express_delivery_days: 2,
-              zone_code: `${destinationState}_CAPITAL`,
+              zone_code: `${destinationState}_CAPITAL_1`,
               state: destinationState,
               matches_cep: cepNaFaixa,
               matches_weight: pesoNaFaixa
             });
+            recordCount++;
           }
 
-          console.log(`[AI Quote Agent] ✅ Jadlog: ${tableData.pricing_data.length} registros processados da planilha`);
+          console.log(`[AI Quote Agent] ✅ Jadlog: ${recordCount} registros processados da planilha`);
         } catch (error) {
           console.error(`[AI Quote Agent] Erro ao processar Jadlog Google Sheets:`, error);
         }
@@ -295,58 +304,65 @@ serve(async (req) => {
           const lines = csvText.split('\n').filter(l => l.trim());
           
           if (lines.length < 3) {
-            console.log(`[AI Quote Agent] ⚠️ Planilha Alfa vazia ou inválida`);
+            console.log(`[AI Quote Agent] ⚠️ Planilha Alfa vazia ou inválida (${lines.length} linhas)`);
             continue;
           }
 
-          // Linha 1: GO ES CAPITAL, GO ES INTERIOR, etc.
-          // Linha 2: INTERIOR, CAPITAL, CAPITAL, etc.
-          const line1 = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-          const line2 = lines[1].split(',').map(h => h.trim().replace(/"/g, ''));
+          // Row 1 (index 0): ORIGEM, DESTINO, GO ES, GO ES, GO GO, GO MG, etc
+          // Row 2 (index 1): INTERIOR, CAPITAL, INTERIOR, CAPITAL, CAPITAL, CAPITAL, etc
+          const row1 = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+          const row2 = lines[1].split(',').map(h => h.trim().replace(/"/g, ''));
           
-          // Procurar coluna que combina estado + tipo (CAPITAL/INTERIOR)
+          console.log(`[AI Quote Agent] Row 1 Alfa (${row1.length} cols):`, row1.slice(0, 15));
+          console.log(`[AI Quote Agent] Row 2 Alfa (${row2.length} cols):`, row2.slice(0, 15));
+          
+          // Procurar coluna: row1 = "GO XX" E row2 = "CAPITAL"
           let stateColumnIndex = -1;
-          for (let i = 0; i < line1.length; i++) {
-            const header1 = line1[i].toUpperCase();
-            const header2 = line2[i].toUpperCase();
+          for (let i = 0; i < row1.length && i < row2.length; i++) {
+            const header1 = row1[i].toUpperCase().replace(/\s+/g, ' ');
+            const header2 = row2[i].toUpperCase();
             
-            // Procurar "GO ES" ou "GO SP" etc na linha 1
-            if (header1.includes('GO') && header1.includes(destinationState)) {
-              // Para capital, procurar coluna CAPITAL
-              if (header2.includes('CAPITAL')) {
+            // Procurar exatamente "GO SP", "GO ES", etc
+            const targetPattern = `GO ${destinationState}`;
+            if (header1 === targetPattern || header1 === `GO  ${destinationState}`) {
+              if (header2 === 'CAPITAL') {
                 stateColumnIndex = i;
+                console.log(`[AI Quote Agent] ✅ MATCH: Col ${i}: "${row1[i]}" + "${row2[i]}"`);
                 break;
               }
             }
           }
           
           if (stateColumnIndex === -1) {
-            console.log(`[AI Quote Agent] ⚠️ Coluna GO→${destinationState} CAPITAL não encontrada na Alfa`);
+            console.log(`[AI Quote Agent] ⚠️ Coluna GO ${destinationState} CAPITAL não encontrada na Alfa`);
             continue;
           }
 
-          console.log(`[AI Quote Agent] ✅ Coluna Alfa encontrada: ${line1[stateColumnIndex]} ${line2[stateColumnIndex]} (index ${stateColumnIndex})`);
+          console.log(`[AI Quote Agent] ✅ Coluna Alfa selecionada: [${stateColumnIndex}] "${row1[stateColumnIndex]}" / "${row2[stateColumnIndex]}"`);
 
-          // Processar linhas de peso (começando da linha 3)
+          // Processar linhas de peso (row 3+ = index 2+)
+          let recordCount = 0;
           for (let i = 2; i < lines.length; i++) {
             const cols = lines[i].split(',').map(c => c.trim().replace(/"/g, ''));
             
-            const weightRange = cols[1]; // Coluna B tem peso (ex: "30")
+            const weightStr = cols[1]; // Coluna B (peso máximo: 19, 20, 21...)
             const priceStr = cols[stateColumnIndex];
             
-            if (!weightRange || !priceStr) continue;
+            if (!weightStr || !priceStr) continue;
             
             const price = parseFloat(priceStr.replace(/[^\d,.]/g, '').replace(',', '.'));
             if (isNaN(price) || price <= 0) continue;
             
-            const weight_max = parseFloat(weightRange);
-            const weight_min = i === 2 ? 0 : parseFloat(lines[i-1].split(',')[1] || '0');
-            
+            const weight_max = parseFloat(weightStr);
             if (isNaN(weight_max)) continue;
             
-            // CEP Capital: 01000000-05999999 para SP
-            const cepInicio = destinationState === 'SP' ? '01000000' : '00000000';
-            const cepFim = destinationState === 'SP' ? '05999999' : '99999999';
+            // weight_min é o peso da linha anterior
+            const prevWeightStr = i > 2 ? lines[i-1].split(',')[1]?.trim().replace(/"/g, '') : '0';
+            const weight_min = parseFloat(prevWeightStr) || 0;
+            
+            // SP Capital: 01000-000 até 05999-999
+            const cepInicio = '01000000';
+            const cepFim = '05999999';
             
             const cepNumerico = parseInt(cleanDestinationCep);
             const cepInicioNum = parseInt(cepInicio);
@@ -369,9 +385,10 @@ serve(async (req) => {
               matches_cep: cepNaFaixa,
               matches_weight: pesoNaFaixa
             });
+            recordCount++;
           }
 
-          console.log(`[AI Quote Agent] ✅ Alfa: ${tableData.pricing_data.length} registros processados da planilha`);
+          console.log(`[AI Quote Agent] ✅ Alfa: ${recordCount} registros processados da planilha`);
         } catch (error) {
           console.error(`[AI Quote Agent] Erro ao processar Alfa Google Sheets:`, error);
         }
