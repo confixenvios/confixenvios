@@ -422,6 +422,59 @@ serve(async (req) => {
         console.log(`[AI Quote Agent] Buscando preço em ${table.name}:`);
         console.log(`  - CEP: ${destination_cep}, Peso: ${peso_tarifavel}kg`);
         
+        // VALIDAÇÃO DE DIMENSÕES (Magalog/outras transportadoras)
+        let dimensions_valid = true;
+        let dimension_violation = '';
+        
+        if (table.max_length_cm || table.max_width_cm || table.max_height_cm || (table as any).max_dimension_sum_cm) {
+          for (const vol of volumes_data) {
+            // Verificar dimensões individuais máximas
+            if (table.max_length_cm && vol.length > table.max_length_cm) {
+              dimensions_valid = false;
+              dimension_violation = `Comprimento ${vol.length}cm excede máximo de ${table.max_length_cm}cm`;
+              break;
+            }
+            if (table.max_width_cm && vol.width > table.max_width_cm) {
+              dimensions_valid = false;
+              dimension_violation = `Largura ${vol.width}cm excede máximo de ${table.max_width_cm}cm`;
+              break;
+            }
+            if (table.max_height_cm && vol.height > table.max_height_cm) {
+              dimensions_valid = false;
+              dimension_violation = `Altura ${vol.height}cm excede máximo de ${table.max_height_cm}cm`;
+              break;
+            }
+            
+            // CONSIDERAÇÃO 2 (Magalog): Verificar soma das dimensões
+            if ((table as any).max_dimension_sum_cm) {
+              const dimension_sum = vol.length + vol.width + vol.height;
+              if (dimension_sum > (table as any).max_dimension_sum_cm) {
+                dimensions_valid = false;
+                dimension_violation = `Soma das dimensões ${dimension_sum}cm (${vol.length}+${vol.width}+${vol.height}) excede máximo de ${(table as any).max_dimension_sum_cm}cm`;
+                break;
+              }
+            }
+          }
+          
+          if (!dimensions_valid) {
+            console.log(`[AI Quote Agent] ❌ ${table.name} - Dimensões inválidas: ${dimension_violation}`);
+            allTableQuotes.push({
+              table_id: table.id,
+              table_name: table.name,
+              base_price: 0,
+              excedente_kg: 0,
+              valor_excedente: 0,
+              insurance_value: 0,
+              final_price: 0,
+              delivery_days: 0,
+              peso_tarifavel: 0,
+              has_coverage: false,
+              dimension_violation
+            });
+            continue; // Pular para próxima tabela
+          }
+        }
+        
         // Encontrar registro de preço correspondente ao CEP e peso
         const priceRecord = table.pricing_data.find(p => {
           // Verificar match de peso
@@ -512,6 +565,15 @@ serve(async (req) => {
           const transports_chemicals = table.chemical_classes_enabled ? 
             `Transporta químicos classes ${table.transports_chemical_classes}` : 
             'Não transporta químicos';
+          
+          // Informações sobre restrições de dimensões
+          const dimension_rules = [];
+          if (table.max_length_cm || table.max_width_cm || table.max_height_cm) {
+            dimension_rules.push(`Dimensões máx: ${table.max_length_cm}×${table.max_width_cm}×${table.max_height_cm}cm`);
+          }
+          if ((table as any).max_dimension_sum_cm) {
+            dimension_rules.push(`Soma máx: ${(table as any).max_dimension_sum_cm}cm`);
+          }
 
           allTableQuotes.push({
             table_id: table.id,
@@ -526,6 +588,7 @@ serve(async (req) => {
             has_coverage: true,
             cubic_meter_equivalent: table.cubic_meter_kg_equivalent,
             transports_chemicals,
+            dimension_rules: dimension_rules.length > 0 ? dimension_rules.join('; ') : null,
             volume_weight_rule: volume_weight_multiplier_applied ? 
               `Multiplicador ${table.distance_multiplier_value}x aplicado (volume >${table.distance_multiplier_threshold_km}kg)` : 
               (table.distance_multiplier_threshold_km ? 
@@ -535,12 +598,15 @@ serve(async (req) => {
           
           console.log(`[AI Quote Agent] ${table.name} - Cobertura ENCONTRADA para CEP ${destination_cep} e peso ${peso_tarifavel}kg`);
           console.log(`  - Equivalência cúbica: ${table.cubic_meter_kg_equivalent} kg/m³ (CONSIDERAÇÃO 1)`);
-          console.log(`  - Volume pesado: ${volume_weight_multiplier_applied ? 'SIM - Multiplicador aplicado!' : 'Não'} (CONSIDERAÇÃO 2)`);
+          console.log(`  - Volume pesado: ${volume_weight_multiplier_applied ? 'SIM - Multiplicador aplicado!' : 'Não'} (CONSIDERAÇÃO 2 Diolog)`);
+          if (dimension_rules.length > 0) {
+            console.log(`  - Restrições de dimensões: ${dimension_rules.join('; ')} (CONSIDERAÇÃO 2 Magalog)`);
+          }
           console.log(`  - Preço base: R$ ${base_price.toFixed(2)}`);
-          console.log(`  - Excedente: R$ ${valor_excedente.toFixed(2)} (CONSIDERAÇÃO 3)`);
+          console.log(`  - Excedente: R$ ${valor_excedente.toFixed(2)} (CONSIDERAÇÃO 3 Diolog)`);
           console.log(`  - Seguro: R$ ${insurance_value.toFixed(2)}`);
           console.log(`  - Preço final: R$ ${final_price.toFixed(2)}`);
-          console.log(`  - ${transports_chemicals} (CONSIDERAÇÃO 4)`);
+          console.log(`  - ${transports_chemicals} (CONSIDERAÇÃO 4 Diolog)`);
         } else {
           // Tabela não tem cobertura para este CEP/peso
           allTableQuotes.push({
@@ -632,6 +698,7 @@ ${JSON.stringify(tablesWithCoverage.map(q => ({
   weight: q.peso_tarifavel,
   cubic_meter_equivalent: q.cubic_meter_equivalent,
   transports_chemicals: q.transports_chemicals,
+  dimension_rules: q.dimension_rules,
   volume_weight_rule: q.volume_weight_rule,
   base_price: q.base_price,
   excess_charge: q.valor_excedente
@@ -643,11 +710,12 @@ CRITÉRIOS DE ESCOLHA (baseado em prioridade "${config.priority_mode}"):
 - "balanced": Balance preço e prazo (melhor custo-benefício)
 
 REGRAS ESPECÍFICAS DAS TRANSPORTADORAS:
-- Diolog: Peso cúbico ${tablesWithCoverage.find(q => q.table_name.includes('Diolog'))?.cubic_meter_equivalent || 'N/A'} kg/m³
-- Cada transportadora pode ter regras diferentes de excedente, volume pesado, e químicos
-- Considere se a regra de volume pesado foi aplicada (multiplica o frete)
+- Cada transportadora tem regras diferentes (peso cúbico, dimensões, excedente, volume pesado, químicos)
+- Magalog: Peso cúbico 167 kg/m³, restrições de dimensões individuais e soma máxima
+- Diolog: Peso cúbico 250 kg/m³, multiplica frete se volume >100kg, cobra excedente, transporta químicos
+- Considere todas as regras aplicadas no cálculo do preço final
 
-Considere todos os fatores: preço final, prazo, regras de excedente/volume, e se transporta químicos (se relevante).
+Considere todos os fatores: preço final, prazo, regras específicas de cada transportadora.
 
 Retorne APENAS JSON válido:
 {

@@ -96,6 +96,7 @@ const AdminTabelas = () => {
     max_length_cm: number;
     max_width_cm: number;
     max_height_cm: number;
+    max_dimension_sum_cm: number;
     excess_weight_threshold_kg: number;
     excess_weight_charge_per_kg: number;
     distance_multiplier_threshold_km: number;
@@ -109,10 +110,11 @@ const AdminTabelas = () => {
     google_sheets_url: '',
     sheet_name: '',
     file: null,
-    cubic_meter_kg_equivalent: 250,
-    max_length_cm: 200,
-    max_width_cm: 200,
-    max_height_cm: 200,
+    cubic_meter_kg_equivalent: 167,
+    max_length_cm: 80,
+    max_width_cm: 80,
+    max_height_cm: 80,
+    max_dimension_sum_cm: 200,
     excess_weight_threshold_kg: 100,
     excess_weight_charge_per_kg: 5.50,
     distance_multiplier_threshold_km: 100,
@@ -321,6 +323,7 @@ const AdminTabelas = () => {
         max_length_cm: formData.max_length_cm > 0 ? formData.max_length_cm : null,
         max_width_cm: formData.max_width_cm > 0 ? formData.max_width_cm : null,
         max_height_cm: formData.max_height_cm > 0 ? formData.max_height_cm : null,
+        max_dimension_sum_cm: formData.max_dimension_sum_cm > 0 ? formData.max_dimension_sum_cm : null,
         excess_weight_threshold_kg: formData.excess_weight_threshold_kg,
         excess_weight_charge_per_kg: formData.excess_weight_charge_per_kg,
         distance_multiplier_threshold_km: formData.distance_multiplier_threshold_km,
@@ -419,10 +422,11 @@ const AdminTabelas = () => {
       google_sheets_url: table.google_sheets_url || '',
       sheet_name: table.sheet_name || '',
       file: null,
-      cubic_meter_kg_equivalent: table.cubic_meter_kg_equivalent ?? 250,
-      max_length_cm: table.max_length_cm ?? 200,
-      max_width_cm: table.max_width_cm ?? 200,
-      max_height_cm: table.max_height_cm ?? 200,
+      cubic_meter_kg_equivalent: table.cubic_meter_kg_equivalent ?? 167,
+      max_length_cm: table.max_length_cm ?? 80,
+      max_width_cm: table.max_width_cm ?? 80,
+      max_height_cm: table.max_height_cm ?? 80,
+      max_dimension_sum_cm: (table as any).max_dimension_sum_cm ?? 200,
       excess_weight_threshold_kg: table.excess_weight_threshold_kg ?? 100,
       excess_weight_charge_per_kg: table.excess_weight_charge_per_kg ?? 5.50,
       distance_multiplier_threshold_km: (table as any).distance_multiplier_threshold_km ?? 100,
@@ -441,10 +445,11 @@ const AdminTabelas = () => {
       google_sheets_url: '',
       sheet_name: '',
       file: null,
-      cubic_meter_kg_equivalent: 250,
-      max_length_cm: 200,
-      max_width_cm: 200,
-      max_height_cm: 200,
+      cubic_meter_kg_equivalent: 167,
+      max_length_cm: 80,
+      max_width_cm: 80,
+      max_height_cm: 80,
+      max_dimension_sum_cm: 200,
       excess_weight_threshold_kg: 100,
       excess_weight_charge_per_kg: 5.50,
       distance_multiplier_threshold_km: 100,
@@ -780,6 +785,94 @@ const AdminTabelas = () => {
                               </p>
                             </div>
                           )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {formData.name.toLowerCase().includes('magalog') && (
+                    <>
+                      <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-semibold text-sm">Consideração 1: Equivalência Cúbica</h3>
+                        
+                        <div>
+                          <Label htmlFor="cubic_meter_magalog">Equivalência Cúbica (kg/m³)</Label>
+                          <Input
+                            id="cubic_meter_magalog"
+                            type="number"
+                            step="1"
+                            min="0"
+                            value={formData.cubic_meter_kg_equivalent}
+                            onChange={(e) => setFormData({...formData, cubic_meter_kg_equivalent: parseFloat(e.target.value) || 0})}
+                            placeholder="167"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Referência: 167 KG/M3
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-semibold text-sm">Consideração 2: Dimensões Máximas</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Restrições individuais de cada dimensão e soma total
+                        </p>
+                        
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <Label htmlFor="max_length_magalog">Comprimento Máx. (cm)</Label>
+                            <Input
+                              id="max_length_magalog"
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={formData.max_length_cm}
+                              onChange={(e) => setFormData({...formData, max_length_cm: parseFloat(e.target.value) || 0})}
+                              placeholder="80"
+                            />
+                          </div>
+
+                          <div>
+                            <Label htmlFor="max_width_magalog">Largura Máx. (cm)</Label>
+                            <Input
+                              id="max_width_magalog"
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={formData.max_width_cm}
+                              onChange={(e) => setFormData({...formData, max_width_cm: parseFloat(e.target.value) || 0})}
+                              placeholder="80"
+                            />
+                          </div>
+
+                          <div>
+                            <Label htmlFor="max_height_magalog">Altura Máx. (cm)</Label>
+                            <Input
+                              id="max_height_magalog"
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={formData.max_height_cm}
+                              onChange={(e) => setFormData({...formData, max_height_cm: parseFloat(e.target.value) || 0})}
+                              placeholder="80"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-4">
+                          <Label htmlFor="max_dimension_sum">Soma Máxima das Dimensões (cm)</Label>
+                          <Input
+                            id="max_dimension_sum"
+                            type="number"
+                            step="1"
+                            min="0"
+                            value={formData.max_dimension_sum_cm}
+                            onChange={(e) => setFormData({...formData, max_dimension_sum_cm: parseFloat(e.target.value) || 0})}
+                            placeholder="200"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            A soma das três dimensões (altura + largura + comprimento) não pode ultrapassar este valor
+                          </p>
                         </div>
                       </div>
                     </>

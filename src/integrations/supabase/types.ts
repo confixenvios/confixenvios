@@ -829,6 +829,7 @@ export type Database = {
           id: string
           is_active: boolean
           last_validation_at: string | null
+          max_dimension_sum_cm: number | null
           max_height_cm: number | null
           max_length_cm: number | null
           max_width_cm: number | null
@@ -857,6 +858,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_validation_at?: string | null
+          max_dimension_sum_cm?: number | null
           max_height_cm?: number | null
           max_length_cm?: number | null
           max_width_cm?: number | null
@@ -885,6 +887,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_validation_at?: string | null
+          max_dimension_sum_cm?: number | null
           max_height_cm?: number | null
           max_length_cm?: number | null
           max_width_cm?: number | null
