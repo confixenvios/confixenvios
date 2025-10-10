@@ -143,16 +143,18 @@ serve(async (req) => {
           const row = jsonData[i];
           if (!row || row.length < 5) continue;
           
-          const origin = colOrigin !== -1 ? String(row[colOrigin] || 'GO').trim() : 'GO';
-          const state = colUF !== -1 ? String(row[colUF] || '').trim() : '';
+          const origin = colOrigin !== -1 ? String(row[colOrigin] || 'GO').trim().toUpperCase() : 'GO';
+          const state = colUF !== -1 ? String(row[colUF] || '').trim().toUpperCase() : '';
           const city = colCity !== -1 ? String(row[colCity] || '').trim() : '';
           const cepStart = colCEPStart !== -1 ? String(row[colCEPStart] || '').trim().replace(/\D/g, '') : '';
           const cepEnd = colCEPEnd !== -1 ? String(row[colCEPEnd] || '').trim().replace(/\D/g, '') : '';
           const prazo = colPrazo !== -1 ? parseInt(String(row[colPrazo] || '5')) : 5;
           const tarifa = colTarifa !== -1 ? String(row[colTarifa] || 'STANDARD').trim() : 'STANDARD';
           
-          // Validar dados essenciais
-          if (!state || !cepStart || !cepEnd || cepStart.length < 5 || cepEnd.length < 5) continue;
+          // Validar dados essenciais - CEPs devem ter pelo menos 5 dígitos
+          if (!state || state.length !== 2 || !cepStart || !cepEnd || cepStart.length < 5 || cepEnd.length < 5) {
+            continue;
+          }
           
           // Criar código único para a zona
           const zoneCode = `${origin}-${state}-${cepStart.substring(0, 5)}`;
@@ -208,8 +210,8 @@ serve(async (req) => {
         const firstDataRowIndex = 4;
         
         console.log(`📍 Estrutura Alfa`);
-        console.log(`📍 Linha 0 - Estados:`, stateRow?.slice(0, 10));
-        console.log(`📍 Linha tarifas:`, tariffRow?.slice(0, 10));
+        console.log(`📍 Linha 0 - Origem/Regiões:`, stateRow?.slice(0, 10));
+        console.log(`📍 Linha 2 - Códigos Tarifa:`, tariffRow?.slice(0, 10));
         console.log(`📍 Primeira linha de dados (índice ${firstDataRowIndex}):`, jsonData[firstDataRowIndex]?.slice(0, 10));
         
         let processedRows = 0;
@@ -261,18 +263,20 @@ serve(async (req) => {
               continue;
             }
             
-            const originState = 'GO'; // Alfa também opera de GO
-            const destinationState = String(stateRow[j] || '').trim().toUpperCase();
-            const tariffType = String(tariffRow[j] || 'STANDARD').trim();
+            const originState = 'GO'; // Alfa opera de GO
+            const tariffCode = String(tariffRow[j] || 'STANDARD').trim();
+            const destinationRegion = String(stateRow[j] || '').trim();
             
-            if (!destinationState || destinationState.length > 2) {
+            // Alfa usa códigos de tarifa como SPCAP.01, SPMET.01, etc.
+            // Não validar por tamanho de estado
+            if (!tariffCode || !destinationRegion) {
               continue;
             }
             
             pricingData.push({
               origin_state: originState,
-              destination_state: destinationState,
-              tariff_type: tariffType,
+              destination_state: tariffCode, // Usar código de tarifa como destino
+              tariff_type: destinationRegion, // Região como tipo de tarifa
               weight_min: weightMin,
               weight_max: weightMax,
               price: price
