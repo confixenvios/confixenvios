@@ -306,8 +306,8 @@ serve(async (req) => {
             
             pricingData.push({
               origin_state: originState,
-              destination_state: tariffCode, // Usar código de tarifa como destino
-              tariff_type: destinationRegion, // Região como tipo de tarifa
+              destination_state: destinationRegion, // ✅ Região é o estado de destino
+              tariff_type: tariffCode, // ✅ Código de tarifa é o tipo de tarifa
               weight_min: weightMin,
               weight_max: weightMax,
               price: price
