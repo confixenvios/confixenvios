@@ -349,68 +349,103 @@ serve(async (req) => {
           }
 
           // Primeiro, verificar cobertura de CEP na aba ABRANGENCIA
-          let abrangenciaUrl = table.google_sheets_url.replace(/gid=\d+/, 'gid=1'); // Aba ABRANGENCIA
           const spreadsheetIdMatch = table.google_sheets_url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-          
-          if (spreadsheetIdMatch) {
-            const spreadsheetId = spreadsheetIdMatch[1];
-            abrangenciaUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=1`;
-          }
           
           console.log(`[AI Quote Agent] Verificando cobertura Alfa CEP ${cleanDestinationCep} na aba ABRANGENCIA...`);
           
           let alfaCoberturaCep = false;
-          try {
-            const abrangenciaResponse = await fetch(abrangenciaUrl);
-            if (abrangenciaResponse.ok) {
-              const abrangenciaText = await abrangenciaResponse.text();
-              const abrangenciaLines = abrangenciaText.split('\n').filter(l => l.trim());
-              
-              console.log(`[AI Quote Agent] 🔍 ALFA ABRANGENCIA: ${abrangenciaLines.length} linhas`);
-              console.log(`[AI Quote Agent] 🔍 Primeira linha ABRANGENCIA:`, abrangenciaLines[0]);
-              console.log(`[AI Quote Agent] 🔍 Segunda linha ABRANGENCIA:`, abrangenciaLines[1]);
-              
-              // Verificar cada linha da aba ABRANGENCIA
-              for (let i = 1; i < abrangenciaLines.length; i++) {
-                const linha = abrangenciaLines[i];
-                console.log(`[AI Quote Agent] 🔍 Linha completa ${i}:`, linha);
+          
+          if (spreadsheetIdMatch) {
+            const spreadsheetId = spreadsheetIdMatch[1];
+            
+            // Tentar múltiplos gids para encontrar a aba ABRANGENCIA
+            const possibleGids = ['1', '1706611173', '0'];
+            
+            for (const gid of possibleGids) {
+              try {
+                const abrangenciaUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
+                console.log(`[AI Quote Agent] 🔍 Tentando buscar ABRANGENCIA com gid=${gid}`);
                 
-                const cols = linha.split(',').map(c => c.trim().replace(/"/g, ''));
-                console.log(`[AI Quote Agent] 🔍 Colunas processadas:`, cols);
-                
-                // Tentar diferentes formatos de colunas
-                let ufOrigem = cols[0]?.toUpperCase();
-                let ufDestino = cols[1]?.toUpperCase();
-                let cepInicial = cols[2]?.replace(/\D/g, '');
-                let cepFinal = cols[3]?.replace(/\D/g, '');
-                
-                // Se não encontrou CEPs nas posições 2 e 3, tentar 3 e 4
-                if (!cepInicial || !cepFinal || cepInicial.length < 8 || cepFinal.length < 8) {
-                  cepInicial = cols[3]?.replace(/\D/g, '');
-                  cepFinal = cols[4]?.replace(/\D/g, '');
-                }
-                
-                console.log(`[AI Quote Agent] 🔍 Linha ${i}: UF_ORIGEM=${ufOrigem}, UF_DESTINO=${ufDestino}, CEP_INICIAL=${cepInicial}, CEP_FINAL=${cepFinal}`);
-                
-                if (ufOrigem === 'GO' && ufDestino === destinationState && cepInicial && cepFinal) {
-                  const cepInicialNum = parseInt(cepInicial);
-                  const cepFinalNum = parseInt(cepFinal);
-                  const cepDestinoNum = parseInt(cleanDestinationCep);
+                const abrangenciaResponse = await fetch(abrangenciaUrl);
+                if (abrangenciaResponse.ok) {
+                  const abrangenciaText = await abrangenciaResponse.text();
+                  const abrangenciaLines = abrangenciaText.split('\n').filter(l => l.trim());
                   
-                  console.log(`[AI Quote Agent] 🎯 MATCH GO → ${destinationState}: Verificando se ${cepDestinoNum} está entre ${cepInicialNum} e ${cepFinalNum}`);
+                  console.log(`[AI Quote Agent] ✅ ABRANGENCIA encontrada com gid=${gid}: ${abrangenciaLines.length} linhas`);
                   
-                  if (cepDestinoNum >= cepInicialNum && cepDestinoNum <= cepFinalNum) {
-                    alfaCoberturaCep = true;
-                    console.log(`[AI Quote Agent] ✅ Alfa ATENDE CEP ${destination_cep} (faixa: ${cepInicial}-${cepFinal})`);
-                    break;
+                  // Verificar se é realmente a aba ABRANGENCIA (deve ter UF ORIGEM, UF DESTINO, etc)
+                  const firstLine = abrangenciaLines[0]?.toUpperCase();
+                  if (!firstLine || (!firstLine.includes('ORIGEM') && !firstLine.includes('DESTINO') && !firstLine.includes('CEP'))) {
+                    console.log(`[AI Quote Agent] ⚠️ gid=${gid} não parece ser a aba ABRANGENCIA, tentando próximo...`);
+                    continue;
                   }
+                  
+                  console.log(`[AI Quote Agent] 📋 Cabeçalho ABRANGENCIA:`, firstLine);
+                  console.log(`[AI Quote Agent] 📋 Exemplo linha 2:`, abrangenciaLines[1]);
+                  
+                  // Verificar cada linha da aba ABRANGENCIA
+                  for (let i = 1; i < abrangenciaLines.length; i++) {
+                    const linha = abrangenciaLines[i];
+                    if (!linha || linha.trim() === '') continue;
+                    
+                    // Parse CSV considerando campos entre aspas
+                    const cols = [];
+                    let currentField = '';
+                    let insideQuotes = false;
+                    
+                    for (let j = 0; j < linha.length; j++) {
+                      const char = linha[j];
+                      if (char === '"') {
+                        insideQuotes = !insideQuotes;
+                      } else if (char === ',' && !insideQuotes) {
+                        cols.push(currentField.trim());
+                        currentField = '';
+                      } else {
+                        currentField += char;
+                      }
+                    }
+                    cols.push(currentField.trim());
+                    
+                    if (cols.length < 4) continue; // Precisa ter pelo menos 4 colunas
+                    
+                    const ufOrigem = cols[0]?.toUpperCase().replace(/"/g, '');
+                    const ufDestino = cols[1]?.toUpperCase().replace(/"/g, '');
+                    const cepInicial = cols[2]?.replace(/\D/g, '');
+                    const cepFinal = cols[3]?.replace(/\D/g, '');
+                    
+                    // Debug apenas para linhas relevantes (GO → destinationState)
+                    if (ufOrigem === 'GO' && ufDestino === destinationState) {
+                      console.log(`[AI Quote Agent] 🎯 Linha ${i}: GO → ${destinationState}, CEP: ${cepInicial} - ${cepFinal}`);
+                    }
+                    
+                    if (ufOrigem === 'GO' && ufDestino === destinationState && cepInicial && cepFinal) {
+                      // Garantir que os CEPs tenham 8 dígitos
+                      const cepIni = cepInicial.padEnd(8, '0');
+                      const cepFim = cepFinal.padEnd(8, '0');
+                      
+                      const cepInicialNum = parseInt(cepIni);
+                      const cepFinalNum = parseInt(cepFim);
+                      const cepDestinoNum = parseInt(cleanDestinationCep);
+                      
+                      console.log(`[AI Quote Agent] 📊 Comparando: ${cepDestinoNum} >= ${cepInicialNum} && ${cepDestinoNum} <= ${cepFinalNum}`);
+                      
+                      if (cepDestinoNum >= cepInicialNum && cepDestinoNum <= cepFinalNum) {
+                        alfaCoberturaCep = true;
+                        console.log(`[AI Quote Agent] ✅ ALFA ATENDE! CEP ${destination_cep} está na faixa: ${cepIni} - ${cepFim}`);
+                        break;
+                      }
+                    }
+                  }
+                  
+                  if (alfaCoberturaCep) break; // Encontrou cobertura, não precisa tentar outros gids
+                  
+                } else {
+                  console.log(`[AI Quote Agent] ⚠️ gid=${gid} retornou status ${abrangenciaResponse.status}`);
                 }
+              } catch (err) {
+                console.log(`[AI Quote Agent] ⚠️ Erro ao tentar gid=${gid}:`, err.message);
               }
-            } else {
-              console.error(`[AI Quote Agent] ❌ Erro ao buscar ABRANGENCIA Alfa: status ${abrangenciaResponse.status}`);
             }
-          } catch (err) {
-            console.warn(`[AI Quote Agent] Erro ao verificar abrangência Alfa:`, err);
           }
           
           if (!alfaCoberturaCep) {
