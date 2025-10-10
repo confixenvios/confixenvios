@@ -348,9 +348,9 @@ serve(async (req) => {
           // Linha 1: UF ORIGEM (GO, GO, GO...)
           // Linha 2: UF DESTINO (DF, ES, ES, GO...)
           // Linha 3: REGIAO ATENDIDA (CAPITAL, INTERIOR, CAPITAL...)
-          // Linha 4: INICIAL (KG) - peso mínimo de cada faixa
-          // Linha 5: PESO FINAL (KG) - peso máximo de cada faixa
-          // Linha 6+: dados (cep_inicio, cep_fim, preços por coluna)
+          // Linha 4: PESO INICIAL (KG) - na coluna A
+          // Linha 5: PESO FINAL (KG) - na coluna B
+          // Linha 6+: preços (uma linha por faixa de peso)
           
           if (lines.length < 6) {
             console.log(`[AI Quote Agent] ⚠️ Planilha Alfa inválida (menos de 6 linhas)`);
@@ -360,110 +360,80 @@ serve(async (req) => {
           const row1 = lines[0].split(',').map(c => c.trim().replace(/"/g, '').toUpperCase());
           const row2 = lines[1].split(',').map(c => c.trim().replace(/"/g, '').toUpperCase());
           const row3 = lines[2].split(',').map(c => c.trim().replace(/"/g, '').toUpperCase());
-          const row4 = lines[3].split(',').map(c => c.trim().replace(/"/g, ''));
-          const row5 = lines[4].split(',').map(c => c.trim().replace(/"/g, ''));
           
           console.log(`[AI Quote Agent] DEBUG Alfa - Primeiras 10 colunas:`);
           console.log(`Row1 (UF ORIGEM):`, row1.slice(0, 10));
           console.log(`Row2 (UF DESTINO):`, row2.slice(0, 10));
           console.log(`Row3 (REGIAO):`, row3.slice(0, 10));
-          console.log(`Row4 (INICIAL KG):`, row4.slice(0, 10));
-          console.log(`Row5 (PESO FINAL KG):`, row5.slice(0, 10));
           
-          // Encontrar coluna: GO → destinationState → CAPITAL
-          let targetColumnIndex = -1;
+          // Encontrar TODAS as colunas GO → destinationState → CAPITAL
+          interface AlfaColumn {
+            columnIndex: number;
+            region: string;
+          }
+          
+          const alfaColumns: AlfaColumn[] = [];
           for (let col = 0; col < row1.length; col++) {
             if (row1[col] === 'GO' && 
                 row2[col] === destinationState && 
                 row3[col] === 'CAPITAL') {
-              targetColumnIndex = col;
-              console.log(`[AI Quote Agent] ✅ Coluna encontrada: GO → ${destinationState} → CAPITAL (coluna ${col})`);
-              console.log(`[AI Quote Agent] Valores nesta coluna - row4[${col}]: "${row4[col]}", row5[${col}]: "${row5[col]}"`);
-              break;
+              alfaColumns.push({
+                columnIndex: col,
+                region: row3[col]
+              });
+              console.log(`[AI Quote Agent] ✅ Coluna Alfa encontrada: GO → ${destinationState} → CAPITAL (coluna ${col})`);
             }
           }
           
-          if (targetColumnIndex === -1) {
-            console.log(`[AI Quote Agent] ⚠️ Coluna GO → ${destinationState} → CAPITAL não encontrada`);
+          if (alfaColumns.length === 0) {
+            console.log(`[AI Quote Agent] ⚠️ Nenhuma coluna GO → ${destinationState} → CAPITAL encontrada na Alfa`);
             continue;
           }
 
-          // Extrair faixas de peso
+          console.log(`[AI Quote Agent] Total de colunas Alfa: ${alfaColumns.length}`);
+          
+          // Extrair faixas de peso das linhas 4+ (coluna A = peso inicial, coluna B = peso final não existe mais)
+          // Na verdade, as faixas de peso estão IMPLÍCITAS nas linhas
+          // Linha 4: 0,001
+          // Linha 5: 5,00
+          // Linha 6: 10,00
+          // etc
+          
           interface WeightRange {
-            columnIndex: number;
             weight_min: number;
             weight_max: number;
+            lineIndex: number;
           }
           
           const weightRanges: WeightRange[] = [];
-          console.log(`[AI Quote Agent] Extraindo faixas de peso para GO → ${destinationState} → CAPITAL...`);
+          let lastMax = 0;
           
-          for (let col = 0; col < row4.length; col++) {
-            if (row1[col] === 'GO' && row2[col] === destinationState && row3[col] === 'CAPITAL') {
-              const minStr = row4[col];
-              const maxStr = row5[col];
-              
-              console.log(`[AI Quote Agent] Coluna ${col} - row4: "${minStr}", row5: "${maxStr}"`);
-              
-              const min = parseFloat(minStr.replace(/[^\d,.]/g, '').replace(',', '.'));
-              const max = parseFloat(maxStr.replace(/[^\d,.]/g, '').replace(',', '.'));
-              
-              console.log(`[AI Quote Agent] Coluna ${col} - parsed min: ${min}, parsed max: ${max}`);
-              
-              if (!isNaN(min) && !isNaN(max) && max > 0) {
-                weightRanges.push({
-                  columnIndex: col,
-                  weight_min: min,
-                  weight_max: max
-                });
-                console.log(`[AI Quote Agent] ✅ Adicionada faixa: ${min}-${max}kg (coluna ${col})`);
-              } else {
-                console.log(`[AI Quote Agent] ⚠️ Faixa inválida na coluna ${col}: min=${min}, max=${max}`);
-              }
-            }
+          for (let i = 3; i < lines.length; i++) {
+            const cols = lines[i].split(',').map(c => c.trim().replace(/"/g, ''));
+            const weightStr = cols[0]; // Coluna A
+            
+            if (!weightStr || weightStr.toUpperCase().includes('ADICIONAL')) break;
+            
+            const weight = parseFloat(weightStr.replace(/[^\d,.]/g, '').replace(',', '.'));
+            if (isNaN(weight) || weight <= 0) continue;
+            
+            weightRanges.push({
+              weight_min: lastMax,
+              weight_max: weight,
+              lineIndex: i
+            });
+            
+            lastMax = weight;
           }
           
-          console.log(`[AI Quote Agent] Total de faixas de peso encontradas: ${weightRanges.length}`);
+          console.log(`[AI Quote Agent] Faixas de peso Alfa:`, weightRanges.map(r => `${r.weight_min}-${r.weight_max}kg`).slice(0, 5));
           
-          console.log(`[AI Quote Agent] Faixas de peso encontradas:`, weightRanges.map(r => `${r.weight_min}-${r.weight_max}kg`));
-          
-          // Processar linhas de dados (a partir da linha 6, que é linha[5] no array)
+          // Para cada coluna Alfa e cada faixa de peso, extrair o preço
           let recordCount = 0;
-          for (let i = 5; i < lines.length; i++) {
-            const cols = lines[i].split(',').map(c => c.trim().replace(/"/g, ''));
-            
-            // Primeiras colunas são metadados (varia por planilha, mas geralmente incluem CEP)
-            // Tentar identificar colunas de CEP inicio/fim nas primeiras colunas
-            let cepInicio = '';
-            let cepFim = '';
-            
-            // Buscar padrão de CEP (5 ou 8 dígitos)
-            for (let c = 0; c < Math.min(10, cols.length); c++) {
-              const cleaned = cols[c].replace(/\D/g, '');
-              if (cleaned.length >= 5 && cleaned.length <= 8) {
-                if (!cepInicio) {
-                  cepInicio = cleaned;
-                } else if (!cepFim && cleaned !== cepInicio) {
-                  cepFim = cleaned;
-                  break;
-                }
-              }
-            }
-            
-            if (!cepInicio || !cepFim) continue;
-            
-            // Verificar se CEP buscado está nesta faixa
-            const cepNumerico = parseInt(cleanDestinationCep);
-            const cepInicioNum = parseInt(cepInicio);
-            const cepFimNum = parseInt(cepFim);
-            
-            if (isNaN(cepInicioNum) || isNaN(cepFimNum)) continue;
-            
-            const cepNaFaixa = cepNumerico >= cepInicioNum && cepNumerico <= cepFimNum;
-            
-            // Para cada faixa de peso, pegar o preço da coluna correspondente
+          for (const alfaCol of alfaColumns) {
             for (const range of weightRanges) {
-              const priceStr = cols[range.columnIndex];
+              const cols = lines[range.lineIndex].split(',').map(c => c.trim().replace(/"/g, ''));
+              const priceStr = cols[alfaCol.columnIndex];
               
               if (!priceStr) continue;
               
@@ -473,9 +443,7 @@ serve(async (req) => {
               const pesoNaFaixa = total_weight > range.weight_min && total_weight <= range.weight_max;
               
               tableData.pricing_data.push({
-                destination_cep: `${cepInicio}-${cepFim}`,
-                cep_start: cepInicio,
-                cep_end: cepFim,
+                destination_cep: destinationState,
                 weight_min: range.weight_min,
                 weight_max: range.weight_max,
                 price,
@@ -483,7 +451,7 @@ serve(async (req) => {
                 express_delivery_days: 3,
                 zone_code: `${destinationState}_CAPITAL`,
                 state: destinationState,
-                matches_cep: cepNaFaixa,
+                matches_cep: true, // Alfa não tem filtro por CEP específico
                 matches_weight: pesoNaFaixa
               });
               recordCount++;
