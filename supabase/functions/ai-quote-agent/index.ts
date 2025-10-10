@@ -195,113 +195,113 @@ serve(async (req) => {
           const csvText = await response.text();
           const lines = csvText.split('\n').filter(l => l.trim());
           
-          console.log(`[AI Quote Agent] Jadlog: Total de ${lines.length} linhas na planilha`);
-          console.log(`[AI Quote Agent] DEBUG Jadlog - Primeiras 5 linhas (uppercase):`);
-          for (let i = 0; i < Math.min(5, lines.length); i++) {
-            console.log(`Linha ${i + 1}:`, lines[i].toUpperCase().substring(0, 200));
-          }
-          
           if (lines.length < 30) {
             console.log(`[AI Quote Agent] ⚠️ Planilha Jadlog vazia ou inválida (${lines.length} linhas)`);
             continue;
           }
 
-          // Procurar linha que contém ORIGEM, DESTINO (header real)
-          // OU procurar linha que tenha múltiplos estados (GO, SP, MG, etc)
-          let headerLineIndex = -1;
-          for (let i = 0; i < Math.min(50, lines.length); i++) {
-            const line = lines[i].toUpperCase();
-            const hasOrigemDestino = line.includes('ORIGEM') && (line.includes('DESTINO') || line.includes('REGIÃO'));
-            const hasMultipleStates = ['GO', 'SP', 'MG', 'PR', 'RS'].filter(state => line.includes(state)).length >= 3;
-            
-            if (hasOrigemDestino || hasMultipleStates) {
-              headerLineIndex = i;
-              console.log(`[AI Quote Agent] ✅ Header Jadlog encontrado na linha ${i + 1} (origem+destino: ${hasOrigemDestino}, múltiplos estados: ${hasMultipleStates})`);
-              break;
+          console.log(`[AI Quote Agent] Jadlog: Total de ${lines.length} linhas`);
+          
+          // A Jadlog tem 3 linhas de header:
+          // Linha 1: ORIGEM
+          // Linha 2: DESTINO (GO, SE, SP, etc)
+          // Linha 3: REGIAO ATENDIDA (CAPITAL 1, CAPITAL 2, CAPITAL 3, etc)
+          // Linha 4: PESO INICIAL (KG) e PESO FINAL (KG) nas colunas A e B
+          
+          if (lines.length < 5) {
+            console.log(`[AI Quote Agent] ⚠️ Planilha Jadlog incompleta`);
+            continue;
+          }
+          
+          const row1 = lines[0].split(',').map(c => c.trim().replace(/"/g, '').toUpperCase());
+          const row2 = lines[1].split(',').map(c => c.trim().replace(/"/g, '').toUpperCase());
+          const row3 = lines[2].split(',').map(c => c.trim().replace(/"/g, '').toUpperCase());
+          const row4 = lines[3].split(',').map(c => c.trim().replace(/"/g, ''));
+          
+          console.log(`[AI Quote Agent] DEBUG Jadlog headers:`);
+          console.log(`Row1 (primeiras 10):`, row1.slice(0, 10));
+          console.log(`Row2 (primeiras 10):`, row2.slice(0, 10));
+          console.log(`Row3 (primeiras 10):`, row3.slice(0, 10));
+          
+          // Encontrar TODAS as colunas GO → destinationState → CAPITAL (1, 2 ou 3)
+          interface JadlogColumn {
+            columnIndex: number;
+            capitalType: string;
+          }
+          
+          const jadlogColumns: JadlogColumn[] = [];
+          for (let col = 0; col < row2.length; col++) {
+            if (row2[col] === destinationState && row3[col].includes('CAPITAL')) {
+              jadlogColumns.push({
+                columnIndex: col,
+                capitalType: row3[col]
+              });
+              console.log(`[AI Quote Agent] ✅ Coluna Jadlog encontrada: GO → ${destinationState} → ${row3[col]} (coluna ${col})`);
             }
           }
           
-          if (headerLineIndex === -1) {
-            console.log(`[AI Quote Agent] ⚠️ Linha de header ORIGEM/DESTINO não encontrada na Jadlog`);
+          if (jadlogColumns.length === 0) {
+            console.log(`[AI Quote Agent] ⚠️ Nenhuma coluna GO → ${destinationState} → CAPITAL encontrada`);
             continue;
           }
-
-          const headers = lines[headerLineIndex].split(',').map(h => h.trim().replace(/"/g, ''));
-          console.log(`[AI Quote Agent] Headers Jadlog: ${headers.length} colunas`);
-          console.log(`[AI Quote Agent] Primeiras 5 colunas:`, headers.slice(0, 5));
-          console.log(`[AI Quote Agent] Procurando coluna com: GO→${destinationState} ou GO ${destinationState}`);
           
-          // Procurar coluna GO → SP CAPITAL 1
-          let stateColumnIndex = -1;
-          for (let i = 0; i < headers.length; i++) {
-            const h = headers[i].toUpperCase();
-            
-            // Aceitar tanto "GO→SP" quanto "GO SP"
-            const hasGO = h.includes('GO');
-            const hasState = h.includes(destinationState);
-            const hasCapital = h.includes('CAPITAL');
-            const hasOne = h.includes('1');
-            
-            if (hasGO && hasState && hasCapital && hasOne) {
-              stateColumnIndex = i;
-              console.log(`[AI Quote Agent] ✅ Coluna Jadlog encontrada: "${headers[i]}" (index ${i})`);
-              break;
-            }
+          console.log(`[AI Quote Agent] Total de colunas Jadlog encontradas: ${jadlogColumns.length}`);
+          
+          // Extrair faixas de peso das colunas A (PESO INICIAL) e B (PESO FINAL)
+          interface WeightRange {
+            weight_min: number;
+            weight_max: number;
+            lineIndex: number;
           }
           
-          if (stateColumnIndex === -1) {
-            console.log(`[AI Quote Agent] ⚠️ Coluna GO→${destinationState} CAPITAL 1 não encontrada na Jadlog`);
-            console.log(`[AI Quote Agent] Amostra de headers:`, headers.slice(0, 20));
-            continue;
-          }
-
-          // Processar linhas de peso (próximas linhas após header)
-          let recordCount = 0;
-          const dataStartLine = headerLineIndex + 1;
-          
-          for (let i = dataStartLine; i < lines.length && recordCount < 50; i++) {
+          const weightRanges: WeightRange[] = [];
+          for (let i = 4; i < lines.length; i++) {
             const cols = lines[i].split(',').map(c => c.trim().replace(/"/g, ''));
+            const minStr = cols[0]; // Coluna A
+            const maxStr = cols[1]; // Coluna B
             
-            const weightStart = cols[0]; // Coluna A
-            const weightEnd = cols[1];   // Coluna B
-            const priceStr = cols[stateColumnIndex];
+            const min = parseFloat(minStr.replace(/[^\d,.]/g, '').replace(',', '.'));
+            const max = parseFloat(maxStr.replace(/[^\d,.]/g, '').replace(',', '.'));
             
-            if (!weightStart || !weightEnd || !priceStr) continue;
-            
-            const price = parseFloat(priceStr.replace(/[^\d,.]/g, '').replace(',', '.'));
-            if (isNaN(price) || price <= 0) continue;
-            
-            const weight_min = parseFloat(weightStart);
-            const weight_max = parseFloat(weightEnd);
-            
-            if (isNaN(weight_min) || isNaN(weight_max)) continue;
-            
-            // SP Capital 1: CEPs 01000-000 até 05999-999
-            const cepInicio = '01000000';
-            const cepFim = '05999999';
-            
-            const cepNumerico = parseInt(cleanDestinationCep);
-            const cepInicioNum = parseInt(cepInicio);
-            const cepFimNum = parseInt(cepFim);
-            
-            const cepNaFaixa = cepNumerico >= cepInicioNum && cepNumerico <= cepFimNum;
-            const pesoNaFaixa = total_weight >= weight_min && total_weight <= weight_max;
-            
-            tableData.pricing_data.push({
-              destination_cep: `${cepInicio}-${cepFim}`,
-              cep_start: cepInicio,
-              cep_end: cepFim,
-              weight_min,
-              weight_max,
-              price,
-              delivery_days: 3,
-              express_delivery_days: 2,
-              zone_code: `${destinationState}_CAPITAL_1`,
-              state: destinationState,
-              matches_cep: cepNaFaixa,
-              matches_weight: pesoNaFaixa
-            });
-            recordCount++;
+            if (!isNaN(min) && !isNaN(max) && max > 0) {
+              weightRanges.push({
+                weight_min: min,
+                weight_max: max,
+                lineIndex: i
+              });
+            }
+          }
+          
+          console.log(`[AI Quote Agent] Faixas de peso Jadlog:`, weightRanges.map(r => `${r.weight_min}-${r.weight_max}kg`).slice(0, 5));
+          
+          // Para cada coluna e cada faixa de peso, extrair o preço
+          let recordCount = 0;
+          for (const jadlogCol of jadlogColumns) {
+            for (const range of weightRanges) {
+              const cols = lines[range.lineIndex].split(',').map(c => c.trim().replace(/"/g, ''));
+              const priceStr = cols[jadlogCol.columnIndex];
+              
+              if (!priceStr) continue;
+              
+              const price = parseFloat(priceStr.replace(/[^\d,.]/g, '').replace(',', '.'));
+              if (isNaN(price) || price <= 0) continue;
+              
+              const pesoNaFaixa = total_weight > range.weight_min && total_weight <= range.weight_max;
+              
+              tableData.pricing_data.push({
+                destination_cep: destinationState,
+                weight_min: range.weight_min,
+                weight_max: range.weight_max,
+                price,
+                delivery_days: 5,
+                express_delivery_days: 3,
+                zone_code: `${destinationState}_${jadlogCol.capitalType}`,
+                state: destinationState,
+                matches_cep: true, // Jadlog não tem filtro por CEP específico
+                matches_weight: pesoNaFaixa
+              });
+              recordCount++;
+            }
           }
 
           console.log(`[AI Quote Agent] ✅ Jadlog: ${recordCount} registros processados da planilha`);
