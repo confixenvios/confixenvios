@@ -834,6 +834,8 @@ export type Database = {
           max_length_cm: number | null
           max_width_cm: number | null
           name: string
+          peso_adicional_30_50kg: number | null
+          peso_adicional_acima_50kg: number | null
           sheet_name: string | null
           source_type: string
           transports_chemical_classes: string | null
@@ -863,6 +865,8 @@ export type Database = {
           max_length_cm?: number | null
           max_width_cm?: number | null
           name: string
+          peso_adicional_30_50kg?: number | null
+          peso_adicional_acima_50kg?: number | null
           sheet_name?: string | null
           source_type: string
           transports_chemical_classes?: string | null
@@ -892,6 +896,8 @@ export type Database = {
           max_length_cm?: number | null
           max_width_cm?: number | null
           name?: string
+          peso_adicional_30_50kg?: number | null
+          peso_adicional_acima_50kg?: number | null
           sheet_name?: string | null
           source_type?: string
           transports_chemical_classes?: string | null

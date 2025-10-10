@@ -333,7 +333,9 @@ const AdminTabelas = () => {
         distance_multiplier_threshold_km: formData.distance_multiplier_threshold_km,
         distance_multiplier_value: formData.distance_multiplier_value,
         transports_chemical_classes: formData.transports_chemical_classes,
-        chemical_classes_enabled: formData.chemical_classes_enabled
+        chemical_classes_enabled: formData.chemical_classes_enabled,
+        peso_adicional_30_50kg: formData.peso_adicional_30_50kg,
+        peso_adicional_acima_50kg: formData.peso_adicional_acima_50kg
       };
 
       let error;
