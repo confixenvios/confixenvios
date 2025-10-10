@@ -37,18 +37,30 @@ export const calculateShippingQuote = async ({
 }: QuoteRequest): Promise<ShippingQuote> => {
   try {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🚀 [ShippingService] INÍCIO');
+    console.log('🚀 [ShippingService] INÍCIO CÁLCULO');
     console.log('📍 CEP:', destinyCep, '| Peso:', weight, 'kg');
+    console.log('📦 Dimensões:', { length, width, height });
+    console.log('💰 Valor:', merchandiseValue);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     // Verificar se IA está ativa
-    const { data: aiConfig } = await supabase
+    console.log('🔍 [ShippingService] Verificando configuração da IA...');
+    const { data: aiConfig, error: aiConfigError } = await supabase
       .from('ai_quote_config')
       .select('*')
       .single();
     
+    if (aiConfigError) {
+      console.log('⚠️ [ShippingService] Erro ao buscar config da IA:', aiConfigError);
+    }
+    
+    console.log('🤖 [ShippingService] Config da IA:', { 
+      is_active: aiConfig?.is_active,
+      hasConfig: !!aiConfig 
+    });
+    
     if (aiConfig?.is_active) {
-      console.log('🤖 [IA ATIVA] Chamando agente...');
+      console.log('✅ [IA] ATIVA - Chamando agente...');
       
       try {
         let totalVolume = 0;
@@ -57,6 +69,14 @@ export const calculateShippingQuote = async ({
         }
         
         const { data: { user } } = await supabase.auth.getUser();
+        
+        console.log('📤 [IA] Enviando requisição com:', {
+          origin_cep: ORIGIN_CEP,
+          destination_cep: destinyCep,
+          total_weight: weight,
+          total_volume: totalVolume,
+          merchandise_value: merchandiseValue || 0
+        });
         
         const { data: aiQuote, error: aiError } = await supabase.functions.invoke('ai-quote-agent', {
           body: {
@@ -77,57 +97,88 @@ export const calculateShippingQuote = async ({
           }
         });
         
-        console.log('📥 [IA] Resposta:', {
-          success: aiQuote?.success,
-          hasQuote: !!aiQuote?.quote,
-          error: aiError
-        });
+        console.log('📥 [IA] Resposta completa:', JSON.stringify(aiQuote, null, 2));
+        console.log('📥 [IA] Erro (se houver):', aiError);
         
-        if (!aiError && aiQuote?.success && aiQuote?.quote) {
-          const quote = aiQuote.quote;
-          const price = quote.final_price || quote.economicPrice;
-          
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.log('✅ [IA] SUCESSO!');
-          console.log('🏢 Transportadora:', quote.selected_table_name);
-          console.log('💰 Preço:', price);
-          console.log('📅 Prazo:', quote.economicDays || quote.delivery_days, 'dias');
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          
-          if (price && price > 0) {
-            return {
-              economicPrice: price,
-              expressPrice: quote.expressPrice || price * 1.3,
-              economicDays: quote.economicDays || quote.delivery_days,
-              expressDays: quote.expressDays || Math.max(1, (quote.delivery_days || quote.economicDays) - 2),
-              zone: `Tabela: ${quote.selected_table_name}`,
-              zoneName: quote.selected_table_name,
-              tableId: quote.selected_table_id || 'ai-agent',
-              tableName: quote.selected_table_name,
-              cnpj: '',
-              insuranceValue: quote.insuranceValue || 0,
-              basePrice: quote.basePrice || quote.base_price || price
-            };
-          }
+        if (aiError) {
+          console.error('❌ [IA] Erro na chamada:', aiError);
+          throw new Error('Falha na chamada da IA: ' + aiError.message);
         }
         
-        console.log('⚠️ [IA] Falhou - usando fallback');
+        if (!aiQuote?.success) {
+          console.log('⚠️ [IA] Resposta não foi sucesso:', aiQuote);
+          throw new Error('IA retornou sem sucesso');
+        }
+        
+        if (!aiQuote?.quote) {
+          console.log('⚠️ [IA] Sem quote na resposta');
+          throw new Error('IA não retornou cotação');
+        }
+        
+        const quote = aiQuote.quote;
+        const price = quote.final_price || quote.economicPrice;
+        
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('✅ [IA] SUCESSO NA RESPOSTA');
+        console.log('🏢 Transportadora:', quote.selected_table_name);
+        console.log('🆔 Table ID:', quote.selected_table_id);
+        console.log('💰 Preço Final:', price);
+        console.log('📅 Prazo:', quote.economicDays || quote.delivery_days, 'dias');
+        console.log('📊 Seguro:', quote.insuranceValue || 0);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        
+        if (!price || price <= 0) {
+          console.log('⚠️ [IA] Preço inválido:', price);
+          throw new Error('Preço da IA é inválido');
+        }
+        
+        const aiResult = {
+          economicPrice: price,
+          expressPrice: quote.expressPrice || price * 1.3,
+          economicDays: quote.economicDays || quote.delivery_days,
+          expressDays: quote.expressDays || Math.max(1, (quote.delivery_days || quote.economicDays) - 2),
+          zone: `Tabela: ${quote.selected_table_name}`,
+          zoneName: quote.selected_table_name,
+          tableId: quote.selected_table_id || 'ai-agent',
+          tableName: quote.selected_table_name,
+          cnpj: '',
+          insuranceValue: quote.insuranceValue || 0,
+          basePrice: quote.basePrice || quote.base_price || price
+        };
+        
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('🎯 [IA] RETORNANDO RESULTADO:');
+        console.log(JSON.stringify(aiResult, null, 2));
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        
+        return aiResult;
+        
       } catch (err) {
-        console.error('❌ [IA] Erro:', err);
+        console.error('❌ [IA] Erro durante processamento:', err);
+        console.log('⚠️ [IA] Falling back to legacy system due to error');
       }
+    } else {
+      console.log('⚠️ [IA] Desativada - usando sistema legado');
     }
 
     // Fallback: usar sistema legado
-    console.log('🔄 [Fallback] Usando sistema legado...');
-    return await calculateLegacyShippingQuote({ 
+    console.log('🔄 [Fallback] Chamando sistema legado...');
+    const legacyResult = await calculateLegacyShippingQuote({ 
       destinyCep, 
       weight, 
       quantity,
       merchandiseValue 
     });
     
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📋 [Legacy] RETORNANDO RESULTADO:');
+    console.log(JSON.stringify(legacyResult, null, 2));
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    return legacyResult;
+    
   } catch (error) {
-    console.error('❌ [ShippingService] ERRO:', error);
+    console.error('❌ [ShippingService] ERRO FATAL:', error);
     throw error;
   }
 };

@@ -188,6 +188,19 @@ const QuoteForm = () => {
     }
   }, [user]);
 
+  // Monitor changes in quoteData
+  useEffect(() => {
+    if (quoteData) {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('👀 [QuoteForm] MUDANÇA NO QUOTEDATA DETECTADA');
+      console.log('🔍 Dados completos:', JSON.stringify(quoteData, null, 2));
+      console.log('💰 economicPrice:', quoteData?.shippingQuote?.economicPrice);
+      console.log('🏢 tableName:', quoteData?.shippingQuote?.tableName);
+      console.log('📅 economicDays:', quoteData?.shippingQuote?.economicDays);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    }
+  }, [quoteData]);
+
   const steps = [
     { number: 1, title: "Calcular Frete", icon: Calculator },
     { number: 2, title: "Opções de Coleta", icon: Truck },
@@ -658,10 +671,13 @@ const QuoteForm = () => {
       });
 
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('📋 [QuoteForm] RESULTADO DA COTAÇÃO');
-      console.log('🏢 Transportadora:', shippingQuote.tableName);
-      console.log('💰 Preço Econômico:', shippingQuote.economicPrice);
-      console.log('📅 Prazo:', shippingQuote.economicDays, 'dias');
+      console.log('📋 [QuoteForm] RESPOSTA RECEBIDA DO SERVIÇO');
+      console.log('🔍 Objeto Completo:', JSON.stringify(shippingQuote, null, 2));
+      console.log('🏢 tableName:', shippingQuote.tableName);
+      console.log('🏢 tableId:', shippingQuote.tableId);
+      console.log('💰 economicPrice:', shippingQuote.economicPrice);
+      console.log('📅 economicDays:', shippingQuote.economicDays);
+      console.log('📍 zone:', shippingQuote.zone);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       // Salvar todos os dados da cotação completa
@@ -686,7 +702,8 @@ const QuoteForm = () => {
       };
 
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('💾 [QuoteForm] SALVANDO NO STATE');
+      console.log('💾 [QuoteForm] DADOS QUE SERÃO SALVOS NO STATE');
+      console.log('🔍 completeQuoteData.shippingQuote:', JSON.stringify(completeQuoteData.shippingQuote, null, 2));
       console.log('✅ economicPrice:', completeQuoteData.shippingQuote.economicPrice);
       console.log('✅ tableName:', completeQuoteData.shippingQuote.tableName);
       console.log('✅ economicDays:', completeQuoteData.shippingQuote.economicDays);
