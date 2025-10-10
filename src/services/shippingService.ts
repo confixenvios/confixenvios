@@ -38,21 +38,17 @@ export const calculateShippingQuote = async ({
   merchandiseValue
 }: QuoteRequest): Promise<ShippingQuote> => {
   try {
-    console.log(`Iniciando cálculo de frete - CEP: ${destinyCep}, Peso: ${weight}kg, Qtd: ${quantity}`);
+    console.log(`[ShippingService] Iniciando cotação - CEP: ${destinyCep}, Peso: ${weight}kg`);
     
-    // OTIMIZAÇÃO: Verificar cache local primeiro (evita chamadas repetidas)
+    // LIMPAR CACHE ANTIGO PARA GARANTIR COTAÇÃO FRESCA
     const cacheKey = `pricing_fallback_${destinyCep}_${weight}_${merchandiseValue || 0}`;
-    const cachedResult = sessionStorage.getItem(cacheKey);
-    
-    if (cachedResult) {
-      console.log('Usando resultado em cache');
-      return JSON.parse(cachedResult);
-    }
+    sessionStorage.removeItem(cacheKey);
+    console.log('[ShippingService] Cache limpo para nova cotação');
 
-    // Tentar buscar cotação das tabelas com timeout rápido
+    // Chamar o serviço de pricing (que já tem lógica de IA)
     let multiTableQuote: ShippingQuote | null = null;
     try {
-      console.log('Tentando cotação via tabelas de preços...');
+      console.log('[ShippingService] Chamando PricingTableService...');
       multiTableQuote = await Promise.race([
         PricingTableService.getMultiTableQuote({ 
           destinyCep, 
@@ -63,23 +59,25 @@ export const calculateShippingQuote = async ({
           height, 
           merchandiseValue 
         }),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)) // 3 segundos máximo
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)) // 5 segundos
       ]);
     } catch (error) {
-      console.warn('Erro nas tabelas, usando fallback:', error);
+      console.warn('[ShippingService] Erro no pricing service:', error);
       multiTableQuote = null;
     }
 
     if (multiTableQuote) {
-      console.log('Cotação encontrada via tabelas:', multiTableQuote);
-      // Cache por 5 minutos
-      sessionStorage.setItem(cacheKey, JSON.stringify(multiTableQuote));
+      console.log('[ShippingService] ✅ Cotação obtida:', {
+        tableName: multiTableQuote.tableName,
+        price: multiTableQuote.economicPrice,
+        days: multiTableQuote.economicDays
+      });
       return multiTableQuote;
     }
 
-    // Fallback IMEDIATO para o sistema legado
-    console.log('Usando sistema legado como fallback');
-    const legacyQuote = await calculateLegacyShippingQuote({ 
+    // Fallback para sistema legado
+    console.log('[ShippingService] Usando sistema legado');
+    return await calculateLegacyShippingQuote({ 
       destinyCep, 
       weight, 
       quantity,
@@ -89,21 +87,12 @@ export const calculateShippingQuote = async ({
       merchandiseValue 
     });
     
-    // Cache o resultado do fallback por 2 minutos
-    sessionStorage.setItem(cacheKey, JSON.stringify(legacyQuote));
-    
-    return legacyQuote;
-    
   } catch (error) {
-    console.error('Erro ao calcular frete:', error);
-    
-    // Se for erro de validação nosso, manter a mensagem amigável
+    console.error('[ShippingService] Erro:', error);
     if (error instanceof Error && (error.message.includes('não') || error.message.includes('kg'))) {
       throw error;
     }
-    
-    // Para outros erros, dar mensagem específica
-    throw new Error('Erro no cálculo do frete. Verifique se o CEP de destino está correto e tente novamente.');
+    throw new Error('Erro no cálculo do frete. Verifique o CEP e tente novamente.');
   }
 };
 

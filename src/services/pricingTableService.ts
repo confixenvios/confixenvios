@@ -53,114 +53,76 @@ export class PricingTableService {
   }): Promise<PricingTableQuote | null> {
     try {
       console.log('🚀 [PricingTableService] === INÍCIO DA COTAÇÃO ===');
-      console.log('📦 Parâmetros recebidos:', { destinyCep, weight, quantity, length, width, height, merchandiseValue });
+      console.log('📦 Parâmetros:', { destinyCep, weight, merchandiseValue });
       
-      // PASSO 1: Verificar se o Agente IA está ativo
-      console.log('🔍 [AI Agent] Verificando status do agente IA...');
-      const { data: aiConfig, error: aiConfigError } = await supabase
+      // LIMPAR TODOS OS CACHES ANTES DE INICIAR
+      sessionStorage.removeItem('active_pricing_tables');
+      
+      // PASSO 1: Tentar usar Agente IA
+      const { data: aiConfig } = await supabase
         .from('ai_quote_config')
         .select('*')
         .single();
       
-      console.log('📊 [AI Agent] Config:', { aiConfig, aiConfigError });
-      
-      if (!aiConfigError && aiConfig?.is_active) {
-        console.log('✅ [AI Agent] Agente IA está ATIVO - delegando cotação para IA');
-        
-        // Calcular volume total em m³
-        let totalVolume = 0;
-        if (length && width && height) {
-          totalVolume = (length / 100) * (width / 100) * (height / 100) * quantity;
-        }
-        console.log('📐 [AI Agent] Volume calculado:', totalVolume, 'm³');
-        
-        // Obter user_id ou session_id para tracking
-        const { data: { user } } = await supabase.auth.getUser();
-        console.log('👤 [AI Agent] User ID:', user?.id || 'Anônimo');
+      if (aiConfig?.is_active) {
+        console.log('🤖 [IA ATIVA] Chamando agente IA...');
         
         try {
-          const requestBody = {
-            origin_cep: '74900000',
-            destination_cep: destinyCep,
-            total_weight: weight,
-            total_volume: totalVolume,
-            merchandise_value: merchandiseValue || 0,
-            user_id: user?.id || null,
-            session_id: (window as any).anonymousSessionId || null,
-            volumes_data: [{
-              weight,
-              length: length || 0,
-              width: width || 0,
-              height: height || 0,
-              quantity
-            }]
-          };
+          let totalVolume = 0;
+          if (length && width && height) {
+            totalVolume = (length / 100) * (width / 100) * (height / 100) * quantity;
+          }
           
-          console.log('📤 [AI Agent] Enviando requisição para edge function:', requestBody);
+          const { data: { user } } = await supabase.auth.getUser();
           
           const { data: aiQuote, error: aiError } = await supabase.functions.invoke('ai-quote-agent', {
-            body: requestBody
+            body: {
+              origin_cep: '74900000',
+              destination_cep: destinyCep,
+              total_weight: weight,
+              total_volume: totalVolume,
+              merchandise_value: merchandiseValue || 0,
+              user_id: user?.id || null,
+              session_id: (window as any).anonymousSessionId || null,
+              volumes_data: [{
+                weight,
+                length: length || 0,
+                width: width || 0,
+                height: height || 0,
+                quantity
+              }]
+            }
           });
           
-          console.log('📥 [AI Agent] Resposta completa:', { 
-            success: aiQuote?.success, 
-            hasQuote: !!aiQuote?.quote,
-            error: aiError,
-            fullResponse: aiQuote 
-          });
-          
-          // Verificar erro primeiro
-          if (aiError) {
-            console.error('❌ [AI Agent] Erro na chamada:', aiError);
-            throw new Error(`Erro na IA: ${aiError.message}`);
-          }
-          
-          // Verificar se IA retornou sucesso
-          if (!aiQuote?.success || !aiQuote?.quote) {
-            console.warn('⚠️ [AI Agent] IA não retornou cotação válida');
-            throw new Error('IA não retornou cotação válida');
-          }
+          if (aiError) throw aiError;
+          if (!aiQuote?.success || !aiQuote?.quote) throw new Error('IA falhou');
           
           const quote = aiQuote.quote;
-          const selectedPrice = quote.final_price || quote.economicPrice || 0;
+          const price = quote.final_price || quote.economicPrice;
           
-          // Verificar se o preço é válido
-          if (selectedPrice <= 0) {
-            console.warn('⚠️ [AI Agent] Preço inválido retornado pela IA');
-            throw new Error('Preço inválido');
-          }
+          if (!price || price <= 0) throw new Error('Preço inválido');
           
-          console.log('✅ [AI Agent] SUCESSO!');
-          console.log('💰 Preço escolhido pela IA:', selectedPrice);
-          console.log('🏢 Transportadora escolhida:', quote.selected_table_name);
-          console.log('📅 Prazo:', quote.economicDays || quote.delivery_days, 'dias');
+          console.log('✅ [IA] Sucesso:', quote.selected_table_name, 'R$', price);
           
-          const aiResult = {
-            economicPrice: selectedPrice,
-            expressPrice: quote.expressPrice || selectedPrice * 1.3,
+          // ⚠️ RETURN IMEDIATO - NÃO CONTINUAR
+          return {
+            economicPrice: price,
+            expressPrice: quote.expressPrice || price * 1.3,
             economicDays: quote.economicDays || quote.delivery_days,
             expressDays: quote.expressDays || Math.max(1, (quote.delivery_days || quote.economicDays) - 2),
-            zone: quote.zone || `Tabela: ${quote.selected_table_name}`,
-            zoneName: quote.selected_table_name || 'Agente IA',
+            zone: `Tabela: ${quote.selected_table_name}`,
+            zoneName: quote.selected_table_name,
             tableId: quote.selected_table_id || 'ai-agent',
-            tableName: quote.selected_table_name || 'Agente IA',
+            tableName: quote.selected_table_name,
             cnpj: '',
             insuranceValue: quote.insuranceValue || 0,
-            basePrice: quote.basePrice || quote.base_price || selectedPrice,
+            basePrice: quote.basePrice || quote.base_price || price,
             cubicWeight: quote.peso_cubado,
             appliedWeight: quote.peso_tarifavel || weight
           };
-          
-          console.log('🎯 [AI Agent] RESULTADO FINAL:', JSON.stringify(aiResult, null, 2));
-          
-          // ✅ RETORNAR IMEDIATAMENTE
-          return aiResult;
-        } catch (aiError: any) {
-          console.error('❌ [AI Agent] Erro:', aiError?.message);
-          console.log('⚠️ [AI Agent] Usando método tradicional...');
+        } catch (err: any) {
+          console.error('❌ [IA] Erro:', err.message);
         }
-      } else {
-        console.log('🔧 [AI Agent] Agente IA inativo - usando método tradicional');
       }
       
       // PASSO 2: Método tradicional
