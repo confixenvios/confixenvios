@@ -103,6 +103,8 @@ const AdminTabelas = () => {
     distance_multiplier_value: number;
     transports_chemical_classes: string;
     chemical_classes_enabled: boolean;
+    peso_adicional_30_50kg: number;
+    peso_adicional_acima_50kg: number;
   }>({
     name: '',
     company_branch_id: '',
@@ -120,7 +122,9 @@ const AdminTabelas = () => {
     distance_multiplier_threshold_km: 100,
     distance_multiplier_value: 2.0,
     transports_chemical_classes: '8/9',
-    chemical_classes_enabled: false
+    chemical_classes_enabled: false,
+    peso_adicional_30_50kg: 55.00,
+    peso_adicional_acima_50kg: 100.00
   });
 
   const [availableSheets, setAvailableSheets] = useState<string[]>([]);
@@ -432,7 +436,9 @@ const AdminTabelas = () => {
       distance_multiplier_threshold_km: (table as any).distance_multiplier_threshold_km ?? 100,
       distance_multiplier_value: (table as any).distance_multiplier_value ?? 2.0,
       transports_chemical_classes: (table as any).transports_chemical_classes ?? '8/9',
-      chemical_classes_enabled: (table as any).chemical_classes_enabled ?? false
+      chemical_classes_enabled: (table as any).chemical_classes_enabled ?? false,
+      peso_adicional_30_50kg: (table as any).peso_adicional_30_50kg ?? 55.00,
+      peso_adicional_acima_50kg: (table as any).peso_adicional_acima_50kg ?? 100.00
     });
     setIsDialogOpen(true);
   };
@@ -455,7 +461,9 @@ const AdminTabelas = () => {
       distance_multiplier_threshold_km: 100,
       distance_multiplier_value: 2.0,
       transports_chemical_classes: '8/9',
-      chemical_classes_enabled: false
+      chemical_classes_enabled: false,
+      peso_adicional_30_50kg: 55.00,
+      peso_adicional_acima_50kg: 100.00
     });
     setEditingTable(null);
     setAvailableSheets([]);
@@ -873,6 +881,103 @@ const AdminTabelas = () => {
                           <p className="text-xs text-muted-foreground mt-1">
                             A soma das três dimensões (altura + largura + comprimento) não pode ultrapassar este valor
                           </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {formData.name.toLowerCase().includes('jadlog') && (
+                    <>
+                      <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-semibold text-sm">Consideração 1: Referência de Peso Cubado</h3>
+                        
+                        <div>
+                          <Label htmlFor="cubic_meter_jadlog">Equivalência Cúbica (kg/m³)</Label>
+                          <Input
+                            id="cubic_meter_jadlog"
+                            type="number"
+                            step="1"
+                            min="0"
+                            value={formData.cubic_meter_kg_equivalent}
+                            onChange={(e) => setFormData({...formData, cubic_meter_kg_equivalent: parseFloat(e.target.value) || 0})}
+                            placeholder="167"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Referência: 167 KG/M3
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="max_single_dimension">Dimensão Individual Máxima (cm)</Label>
+                          <Input
+                            id="max_single_dimension"
+                            type="number"
+                            step="1"
+                            min="0"
+                            value={formData.max_length_cm}
+                            onChange={(e) => setFormData({...formData, max_length_cm: parseFloat(e.target.value) || 0})}
+                            placeholder="170"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Nenhuma dimensão individual pode exceder este valor
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="max_dimension_sum_jadlog">Soma Máxima das Dimensões (cm)</Label>
+                          <Input
+                            id="max_dimension_sum_jadlog"
+                            type="number"
+                            step="1"
+                            min="0"
+                            value={formData.max_dimension_sum_cm}
+                            onChange={(e) => setFormData({...formData, max_dimension_sum_cm: parseFloat(e.target.value) || 0})}
+                            placeholder="240"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            A soma das três dimensões não pode exceder este valor
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-semibold text-sm">Taxas Adicionais por Peso</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Se peso real/cubado for superior aos limites, será cobrada taxa adicional
+                        </p>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="taxa_30_50kg">Taxa 30-50kg (R$)</Label>
+                            <Input
+                              id="taxa_30_50kg"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={formData.peso_adicional_30_50kg}
+                              onChange={(e) => setFormData({...formData, peso_adicional_30_50kg: parseFloat(e.target.value) || 0})}
+                              placeholder="55.00"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Taxa para peso entre 30kg e 50kg
+                            </p>
+                          </div>
+
+                          <div>
+                            <Label htmlFor="taxa_acima_50kg">Taxa Acima 50kg (R$)</Label>
+                            <Input
+                              id="taxa_acima_50kg"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={formData.peso_adicional_acima_50kg}
+                              onChange={(e) => setFormData({...formData, peso_adicional_acima_50kg: parseFloat(e.target.value) || 0})}
+                              placeholder="100.00"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Taxa para peso acima de 50kg
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </>
