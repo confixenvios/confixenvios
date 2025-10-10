@@ -38,61 +38,37 @@ export const calculateShippingQuote = async ({
   merchandiseValue
 }: QuoteRequest): Promise<ShippingQuote> => {
   try {
-    console.log(`[ShippingService] Iniciando cotação - CEP: ${destinyCep}, Peso: ${weight}kg`);
-    
-    // LIMPAR CACHE ANTIGO PARA GARANTIR COTAÇÃO FRESCA
-    const cacheKey = `pricing_fallback_${destinyCep}_${weight}_${merchandiseValue || 0}`;
-    sessionStorage.removeItem(cacheKey);
-    console.log('[ShippingService] Cache limpo para nova cotação');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🚀 [ShippingService] INÍCIO');
+    console.log('📍 CEP:', destinyCep, '| Peso:', weight, 'kg');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    // Chamar o serviço de pricing (que já tem lógica de IA)
-    let multiTableQuote: ShippingQuote | null = null;
-    try {
-      console.log('[ShippingService] Chamando PricingTableService...');
-      multiTableQuote = await Promise.race([
-        PricingTableService.getMultiTableQuote({ 
-          destinyCep, 
-          weight, 
-          quantity, 
-          length, 
-          width, 
-          height, 
-          merchandiseValue 
-        }),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)) // 5 segundos
-      ]);
-    } catch (error) {
-      console.warn('[ShippingService] Erro no pricing service:', error);
-      multiTableQuote = null;
-    }
+    // Chamar o pricing service (já tem lógica de IA interna)
+    const multiTableQuote = await PricingTableService.getMultiTableQuote({ 
+      destinyCep, 
+      weight, 
+      quantity, 
+      length, 
+      width, 
+      height, 
+      merchandiseValue 
+    });
 
     if (multiTableQuote) {
-      console.log('[ShippingService] ✅ Cotação obtida:', {
-        tableName: multiTableQuote.tableName,
-        price: multiTableQuote.economicPrice,
-        days: multiTableQuote.economicDays
-      });
+      console.log('✅ [ShippingService] RESULTADO RECEBIDO:');
+      console.log('   📦 Transportadora:', multiTableQuote.tableName);
+      console.log('   💰 Preço:', multiTableQuote.economicPrice);
+      console.log('   📅 Prazo:', multiTableQuote.economicDays, 'dias');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       return multiTableQuote;
     }
 
-    // Fallback para sistema legado
-    console.log('[ShippingService] Usando sistema legado');
-    return await calculateLegacyShippingQuote({ 
-      destinyCep, 
-      weight, 
-      quantity,
-      length,
-      width,
-      height,
-      merchandiseValue 
-    });
+    console.error('❌ [ShippingService] Pricing service retornou NULL');
+    throw new Error('Serviço de cotação não disponível');
     
   } catch (error) {
-    console.error('[ShippingService] Erro:', error);
-    if (error instanceof Error && (error.message.includes('não') || error.message.includes('kg'))) {
-      throw error;
-    }
-    throw new Error('Erro no cálculo do frete. Verifique o CEP e tente novamente.');
+    console.error('❌ [ShippingService] ERRO:', error);
+    throw error;
   }
 };
 

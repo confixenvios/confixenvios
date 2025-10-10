@@ -52,20 +52,18 @@ export class PricingTableService {
     merchandiseValue?: number;
   }): Promise<PricingTableQuote | null> {
     try {
-      console.log('🚀 [PricingTableService] === INÍCIO DA COTAÇÃO ===');
-      console.log('📦 Parâmetros:', { destinyCep, weight, merchandiseValue });
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('🎯 [PricingService] INÍCIO');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       
-      // LIMPAR TODOS OS CACHES ANTES DE INICIAR
-      sessionStorage.removeItem('active_pricing_tables');
-      
-      // PASSO 1: Tentar usar Agente IA
+      // Verificar se IA está ativa
       const { data: aiConfig } = await supabase
         .from('ai_quote_config')
         .select('*')
         .single();
       
       if (aiConfig?.is_active) {
-        console.log('🤖 [IA ATIVA] Chamando agente IA...');
+        console.log('🤖 [IA ATIVA] Chamando agente...');
         
         try {
           let totalVolume = 0;
@@ -94,18 +92,38 @@ export class PricingTableService {
             }
           });
           
-          if (aiError) throw aiError;
-          if (!aiQuote?.success || !aiQuote?.quote) throw new Error('IA falhou');
+          console.log('📥 [IA] Resposta recebida:', {
+            success: aiQuote?.success,
+            hasQuote: !!aiQuote?.quote,
+            error: aiError
+          });
+          
+          if (aiError) {
+            console.error('❌ [IA] Erro:', aiError);
+            throw new Error('Erro na IA');
+          }
+          
+          if (!aiQuote?.success || !aiQuote?.quote) {
+            console.error('❌ [IA] Resposta inválida');
+            throw new Error('IA não retornou cotação');
+          }
           
           const quote = aiQuote.quote;
           const price = quote.final_price || quote.economicPrice;
           
-          if (!price || price <= 0) throw new Error('Preço inválido');
+          if (!price || price <= 0) {
+            console.error('❌ [IA] Preço inválido:', price);
+            throw new Error('Preço inválido');
+          }
           
-          console.log('✅ [IA] Sucesso:', quote.selected_table_name, 'R$', price);
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log('✅ [IA] SUCESSO!');
+          console.log('🏢 Transportadora:', quote.selected_table_name);
+          console.log('💰 Preço:', price);
+          console.log('📅 Prazo:', quote.economicDays || quote.delivery_days, 'dias');
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
           
-          // ⚠️ RETURN IMEDIATO - NÃO CONTINUAR
-          return {
+          const result: PricingTableQuote = {
             economicPrice: price,
             expressPrice: quote.expressPrice || price * 1.3,
             economicDays: quote.economicDays || quote.delivery_days,
@@ -120,10 +138,19 @@ export class PricingTableService {
             cubicWeight: quote.peso_cubado,
             appliedWeight: quote.peso_tarifavel || weight
           };
+          
+          console.log('🎯 [PricingService] RETORNANDO:', JSON.stringify(result, null, 2));
+          return result;
+          
         } catch (err: any) {
-          console.error('❌ [IA] Erro:', err.message);
+          console.error('❌ [IA] Falha:', err.message);
         }
+      } else {
+        console.log('⚠️ [IA] Inativa');
       }
+      
+      console.log('❌ [PricingService] Retornando NULL');
+      return null;
       
       // PASSO 2: Método tradicional
       // OTIMIZAÇÃO: Cache para evitar chamadas repetidas desnecessárias
