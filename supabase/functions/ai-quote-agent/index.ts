@@ -224,9 +224,21 @@ serve(async (req) => {
           console.log(`Row3 (primeiras 10):`, row3.slice(0, 10));
           
           // Encontrar TODAS as colunas GO → destinationState → CAPITAL (1, 2 ou 3)
+          // E também encontrar a coluna PRAZO
           interface JadlogColumn {
             columnIndex: number;
             capitalType: string;
+            prazoColumnIndex?: number;
+          }
+          
+          // Primeiro, encontrar a coluna PRAZO (deve estar no header linha 1 ou linha 3)
+          let prazoColumnIndex = -1;
+          for (let col = 0; col < row1.length; col++) {
+            if (row1[col] === 'PRAZO' || row3[col] === 'PRAZO') {
+              prazoColumnIndex = col;
+              console.log(`[AI Quote Agent] ✅ Coluna PRAZO encontrada no índice ${col}`);
+              break;
+            }
           }
           
           const jadlogColumns: JadlogColumn[] = [];
@@ -234,7 +246,8 @@ serve(async (req) => {
             if (row2[col] === destinationState && row3[col].includes('CAPITAL')) {
               jadlogColumns.push({
                 columnIndex: col,
-                capitalType: row3[col]
+                capitalType: row3[col],
+                prazoColumnIndex: prazoColumnIndex
               });
               console.log(`[AI Quote Agent] ✅ Coluna Jadlog encontrada: GO → ${destinationState} → ${row3[col]} (coluna ${col})`);
             }
@@ -274,25 +287,33 @@ serve(async (req) => {
           
           console.log(`[AI Quote Agent] Faixas de peso Jadlog:`, weightRanges.map(r => `${r.weight_min}-${r.weight_max}kg`).slice(0, 5));
           
-          // Para cada coluna e cada faixa de peso, extrair o preço
+          // Para cada coluna e cada faixa de peso, extrair o preço E o prazo
           let recordCount = 0;
           for (const jadlogCol of jadlogColumns) {
             for (const range of weightRanges) {
               const cols = lines[range.lineIndex].split(',').map(c => c.trim().replace(/"/g, ''));
               const priceStr = cols[jadlogCol.columnIndex];
               
+              // Ler prazo da linha, se a coluna PRAZO foi encontrada
+              let deliveryDays = 2; // Valor padrão
+              if (jadlogCol.prazoColumnIndex && jadlogCol.prazoColumnIndex >= 0) {
+                const prazoStr = cols[jadlogCol.prazoColumnIndex];
+                const prazo = parseInt(prazoStr);
+                if (!isNaN(prazo) && prazo > 0) {
+                  deliveryDays = prazo;
+                }
+              }
+              
               if (!priceStr) continue;
               
               const price = parseFloat(priceStr.replace(/[^\d,.]/g, '').replace(',', '.'));
               if (isNaN(price) || price <= 0) continue;
               
-              // Para 10kg: deve estar na faixa [10-20], não [5-10]
-              // Portanto: peso > min E peso <= max
               const pesoNaFaixa = total_weight > range.weight_min && total_weight <= range.weight_max;
               
               // Log detalhado quando há match
               if (pesoNaFaixa) {
-                console.log(`[AI Quote Agent] 🎯 Jadlog MATCH: Peso ${total_weight}kg na faixa [${range.weight_min}-${range.weight_max}kg] coluna ${jadlogCol.capitalType} = R$ ${price.toFixed(2)}`);
+                console.log(`[AI Quote Agent] 🎯 Jadlog MATCH: Peso ${total_weight}kg na faixa [${range.weight_min}-${range.weight_max}kg] coluna ${jadlogCol.capitalType} = R$ ${price.toFixed(2)} (prazo: ${deliveryDays} dias)`);
               }
               
               tableData.pricing_data.push({
@@ -300,8 +321,8 @@ serve(async (req) => {
                 weight_min: range.weight_min,
                 weight_max: range.weight_max,
                 price,
-                delivery_days: 5,
-                express_delivery_days: 3,
+                delivery_days: deliveryDays, // Prazo lido da planilha
+                express_delivery_days: deliveryDays,
                 zone_code: `${destinationState}_${jadlogCol.capitalType}`,
                 state: destinationState,
                 matches_cep: true, // Jadlog não tem filtro por CEP específico
@@ -316,17 +337,65 @@ serve(async (req) => {
           console.error(`[AI Quote Agent] Erro ao processar Jadlog Google Sheets:`, error);
         }
       }
-      // TABELA ALFA: Processar Google Sheets com faixas de CEP por linha
+      // TABELA ALFA: Processar Google Sheets e verificar cobertura de CEP na aba ABRANGENCIA
       else if (table.name.toLowerCase().includes('alfa') && table.source_type === 'google_sheets' && table.google_sheets_url) {
-        console.log(`[AI Quote Agent] 📊 Processando Alfa do Google Sheets (estrutura: múltiplas faixas de CEP)`);
+        console.log(`[AI Quote Agent] 📊 Processando Alfa do Google Sheets com verificação de CEP`);
         try {
           if (!destinationState || destinationState === 'UNKNOWN') {
             console.log(`[AI Quote Agent] ⚠️ Estado não identificado para CEP ${destination_cep}`);
             continue;
           }
 
+          // Primeiro, verificar cobertura de CEP na aba ABRANGENCIA
+          let abrangenciaUrl = table.google_sheets_url.replace(/gid=\d+/, 'gid=1'); // Aba ABRANGENCIA
+          const spreadsheetIdMatch = table.google_sheets_url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+          
+          if (spreadsheetIdMatch) {
+            const spreadsheetId = spreadsheetIdMatch[1];
+            abrangenciaUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=1`;
+          }
+          
+          console.log(`[AI Quote Agent] Verificando cobertura Alfa CEP ${cleanDestinationCep} na aba ABRANGENCIA...`);
+          
+          let alfaCoberturaCep = false;
+          try {
+            const abrangenciaResponse = await fetch(abrangenciaUrl);
+            if (abrangenciaResponse.ok) {
+              const abrangenciaText = await abrangenciaResponse.text();
+              const abrangenciaLines = abrangenciaText.split('\n').filter(l => l.trim());
+              
+              // Verificar cada linha da aba ABRANGENCIA
+              for (let i = 1; i < abrangenciaLines.length; i++) {
+                const cols = abrangenciaLines[i].split(',').map(c => c.trim().replace(/"/g, ''));
+                const ufOrigem = cols[0];
+                const ufDestino = cols[1];
+                const cepInicial = cols[3]?.replace(/\D/g, '');
+                const cepFinal = cols[4]?.replace(/\D/g, '');
+                
+                if (ufOrigem === 'GO' && ufDestino === destinationState && cepInicial && cepFinal) {
+                  const cepInicialNum = parseInt(cepInicial);
+                  const cepFinalNum = parseInt(cepFinal);
+                  const cepDestinoNum = parseInt(cleanDestinationCep);
+                  
+                  if (cepDestinoNum >= cepInicialNum && cepDestinoNum <= cepFinalNum) {
+                    alfaCoberturaCep = true;
+                    console.log(`[AI Quote Agent] ✅ Alfa ATENDE CEP ${destination_cep} (faixa: ${cepInicial}-${cepFinal})`);
+                    break;
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            console.warn(`[AI Quote Agent] Erro ao verificar abrangência Alfa:`, err);
+          }
+          
+          if (!alfaCoberturaCep) {
+            console.log(`[AI Quote Agent] ❌ Alfa NÃO ATENDE CEP ${destination_cep} - pulando tabela`);
+            continue;
+          }
+
+          // Se chegou aqui, Alfa atende o CEP - buscar preços
           let sheetUrl = table.google_sheets_url;
-          const spreadsheetIdMatch = sheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
           const gidMatch = sheetUrl.match(/[#&]gid=([0-9]+)/);
           
           if (spreadsheetIdMatch) {
@@ -459,8 +528,8 @@ serve(async (req) => {
                 weight_min: range.weight_min,
                 weight_max: range.weight_max,
                 price,
-                delivery_days: 4,
-                express_delivery_days: 3,
+                delivery_days: 5, // Alfa prazo padrão
+                express_delivery_days: 4,
                 zone_code: `${destinationState}_CAPITAL`,
                 state: destinationState,
                 matches_cep: true, // Alfa não tem filtro por CEP específico
