@@ -453,7 +453,7 @@ const AdminAgenteIA = () => {
                                         key={quote.table_id} 
                                         className={`p-3 rounded-lg border-2 ${
                                           isSelected
-                                            ? 'bg-primary/10 border-primary' 
+                                            ? 'bg-green-50 dark:bg-green-950/20 border-green-600' 
                                             : quote.has_coverage
                                             ? 'bg-muted/30 border-muted'
                                             : 'bg-destructive/5 border-destructive/20'
