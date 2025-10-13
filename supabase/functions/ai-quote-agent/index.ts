@@ -201,10 +201,41 @@ serve(async (req) => {
               .gte('cep_end', cleanDestinationCep)
               .limit(1);
             
-            // Se não encontrou zona específica, usar valores padrão
-            const deliveryDays = zones && zones.length > 0 ? zones[0].delivery_days : 5;
-            const expressDeliveryDays = zones && zones.length > 0 ? zones[0].express_delivery_days : 3;
-            const zoneCode = zones && zones.length > 0 ? zones[0].zone_code : `JADLOG-${destinationState}`;
+            let deliveryDays: number;
+            let expressDeliveryDays: number;
+            let zoneCode: string;
+            
+            if (zones && zones.length > 0) {
+              // Zona específica encontrada
+              deliveryDays = zones[0].delivery_days;
+              expressDeliveryDays = zones[0].express_delivery_days;
+              zoneCode = zones[0].zone_code;
+              console.log(`[AI Quote Agent] ✅ Jadlog: Zona específica encontrada - ${zoneCode}, ${deliveryDays} dias`);
+            } else {
+              // Zona não encontrada, buscar zona mais próxima do mesmo estado
+              console.log(`[AI Quote Agent] ⚠️ Zona específica não encontrada, buscando zona mais próxima...`);
+              const { data: nearestZones } = await supabaseClient
+                .from('jadlog_zones')
+                .select('*')
+                .eq('state', destinationState)
+                .order('cep_start', { ascending: false })
+                .limit(5);
+              
+              if (nearestZones && nearestZones.length > 0) {
+                // Usar a zona mais próxima encontrada (geralmente Capital tem os prazos corretos)
+                const nearestZone = nearestZones[0];
+                deliveryDays = nearestZone.delivery_days;
+                expressDeliveryDays = nearestZone.express_delivery_days;
+                zoneCode = `JADLOG-${destinationState}`;
+                console.log(`[AI Quote Agent] 📍 Jadlog: Usando zona próxima de referência - ${nearestZone.zone_code}, ${deliveryDays} dias`);
+              } else {
+                // Fallback apenas se não houver nenhuma zona do estado
+                deliveryDays = 9; // Valor mais conservador para evitar prazos muito otimistas
+                expressDeliveryDays = 7;
+                zoneCode = `JADLOG-${destinationState}`;
+                console.log(`[AI Quote Agent] ⚠️ Jadlog: Nenhuma zona encontrada, usando prazo padrão conservador de ${deliveryDays} dias`);
+              }
+            }
             
             console.log(`[AI Quote Agent] 📍 Jadlog: Usando prazo ${deliveryDays} dias, zona ${zoneCode}`);
             
