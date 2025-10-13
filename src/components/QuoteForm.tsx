@@ -327,7 +327,7 @@ const QuoteForm = () => {
     const numbers = value.replace(/\D/g, '');
     if (!numbers) return '';
     
-    // Converte para número com centavos
+    // Converte para número com centavos (números já representam centavos)
     const amount = parseFloat(numbers) / 100;
     
     // Formata como moeda brasileira
@@ -341,14 +341,21 @@ const QuoteForm = () => {
     // Remove tudo que não é dígito
     const numbers = value.replace(/\D/g, '');
     
-    // Armazena apenas os números (em centavos)
-    const amount = numbers ? (parseFloat(numbers) / 100).toString() : '';
+    if (!numbers) {
+      setFormData(prev => ({ ...prev, unitValue: '' }));
+      return;
+    }
+    
+    // Armazena o valor em reais (não em centavos)
+    const amount = (parseFloat(numbers) / 100).toFixed(2);
     setFormData(prev => ({ ...prev, unitValue: amount }));
   };
 
   const getCurrencyDisplayValue = (): string => {
     if (!formData.unitValue) return '';
-    return formatCurrency((parseFloat(formData.unitValue) * 100).toString());
+    // Converte o valor em reais para centavos e formata
+    const valueInCents = Math.round(parseFloat(formData.unitValue) * 100);
+    return formatCurrency(valueInCents.toString());
   };
 
   const handleQuantityChange = (value: string) => {
