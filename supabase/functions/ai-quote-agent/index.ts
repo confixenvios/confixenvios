@@ -218,7 +218,7 @@ serve(async (req) => {
                 .from('jadlog_zones')
                 .select('*')
                 .eq('state', destinationState)
-                .order('cep_start', { ascending: false })
+                .order('cep_start', { ascending: true }) // Ordem crescente para pegar zonas de capital primeiro
                 .limit(5);
               
               if (nearestZones && nearestZones.length > 0) {
