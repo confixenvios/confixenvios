@@ -653,12 +653,82 @@ serve(async (req) => {
           });
         }
 
-        if (priceRecord) {
-          // USAR APENAS O PREÇO DA TABELA - sem adicionar taxas extras
-          // Os preços na tabela já incluem todos os custos necessários
-          let base_price = priceRecord.price;
+        // Se não encontrou match direto, verificar se pode aplicar peso excedente
+        if (!priceRecord && table.excess_weight_threshold_kg) {
+          // Buscar a faixa de peso máxima disponível na tabela
+          const maxWeightRecord = table.pricing_data
+            .filter(p => {
+              const recordCep = p.destination_cep.replace(/\D/g, '');
+              const rangeMatch = p.destination_cep.match(/(\d{5,8})\s*-\s*(\d{5,8})/);
+              let cepMatch = false;
+              
+              if (rangeMatch) {
+                const rangeStart = parseInt(rangeMatch[1]);
+                const rangeEnd = parseInt(rangeMatch[2]);
+                cepMatch = cepNumerico >= rangeStart && cepNumerico <= rangeEnd;
+              } else if (recordCep.length <= 5) {
+                cepMatch = cepPrefix.startsWith(recordCep);
+              } else if (recordCep.length === 8) {
+                cepMatch = cepNumerico === parseInt(recordCep);
+              } else {
+                cepMatch = cepPrefix.startsWith(recordCep.substring(0, 5));
+              }
+              
+              return cepMatch;
+            })
+            .sort((a, b) => b.weight_max - a.weight_max)[0]; // Maior weight_max
           
-          console.log(`[AI Quote Agent] 📋 ${table.name} - PREÇO DA TABELA: R$ ${base_price.toFixed(2)} para ${peso_tarifavel}kg`);
+          if (maxWeightRecord && peso_tarifavel > maxWeightRecord.weight_max) {
+            console.log(`[AI Quote Agent] ⚖️ ${table.name} - Peso excedente detectado!`);
+            console.log(`[AI Quote Agent]    Peso solicitado: ${peso_tarifavel}kg`);
+            console.log(`[AI Quote Agent]    Peso máximo tabela: ${maxWeightRecord.weight_max}kg`);
+            console.log(`[AI Quote Agent]    Excedente: ${(peso_tarifavel - maxWeightRecord.weight_max).toFixed(2)}kg`);
+            
+            // Usar esse registro como base para cálculo de excedente
+            priceRecord = maxWeightRecord;
+          }
+        }
+
+        if (priceRecord) {
+          let base_price = priceRecord.price;
+          let peso_adicional_taxa = 0;
+          let excedente_kg = 0;
+          
+          // Verificar se há peso excedente (acima da faixa máxima da tabela)
+          if (peso_tarifavel > priceRecord.weight_max && table.excess_weight_threshold_kg) {
+            excedente_kg = peso_tarifavel - priceRecord.weight_max;
+            
+            console.log(`[AI Quote Agent] 💼 ${table.name} - APLICANDO REGRAS DE PESO EXCEDENTE:`);
+            console.log(`[AI Quote Agent]    Peso base (tabela): ${priceRecord.weight_max}kg`);
+            console.log(`[AI Quote Agent]    Peso total: ${peso_tarifavel}kg`);
+            console.log(`[AI Quote Agent]    Excedente: ${excedente_kg.toFixed(2)}kg`);
+            
+            // Aplicar taxa de peso adicional baseado na faixa
+            const peso_total_real = peso_tarifavel;
+            
+            if (peso_total_real > 50 && table.peso_adicional_acima_50kg) {
+              // Acima de 50kg
+              peso_adicional_taxa = parseFloat(table.peso_adicional_acima_50kg.toString());
+              console.log(`[AI Quote Agent]    Faixa: Acima de 50kg → Taxa: R$ ${peso_adicional_taxa.toFixed(2)}`);
+            } else if (peso_total_real > 30 && peso_total_real <= 50 && table.peso_adicional_30_50kg) {
+              // Entre 30-50kg
+              peso_adicional_taxa = parseFloat(table.peso_adicional_30_50kg.toString());
+              console.log(`[AI Quote Agent]    Faixa: 30-50kg → Taxa: R$ ${peso_adicional_taxa.toFixed(2)}`);
+            }
+            
+            // Adicionar cobrança por kg excedente (opcional)
+            if (table.excess_weight_charge_per_kg && excedente_kg > 0) {
+              const cobranca_por_kg = excedente_kg * parseFloat(table.excess_weight_charge_per_kg.toString());
+              console.log(`[AI Quote Agent]    Cobrança por kg excedente: ${excedente_kg.toFixed(2)}kg × R$ ${table.excess_weight_charge_per_kg} = R$ ${cobranca_por_kg.toFixed(2)}`);
+              // Comentado por enquanto - a taxa fixa já cobre o excedente
+              // peso_adicional_taxa += cobranca_por_kg;
+            }
+          }
+          
+          console.log(`[AI Quote Agent] 📋 ${table.name} - PREÇO DA TABELA: R$ ${base_price.toFixed(2)} para ${priceRecord.weight_max}kg (base)`);
+          if (peso_adicional_taxa > 0) {
+            console.log(`[AI Quote Agent] 💰 ${table.name} - TAXA PESO ADICIONAL: R$ ${peso_adicional_taxa.toFixed(2)}`);
+          }
           
           // Calcular seguro (1.3% do valor da mercadoria)
           let insurance_value = 0;
@@ -667,10 +737,13 @@ serve(async (req) => {
             console.log(`[AI Quote Agent] 🛡️ Seguro calculado: R$ ${insurance_value.toFixed(2)} (1.3% de R$ ${merchandise_value.toFixed(2)})`);
           }
           
-          const final_price = base_price + insurance_value;
+          const final_price = base_price + peso_adicional_taxa + insurance_value;
 
           console.log(`[AI Quote Agent] 💰 ${table.name} - CÁLCULO FINAL:`);
           console.log(`[AI Quote Agent]    Preço Base (tabela): R$ ${base_price.toFixed(2)}`);
+          if (peso_adicional_taxa > 0) {
+            console.log(`[AI Quote Agent]    Taxa Peso Adicional: R$ ${peso_adicional_taxa.toFixed(2)}`);
+          }
           console.log(`[AI Quote Agent]    Seguro (1.3%): R$ ${insurance_value.toFixed(2)}`);
           console.log(`[AI Quote Agent]    ════════════════════════════`);
           console.log(`[AI Quote Agent]    TOTAL: R$ ${final_price.toFixed(2)}`);
@@ -697,9 +770,9 @@ serve(async (req) => {
             table_id: table.id,
             table_name: table.name,
             base_price,
-            excedente_kg: 0,
-            valor_excedente: 0,
-            peso_adicional_taxa: 0,
+            excedente_kg,
+            valor_excedente: peso_adicional_taxa,
+            peso_adicional_taxa,
             insurance_value,
             final_price,
             delivery_days: priceRecord.delivery_days,
@@ -719,6 +792,9 @@ serve(async (req) => {
             console.log(`  - Restrições de dimensões: ${dimension_rules.join('; ')}`);
           }
           console.log(`  - Preço da tabela: R$ ${base_price.toFixed(2)}`);
+          if (peso_adicional_taxa > 0) {
+            console.log(`  - Taxa peso adicional: R$ ${peso_adicional_taxa.toFixed(2)}`);
+          }
           console.log(`  - Seguro: R$ ${insurance_value.toFixed(2)}`);
           console.log(`  - Preço final: R$ ${final_price.toFixed(2)}`);
           console.log(`  - ${transports_chemicals}`);
