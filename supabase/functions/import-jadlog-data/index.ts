@@ -141,23 +141,29 @@ serve(async (req) => {
               const origin = colOrigin !== -1 ? String(row[colOrigin] || 'GO').trim() : 'GO';
               const state = colUF !== -1 ? String(row[colUF] || '').trim() : '';
               const city = colCity !== -1 ? String(row[colCity] || '').trim() : '';
-              const cepStart = colCEPStart !== -1 ? String(row[colCEPStart] || '').trim().replace(/\D/g, '') : '';
-              const cepEnd = colCEPEnd !== -1 ? String(row[colCEPEnd] || '').trim().replace(/\D/g, '') : '';
+              let cepStart = colCEPStart !== -1 ? String(row[colCEPStart] || '').trim().replace(/\D/g, '') : '';
+              let cepEnd = colCEPEnd !== -1 ? String(row[colCEPEnd] || '').trim().replace(/\D/g, '') : '';
               const prazo = colPrazo !== -1 ? parseInt(String(row[colPrazo] || '5')) : 5;
               const tarifa = colTarifa !== -1 ? String(row[colTarifa] || 'STANDARD').trim() : 'STANDARD';
               
               // Validar dados essenciais
               if (!state || !cepStart || !cepEnd || cepStart.length < 5 || cepEnd.length < 5) continue;
               
+              // CORREÇÃO DE GAPS: Expandir faixas de CEP automaticamente
+              // Arredondar CEP inicial para baixo (início do bloco de 100 CEPs)
+              const cepStartNum = parseInt(cepStart);
+              const cepEndNum = parseInt(cepEnd);
+              const expandedCepStart = Math.floor(cepStartNum / 100) * 100;
+              
               // Criar código único para a zona
-              const zoneCode = `${origin}-${state}-${cepStart.substring(0, 5)}`;
+              const zoneCode = `${origin}-${state}-${String(expandedCepStart).substring(0, 5)}`;
               
               zonesData.push({
                 zone_code: zoneCode,
                 state: state,
                 zone_type: city || 'STANDARD',
                 tariff_type: tarifa,
-                cep_start: cepStart.padStart(8, '0'),
+                cep_start: String(expandedCepStart).padStart(8, '0'),
                 cep_end: cepEnd.padStart(8, '0'),
                 delivery_days: isNaN(prazo) ? 5 : prazo,
                 express_delivery_days: isNaN(prazo) ? 3 : Math.max(1, prazo - 2)
