@@ -155,27 +155,12 @@ export const calculateShippingQuote = async ({
         
       } catch (err) {
         console.error('❌ [IA] Erro durante processamento:', err);
-        console.log('⚠️ [IA] Falling back to legacy system due to error');
+        throw new Error(`Erro ao calcular frete: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
       }
-    } else {
-      console.log('⚠️ [IA] Desativada - usando sistema legado');
     }
-
-    // Fallback: usar sistema legado
-    console.log('🔄 [Fallback] Chamando sistema legado...');
-    const legacyResult = await calculateLegacyShippingQuote({ 
-      destinyCep, 
-      weight, 
-      quantity,
-      merchandiseValue 
-    });
     
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📋 [Legacy] RETORNANDO RESULTADO:');
-    console.log(JSON.stringify(legacyResult, null, 2));
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
-    return legacyResult;
+    // IA desativada - retornar erro
+    throw new Error('Sistema de cotação não está ativo. Entre em contato com o suporte.');
     
   } catch (error) {
     console.error('❌ [ShippingService] ERRO FATAL:', error);
@@ -183,98 +168,7 @@ export const calculateShippingQuote = async ({
   }
 };
 
-const calculateLegacyShippingQuote = async ({
-  destinyCep,
-  weight,
-  quantity = 1,
-  merchandiseValue
-}: QuoteRequest): Promise<ShippingQuote> => {
-  console.log(`[Legacy] Calculando - CEP: ${destinyCep}, Peso: ${weight}kg`);
-  
-  const cleanCep = destinyCep.replace(/\D/g, '').padStart(8, '0');
-  
-  if (cleanCep.length !== 8 || cleanCep === '00000000') {
-    throw new Error(`CEP ${destinyCep} é inválido.`);
-  }
-  
-  const { data: zones, error: zoneError } = await supabase
-    .from('shipping_zones_magalog')
-    .select('*')
-    .lte('cep_start', cleanCep)
-    .gte('cep_end', cleanCep)
-    .limit(1);
-
-  if (zoneError) {
-    throw new Error(`Erro ao consultar zonas: ${zoneError.message}`);
-  }
-
-  if (!zones || zones.length === 0) {
-    throw new Error(`CEP ${destinyCep} não é atendido.`);
-  }
-
-  const zone = zones[0];
-
-  const { data: pricing, error: priceError } = await supabase
-    .from('shipping_pricing_magalog')
-    .select('*')
-    .eq('zone_code', zone.zone_code)
-    .lte('weight_min', weight)
-    .gte('weight_max', weight)
-    .limit(1);
-
-  if (priceError) {
-    throw new Error(`Erro ao consultar preços: ${priceError.message}`);
-  }
-
-  let basePrice: number;
-  let excessWeightCharge = 0;
-
-  if (!pricing || pricing.length === 0) {
-    const { data: maxWeightPricing } = await supabase
-      .from('shipping_pricing_magalog')
-      .select('*')
-      .eq('zone_code', zone.zone_code)
-      .order('weight_max', { ascending: false })
-      .limit(1);
-
-    if (!maxWeightPricing || maxWeightPricing.length === 0) {
-      throw new Error(`Peso ${weight}kg não encontrado na tabela.`);
-    }
-
-    basePrice = maxWeightPricing[0].price;
-    
-    if (weight > 30) {
-      const excessWeight = weight - 30;
-      excessWeightCharge = excessWeight * 10;
-    }
-  } else {
-    basePrice = pricing[0].price;
-  }
-  
-  const basePriceWithQuantity = (basePrice + excessWeightCharge) * quantity;
-  
-  let insuranceValue = 0;
-  if (merchandiseValue && merchandiseValue > 0) {
-    insuranceValue = merchandiseValue * 0.013;
-  }
-  
-  const economicPrice = basePriceWithQuantity + insuranceValue;
-  const expressPrice = (basePriceWithQuantity * 1.6) + insuranceValue;
-
-  return {
-    economicPrice: Number(economicPrice.toFixed(2)),
-    expressPrice: Number(expressPrice.toFixed(2)),
-    economicDays: zone.delivery_days,
-    expressDays: zone.express_delivery_days,
-    zone: zone.zone_code,
-    zoneName: `${zone.state} - ${zone.zone_type === 'CAP' ? 'Capital' : 'Interior'}`,
-    tableId: 'legacy',
-    tableName: 'Sistema Legado Confix',
-    cnpj: '00000000000000',
-    insuranceValue: Number(insuranceValue.toFixed(2)),
-    basePrice: Number(basePriceWithQuantity.toFixed(2))
-  };
-};
+// Sistema legado REMOVIDO - use apenas AI Quote Agent com tabelas Jadlog/Alfa/Magalog
 
 export const validateCep = (cep: string): boolean => {
   const cleanCep = cep.replace(/\D/g, '');
