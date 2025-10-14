@@ -87,6 +87,16 @@ serve(async (req) => {
     console.log('Shipment webhook dispatch - Sender personal data:', senderPersonalData);
     console.log('Shipment webhook dispatch - Recipient personal data:', recipientPersonalData);
 
+    // Get pricing table information (for CNPJ do transportador)
+    const { data: pricingTable } = await supabaseService
+      .from('pricing_tables')
+      .select('cnpj, name')
+      .eq('id', fullShipment.pricing_table_id)
+      .single();
+    
+    const transportadorCNPJ = pricingTable?.cnpj || '';
+    console.log('Transportador CNPJ:', transportadorCNPJ, 'from table:', pricingTable?.name);
+    
     // Get company branches data (required information)
     const { data: branches, error: branchesError } = await supabaseService
       .from('company_branches')
@@ -111,6 +121,9 @@ serve(async (req) => {
     const addressData = quoteData.addressData || {};
     const merchandiseDetails = quoteData.merchandiseDetails || {};
     const deliveryDetails = quoteData.deliveryDetails || {};
+    
+    // Get quantity of volumes (default to 1)
+    const quantityVolumes = quoteData.quantity || quoteData.volumes || 1;
     
     // Get NFe key from multiple possible locations
     const nfeKey = quoteData.fiscalData?.nfeAccessKey || 
@@ -154,6 +167,7 @@ serve(async (req) => {
     const webhookPayload = {
       idLote: fullShipment.tracking_code || '',
       cnpjEmbarcadorOrigem: mainBranch.cnpj.replace(/[^\d]/g, ''),
+      cnpjTransportador: transportadorCNPJ ? transportadorCNPJ.replace(/[^\d]/g, '') : '',
       sincPLP: 0,
       retornoEDI: true,
       listaSolicitacoes: [
@@ -184,7 +198,7 @@ serve(async (req) => {
           // Expedidor (mesmo que remetente)
           Expedidor: formatAddress(fullShipment.sender_address, senderPersonalData),
           
-          LogisticaReversa: {
+         LogisticaReversa: {
             flagColetaPortaria: fullShipment.pickup_option === 'dropoff',
             flagColetaSemEmbalagem: false
           },
@@ -203,7 +217,7 @@ serve(async (req) => {
                chaveNotaFiscal: nfeKey || '',
               nroCarga: fullShipment.tracking_code || '',
               nroPedido: fullShipment.tracking_code || '',
-              qtdeVolumes: 1,
+              qtdeVolumes: quantityVolumes,
               qtdeItens: 1,
               pesoTotal: fullShipment.weight || 0,
               cubagemTotal: ((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000, // m³
@@ -211,18 +225,29 @@ serve(async (req) => {
               valorICMS: 0,
               valorPendenteCompra: 0,
               
-              listaVolumes: [
-                {
-                  idVolume: 1,
-                  nroEtiqueta: fullShipment.tracking_code || '',
-                  codigoBarras: fullShipment.tracking_code || '',
-                  pesoVolume: fullShipment.weight || 0,
-                  cubagemVolume: ((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000,
-                   altura: (fullShipment.height || 0) / 100, // Convert cm to m
-                   largura: (fullShipment.width || 0) / 100,
-                   comprimento: (fullShipment.length || 0) / 100
-                }
-              ],
+              // Gerar lista de volumes dinamicamente baseado na quantidade
+              listaVolumes: Array.from({ length: quantityVolumes }, (_, index) => {
+                const volumeNumber = index + 1;
+                const trackingCode = fullShipment.tracking_code || '';
+                const pesoVolume = (fullShipment.weight || 0) / quantityVolumes;
+                const cubagemVolume = ((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000 / quantityVolumes;
+                const contentDescription = quoteData.merchandiseDescription || 
+                                          quoteData.documentData?.merchandiseDescription || 
+                                          quoteData.fiscalData?.contentDescription || 
+                                          'Mercadoria diversa';
+                
+                return {
+                  idVolume: volumeNumber,
+                  nroEtiqueta: `${trackingCode}-${volumeNumber}`,
+                  codigoBarras: `${trackingCode}-${volumeNumber}`,
+                  pesoVolume: pesoVolume,
+                  cubagemVolume: cubagemVolume,
+                  altura: (fullShipment.height || 0) / 100, // Convert cm to m
+                  largura: (fullShipment.width || 0) / 100,
+                  comprimento: (fullShipment.length || 0) / 100,
+                  conteudo: contentDescription
+                };
+              }),
               
               listaItens: [
                 {
