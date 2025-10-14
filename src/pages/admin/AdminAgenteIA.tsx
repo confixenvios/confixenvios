@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Bot, Settings, History } from "lucide-react";
+import { Bot, Settings, History, RefreshCw, Package } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,6 +48,7 @@ interface QuoteLog {
 
 const AdminAgenteIA = () => {
   const queryClient = useQueryClient();
+  const [isImporting, setIsImporting] = useState(false);
 
   // Buscar configuração
   const { data: config } = useQuery({
@@ -111,6 +112,37 @@ const AdminAgenteIA = () => {
       balanced: "Busca o melhor equilíbrio entre preço e prazo de entrega",
     };
     return modes[mode] || mode;
+  };
+
+  // Reimportar dados da Jadlog
+  const handleReimportJadlog = async () => {
+    setIsImporting(true);
+    try {
+      toast.info("Iniciando reimportação da Jadlog...", {
+        description: "Isso pode levar alguns minutos. Aguarde...",
+        duration: 5000,
+      });
+
+      const { data, error } = await supabase.functions.invoke('import-jadlog-data', {
+        body: { action: 'reimport' }
+      });
+
+      if (error) throw error;
+
+      console.log('Reimportação Jadlog completa:', data);
+      
+      toast.success("Reimportação concluída!", {
+        description: `Importados: ${data.imported_pricing || 0} preços e ${data.imported_zones || 0} zonas`,
+        duration: 5000,
+      });
+    } catch (error: any) {
+      console.error('Erro ao reimportar Jadlog:', error);
+      toast.error("Erro ao reimportar dados da Jadlog", {
+        description: error.message || 'Erro desconhecido',
+      });
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   return (
@@ -216,6 +248,52 @@ const AdminAgenteIA = () => {
                   checked={config?.is_active || false}
                   onCheckedChange={(checked) => updateConfigMutation.mutate({ is_active: checked })}
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Manutenção de Dados
+              </CardTitle>
+              <CardDescription>
+                Reimportar tabelas de preços e faixas de CEP das transportadoras
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-2">
+                  ⚠️ Reimportação de Dados da Jadlog
+                </p>
+                <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+                  Esta operação irá:
+                </p>
+                <ul className="text-sm text-amber-800 dark:text-amber-200 space-y-1 list-disc list-inside mb-4">
+                  <li>Limpar todos os dados atuais das tabelas jadlog_zones e jadlog_pricing</li>
+                  <li>Reimportar TODAS as faixas de CEP e preços da tabela Google Sheets</li>
+                  <li>Corrigir todos os tipos de tarifa (Capital, Interior 1, 2, 3, etc.)</li>
+                  <li>Esta operação pode levar de 2 a 5 minutos</li>
+                </ul>
+                <Button 
+                  onClick={handleReimportJadlog}
+                  disabled={isImporting}
+                  className="w-full"
+                  variant="default"
+                >
+                  {isImporting ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Reimportando...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Reimportar Dados da Jadlog
+                    </>
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>
