@@ -171,92 +171,66 @@ serve(async (req) => {
       if (table.name.toLowerCase().includes('jadlog')) {
         console.log(`[AI Quote Agent] ⚡ Buscando Jadlog do Supabase por CEP ${destination_cep} e peso ${total_weight}kg`);
         try {
-          // 1. Buscar PRIMEIRO os preços para o estado e peso
-          console.log(`[AI Quote Agent] Query 1: Buscando preços Jadlog - estado: ${destinationState}, peso: ${total_weight}kg...`);
-          
-          const { data: prices, error: pricesError } = await supabaseClient
-            .from('jadlog_pricing')
+          // 1. Buscar PRIMEIRO a zona específica para o CEP (para determinar tariff_type e prazos)
+          console.log(`[AI Quote Agent] Query 1: Buscando zona Jadlog para CEP ${cleanDestinationCep}...`);
+          const { data: zones, error: zonesError } = await supabaseClient
+            .from('jadlog_zones')
             .select('*')
-            .eq('destination_state', destinationState)
-            .lte('weight_min', total_weight)
-            .gte('weight_max', total_weight)
-            .limit(50);
+            .eq('state', destinationState)
+            .lte('cep_start', cleanDestinationCep)
+            .gte('cep_end', cleanDestinationCep)
+            .limit(1);
           
-          if (pricesError) {
-            console.error(`[AI Quote Agent] ❌ Erro ao buscar preços Jadlog:`, pricesError);
+          if (zonesError) {
+            console.error(`[AI Quote Agent] ❌ Erro ao buscar zona Jadlog:`, zonesError);
             tableData.pricing_data = [];
-          } else if (!prices || prices.length === 0) {
-            console.log(`[AI Quote Agent] ⚠️ Jadlog: Nenhum preço encontrado para estado ${destinationState}, peso ${total_weight}kg`);
+          } else if (!zones || zones.length === 0) {
+            console.log(`[AI Quote Agent] ⚠️ Jadlog: Nenhuma zona encontrada para CEP ${cleanDestinationCep} (estado: ${destinationState})`);
             tableData.pricing_data = [];
           } else {
-            console.log(`[AI Quote Agent] ✅ Jadlog: ${prices.length} preço(s) encontrado(s)`);
+            const zone = zones[0];
+            console.log(`[AI Quote Agent] ✅ Jadlog: Zona encontrada - ${zone.zone_code}, tariff_type: ${zone.tariff_type}, ${zone.delivery_days} dias`);
             
-            // 2. Tentar buscar zona específica para o CEP (para prazos mais precisos)
-            console.log(`[AI Quote Agent] Query 2: Buscando zona Jadlog para CEP ${cleanDestinationCep}...`);
-            const { data: zones } = await supabaseClient
-              .from('jadlog_zones')
+            // 2. Buscar preços para o tariff_type específico da zona
+            console.log(`[AI Quote Agent] Query 2: Buscando preços Jadlog - estado: ${destinationState}, tarifa: ${zone.tariff_type}, peso: ${total_weight}kg...`);
+            
+            const { data: prices, error: pricesError } = await supabaseClient
+              .from('jadlog_pricing')
               .select('*')
-              .eq('state', destinationState)
-              .lte('cep_start', cleanDestinationCep)
-              .gte('cep_end', cleanDestinationCep)
-              .limit(1);
+              .eq('destination_state', destinationState)
+              .eq('tariff_type', zone.tariff_type)
+              .lte('weight_min', total_weight)
+              .gte('weight_max', total_weight)
+              .limit(10);
             
-            let deliveryDays: number;
-            let expressDeliveryDays: number;
-            let zoneCode: string;
-            
-            if (zones && zones.length > 0) {
-              // Zona específica encontrada
-              deliveryDays = zones[0].delivery_days;
-              expressDeliveryDays = zones[0].express_delivery_days;
-              zoneCode = zones[0].zone_code;
-              console.log(`[AI Quote Agent] ✅ Jadlog: Zona específica encontrada - ${zoneCode}, ${deliveryDays} dias`);
+            if (pricesError) {
+              console.error(`[AI Quote Agent] ❌ Erro ao buscar preços Jadlog:`, pricesError);
+              tableData.pricing_data = [];
+            } else if (!prices || prices.length === 0) {
+              console.log(`[AI Quote Agent] ⚠️ Jadlog: Nenhum preço encontrado para estado ${destinationState}, tarifa ${zone.tariff_type}, peso ${total_weight}kg`);
+              tableData.pricing_data = [];
             } else {
-              // Zona não encontrada, buscar zona mais próxima do mesmo estado
-              console.log(`[AI Quote Agent] ⚠️ Zona específica não encontrada, buscando zona mais próxima...`);
-              const { data: nearestZones } = await supabaseClient
-                .from('jadlog_zones')
-                .select('*')
-                .eq('state', destinationState)
-                .order('cep_start', { ascending: true }) // Ordem crescente para pegar zonas de capital primeiro
-                .limit(5);
+              console.log(`[AI Quote Agent] ✅ Jadlog: ${prices.length} preço(s) encontrado(s)`);
               
-              if (nearestZones && nearestZones.length > 0) {
-                // Usar a zona mais próxima encontrada (geralmente Capital tem os prazos corretos)
-                const nearestZone = nearestZones[0];
-                deliveryDays = nearestZone.delivery_days;
-                expressDeliveryDays = nearestZone.express_delivery_days;
-                zoneCode = `JADLOG-${destinationState}`;
-                console.log(`[AI Quote Agent] 📍 Jadlog: Usando zona próxima de referência - ${nearestZone.zone_code}, ${deliveryDays} dias`);
-              } else {
-                // Fallback apenas se não houver nenhuma zona do estado
-                deliveryDays = 9; // Valor mais conservador para evitar prazos muito otimistas
-                expressDeliveryDays = 7;
-                zoneCode = `JADLOG-${destinationState}`;
-                console.log(`[AI Quote Agent] ⚠️ Jadlog: Nenhuma zona encontrada, usando prazo padrão conservador de ${deliveryDays} dias`);
-              }
-            }
-            
-            console.log(`[AI Quote Agent] 📍 Jadlog: Usando prazo ${deliveryDays} dias, zona ${zoneCode}`);
-            
-            prices.forEach(price => {
-              tableData.pricing_data.push({
-                destination_cep: cleanDestinationCep,
-                weight_min: price.weight_min,
-                weight_max: price.weight_max,
-                price: price.price,
-                delivery_days: deliveryDays,
-                express_delivery_days: expressDeliveryDays,
-                zone_code: zoneCode,
-                state: destinationState,
-                tariff_type: price.tariff_type,
-                matches_cep: true,
-                matches_weight: true
+              prices.forEach(price => {
+                tableData.pricing_data.push({
+                  destination_cep: cleanDestinationCep,
+                  weight_min: price.weight_min,
+                  weight_max: price.weight_max,
+                  price: price.price,
+                  delivery_days: zone.delivery_days,
+                  express_delivery_days: zone.express_delivery_days,
+                  zone_code: zone.zone_code,
+                  state: destinationState,
+                  tariff_type: price.tariff_type,
+                  matches_cep: true,
+                  matches_weight: true
+                });
+                console.log(`[AI Quote Agent] ✅ Jadlog: R$ ${price.price} para ${price.weight_min}-${price.weight_max}kg, tipo: ${price.tariff_type}`);
               });
-              console.log(`[AI Quote Agent] ✅ Jadlog: R$ ${price.price} para ${price.weight_min}-${price.weight_max}kg, tipo: ${price.tariff_type}`);
-            });
-            
-            console.log(`[AI Quote Agent] ✅ Jadlog: ${tableData.pricing_data.length} registros totais do Supabase`);
+              
+              console.log(`[AI Quote Agent] ✅ Jadlog: ${tableData.pricing_data.length} registros totais do Supabase`);
+            }
           }
         } catch (error) {
           console.error(`[AI Quote Agent] ❌ Erro ao processar Jadlog:`, error);
