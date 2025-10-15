@@ -88,14 +88,33 @@ serve(async (req) => {
     console.log('Shipment webhook dispatch - Recipient personal data:', recipientPersonalData);
 
     // Get pricing table information (for CNPJ do transportador)
-    const { data: pricingTable } = await supabaseService
-      .from('pricing_tables')
-      .select('cnpj, name')
-      .eq('id', fullShipment.pricing_table_id)
-      .single();
+    // Try to get table ID from shipment or from quote_data
+    const tableId = fullShipment.pricing_table_id || 
+                    fullShipment.quote_data?.quoteData?.shippingQuote?.tableId ||
+                    fullShipment.quote_data?.shippingQuote?.tableId;
     
-    const transportadorCNPJ = pricingTable?.cnpj || '';
-    console.log('Transportador CNPJ:', transportadorCNPJ, 'from table:', pricingTable?.name);
+    console.log('Pricing table ID found:', tableId);
+    
+    let transportadorCNPJ = '';
+    
+    if (tableId) {
+      const { data: pricingTable, error: pricingTableError } = await supabaseService
+        .from('pricing_tables')
+        .select('cnpj, name')
+        .eq('id', tableId)
+        .single();
+      
+      if (pricingTableError) {
+        console.error('Error fetching pricing table:', pricingTableError);
+      } else if (pricingTable) {
+        transportadorCNPJ = pricingTable.cnpj || '';
+        console.log('✓ Transportador CNPJ encontrado:', transportadorCNPJ, 'da tabela:', pricingTable.name);
+      } else {
+        console.log('⚠ Pricing table not found for ID:', tableId);
+      }
+    } else {
+      console.log('⚠ No pricing table ID available in shipment data');
+    }
     
     // Get company branches data (required information)
     const { data: branches, error: branchesError } = await supabaseService
