@@ -235,6 +235,11 @@ serve(async (req) => {
         {
           idSolicitacaoInterno: fullShipment.tracking_code || '',
           idServico: fullShipment.selected_option === 'express' ? 1 : 2,
+          vlfrete: deliveryDetails.shippingPrice || 
+            deliveryDetails.totalPrice || 
+            (fullShipment.selected_option === 'express' 
+              ? (quoteData.quoteData?.shippingQuote?.expressPrice || quoteData.shippingQuote?.expressPrice || 0)
+              : (quoteData.quoteData?.shippingQuote?.economicPrice || quoteData.shippingQuote?.economicPrice || 0)),
           vlicms: 0,
           vladicional: 0,
           tpvalor: true,
