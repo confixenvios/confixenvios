@@ -190,6 +190,26 @@ serve(async (req) => {
       }
     });
 
+    // Calculate total cubagem from volumes
+    let totalCubagem = 0;
+    for (let i = 0; i < quantityVolumes; i++) {
+      const specificVolume = Array.isArray(volumesData) && volumesData[i];
+      
+      if (specificVolume) {
+        // Use specific volume data
+        const altura = parseFloat(specificVolume.height) / 100; // Convert cm to m
+        const largura = parseFloat(specificVolume.width) / 100;
+        const comprimento = parseFloat(specificVolume.length) / 100;
+        totalCubagem += altura * largura * comprimento;
+      } else {
+        // Divide equally among volumes
+        const cubagem = ((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000 / quantityVolumes;
+        totalCubagem += cubagem;
+      }
+    }
+    totalCubagem = parseFloat(totalCubagem.toFixed(2));
+    console.log('Total cubagem calculated:', totalCubagem);
+
     // Build CTE payload in the exact format requested
     const webhookPayload = {
       idLote: fullShipment.tracking_code || '',
@@ -242,21 +262,21 @@ serve(async (req) => {
                serieNotaFiscal: 0,
                dtEmissaoNotaFiscal: new Date().toISOString(),
                chaveNotaFiscal: nfeKey || '',
-              nroCarga: fullShipment.tracking_code || '',
-              nroPedido: fullShipment.tracking_code || '',
-              qtdeVolumes: quantityVolumes,
-              qtdeItens: 1,
-              pesoTotal: fullShipment.weight || 0,
-              cubagemTotal: parseFloat((((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000).toFixed(2)), // m³
-              valorMercadoria: merchandiseDetails.totalValue || quoteData.quoteData?.totalMerchandiseValue || 0,
-              valorICMS: 0,
-              valorPendenteCompra: 0,
-              vlfrete: fullShipment.selected_option === 'express' 
-                ? (quoteData.shippingQuote?.expressPrice || quoteData.quoteData?.shippingQuote?.expressPrice || 0)
-                : (quoteData.shippingQuote?.economicPrice || quoteData.quoteData?.shippingQuote?.economicPrice || 0),
-              
-               // Gerar lista de volumes usando dados específicos ou dividindo igualmente
-               listaVolumes: Array.from({ length: quantityVolumes }, (_, index) => {
+               nroCarga: fullShipment.tracking_code || '',
+               nroPedido: fullShipment.tracking_code || '',
+               qtdeVolumes: quantityVolumes,
+               qtdeItens: 1,
+               pesoTotal: fullShipment.weight || 0,
+               cubagemTotal: totalCubagem,
+               valorMercadoria: merchandiseDetails.totalValue || quoteData.quoteData?.totalMerchandiseValue || 0,
+               valorICMS: 0,
+               valorPendenteCompra: 0,
+               vlfrete: fullShipment.selected_option === 'express' 
+                 ? (quoteData.shippingQuote?.expressPrice || quoteData.quoteData?.shippingQuote?.expressPrice || 0)
+                 : (quoteData.shippingQuote?.economicPrice || quoteData.quoteData?.shippingQuote?.economicPrice || 0),
+               
+                // Gerar lista de volumes usando dados específicos ou dividindo igualmente
+                listaVolumes: Array.from({ length: quantityVolumes }, (_, index) => {
                  const volumeNumber = index + 1;
                  const trackingCode = fullShipment.tracking_code || '';
                  
