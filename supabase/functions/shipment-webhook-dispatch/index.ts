@@ -244,7 +244,7 @@ serve(async (req) => {
               qtdeVolumes: quantityVolumes,
               qtdeItens: 1,
               pesoTotal: fullShipment.weight || 0,
-              cubagemTotal: ((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000, // m³
+              cubagemTotal: parseFloat((((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000).toFixed(2)), // m³
               valorMercadoria: merchandiseDetails.totalValue || quoteData.quoteData?.totalMerchandiseValue || 0,
               valorICMS: 0,
               valorPendenteCompra: 0,
@@ -262,21 +262,21 @@ serve(async (req) => {
                  
                  let pesoVolume, cubagemVolume, altura, largura, comprimento;
                  
-                 if (specificVolume) {
-                   // Usar dados específicos do volume
-                   pesoVolume = parseFloat(specificVolume.weight) || 0;
-                   altura = parseFloat(specificVolume.height) / 100; // Convert cm to m
-                   largura = parseFloat(specificVolume.width) / 100;
-                   comprimento = parseFloat(specificVolume.length) / 100;
-                   cubagemVolume = (altura * largura * comprimento);
-                 } else {
-                   // Dividir igualmente entre volumes
-                   pesoVolume = (fullShipment.weight || 0) / quantityVolumes;
-                   cubagemVolume = ((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000 / quantityVolumes;
-                   altura = (fullShipment.height || 0) / 100; // Convert cm to m
-                   largura = (fullShipment.width || 0) / 100;
-                   comprimento = (fullShipment.length || 0) / 100;
-                 }
+                  if (specificVolume) {
+                    // Usar dados específicos do volume
+                    pesoVolume = parseFloat(specificVolume.weight) || 0;
+                    altura = parseFloat(specificVolume.height) / 100; // Convert cm to m
+                    largura = parseFloat(specificVolume.width) / 100;
+                    comprimento = parseFloat(specificVolume.length) / 100;
+                    cubagemVolume = parseFloat((altura * largura * comprimento).toFixed(2));
+                  } else {
+                    // Dividir igualmente entre volumes
+                    pesoVolume = (fullShipment.weight || 0) / quantityVolumes;
+                    cubagemVolume = parseFloat((((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000 / quantityVolumes).toFixed(2));
+                    altura = (fullShipment.height || 0) / 100; // Convert cm to m
+                    largura = (fullShipment.width || 0) / 100;
+                    comprimento = (fullShipment.length || 0) / 100;
+                  }
                  
                  const contentDescription = quoteData.merchandiseDescription || 
                                            quoteData.documentData?.merchandiseDescription || 
