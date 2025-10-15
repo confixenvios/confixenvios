@@ -220,8 +220,8 @@ serve(async (req) => {
       }
     }
     
-    // Limit to 2 decimal places
-    totalCubagem = parseFloat(totalCubagem.toFixed(2));
+    // Limit to 3 decimal places
+    totalCubagem = parseFloat(totalCubagem.toFixed(3));
     console.log('Total cubagem from quote data:', totalCubagem);
 
     // Build CTE payload in the exact format requested
@@ -302,7 +302,7 @@ serve(async (req) => {
                   if (merchandiseVolume) {
                     // Use pre-calculated values from merchandiseDetails (from quote form)
                     pesoVolume = parseFloat(merchandiseVolume.weight) || 0;
-                    cubagemVolume = parseFloat((merchandiseVolume.cubicWeight || 0).toFixed(2));
+                    cubagemVolume = parseFloat((merchandiseVolume.cubicWeight || 0).toFixed(3));
                     altura = parseFloat(merchandiseVolume.height) / 100; // Convert cm to m
                     largura = parseFloat(merchandiseVolume.width) / 100;
                     comprimento = parseFloat(merchandiseVolume.length) / 100;
@@ -312,11 +312,11 @@ serve(async (req) => {
                     altura = parseFloat(specificVolume.height) / 100;
                     largura = parseFloat(specificVolume.width) / 100;
                     comprimento = parseFloat(specificVolume.length) / 100;
-                    cubagemVolume = parseFloat((altura * largura * comprimento).toFixed(2));
+                    cubagemVolume = parseFloat((altura * largura * comprimento).toFixed(3));
                   } else {
                     // Dividir igualmente entre volumes
                     pesoVolume = (fullShipment.weight || 0) / quantityVolumes;
-                    cubagemVolume = parseFloat((totalCubagem / quantityVolumes).toFixed(2));
+                    cubagemVolume = parseFloat((totalCubagem / quantityVolumes).toFixed(3));
                     altura = (fullShipment.height || 0) / 100;
                     largura = (fullShipment.width || 0) / 100;
                     comprimento = (fullShipment.length || 0) / 100;
