@@ -724,62 +724,100 @@ const ClientRemessas = () => {
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Peso</p>
-                      <p className="font-medium">{selectedShipment.weight}kg</p>
+                      <p className="font-medium">
+                        {selectedShipment.quote_data?.originalFormData?.weight || 
+                         selectedShipment.quote_data?.weight || 
+                         selectedShipment.weight}kg
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Quantidade</p>
                       <p className="font-medium">
-                        {selectedShipment.quote_data?.quantity || 
-                         selectedShipment.quote_data?.originalFormData?.quantity || 
-                         selectedShipment.quote_data?.merchandiseDetails?.quantity || '1'} volumes
+                        {selectedShipment.quote_data?.originalFormData?.quantity || 
+                         selectedShipment.quote_data?.quantity || '1'} volumes
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Formato</p>
-                      <p className="font-medium capitalize">{selectedShipment.format}</p>
+                      <p className="font-medium capitalize">
+                        {selectedShipment.quote_data?.originalFormData?.format || 
+                         selectedShipment.quote_data?.format || 
+                         selectedShipment.format}
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Comprimento</p>
-                      <p className="font-medium">{selectedShipment.length}cm</p>
+                      <p className="font-medium">
+                        {selectedShipment.quote_data?.originalFormData?.length || 
+                         selectedShipment.quote_data?.length || 
+                         selectedShipment.length}cm
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Largura</p>
-                      <p className="font-medium">{selectedShipment.width}cm</p>
+                      <p className="font-medium">
+                        {selectedShipment.quote_data?.originalFormData?.width || 
+                         selectedShipment.quote_data?.width || 
+                         selectedShipment.width}cm
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Altura</p>
-                      <p className="font-medium">{selectedShipment.height}cm</p>
+                      <p className="font-medium">
+                        {selectedShipment.quote_data?.originalFormData?.height || 
+                         selectedShipment.quote_data?.height || 
+                         selectedShipment.height}cm
+                      </p>
                     </div>
                     {/* Valor Unitário */}
-                    {(selectedShipment.quote_data?.unitValue || 
-                      selectedShipment.quote_data?.originalFormData?.unitValue ||
+                    {(selectedShipment.quote_data?.originalFormData?.unitValue || 
+                      selectedShipment.quote_data?.unitValue ||
                       selectedShipment.quote_data?.merchandiseDetails?.unitValue) && (
                       <div>
                         <p className="text-muted-foreground">Valor Unitário</p>
                         <p className="font-medium">
                           R$ {parseFloat(
-                            selectedShipment.quote_data?.unitValue || 
-                            selectedShipment.quote_data?.originalFormData?.unitValue ||
+                            selectedShipment.quote_data?.originalFormData?.unitValue || 
+                            selectedShipment.quote_data?.unitValue ||
                             selectedShipment.quote_data?.merchandiseDetails?.unitValue || '0'
                           ).toFixed(2).replace('.', ',')}
                         </p>
                       </div>
                     )}
                     {/* Valor Total da Mercadoria */}
-                    {(selectedShipment.quote_data?.totalMerchandiseValue || 
-                      selectedShipment.quote_data?.originalFormData?.totalMerchandiseValue ||
+                    {(selectedShipment.quote_data?.originalFormData?.totalMerchandiseValue ||
+                      selectedShipment.quote_data?.totalMerchandiseValue || 
                       selectedShipment.quote_data?.merchandiseDetails?.totalValue) && (
                       <div>
-                        <p className="text-muted-foreground">Valor Total</p>
+                        <p className="text-muted-foreground">Valor Total da Mercadoria</p>
                         <p className="font-medium">
                           R$ {parseFloat(
-                            selectedShipment.quote_data?.totalMerchandiseValue || 
                             selectedShipment.quote_data?.originalFormData?.totalMerchandiseValue ||
+                            selectedShipment.quote_data?.totalMerchandiseValue || 
                             selectedShipment.quote_data?.merchandiseDetails?.totalValue || '0'
                           ).toFixed(2).replace('.', ',')}
                         </p>
                       </div>
                     )}
+                    {/* Valor do Seguro */}
+                    {(() => {
+                      const insuranceValue = selectedShipment.quote_data?.originalFormData?.totalMerchandiseValue ||
+                                           selectedShipment.quote_data?.totalMerchandiseValue || 
+                                           selectedShipment.quote_data?.merchandiseDetails?.totalValue ||
+                                           selectedShipment.quote_data?.insurance;
+                      
+                      if (insuranceValue) {
+                        return (
+                          <div>
+                            <p className="text-muted-foreground">Valor do Seguro</p>
+                            <p className="font-medium text-primary">
+                              R$ {parseFloat(insuranceValue).toFixed(2).replace('.', ',')}
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                     {/* Peso Cúbico se disponível */}
                     {selectedShipment.quote_data?.technicalData?.cubicWeight && (
                       <div>

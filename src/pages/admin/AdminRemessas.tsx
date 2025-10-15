@@ -1274,33 +1274,73 @@ const AdminRemessas = () => {
                 {/* Dimensões e Peso */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Dimensões e Peso</CardTitle>
+                    <CardTitle className="text-base">Dimensões e Peso - Dados do Formulário</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Peso</label>
-                        <p className="text-sm">{selectedShipmentDetails.weight} kg</p>
+                        <p className="text-sm">
+                          {selectedShipmentDetails.quote_data?.originalFormData?.weight || 
+                           selectedShipmentDetails.quote_data?.weight || 
+                           selectedShipmentDetails.weight} kg
+                        </p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Formato</label>
-                        <p className="text-sm">{selectedShipmentDetails.format}</p>
+                        <p className="text-sm capitalize">
+                          {selectedShipmentDetails.quote_data?.originalFormData?.format || 
+                           selectedShipmentDetails.quote_data?.format || 
+                           selectedShipmentDetails.format}
+                        </p>
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Comprimento</label>
-                        <p className="text-sm">{selectedShipmentDetails.length} cm</p>
+                        <p className="text-sm">
+                          {selectedShipmentDetails.quote_data?.originalFormData?.length || 
+                           selectedShipmentDetails.quote_data?.length || 
+                           selectedShipmentDetails.length} cm
+                        </p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Largura</label>
-                        <p className="text-sm">{selectedShipmentDetails.width} cm</p>
+                        <p className="text-sm">
+                          {selectedShipmentDetails.quote_data?.originalFormData?.width || 
+                           selectedShipmentDetails.quote_data?.width || 
+                           selectedShipmentDetails.width} cm
+                        </p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Altura</label>
-                        <p className="text-sm">{selectedShipmentDetails.height} cm</p>
+                        <p className="text-sm">
+                          {selectedShipmentDetails.quote_data?.originalFormData?.height || 
+                           selectedShipmentDetails.quote_data?.height || 
+                           selectedShipmentDetails.height} cm
+                        </p>
                       </div>
                     </div>
+                    
+                    {/* Valor do Seguro */}
+                    {(() => {
+                      const insuranceValue = selectedShipmentDetails.quote_data?.originalFormData?.totalMerchandiseValue ||
+                                           selectedShipmentDetails.quote_data?.totalMerchandiseValue || 
+                                           selectedShipmentDetails.quote_data?.merchandiseDetails?.totalValue ||
+                                           selectedShipmentDetails.quote_data?.insurance;
+                      
+                      if (insuranceValue) {
+                        return (
+                          <div className="mt-2">
+                            <label className="text-sm font-medium text-muted-foreground">Valor do Seguro (Valor da Mercadoria)</label>
+                            <p className="text-lg font-bold text-primary">
+                              R$ {parseFloat(insuranceValue).toFixed(2).replace('.', ',')}
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
 
                     {/* Volumes Individuais */}
                     {(() => {
