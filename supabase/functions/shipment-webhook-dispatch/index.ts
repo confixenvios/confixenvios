@@ -247,7 +247,7 @@ serve(async (req) => {
     const webhookPayload = {
       idLote: fullShipment.tracking_code || '',
       cnpjEmbarcadorOrigem: mainBranch.cnpj.replace(/[^\d]/g, ''),
-      cnpjTransportador: transportadorCNPJ ? transportadorCNPJ.replace(/[^\d]/g, '') : '',
+      cnpjTransportadorDestinto: transportadorCNPJ ? transportadorCNPJ.replace(/[^\d]/g, '') : '',
       sincPLP: 0,
       retornoEDI: true,
       listaSolicitacoes: [
