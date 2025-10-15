@@ -150,11 +150,14 @@ serve(async (req) => {
     console.log('Volumes data found:', Array.isArray(volumesData) ? `${volumesData.length} volumes` : 'using quantity', quantityVolumes);
     
     // Get NFe key from multiple possible locations
-    const nfeKey = quoteData.fiscalData?.nfeAccessKey || 
-                   quoteData.nfeKey || 
-                   quoteData.nfeChave || 
-                   quoteData.documentData?.nfeKey ||
-                   quoteData.documentData?.fiscalData?.nfeAccessKey || '';
+    // If document type is declaracao_conteudo, use a fictional key
+    const nfeKey = fullShipment.document_type === 'declaracao_conteudo' 
+      ? '99999999999999999999999999999999999999999999' 
+      : (quoteData.fiscalData?.nfeAccessKey || 
+         quoteData.nfeKey || 
+         quoteData.nfeChave || 
+         quoteData.documentData?.nfeKey ||
+         quoteData.documentData?.fiscalData?.nfeAccessKey || '');
 
     // Helper function to extract document from different formats  
     const extractDocument = (doc: string) => {
