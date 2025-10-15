@@ -788,6 +788,47 @@ const ClientRemessas = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* Volumes Individuais */}
+                  {(() => {
+                    const volumes = selectedShipment.quote_data?.volumes || selectedShipment.quote_data?.quoteData?.volumes;
+                    if (Array.isArray(volumes) && volumes.length > 0) {
+                      return (
+                        <div className="mt-6">
+                          <h4 className="text-base font-semibold mb-3 text-primary">Volumes Individuais</h4>
+                          <div className="space-y-3">
+                            {volumes.map((volume: any, index: number) => (
+                              <div key={index} className="p-4 border border-border/50 rounded-lg bg-muted/30">
+                                <div className="flex items-center mb-2">
+                                  <Package className="w-4 h-4 mr-2 text-primary" />
+                                  <span className="font-medium">Volume {index + 1}</span>
+                                </div>
+                                <div className="grid grid-cols-4 gap-3 text-sm">
+                                  <div>
+                                    <p className="text-muted-foreground text-xs">Peso</p>
+                                    <p className="font-medium">{volume.weight}kg</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground text-xs">Comprimento</p>
+                                    <p className="font-medium">{volume.length}cm</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground text-xs">Largura</p>
+                                    <p className="font-medium">{volume.width}cm</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground text-xs">Altura</p>
+                                    <p className="font-medium">{volume.height}cm</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 <Separator />
@@ -859,45 +900,47 @@ const ClientRemessas = () => {
                     <div>
                       <h3 className="text-lg font-semibold mb-3">Dados de Pagamento</h3>
                       <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Método de Pagamento</p>
-                          <p className="font-medium">{selectedShipment.payment_data.method?.toUpperCase()}</p>
-                        </div>
-                         {(() => {
-                            // Tentar obter o valor do frete de várias fontes
+                         <div>
+                           <p className="text-muted-foreground">Método de Pagamento</p>
+                           <p className="font-medium">{selectedShipment.payment_data.method?.toUpperCase()}</p>
+                         </div>
+                          {(() => {
+                            // Prioridade: Obter valor da cotação aprovada (mais confiável)
                             let amount = null;
                             
-                            // 1. Tentar payment_data.pixData.amount (PIX - já vem em centavos)
-                            if (selectedShipment.payment_data?.pixData?.amount) {
-                              amount = selectedShipment.payment_data.pixData.amount; // já está em centavos
+                            // 1. PRIORIDADE: Valor da cotação aprovada (shippingQuote)
+                            if (selectedShipment.quote_data?.shippingQuote) {
+                              const price = selectedShipment.selected_option === 'express' 
+                                ? (selectedShipment.quote_data.shippingQuote.expressPrice || selectedShipment.quote_data.quoteData?.shippingQuote?.expressPrice)
+                                : (selectedShipment.quote_data.shippingQuote.economicPrice || selectedShipment.quote_data.quoteData?.shippingQuote?.economicPrice);
+                              if (price) {
+                                amount = price * 100; // converter de reais para centavos
+                              }
                             }
-                            // 2. Tentar payment_data.amount (PIX novo formato - vem em reais, precisa converter)
-                            else if (selectedShipment.payment_data?.amount && selectedShipment.payment_data?.method === 'pix') {
-                              amount = selectedShipment.payment_data.amount * 100; // converter de reais para centavos
+                            // 2. Fallback: payment_data.pixData.amount (PIX - já vem em centavos)
+                            if (!amount && selectedShipment.payment_data?.pixData?.amount) {
+                              amount = selectedShipment.payment_data.pixData.amount;
                             }
-                            // 3. Tentar payment_data.amount (Stripe/Cartão - já em centavos)
-                            else if (selectedShipment.payment_data?.amount) {
+                            // 3. Fallback: payment_data.amount (PIX novo formato - vem em reais)
+                            else if (!amount && selectedShipment.payment_data?.amount && selectedShipment.payment_data?.method === 'pix') {
+                              amount = selectedShipment.payment_data.amount * 100;
+                            }
+                            // 4. Fallback: payment_data.amount (Stripe/Cartão - já em centavos)
+                            else if (!amount && selectedShipment.payment_data?.amount) {
                               amount = selectedShipment.payment_data.amount;
                             }
-                            // 4. Tentar quote_data.shippingQuote.economicPrice ou expressPrice
-                            else if (selectedShipment.quote_data?.shippingQuote) {
-                              const price = selectedShipment.selected_option === 'express' 
-                                ? selectedShipment.quote_data.shippingQuote.expressPrice 
-                                : selectedShipment.quote_data.shippingQuote.economicPrice;
-                              amount = price * 100; // converter de reais para centavos
+                            // 5. Fallback: quote_data.totalPrice
+                            else if (!amount && selectedShipment.quote_data?.totalPrice) {
+                              amount = selectedShipment.quote_data.totalPrice * 100;
                             }
-                            // 5. Tentar quote_data.totalPrice
-                            else if (selectedShipment.quote_data?.totalPrice) {
-                              amount = selectedShipment.quote_data.totalPrice * 100; // converter de reais para centavos
-                            }
-                            // 6. Tentar deliveryDetails.totalPrice
-                            else if (selectedShipment.quote_data?.deliveryDetails?.totalPrice) {
+                            // 6. Fallback: deliveryDetails.totalPrice
+                            else if (!amount && selectedShipment.quote_data?.deliveryDetails?.totalPrice) {
                               amount = selectedShipment.quote_data.deliveryDetails.totalPrice * 100;
                             }
 
                             return amount ? (
                               <div>
-                                <p className="text-muted-foreground">Valor Pago</p>
+                                <p className="text-muted-foreground">Valor do Frete</p>
                                 <p className="font-medium">{formatCurrency(amount)}</p>
                               </div>
                             ) : null;

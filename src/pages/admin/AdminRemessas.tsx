@@ -1125,37 +1125,54 @@ const AdminRemessas = () => {
                          </div>
                        )}
 
-                     {/* Forma de Pagamento */}
-                     {selectedShipmentDetails.payment_data && (
-                       <div>
-                         <label className="text-sm font-medium text-muted-foreground">Forma de Pagamento</label>
-                         <div className="mt-1 p-3 bg-green-50 border border-green-200 rounded-lg">
-                           <div className="flex items-center justify-between mb-2">
-                             <div className="flex items-center space-x-2">
-                               <CheckCircle className="w-4 h-4 text-green-600" />
-                               <span className="font-medium text-green-800 capitalize">
-                                 {selectedShipmentDetails.payment_data?.method === 'pix' ? 'PIX' : 
-                                  selectedShipmentDetails.payment_data?.method === 'credit_card' ? 'Cartão de Crédito' : 
-                                  selectedShipmentDetails.payment_data?.method || 'N/A'}
-                               </span>
-                             </div>
-                             <Badge className="bg-green-100 text-green-700">
-                               R$ {(selectedShipmentDetails.payment_data?.amount || 0).toFixed(2).replace('.', ',')}
-                             </Badge>
-                           </div>
-                           {selectedShipmentDetails.payment_data?.confirmed_at && (
-                             <p className="text-xs text-green-600">
-                               Confirmado em: {format(new Date(selectedShipmentDetails.payment_data.confirmed_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                             </p>
-                           )}
-                           {selectedShipmentDetails.payment_data?.payment_id && (
-                             <p className="text-xs text-muted-foreground mt-1">
-                               ID: {selectedShipmentDetails.payment_data.payment_id}
-                             </p>
-                           )}
-                         </div>
-                       </div>
-                     )}
+                      {/* Forma de Pagamento */}
+                      {selectedShipmentDetails.payment_data && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Forma de Pagamento</label>
+                          <div className="mt-1 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center space-x-2">
+                                <CheckCircle className="w-4 h-4 text-green-600" />
+                                <span className="font-medium text-green-800 capitalize">
+                                  {selectedShipmentDetails.payment_data?.method === 'pix' ? 'PIX' : 
+                                   selectedShipmentDetails.payment_data?.method === 'credit_card' ? 'Cartão de Crédito' : 
+                                   selectedShipmentDetails.payment_data?.method || 'N/A'}
+                                </span>
+                              </div>
+                              <Badge className="bg-green-100 text-green-700">
+                                {(() => {
+                                  // Prioridade: Valor da cotação aprovada
+                                  let amount = 0;
+                                  
+                                  // 1. PRIORIDADE: Valor da cotação aprovada (mais confiável)
+                                  if (selectedShipmentDetails.quote_data?.shippingQuote) {
+                                    const price = selectedShipmentDetails.selected_option === 'express'
+                                      ? (selectedShipmentDetails.quote_data.shippingQuote.expressPrice || selectedShipmentDetails.quote_data.quoteData?.shippingQuote?.expressPrice)
+                                      : (selectedShipmentDetails.quote_data.shippingQuote.economicPrice || selectedShipmentDetails.quote_data.quoteData?.shippingQuote?.economicPrice);
+                                    if (price) amount = price;
+                                  }
+                                  // 2. Fallback: payment_data.amount
+                                  if (amount === 0 && selectedShipmentDetails.payment_data?.amount) {
+                                    amount = selectedShipmentDetails.payment_data.amount;
+                                  }
+                                  
+                                  return `R$ ${amount.toFixed(2).replace('.', ',')}`;
+                                })()}
+                              </Badge>
+                            </div>
+                            {selectedShipmentDetails.payment_data?.confirmed_at && (
+                              <p className="text-xs text-green-600">
+                                Confirmado em: {format(new Date(selectedShipmentDetails.payment_data.confirmed_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                              </p>
+                            )}
+                            {selectedShipmentDetails.payment_data?.payment_id && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                ID: {selectedShipmentDetails.payment_data.payment_id}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                      {/* Informações da Cotação Original */}
                      {selectedShipmentDetails.quote_data && (
@@ -1284,6 +1301,47 @@ const AdminRemessas = () => {
                         <p className="text-sm">{selectedShipmentDetails.height} cm</p>
                       </div>
                     </div>
+
+                    {/* Volumes Individuais */}
+                    {(() => {
+                      const volumes = selectedShipmentDetails.quote_data?.volumes || selectedShipmentDetails.quote_data?.quoteData?.volumes;
+                      if (Array.isArray(volumes) && volumes.length > 0) {
+                        return (
+                          <div className="mt-4">
+                            <label className="text-sm font-medium text-primary mb-3 block">Volumes Individuais</label>
+                            <div className="space-y-2">
+                              {volumes.map((volume: any, index: number) => (
+                                <div key={index} className="p-3 border border-primary/20 rounded-lg bg-primary/5">
+                                  <div className="flex items-center mb-2">
+                                    <Package className="w-4 h-4 mr-2 text-primary" />
+                                    <span className="font-medium text-sm">Volume {index + 1}</span>
+                                  </div>
+                                  <div className="grid grid-cols-4 gap-2 text-xs">
+                                    <div>
+                                      <p className="text-muted-foreground">Peso</p>
+                                      <p className="font-medium">{volume.weight}kg</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-muted-foreground">Compr.</p>
+                                      <p className="font-medium">{volume.length}cm</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-muted-foreground">Largura</p>
+                                      <p className="font-medium">{volume.width}cm</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-muted-foreground">Altura</p>
+                                      <p className="font-medium">{volume.height}cm</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </CardContent>
                 </Card>
               </div>
