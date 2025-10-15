@@ -142,7 +142,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
 
       // Preparar dados para PIX com TODOS os dados da cotação
       const pixPayload = {
-        amount: Math.round(amount), // Valor em reais
+        amount: parseFloat(amount.toFixed(2)), // Valor em reais com 2 casas decimais
         name: formData.name,
         email: formData.email,
         phone: formData.phone.replace(/\D/g, ''),
