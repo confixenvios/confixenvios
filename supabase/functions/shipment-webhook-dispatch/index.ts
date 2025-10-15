@@ -116,6 +116,25 @@ serve(async (req) => {
       console.log('⚠ No pricing table ID available in shipment data');
     }
     
+    // CRITICAL VALIDATION: CNPJ do transportador é obrigatório
+    if (!transportadorCNPJ || transportadorCNPJ.trim() === '') {
+      console.error('❌ ERRO CRÍTICO: CNPJ do transportador não encontrado!');
+      console.error('Shipment ID:', shipmentId);
+      console.error('Pricing table ID:', tableId);
+      console.error('Pricing table name:', fullShipment.pricing_table_name);
+      
+      // Log error
+      await supabaseService.from('webhook_logs').insert({
+        event_type: 'webhook_dispatch_failed',
+        shipment_id: shipmentId,
+        payload: { error: 'CNPJ transportador obrigatório', tableId, pricing_table_name: fullShipment.pricing_table_name },
+        response_status: 400,
+        response_body: { error: 'CNPJ do transportador não encontrado - campo obrigatório' }
+      });
+      
+      throw new Error('CNPJ do transportador é obrigatório mas não foi encontrado. Verifique se a tabela de preços tem CNPJ cadastrado.');
+    }
+    
     // Get company branches data (required information)
     const { data: branches, error: branchesError } = await supabaseService
       .from('company_branches')
