@@ -248,6 +248,9 @@ serve(async (req) => {
               valorMercadoria: merchandiseDetails.totalValue || quoteData.quoteData?.totalMerchandiseValue || 0,
               valorICMS: 0,
               valorPendenteCompra: 0,
+              vlfrete: fullShipment.selected_option === 'express' 
+                ? (quoteData.shippingQuote?.expressPrice || quoteData.quoteData?.shippingQuote?.expressPrice || 0)
+                : (quoteData.shippingQuote?.economicPrice || quoteData.quoteData?.shippingQuote?.economicPrice || 0),
               
                // Gerar lista de volumes usando dados específicos ou dividindo igualmente
                listaVolumes: Array.from({ length: quantityVolumes }, (_, index) => {
