@@ -282,12 +282,14 @@ serve(async (req) => {
                qtdeItens: 1,
                pesoTotal: fullShipment.weight || 0,
                cubagemTotal: totalCubagem,
-               valorMercadoria: merchandiseDetails.totalValue || quoteData.quoteData?.totalMerchandiseValue || 0,
-               valorICMS: 0,
-               valorPendenteCompra: 0,
-               vlfrete: fullShipment.selected_option === 'express' 
-                 ? (quoteData.shippingQuote?.expressPrice || quoteData.quoteData?.shippingQuote?.expressPrice || 0)
-                 : (quoteData.shippingQuote?.economicPrice || quoteData.quoteData?.shippingQuote?.economicPrice || 0),
+                valorMercadoria: merchandiseDetails.totalValue || quoteData.quoteData?.totalMerchandiseValue || 0,
+                valorICMS: 0,
+                valorPendenteCompra: 0,
+                vlfrete: deliveryDetails.shippingPrice || 
+                  deliveryDetails.totalPrice || 
+                  (fullShipment.selected_option === 'express' 
+                    ? (quoteData.quoteData?.shippingQuote?.expressPrice || quoteData.shippingQuote?.expressPrice || 0)
+                    : (quoteData.quoteData?.shippingQuote?.economicPrice || quoteData.shippingQuote?.economicPrice || 0)),
                
                  listaVolumes: Array.from({ length: quantityVolumes }, (_, index) => {
                   const volumeNumber = index + 1;
