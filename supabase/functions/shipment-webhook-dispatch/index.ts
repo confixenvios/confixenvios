@@ -190,25 +190,39 @@ serve(async (req) => {
       }
     });
 
-    // Calculate total cubagem from volumes
+    // Get total cubagem from quote data (already calculated in cotação form)
     let totalCubagem = 0;
-    for (let i = 0; i < quantityVolumes; i++) {
-      const specificVolume = Array.isArray(volumesData) && volumesData[i];
-      
-      if (specificVolume) {
-        // Use specific volume data
-        const altura = parseFloat(specificVolume.height) / 100; // Convert cm to m
-        const largura = parseFloat(specificVolume.width) / 100;
-        const comprimento = parseFloat(specificVolume.length) / 100;
-        totalCubagem += altura * largura * comprimento;
-      } else {
-        // Divide equally among volumes
-        const cubagem = ((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000 / quantityVolumes;
-        totalCubagem += cubagem;
+    
+    // First try to get from merchandiseDetails (most reliable)
+    if (merchandiseDetails.cubicWeight) {
+      totalCubagem = parseFloat(merchandiseDetails.cubicWeight);
+    } 
+    // Otherwise sum from individual volumes if they have cubicWeight
+    else if (merchandiseDetails.volumes && Array.isArray(merchandiseDetails.volumes)) {
+      totalCubagem = merchandiseDetails.volumes.reduce((sum: number, vol: any) => {
+        return sum + (parseFloat(vol.cubicWeight) || 0);
+      }, 0);
+    }
+    // Fallback: calculate from dimensions
+    else {
+      for (let i = 0; i < quantityVolumes; i++) {
+        const specificVolume = Array.isArray(volumesData) && volumesData[i];
+        
+        if (specificVolume) {
+          const altura = parseFloat(specificVolume.height) / 100;
+          const largura = parseFloat(specificVolume.width) / 100;
+          const comprimento = parseFloat(specificVolume.length) / 100;
+          totalCubagem += altura * largura * comprimento;
+        } else {
+          const cubagem = ((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000 / quantityVolumes;
+          totalCubagem += cubagem;
+        }
       }
     }
+    
+    // Limit to 2 decimal places
     totalCubagem = parseFloat(totalCubagem.toFixed(2));
-    console.log('Total cubagem calculated:', totalCubagem);
+    console.log('Total cubagem from quote data:', totalCubagem);
 
     // Build CTE payload in the exact format requested
     const webhookPayload = {
@@ -275,28 +289,35 @@ serve(async (req) => {
                  ? (quoteData.shippingQuote?.expressPrice || quoteData.quoteData?.shippingQuote?.expressPrice || 0)
                  : (quoteData.shippingQuote?.economicPrice || quoteData.quoteData?.shippingQuote?.economicPrice || 0),
                
-                // Gerar lista de volumes usando dados específicos ou dividindo igualmente
-                listaVolumes: Array.from({ length: quantityVolumes }, (_, index) => {
-                 const volumeNumber = index + 1;
-                 const trackingCode = fullShipment.tracking_code || '';
-                 
-                 // Se temos array de volumes com dados específicos, usar esses dados
-                 const specificVolume = Array.isArray(volumesData) && volumesData[index];
-                 
-                 let pesoVolume, cubagemVolume, altura, largura, comprimento;
-                 
-                  if (specificVolume) {
-                    // Usar dados específicos do volume
+                 listaVolumes: Array.from({ length: quantityVolumes }, (_, index) => {
+                  const volumeNumber = index + 1;
+                  const trackingCode = fullShipment.tracking_code || '';
+                  
+                  // Get volume data from merchandiseDetails if available (most reliable)
+                  const merchandiseVolume = merchandiseDetails.volumes && merchandiseDetails.volumes[index];
+                  const specificVolume = Array.isArray(volumesData) && volumesData[index];
+                  
+                  let pesoVolume, cubagemVolume, altura, largura, comprimento;
+                  
+                  if (merchandiseVolume) {
+                    // Use pre-calculated values from merchandiseDetails (from quote form)
+                    pesoVolume = parseFloat(merchandiseVolume.weight) || 0;
+                    cubagemVolume = parseFloat((merchandiseVolume.cubicWeight || 0).toFixed(2));
+                    altura = parseFloat(merchandiseVolume.height) / 100; // Convert cm to m
+                    largura = parseFloat(merchandiseVolume.width) / 100;
+                    comprimento = parseFloat(merchandiseVolume.length) / 100;
+                  } else if (specificVolume) {
+                    // Fallback: use specificVolume data
                     pesoVolume = parseFloat(specificVolume.weight) || 0;
-                    altura = parseFloat(specificVolume.height) / 100; // Convert cm to m
+                    altura = parseFloat(specificVolume.height) / 100;
                     largura = parseFloat(specificVolume.width) / 100;
                     comprimento = parseFloat(specificVolume.length) / 100;
                     cubagemVolume = parseFloat((altura * largura * comprimento).toFixed(2));
                   } else {
                     // Dividir igualmente entre volumes
                     pesoVolume = (fullShipment.weight || 0) / quantityVolumes;
-                    cubagemVolume = parseFloat((((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000 / quantityVolumes).toFixed(2));
-                    altura = (fullShipment.height || 0) / 100; // Convert cm to m
+                    cubagemVolume = parseFloat((totalCubagem / quantityVolumes).toFixed(2));
+                    altura = (fullShipment.height || 0) / 100;
                     largura = (fullShipment.width || 0) / 100;
                     comprimento = (fullShipment.length || 0) / 100;
                   }
