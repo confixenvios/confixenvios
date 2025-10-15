@@ -799,19 +799,38 @@ const ClientRemessas = () => {
                         </p>
                       </div>
                     )}
-                    {/* Valor do Seguro */}
+                    {/* Valor da Nota (Valor Declarado) */}
                     {(() => {
-                      const insuranceValue = selectedShipment.quote_data?.originalFormData?.totalMerchandiseValue ||
+                      const merchandiseValue = selectedShipment.quote_data?.originalFormData?.totalMerchandiseValue ||
                                            selectedShipment.quote_data?.totalMerchandiseValue || 
-                                           selectedShipment.quote_data?.merchandiseDetails?.totalValue ||
-                                           selectedShipment.quote_data?.insurance;
+                                           selectedShipment.quote_data?.merchandiseDetails?.totalValue;
                       
-                      if (insuranceValue) {
+                      if (merchandiseValue) {
                         return (
                           <div>
-                            <p className="text-muted-foreground">Valor do Seguro</p>
+                            <p className="text-muted-foreground">Valor da Nota (Valor Declarado)</p>
                             <p className="font-medium text-primary">
-                              R$ {parseFloat(insuranceValue).toFixed(2).replace('.', ',')}
+                              R$ {parseFloat(merchandiseValue).toFixed(2).replace('.', ',')}
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    {/* Valor do Seguro (0,6% do valor declarado) */}
+                    {(() => {
+                      const merchandiseValue = selectedShipment.quote_data?.originalFormData?.totalMerchandiseValue ||
+                                           selectedShipment.quote_data?.totalMerchandiseValue || 
+                                           selectedShipment.quote_data?.merchandiseDetails?.totalValue;
+                      
+                      if (merchandiseValue) {
+                        const insuranceValue = parseFloat(merchandiseValue) * 0.006; // 0,6%
+                        return (
+                          <div>
+                            <p className="text-muted-foreground">Valor do Seguro (0,6%)</p>
+                            <p className="font-medium text-primary">
+                              R$ {insuranceValue.toFixed(2).replace('.', ',')}
                             </p>
                           </div>
                         );
