@@ -141,8 +141,13 @@ serve(async (req) => {
     const merchandiseDetails = quoteData.merchandiseDetails || {};
     const deliveryDetails = quoteData.deliveryDetails || {};
     
-    // Get quantity of volumes (default to 1)
-    const quantityVolumes = quoteData.quantity || quoteData.volumes || 1;
+    // Get volumes information - can be array with detailed volumes or just quantity
+    const volumesData = quoteData.volumes || quoteData.quoteData?.volumes || [];
+    const quantityVolumes = Array.isArray(volumesData) && volumesData.length > 0 
+      ? volumesData.length 
+      : (quoteData.quantity || 1);
+    
+    console.log('Volumes data found:', Array.isArray(volumesData) ? `${volumesData.length} volumes` : 'using quantity', quantityVolumes);
     
     // Get NFe key from multiple possible locations
     const nfeKey = quoteData.fiscalData?.nfeAccessKey || 
@@ -244,29 +249,49 @@ serve(async (req) => {
               valorICMS: 0,
               valorPendenteCompra: 0,
               
-              // Gerar lista de volumes dinamicamente baseado na quantidade
-              listaVolumes: Array.from({ length: quantityVolumes }, (_, index) => {
-                const volumeNumber = index + 1;
-                const trackingCode = fullShipment.tracking_code || '';
-                const pesoVolume = (fullShipment.weight || 0) / quantityVolumes;
-                const cubagemVolume = ((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000 / quantityVolumes;
-                const contentDescription = quoteData.merchandiseDescription || 
-                                          quoteData.documentData?.merchandiseDescription || 
-                                          quoteData.fiscalData?.contentDescription || 
-                                          'Mercadoria diversa';
-                
-                return {
-                  idVolume: volumeNumber,
-                  nroEtiqueta: `${trackingCode}-${volumeNumber}`,
-                  codigoBarras: `${trackingCode}-${volumeNumber}`,
-                  pesoVolume: pesoVolume,
-                  cubagemVolume: cubagemVolume,
-                  altura: (fullShipment.height || 0) / 100, // Convert cm to m
-                  largura: (fullShipment.width || 0) / 100,
-                  comprimento: (fullShipment.length || 0) / 100,
-                  conteudo: contentDescription
-                };
-              }),
+               // Gerar lista de volumes usando dados específicos ou dividindo igualmente
+               listaVolumes: Array.from({ length: quantityVolumes }, (_, index) => {
+                 const volumeNumber = index + 1;
+                 const trackingCode = fullShipment.tracking_code || '';
+                 
+                 // Se temos array de volumes com dados específicos, usar esses dados
+                 const specificVolume = Array.isArray(volumesData) && volumesData[index];
+                 
+                 let pesoVolume, cubagemVolume, altura, largura, comprimento;
+                 
+                 if (specificVolume) {
+                   // Usar dados específicos do volume
+                   pesoVolume = parseFloat(specificVolume.weight) || 0;
+                   altura = parseFloat(specificVolume.height) / 100; // Convert cm to m
+                   largura = parseFloat(specificVolume.width) / 100;
+                   comprimento = parseFloat(specificVolume.length) / 100;
+                   cubagemVolume = (altura * largura * comprimento);
+                 } else {
+                   // Dividir igualmente entre volumes
+                   pesoVolume = (fullShipment.weight || 0) / quantityVolumes;
+                   cubagemVolume = ((fullShipment.length || 0) * (fullShipment.width || 0) * (fullShipment.height || 0)) / 1000000 / quantityVolumes;
+                   altura = (fullShipment.height || 0) / 100; // Convert cm to m
+                   largura = (fullShipment.width || 0) / 100;
+                   comprimento = (fullShipment.length || 0) / 100;
+                 }
+                 
+                 const contentDescription = quoteData.merchandiseDescription || 
+                                           quoteData.documentData?.merchandiseDescription || 
+                                           quoteData.fiscalData?.contentDescription || 
+                                           'Mercadoria diversa';
+                 
+                 return {
+                   idVolume: volumeNumber,
+                   nroEtiqueta: `${trackingCode}-${volumeNumber}`,
+                   codigoBarras: `${trackingCode}-${volumeNumber}`,
+                   pesoVolume: pesoVolume,
+                   cubagemVolume: cubagemVolume,
+                   altura: altura,
+                   largura: largura,
+                   comprimento: comprimento,
+                   conteudo: contentDescription
+                 };
+               }),
               
               listaItens: [
                 {
