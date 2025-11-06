@@ -319,8 +319,8 @@ serve(async (req) => {
           dtPrazoInicio: new Date().toISOString(),
           dtPrazoFim: new Date(Date.now() + (deliveryDetails.estimatedDays || 5) * 24 * 60 * 60 * 1000).toISOString(),
           
-          // Tomador do Serviço (quem paga o frete - sempre Juri Express)
-          TomadorServico: formatJuriExpressAddress(mainBranch),
+          // Tomador do Serviço (quem paga o frete - sempre o remetente)
+          TomadorServico: formatAddress(fullShipment.sender_address, senderPersonalData),
           
           // Remetente (cliente que está enviando)
           Remetente: formatAddress(fullShipment.sender_address, senderPersonalData),
