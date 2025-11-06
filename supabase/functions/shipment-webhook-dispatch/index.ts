@@ -117,6 +117,18 @@ serve(async (req) => {
     }
     
     // CRITICAL VALIDATION: CNPJ do transportador é obrigatório
+    // Try to get CNPJ from quote_data if not found in pricing table
+    if (!transportadorCNPJ || transportadorCNPJ.trim() === '') {
+      transportadorCNPJ = fullShipment.quote_data?.quoteData?.shippingQuote?.cnpj ||
+                         fullShipment.quote_data?.shippingQuote?.cnpj ||
+                         fullShipment.quote_data?.quote?.cnpj || '';
+      
+      if (transportadorCNPJ && transportadorCNPJ.trim() !== '') {
+        console.log('✓ CNPJ encontrado no quote_data:', transportadorCNPJ);
+      }
+    }
+    
+    // Final validation - CNPJ is required
     if (!transportadorCNPJ || transportadorCNPJ.trim() === '') {
       console.error('❌ ERRO CRÍTICO: CNPJ do transportador não encontrado!');
       console.error('Shipment ID:', shipmentId);

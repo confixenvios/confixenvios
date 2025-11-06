@@ -74,6 +74,7 @@ serve(async (req) => {
           expressDays: 2,
           selected_table_name: 'Teste Manual - R$ 2,00',
           selected_table_id: 'TEST-OVERRIDE',
+          cnpj: '54007348000130',
           final_price: 2.00,
           base_price: 2.00,
           basePrice: 2.00,
