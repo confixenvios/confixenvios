@@ -60,6 +60,54 @@ serve(async (req) => {
       );
     }
 
+    // ⚠️ OVERRIDE DE TESTE - CEP 74568-315 - R$ 2,00
+    const cleanTestCep = destination_cep.replace(/\D/g, '');
+    if (cleanTestCep === '74568315') {
+      console.log('🧪 [TESTE] Override ativado para CEP 74568-315 - Retornando R$ 2,00');
+      
+      const testResult = {
+        success: true,
+        economicPrice: 2.00,
+        expressPrice: 2.00,
+        economicDays: 2,
+        expressDays: 2,
+        zone: 'LOCAL',
+        zoneName: 'Teste - GO (interior)',
+        insuranceValue: 0,
+        tableId: 'TEST-OVERRIDE',
+        tableName: 'Teste Manual',
+        cnpj: '00000000000000',
+        details: {
+          basePrice: 2.00,
+          appliedWeight: total_weight,
+          message: '⚠️ VALOR DE TESTE - CEP 74568-315'
+        }
+      };
+
+      // Registrar no log de cotações
+      await supabaseClient.from('quote_logs').insert({
+        user_id: user_id || null,
+        session_id: session_id || null,
+        origin_cep: origin_cep,
+        destination_cep: destination_cep,
+        weight: total_weight,
+        merchandise_value: merchandise_value || 0,
+        selected_table_id: 'TEST-OVERRIDE',
+        selected_table_name: 'Teste Manual',
+        economic_price: 2.00,
+        express_price: 2.00,
+        economic_days: 2,
+        express_days: 2,
+        zone_code: 'LOCAL',
+        quote_result: testResult
+      });
+
+      return new Response(
+        JSON.stringify(testResult),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Buscar tabelas de preços ativas configuradas
     console.log('[AI Quote Agent] Buscando tabelas de preços ativas...');
     
