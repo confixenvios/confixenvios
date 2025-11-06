@@ -60,10 +60,10 @@ serve(async (req) => {
       );
     }
 
-    // ⚠️ OVERRIDE DE TESTE - CEP 74568-315 - R$ 2,00
+    // ⚠️ OVERRIDE DE TESTE - CEP 74968-315 - R$ 2,00
     const cleanTestCep = destination_cep.replace(/\D/g, '');
-    if (cleanTestCep === '74568315') {
-      console.log('🧪 [TESTE] Override ativado para CEP 74568-315 - Retornando R$ 2,00');
+    if (cleanTestCep === '74968315') {
+      console.log('🧪 [TESTE] Override ativado para CEP 74968-315 - Retornando R$ 2,00');
       
       const testResult = {
         success: true,
@@ -80,7 +80,7 @@ serve(async (req) => {
         details: {
           basePrice: 2.00,
           appliedWeight: total_weight,
-          message: '⚠️ VALOR DE TESTE - CEP 74568-315'
+          message: '⚠️ VALOR DE TESTE - CEP 74968-315'
         }
       };
 
