@@ -128,6 +128,33 @@ serve(async (req) => {
       }
     }
     
+    // Get company branches data (required information - needed for fallback CNPJ)
+    const { data: branches, error: branchesError } = await supabaseService
+      .from('company_branches')
+      .select('*')
+      .eq('active', true)
+      .order('is_main_branch', { ascending: false });
+
+    if (branchesError) {
+      console.error('Shipment webhook dispatch - Error fetching branches:', branchesError);
+      throw new Error('Failed to fetch company branches data');
+    }
+
+    const mainBranch = branches?.find(b => b.is_main_branch) || branches?.[0];
+    
+    if (!mainBranch) {
+      console.error('Shipment webhook dispatch - No company branch found');
+      throw new Error('No company branch configured - required for CTE dispatch');
+    }
+    
+    // Final fallback: Use main branch CNPJ if transportador CNPJ not found
+    if (!transportadorCNPJ || transportadorCNPJ.trim() === '') {
+      transportadorCNPJ = mainBranch.cnpj || '';
+      if (transportadorCNPJ) {
+        console.log('✓ Using main branch CNPJ as fallback:', transportadorCNPJ);
+      }
+    }
+    
     // Final validation - CNPJ is required
     if (!transportadorCNPJ || transportadorCNPJ.trim() === '') {
       console.error('❌ ERRO CRÍTICO: CNPJ do transportador não encontrado!');
@@ -145,25 +172,6 @@ serve(async (req) => {
       });
       
       throw new Error('CNPJ do transportador é obrigatório mas não foi encontrado. Verifique se a tabela de preços tem CNPJ cadastrado.');
-    }
-    
-    // Get company branches data (required information)
-    const { data: branches, error: branchesError } = await supabaseService
-      .from('company_branches')
-      .select('*')
-      .eq('active', true)
-      .order('is_main_branch', { ascending: false });
-
-    if (branchesError) {
-      console.error('Shipment webhook dispatch - Error fetching branches:', branchesError);
-      throw new Error('Failed to fetch company branches data');
-    }
-
-    const mainBranch = branches?.find(b => b.is_main_branch) || branches?.[0];
-    
-    if (!mainBranch) {
-      console.error('Shipment webhook dispatch - No company branch found');
-      throw new Error('No company branch configured - required for CTE dispatch');
     }
 
     // Extract data from fullShipment.quote_data
