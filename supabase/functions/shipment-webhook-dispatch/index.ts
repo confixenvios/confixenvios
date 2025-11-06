@@ -69,7 +69,10 @@ serve(async (req) => {
              fullShipment.quote_data?.sender?.phone || '',
       email: fullShipment.quote_data?.addressData?.sender?.email || 
              fullShipment.quote_data?.senderData?.email ||
-             fullShipment.quote_data?.sender?.email || ''
+             fullShipment.quote_data?.sender?.email || '',
+      inscricaoEstadual: fullShipment.quote_data?.addressData?.sender?.inscricaoEstadual || 
+                        fullShipment.quote_data?.senderData?.inscricaoEstadual ||
+                        fullShipment.quote_data?.sender?.inscricaoEstadual || ''
     };
 
     const recipientPersonalData = {
@@ -81,7 +84,10 @@ serve(async (req) => {
              fullShipment.quote_data?.recipient?.phone || '',
       email: fullShipment.quote_data?.addressData?.recipient?.email || 
              fullShipment.quote_data?.recipientData?.email ||
-             fullShipment.quote_data?.recipient?.email || ''
+             fullShipment.quote_data?.recipient?.email || '',
+      inscricaoEstadual: fullShipment.quote_data?.addressData?.recipient?.inscricaoEstadual || 
+                        fullShipment.quote_data?.recipientData?.inscricaoEstadual ||
+                        fullShipment.quote_data?.recipient?.inscricaoEstadual || ''
     };
 
     console.log('Shipment webhook dispatch - Sender personal data:', senderPersonalData);
@@ -208,7 +214,7 @@ serve(async (req) => {
     const formatAddress = (address: any, personalData: any) => ({
       cpf: extractDocument(personalData.document || '').length === 11 ? extractDocument(personalData.document || '') : '',
       cnpj: extractDocument(personalData.document || '').length === 14 ? extractDocument(personalData.document || '') : '',
-      inscricaoEstadual: '',
+      inscricaoEstadual: personalData.inscricaoEstadual || '',
       nome: address?.name || '',
       razaoSocial: address?.name || '',
       telefone: personalData.phone || '',

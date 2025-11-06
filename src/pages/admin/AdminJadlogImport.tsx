@@ -27,7 +27,7 @@ const AdminJadlogImport = () => {
     try {
       // Verificar se já existem dados
       const { count, error } = await supabase
-        .from('jadlog_pricing')
+        .from('jadlog_preco')
         .select('*', { count: 'exact', head: true });
 
       if (error) {
@@ -211,7 +211,7 @@ const AdminJadlogImport = () => {
             <CardContent className="text-sm text-muted-foreground space-y-2">
               <p>• A importação busca os dados diretamente do Google Sheets</p>
               <p>• Todas as abas da planilha são processadas automaticamente</p>
-              <p>• Os dados são validados e importados para as tabelas jadlog_pricing e jadlog_zones</p>
+              <p>• Os dados são validados e importados para as tabelas jadlog_preco e jadlog_zones</p>
               <p>• O processo é automático ao acessar esta página pela primeira vez</p>
             </CardContent>
           </Card>

@@ -52,7 +52,7 @@ export const TableImportStatus = ({
       if (lowerTableName.includes('jadlog')) {
         // Contar registros da tabela Jadlog
         const { count: pricingCount, error: pricingError } = await supabase
-          .from('jadlog_pricing')
+          .from('jadlog_preco')
           .select('*', { count: 'exact', head: true });
 
         const { count: zonesCount, error: zonesError } = await supabase

@@ -28,6 +28,7 @@ interface SavedRecipient {
   state: string;
   reference?: string;
   is_default: boolean;
+  inscricao_estadual?: string;
 }
 
 interface AddressData {
@@ -43,6 +44,7 @@ interface AddressData {
   city: string;
   state: string;
   reference: string;
+  inscricaoEstadual?: string;
 }
 
 interface SavedRecipientsManagerProps {
@@ -354,7 +356,8 @@ const RecipientFormContent = ({
     neighborhood: recipient?.neighborhood || "",
     city: recipient?.city || "",
     state: recipient?.state || "",
-    reference: recipient?.reference || ""
+    reference: recipient?.reference || "",
+    inscricaoEstadual: recipient?.inscricao_estadual || ""
   });
 
   const handleInputChange = (field: keyof AddressData, value: string) => {
@@ -419,6 +422,15 @@ const RecipientFormContent = ({
             value={formData.email}
             onChange={(e) => handleInputChange('email', e.target.value)}
             placeholder="email@exemplo.com"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Inscrição Estadual (apenas para empresas)</Label>
+          <Input
+            value={formData.inscricaoEstadual || ""}
+            onChange={(e) => handleInputChange('inscricaoEstadual', e.target.value)}
+            placeholder="123456789"
           />
         </div>
         

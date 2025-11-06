@@ -796,39 +796,36 @@ export type Database = {
         }
         Relationships: []
       }
-      jadlog_pricing: {
+      jadlog_preco: {
         Row: {
           created_at: string
-          destination_state: string
-          id: string
-          origin_state: string
-          price: number
-          tariff_type: string
-          updated_at: string
-          weight_max: number
-          weight_min: number
+          id: number
+          peso_max: number | null
+          peso_min: number | null
+          regiao_nome: string | null
+          transportadora_id: string | null
+          uf_destino: string | null
+          valor_frete: number | null
         }
         Insert: {
           created_at?: string
-          destination_state: string
-          id?: string
-          origin_state: string
-          price: number
-          tariff_type: string
-          updated_at?: string
-          weight_max: number
-          weight_min: number
+          id?: number
+          peso_max?: number | null
+          peso_min?: number | null
+          regiao_nome?: string | null
+          transportadora_id?: string | null
+          uf_destino?: string | null
+          valor_frete?: number | null
         }
         Update: {
           created_at?: string
-          destination_state?: string
-          id?: string
-          origin_state?: string
-          price?: number
-          tariff_type?: string
-          updated_at?: string
-          weight_max?: number
-          weight_min?: number
+          id?: number
+          peso_max?: number | null
+          peso_min?: number | null
+          regiao_nome?: string | null
+          transportadora_id?: string | null
+          uf_destino?: string | null
+          valor_frete?: number | null
         }
         Relationships: []
       }
@@ -1080,6 +1077,7 @@ export type Database = {
           document: string
           email: string
           id: string
+          inscricao_estadual: string | null
           is_default: boolean | null
           name: string
           neighborhood: string
@@ -1099,6 +1097,7 @@ export type Database = {
           document: string
           email: string
           id?: string
+          inscricao_estadual?: string | null
           is_default?: boolean | null
           name: string
           neighborhood: string
@@ -1118,6 +1117,7 @@ export type Database = {
           document?: string
           email?: string
           id?: string
+          inscricao_estadual?: string | null
           is_default?: boolean | null
           name?: string
           neighborhood?: string
@@ -1140,6 +1140,7 @@ export type Database = {
           document: string
           email: string
           id: string
+          inscricao_estadual: string | null
           is_default: boolean | null
           name: string
           neighborhood: string
@@ -1159,6 +1160,7 @@ export type Database = {
           document: string
           email: string
           id?: string
+          inscricao_estadual?: string | null
           is_default?: boolean | null
           name: string
           neighborhood: string
@@ -1178,6 +1180,7 @@ export type Database = {
           document?: string
           email?: string
           id?: string
+          inscricao_estadual?: string | null
           is_default?: boolean | null
           name?: string
           neighborhood?: string
@@ -1652,10 +1655,7 @@ export type Database = {
           telefone: string
         }[]
       }
-      bytea_to_text: {
-        Args: { data: string }
-        Returns: string
-      }
+      bytea_to_text: { Args: { data: string }; Returns: string }
       check_rate_limit: {
         Args: {
           action_type: string
@@ -1674,30 +1674,12 @@ export type Database = {
         }
         Returns: boolean
       }
-      cleanup_anonymous_addresses: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_expired_sessions: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_expired_temp_quotes: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_old_security_logs: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_orphaned_anonymous_shipments: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_security_logs: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      cleanup_anonymous_addresses: { Args: never; Returns: undefined }
+      cleanup_expired_sessions: { Args: never; Returns: undefined }
+      cleanup_expired_temp_quotes: { Args: never; Returns: undefined }
+      cleanup_old_security_logs: { Args: never; Returns: undefined }
+      cleanup_orphaned_anonymous_shipments: { Args: never; Returns: undefined }
+      cleanup_security_logs: { Args: never; Returns: undefined }
       create_anonymous_session: {
         Args: { client_fingerprint?: string }
         Returns: {
@@ -1734,20 +1716,11 @@ export type Database = {
         }
         Returns: string
       }
-      generate_api_key: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_b2b_tracking_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_tracking_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_api_key: { Args: never; Returns: string }
+      generate_b2b_tracking_code: { Args: never; Returns: string }
+      generate_tracking_code: { Args: never; Returns: string }
       get_available_shipments: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           created_at: string
           cte_key: string
@@ -1778,10 +1751,7 @@ export type Database = {
           total_shipments: number
         }[]
       }
-      get_current_session_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_current_session_id: { Args: never; Returns: string }
       get_masked_personal_data: {
         Args: { address_ref: string }
         Returns: {
@@ -1835,7 +1805,7 @@ export type Database = {
         }[]
       }
       get_secure_integrations: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           active: boolean
           created_at: string
@@ -1853,34 +1823,81 @@ export type Database = {
         }
         Returns: boolean
       }
-      hash_password: {
-        Args: { password: string }
-        Returns: string
-      }
+      hash_password: { Args: { password: string }; Returns: string }
       http: {
         Args: { request: Database["public"]["CompositeTypes"]["http_request"] }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "http_request"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      http_delete: {
-        Args:
-          | { content: string; content_type: string; uri: string }
-          | { uri: string }
-        Returns: Database["public"]["CompositeTypes"]["http_response"]
-      }
-      http_get: {
-        Args: { data: Json; uri: string } | { uri: string }
-        Returns: Database["public"]["CompositeTypes"]["http_response"]
-      }
+      http_delete:
+        | {
+            Args: { uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: { content: string; content_type: string; uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+      http_get:
+        | {
+            Args: { uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: { data: Json; uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       http_head: {
         Args: { uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       http_header: {
         Args: { field: string; value: string }
         Returns: Database["public"]["CompositeTypes"]["http_header"]
+        SetofOptions: {
+          from: "*"
+          to: "http_header"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       http_list_curlopt: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           curlopt: string
           value: string
@@ -1889,31 +1906,52 @@ export type Database = {
       http_patch: {
         Args: { content: string; content_type: string; uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      http_post: {
-        Args:
-          | { content: string; content_type: string; uri: string }
-          | { data: Json; uri: string }
-        Returns: Database["public"]["CompositeTypes"]["http_response"]
-      }
+      http_post:
+        | {
+            Args: { content: string; content_type: string; uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: { data: Json; uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       http_put: {
         Args: { content: string; content_type: string; uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      http_reset_curlopt: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      http_reset_curlopt: { Args: never; Returns: boolean }
       http_set_curlopt: {
         Args: { curlopt: string; value: string }
         Returns: boolean
       }
-      is_ip_blocked: {
-        Args: { client_ip: string }
-        Returns: boolean
-      }
+      is_ip_blocked: { Args: { client_ip: string }; Returns: boolean }
       list_security_definer_functions: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           comment: string
           function_name: string
@@ -1943,7 +1981,7 @@ export type Database = {
         Returns: Json
       }
       monitor_security_events: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           event_count: number
           event_type: string
@@ -1951,10 +1989,7 @@ export type Database = {
           unique_ips: number
         }[]
       }
-      promote_to_admin: {
-        Args: { user_email: string }
-        Returns: undefined
-      }
+      promote_to_admin: { Args: { user_email: string }; Returns: undefined }
       register_motorista_public: {
         Args: {
           p_cpf: string
@@ -1975,14 +2010,21 @@ export type Database = {
         }
         Returns: Json
       }
-      text_to_bytea: {
-        Args: { data: string }
-        Returns: string
-      }
-      urlencode: {
-        Args: { data: Json } | { string: string } | { string: string }
-        Returns: string
-      }
+      text_to_bytea: { Args: { data: string }; Returns: string }
+      urlencode:
+        | { Args: { data: Json }; Returns: string }
+        | {
+            Args: { string: string }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.urlencode(string => bytea), public.urlencode(string => varchar). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+          }
+        | {
+            Args: { string: string }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.urlencode(string => bytea), public.urlencode(string => varchar). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+          }
       validate_anonymous_session: {
         Args: { session_token: string }
         Returns: string
@@ -2022,7 +2064,7 @@ export type Database = {
         value: string | null
       }
       http_request: {
-        method: unknown | null
+        method: unknown
         uri: string | null
         headers: Database["public"]["CompositeTypes"]["http_header"][] | null
         content_type: string | null

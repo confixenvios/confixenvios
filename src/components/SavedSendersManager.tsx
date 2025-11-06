@@ -27,6 +27,7 @@ interface SavedSender {
   state: string;
   reference?: string;
   is_default: boolean;
+  inscricao_estadual?: string;
 }
 
 interface AddressData {
@@ -42,6 +43,7 @@ interface AddressData {
   city: string;
   state: string;
   reference: string;
+  inscricaoEstadual?: string;
 }
 
 interface SavedSendersManagerProps {
@@ -93,7 +95,8 @@ const SavedSendersManager = ({ currentSenderData, onSenderSelect, onSenderSave }
           neighborhood: defaultSender.neighborhood,
           city: defaultSender.city,
           state: defaultSender.state,
-          reference: defaultSender.reference || ""
+          reference: defaultSender.reference || "",
+          inscricaoEstadual: defaultSender.inscricao_estadual || ""
         });
       }
     } catch (error) {
@@ -517,7 +520,8 @@ const SenderFormContent = ({ editingSender, isNewSender, onSave, onCancel, loadi
     neighborhood: editingSender?.neighborhood || "",
     city: editingSender?.city || "",
     state: editingSender?.state || "",
-    reference: editingSender?.reference || ""
+    reference: editingSender?.reference || "",
+    inscricaoEstadual: editingSender?.inscricao_estadual || ""
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -592,6 +596,17 @@ const SenderFormContent = ({ editingSender, isNewSender, onSave, onCancel, loadi
             onChange={(e) => handleInputChange("email", e.target.value)}
             placeholder="email@exemplo.com"
             required
+          />
+        </div>
+
+        {/* Inscrição Estadual */}
+        <div className="md:col-span-2">
+          <Label htmlFor="inscricaoEstadual">Inscrição Estadual (apenas para empresas)</Label>
+          <Input
+            id="inscricaoEstadual"
+            value={formData.inscricaoEstadual || ""}
+            onChange={(e) => handleInputChange("inscricaoEstadual", e.target.value)}
+            placeholder="123456789"
           />
         </div>
 

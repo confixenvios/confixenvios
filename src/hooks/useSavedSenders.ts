@@ -18,6 +18,7 @@ interface SavedSender {
   state: string;
   reference?: string;
   is_default: boolean;
+  inscricao_estadual?: string;
 }
 
 interface AddressData {
@@ -33,6 +34,7 @@ interface AddressData {
   city: string;
   state: string;
   reference: string;
+  inscricaoEstadual?: string;
 }
 
 export const useSavedSenders = () => {
@@ -117,6 +119,7 @@ export const useSavedSenders = () => {
           city: senderData.city,
           state: senderData.state,
           reference: senderData.reference || null,
+          inscricao_estadual: senderData.inscricaoEstadual || null,
           is_default: shouldSetDefault
         });
 
@@ -157,7 +160,8 @@ export const useSavedSenders = () => {
           neighborhood: senderData.neighborhood,
           city: senderData.city,
           state: senderData.state,
-          reference: senderData.reference || null
+          reference: senderData.reference || null,
+          inscricao_estadual: senderData.inscricaoEstadual || null
         })
         .eq('id', senderId);
 
@@ -195,7 +199,8 @@ export const useSavedSenders = () => {
       neighborhood: sender.neighborhood,
       city: sender.city,
       state: sender.state,
-      reference: sender.reference || ""
+      reference: sender.reference || "",
+      inscricaoEstadual: sender.inscricao_estadual || ""
     };
   };
 

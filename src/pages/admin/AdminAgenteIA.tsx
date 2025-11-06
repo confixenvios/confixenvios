@@ -271,7 +271,7 @@ const AdminAgenteIA = () => {
                   Esta operação irá:
                 </p>
                 <ul className="text-sm text-amber-800 dark:text-amber-200 space-y-1 list-disc list-inside mb-4">
-                  <li>Limpar todos os dados atuais das tabelas jadlog_zones e jadlog_pricing</li>
+                  <li>Limpar todos os dados atuais das tabelas jadlog_zones e jadlog_preco</li>
                   <li>Reimportar TODAS as faixas de CEP e preços da tabela Google Sheets</li>
                   <li>Corrigir todos os tipos de tarifa (Capital, Interior 1, 2, 3, etc.)</li>
                   <li>Esta operação pode levar de 2 a 5 minutos</li>

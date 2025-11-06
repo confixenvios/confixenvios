@@ -184,7 +184,7 @@ const AdminTabelas = () => {
           
           if (lowerName.includes('jadlog')) {
             const { count: pricingCount } = await supabase
-              .from('jadlog_pricing')
+              .from('jadlog_preco')
               .select('*', { count: 'exact', head: true });
             const { count: zonesCount } = await supabase
               .from('jadlog_zones')
