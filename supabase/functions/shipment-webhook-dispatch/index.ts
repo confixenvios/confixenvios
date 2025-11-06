@@ -228,6 +228,31 @@ serve(async (req) => {
         lng: ''
       }
     });
+    
+    // Helper function to format Juri Express address (company branch)
+    const formatJuriExpressAddress = (branch: any) => ({
+      cpf: '',
+      cnpj: branch.cnpj?.replace(/[^\d]/g, '') || '',
+      inscricaoEstadual: branch.inscricao_estadual || '',
+      nome: branch.fantasy_name || branch.name || '',
+      razaoSocial: branch.name || '',
+      telefone: branch.phone || '',
+      email: branch.email || '',
+      Endereco: {
+        cep: branch.cep?.replace(/[^\d]/g, '') || '',
+        logradouro: branch.street || '',
+        numero: branch.number || '',
+        complemento: branch.complement || '',
+        pontoReferencia: '',
+        bairro: branch.neighborhood || '',
+        nomeCidade: branch.city || '',
+        siglaEstado: branch.state || '',
+        idCidadeIBGE: '',
+        pais: 'Brasil',
+        lat: '',
+        lng: ''
+      }
+    });
 
     // Get total cubagem from quote data (already calculated in cotação form)
     let totalCubagem = 0;
@@ -288,10 +313,10 @@ serve(async (req) => {
           dtPrazoInicio: new Date().toISOString(),
           dtPrazoFim: new Date(Date.now() + (deliveryDetails.estimatedDays || 5) * 24 * 60 * 60 * 1000).toISOString(),
           
-          // Tomador do Serviço (quem paga o frete - no caso, o remetente)
-          TomadorServico: formatAddress(fullShipment.sender_address, senderPersonalData),
+          // Tomador do Serviço (quem paga o frete - sempre Juri Express)
+          TomadorServico: formatJuriExpressAddress(mainBranch),
           
-          // Remetente
+          // Remetente (cliente que está enviando)
           Remetente: formatAddress(fullShipment.sender_address, senderPersonalData),
           
           // Destinatário  
@@ -300,8 +325,8 @@ serve(async (req) => {
           // Recebedor (mesmo que destinatário)
           Recebedor: formatAddress(fullShipment.recipient_address, recipientPersonalData),
           
-          // Expedidor (mesmo que remetente)
-          Expedidor: formatAddress(fullShipment.sender_address, senderPersonalData),
+          // Expedidor (sempre Juri Express - quem despacha a mercadoria)
+          Expedidor: formatJuriExpressAddress(mainBranch),
           
          LogisticaReversa: {
             flagColetaPortaria: fullShipment.pickup_option === 'dropoff',
