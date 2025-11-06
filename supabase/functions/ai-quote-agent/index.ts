@@ -67,20 +67,18 @@ serve(async (req) => {
       
       const testResult = {
         success: true,
-        economicPrice: 2.00,
-        expressPrice: 2.00,
-        economicDays: 2,
-        expressDays: 2,
-        zone: 'LOCAL',
-        zoneName: 'Teste - GO (interior)',
-        insuranceValue: 0,
-        tableId: 'TEST-OVERRIDE',
-        tableName: 'Teste Manual',
-        cnpj: '00000000000000',
-        details: {
+        quote: {
+          economicPrice: 2.00,
+          expressPrice: 2.00,
+          economicDays: 2,
+          expressDays: 2,
+          selected_table_name: 'Teste Manual - R$ 2,00',
+          selected_table_id: 'TEST-OVERRIDE',
+          final_price: 2.00,
+          base_price: 2.00,
           basePrice: 2.00,
-          appliedWeight: total_weight,
-          message: '⚠️ VALOR DE TESTE - CEP 74968-315'
+          insuranceValue: 0,
+          delivery_days: 2
         }
       };
 
@@ -93,7 +91,7 @@ serve(async (req) => {
         weight: total_weight,
         merchandise_value: merchandise_value || 0,
         selected_table_id: 'TEST-OVERRIDE',
-        selected_table_name: 'Teste Manual',
+        selected_table_name: 'Teste Manual - R$ 2,00',
         economic_price: 2.00,
         express_price: 2.00,
         economic_days: 2,
