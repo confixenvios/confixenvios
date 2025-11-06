@@ -3,15 +3,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { User, Mail, Phone, Calendar, Lock, Key, FileText } from "lucide-react";
+import { User, Mail, Phone, Calendar, Lock, Key, FileText, Edit } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import PaymentMethodsManager from "@/components/PaymentMethodsManager";
 import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 
 const ClientConta = () => {
-  const { user, profile, userRole, updatePassword } = useAuth();
+  const { user, profile, userRole, updatePassword, refreshUserData } = useAuth();
   const { toast } = useToast();
   
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -21,6 +30,17 @@ const ClientConta = () => {
     confirmPassword: ''
   });
   const [passwordError, setPasswordError] = useState('');
+  
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [profileData, setProfileData] = useState({
+    first_name: profile?.first_name || '',
+    last_name: profile?.last_name || '',
+    phone: profile?.phone || '',
+    document: profile?.document || '',
+    inscricao_estadual: profile?.inscricao_estadual || ''
+  });
+  const [profileError, setProfileError] = useState('');
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +88,60 @@ const ClientConta = () => {
     }
   };
 
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileError('');
+    
+    if (!profileData.first_name) {
+      setProfileError('O nome é obrigatório');
+      return;
+    }
+    
+    setIsUpdatingProfile(true);
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          first_name: profileData.first_name,
+          last_name: profileData.last_name,
+          phone: profileData.phone,
+          document: profileData.document,
+          inscricao_estadual: profileData.inscricao_estadual,
+        })
+        .eq('id', user?.id);
+      
+      if (error) {
+        setProfileError('Erro ao atualizar perfil: ' + error.message);
+      } else {
+        toast({
+          title: "Perfil atualizado!",
+          description: "Suas informações foram atualizadas com sucesso.",
+        });
+        
+        // Refresh user data
+        await refreshUserData();
+        setIsEditDialogOpen(false);
+      }
+    } catch (error) {
+      setProfileError('Erro inesperado ao atualizar perfil');
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  const openEditDialog = () => {
+    setProfileData({
+      first_name: profile?.first_name || '',
+      last_name: profile?.last_name || '',
+      phone: profile?.phone || '',
+      document: profile?.document || '',
+      inscricao_estadual: profile?.inscricao_estadual || ''
+    });
+    setProfileError('');
+    setIsEditDialogOpen(true);
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col space-y-2">
@@ -81,13 +155,135 @@ const ClientConta = () => {
         {/* Informações Pessoais */}
         <Card className="border-border/50 shadow-card">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <User className="w-5 h-5" />
-              <span>Informações Pessoais</span>
-            </CardTitle>
-            <CardDescription>
-              Suas informações de cadastro
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center space-x-2">
+                  <User className="w-5 h-5" />
+                  <span>Informações Pessoais</span>
+                </CardTitle>
+                <CardDescription>
+                  Suas informações de cadastro
+                </CardDescription>
+              </div>
+              <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={openEditDialog}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Editar
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Editar Informações Pessoais</DialogTitle>
+                    <DialogDescription>
+                      Atualize suas informações de cadastro
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleProfileUpdate} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-first-name">Nome *</Label>
+                        <Input
+                          id="edit-first-name"
+                          placeholder="Digite seu nome"
+                          value={profileData.first_name}
+                          onChange={(e) => setProfileData(prev => ({
+                            ...prev,
+                            first_name: e.target.value
+                          }))}
+                          disabled={isUpdatingProfile}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-last-name">Sobrenome</Label>
+                        <Input
+                          id="edit-last-name"
+                          placeholder="Digite seu sobrenome"
+                          value={profileData.last_name}
+                          onChange={(e) => setProfileData(prev => ({
+                            ...prev,
+                            last_name: e.target.value
+                          }))}
+                          disabled={isUpdatingProfile}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-phone">Telefone</Label>
+                      <Input
+                        id="edit-phone"
+                        placeholder="(00) 00000-0000"
+                        value={profileData.phone}
+                        onChange={(e) => setProfileData(prev => ({
+                          ...prev,
+                          phone: e.target.value
+                        }))}
+                        disabled={isUpdatingProfile}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-document">CPF/CNPJ</Label>
+                      <Input
+                        id="edit-document"
+                        placeholder="000.000.000-00"
+                        value={profileData.document}
+                        onChange={(e) => setProfileData(prev => ({
+                          ...prev,
+                          document: e.target.value
+                        }))}
+                        disabled={isUpdatingProfile}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-inscricao">Inscrição Estadual</Label>
+                      <Input
+                        id="edit-inscricao"
+                        placeholder="Digite a inscrição estadual"
+                        value={profileData.inscricao_estadual}
+                        onChange={(e) => setProfileData(prev => ({
+                          ...prev,
+                          inscricao_estadual: e.target.value
+                        }))}
+                        disabled={isUpdatingProfile}
+                      />
+                    </div>
+
+                    {profileError && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{profileError}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div className="flex gap-2 justify-end">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => setIsEditDialogOpen(false)}
+                        disabled={isUpdatingProfile}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button 
+                        type="submit" 
+                        disabled={isUpdatingProfile}
+                      >
+                        {isUpdatingProfile ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
+                            Salvando...
+                          </>
+                        ) : (
+                          'Salvar Alterações'
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-3">
