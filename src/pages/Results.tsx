@@ -100,6 +100,7 @@ const Results = () => {
   const { user, loading } = useAuth();
   const [quoteData, setQuoteData] = useState<any>(null);
   const [pickupOption, setPickupOption] = useState<string>("");
+  const [shippingOption, setShippingOption] = useState<"economic" | "express">("economic");
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Função para calcular valor da coleta baseado na região
@@ -114,9 +115,19 @@ const Results = () => {
   // Calcula o valor total (frete + coleta)
   const getTotalPrice = () => {
     if (!quoteData?.shippingQuote) return 0;
-    const freightPrice = quoteData.shippingQuote.economicPrice;
+    const freightPrice = shippingOption === "economic" 
+      ? quoteData.shippingQuote.economicPrice 
+      : quoteData.shippingQuote.expressPrice;
     const pickupCost = getPickupCost(pickupOption);
     return freightPrice + pickupCost;
+  };
+
+  // Obtém os dias de entrega baseado na opção selecionada
+  const getDeliveryDays = () => {
+    if (!quoteData?.shippingQuote) return 0;
+    return shippingOption === "economic" 
+      ? quoteData.shippingQuote.economicDays 
+      : quoteData.shippingQuote.expressDays;
   };
 
   useEffect(() => {
@@ -138,11 +149,20 @@ const Results = () => {
       return;
     }
 
+    if (!shippingOption) {
+      toast({
+        title: "Seleção obrigatória",
+        description: "Selecione uma opção de frete para continuar",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Check if user is authenticated
     if (!user && !loading) {
     // Store selections before showing auth modal
     sessionStorage.setItem('selectedQuote', JSON.stringify({
-      option: "standard", // Sempre frete padrão
+      option: shippingOption,
       pickup: pickupOption,
       quoteData,
       totalPrice: getTotalPrice()
@@ -159,7 +179,7 @@ const Results = () => {
   const proceedToNextStep = () => {
     // Store selections and navigate to next step
     sessionStorage.setItem('selectedQuote', JSON.stringify({
-      option: "standard", // Sempre frete padrão
+      option: shippingOption,
       pickup: pickupOption,
       quoteData,
       totalPrice: getTotalPrice()
@@ -228,73 +248,90 @@ const Results = () => {
             </CardContent>
           </Card>
 
-          {/* Freight Information (Non-clickable) */}
-          <div className="max-w-md mx-auto mb-8">
-            <Card className="shadow-card">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center space-x-2">
-                    <DollarSign className="h-5 w-5 text-success" />
-                    <span>Frete Padrão</span>
-                  </CardTitle>
-                  <Badge variant="secondary">
-                    Padrão
-                  </Badge>
-                </div>
-                <CardDescription>Entrega padrão com melhor custo-benefício</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+          {/* Freight Options - Economic and Express */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 text-center">Escolha como será feita a coleta do seu envio</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+              {/* Economic Option */}
+              <Card 
+                className={`shadow-card cursor-pointer transition-all duration-200 ${
+                  shippingOption === 'economic' 
+                    ? 'border-primary ring-2 ring-primary' 
+                    : 'border-border hover:border-primary/50'
+                }`}
+                onClick={() => setShippingOption('economic')}
+              >
+                <CardHeader>
                   <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-primary">
-                      R$ {quoteData.shippingQuote.economicPrice.toFixed(2)}
-                    </span>
-                    <div className="text-right">
-                      <div className="text-lg font-semibold">
-                        {quoteData.shippingQuote.economicDays} dias úteis
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Prazo estimado
+                    <CardTitle className="flex items-center space-x-2">
+                      <DollarSign className="h-5 w-5 text-success" />
+                      <span>{quoteData.shippingQuote.economicCarrier || 'Econômico'}</span>
+                    </CardTitle>
+                    <Badge variant="secondary">
+                      Melhor custo-benefício
+                    </Badge>
+                  </div>
+                  <CardDescription>Entrega padrão com melhor preço</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold text-success">
+                        R$ {quoteData.shippingQuote.economicPrice.toFixed(2)}
+                      </span>
+                      <div className="text-right">
+                        <div className="text-lg font-semibold">
+                          {quoteData.shippingQuote.economicDays} dias úteis
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Prazo estimado
+                        </div>
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Detalhamento do valor */}
-                  {(quoteData.shippingQuote.insuranceValue || quoteData.shippingQuote.basePrice || quoteData.weight > 30) && (
-                    <div className="mt-4 pt-4 border-t space-y-2 text-sm">
-                      <div className="font-medium text-muted-foreground mb-2">Composição do valor:</div>
-                      
-                      {quoteData.shippingQuote.basePrice && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Preço da tabela</span>
-                          <span>R$ {quoteData.shippingQuote.basePrice.toFixed(2)}</span>
+                </CardContent>
+              </Card>
+
+              {/* Express Option */}
+              <Card 
+                className={`shadow-card cursor-pointer transition-all duration-200 ${
+                  shippingOption === 'express' 
+                    ? 'border-primary ring-2 ring-primary' 
+                    : 'border-border hover:border-primary/50'
+                }`}
+                onClick={() => setShippingOption('express')}
+              >
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center space-x-2">
+                      <Clock className="h-5 w-5 text-primary" />
+                      <span>{quoteData.shippingQuote.expressCarrier || 'Expresso'}</span>
+                    </CardTitle>
+                    <Badge variant="default">
+                      Mais rápido
+                    </Badge>
+                  </div>
+                  <CardDescription>Entrega expressa em menor prazo</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold text-primary">
+                        R$ {quoteData.shippingQuote.expressPrice.toFixed(2)}
+                      </span>
+                      <div className="text-right">
+                        <div className="text-lg font-semibold">
+                          {quoteData.shippingQuote.expressDays} dias úteis
                         </div>
-                      )}
-                      
-                      {quoteData.shippingQuote.insuranceValue && quoteData.shippingQuote.insuranceValue > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Seguro (0,6% do valor declarado)</span>
-                          <span>R$ {quoteData.shippingQuote.insuranceValue.toFixed(2)}</span>
+                        <div className="text-sm text-muted-foreground">
+                          Prazo estimado
                         </div>
-                      )}
-                      
-                      {quoteData.weight > 30 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Peso excedente ({(quoteData.weight - 30).toFixed(1)}kg × R$10)</span>
-                          <span>R$ {((quoteData.weight - 30) * 10).toFixed(2)}</span>
-                        </div>
-                      )}
-                      
-                   {quoteData.shippingQuote.tableName && (
-                    <div className="text-xs text-muted-foreground pt-2 border-t mt-2">
-                      <strong>Tabela utilizada:</strong> {quoteData.shippingQuote.tableName}
+                      </div>
                     </div>
-                  )}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           {/* Pickup Options */}
@@ -359,7 +396,9 @@ const Results = () => {
                     R$ {getTotalPrice().toFixed(2)}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Frete: R$ {quoteData.shippingQuote.economicPrice.toFixed(2)} 
+                    Frete: R$ {(shippingOption === "economic" 
+                      ? quoteData.shippingQuote.economicPrice 
+                      : quoteData.shippingQuote.expressPrice).toFixed(2)} 
                     {pickupOption === 'pickup' && ' + Coleta: R$ 10,00'}
                   </div>
                 </div>
@@ -372,7 +411,7 @@ const Results = () => {
             <Button 
               onClick={handleContinue}
               className="w-full md:w-auto px-12 h-12 text-lg font-semibold bg-gradient-primary hover:shadow-primary transition-all duration-300"
-              disabled={!pickupOption}
+              disabled={!pickupOption || !shippingOption}
             >
               Preencher Dados da Etiqueta
             </Button>
