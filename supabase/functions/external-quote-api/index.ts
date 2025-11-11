@@ -42,41 +42,6 @@ serve(async (req) => {
     // Limpar CEP (remover formatação)
     const cleanCep = destinyCep.replace(/\D/g, '');
 
-    // TEMPORÁRIO: Mock para CEP 71070-654 (teste)
-    if (cleanCep === '71070654') {
-      console.log('[External Quote API] Using mock data for test CEP 71070654');
-      const mockQuote = {
-        economicPrice: 2.00,
-        economicDays: 2,
-        expressPrice: 2.00,
-        expressDays: 1,
-        zone: 'teste',
-        zoneName: 'Teste',
-        tableId: 'mock-test',
-        tableName: 'Teste Temporário',
-        cnpj: '',
-        insuranceValue: 0,
-        basePrice: 2.00,
-        cubicWeight: weight,
-        appliedWeight: weight,
-        additionals_applied: [],
-        economicCarrier: 'teste',
-        expressCarrier: 'teste',
-        economicRegion: 'Teste',
-        expressRegion: 'Teste'
-      };
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          quote: mockQuote
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
     // Preparar payload para API externa
     const apiPayload = {
       cep: cleanCep,
