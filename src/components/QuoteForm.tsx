@@ -1342,15 +1342,10 @@ const QuoteForm = () => {
                       onClick={() => setShippingOption('economic')}
                     >
                       <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="flex items-center space-x-2 text-base">
-                            <DollarSign className="h-4 w-4 text-success" />
-                            <span>Mais barato</span>
-                          </CardTitle>
-                          <Badge variant="secondary" className="text-xs">
-                            Melhor custo
-                          </Badge>
-                        </div>
+                        <CardTitle className="flex items-center space-x-2 text-base">
+                          <DollarSign className="h-4 w-4 text-success" />
+                          <span>Mais barato</span>
+                        </CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="flex items-center justify-between">
@@ -1379,15 +1374,10 @@ const QuoteForm = () => {
                       onClick={() => setShippingOption('express')}
                     >
                       <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="flex items-center space-x-2 text-base">
-                            <Clock className="h-4 w-4 text-primary" />
-                            <span>Mais rápido</span>
-                          </CardTitle>
-                          <Badge variant="default" className="text-xs">
-                            Menor prazo
-                          </Badge>
-                        </div>
+                        <CardTitle className="flex items-center space-x-2 text-base">
+                          <Clock className="h-4 w-4 text-primary" />
+                          <span>Mais rápido</span>
+                        </CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="flex items-center justify-between">

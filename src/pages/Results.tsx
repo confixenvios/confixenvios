@@ -262,15 +262,10 @@ const Results = () => {
                 onClick={() => setShippingOption('economic')}
               >
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center space-x-2">
-                      <DollarSign className="h-5 w-5 text-success" />
-                      <span>Mais barato</span>
-                    </CardTitle>
-                    <Badge variant="secondary">
-                      Melhor custo
-                    </Badge>
-                  </div>
+                  <CardTitle className="flex items-center space-x-2">
+                    <DollarSign className="h-5 w-5 text-success" />
+                    <span>Mais barato</span>
+                  </CardTitle>
                   <CardDescription>Entrega com melhor preço</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -302,15 +297,10 @@ const Results = () => {
                 onClick={() => setShippingOption('express')}
               >
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center space-x-2">
-                      <Clock className="h-5 w-5 text-primary" />
-                      <span>Mais rápido</span>
-                    </CardTitle>
-                    <Badge variant="default">
-                      Menor prazo
-                    </Badge>
-                  </div>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Clock className="h-5 w-5 text-primary" />
+                    <span>Mais rápido</span>
+                  </CardTitle>
                   <CardDescription>Entrega expressa em menor prazo</CardDescription>
                 </CardHeader>
                 <CardContent>
