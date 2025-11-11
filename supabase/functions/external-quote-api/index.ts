@@ -110,6 +110,11 @@ serve(async (req) => {
 
     const externalData = await response.json();
     console.log('[External Quote API] External API response:', externalData);
+    
+    // Log detalhado das diferenças
+    console.log('[External Quote API] COMPARAÇÃO:');
+    console.log('  Mais Barato  :', externalData.maisbarato?.transportadora, 'R$', externalData.maisbarato?.preco_total, '-', externalData.maisbarato?.prazo, 'dias');
+    console.log('  Mais Rápido  :', externalData.maisRapido?.transportadora, 'R$', externalData.maisRapido?.preco_total, '-', externalData.maisRapido?.prazo, 'dias');
 
     // Mapear resposta da API externa para formato esperado pelo sistema
     // A API retorna dois objetos: maisbarato (econômico) e maisRapido (expresso)
