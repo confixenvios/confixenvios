@@ -77,21 +77,38 @@ serve(async (req) => {
     console.log('[External Quote API] External API response:', externalData);
 
     // Mapear resposta da API externa para formato esperado pelo sistema
+    // A API retorna dois objetos: maisbarato (econômico) e maisRapido (expresso)
+    const maisbarato = externalData.maisbarato || {};
+    const maisRapido = externalData.maisRapido || {};
+    
     const quote = {
-      economicPrice: externalData.valorFrete || 0,
-      economicDays: externalData.prazoEntrega || 5,
-      expressPrice: externalData.valorFreteExpresso || externalData.valorFrete || 0,
-      expressDays: externalData.prazoEntregaExpresso || externalData.prazoEntrega || 3,
-      zone: externalData.transportadora || 'API Externa',
-      zoneName: externalData.tipoServico || 'Padrão',
+      // Opção Econômica (mais barato)
+      economicPrice: maisbarato.preco_total || 0,
+      economicDays: maisbarato.prazo || 5,
+      
+      // Opção Expressa (mais rápido)
+      expressPrice: maisRapido.preco_total || 0,
+      expressDays: maisRapido.prazo || 3,
+      
+      // Metadados (usar dados da opção econômica como padrão)
+      zone: maisbarato.transportadora || 'API Externa',
+      zoneName: maisbarato.regiao || 'Padrão',
       tableId: 'external-api',
-      tableName: 'Confix API',
+      tableName: `${maisbarato.transportadora || 'Confix API'}`,
       cnpj: '',
-      insuranceValue: externalData.valorSeguro || 0,
-      basePrice: externalData.valorBase || externalData.valorFrete || 0,
-      cubicWeight: externalData.pesoCubado || weight,
-      appliedWeight: weight,
-      additionals_applied: externalData.adicionais || []
+      
+      // Valores técnicos
+      insuranceValue: 0,
+      basePrice: maisbarato.preco_unitario || 0,
+      cubicWeight: maisbarato.peso_cubado || weight,
+      appliedWeight: maisbarato.peso_real || weight,
+      
+      // Dados adicionais para referência
+      additionals_applied: [],
+      economicCarrier: maisbarato.transportadora || '',
+      expressCarrier: maisRapido.transportadora || '',
+      economicRegion: maisbarato.regiao || '',
+      expressRegion: maisRapido.regiao || ''
     };
 
     console.log('[External Quote API] Mapped quote:', quote);
