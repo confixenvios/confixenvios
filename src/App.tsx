@@ -48,11 +48,7 @@ import AdminIntegracoes from "./pages/admin/AdminIntegracoes";
 import AdminWebhooks from "./pages/admin/AdminWebhooks";
 import AdminApiKeys from "./pages/admin/AdminApiKeys";
 import ApiDocs from "./pages/ApiDocs";
-import AdminAgenteIA from "./pages/admin/AdminAgenteIA";
-
-
-import AdminTabelas from "./pages/admin/AdminTabelas";
-import AdminJadlogImport from "./pages/admin/AdminJadlogImport";
+import AdminApiExterna from "./pages/admin/AdminApiExterna";
 import AdminRelatorios from "./pages/admin/AdminRelatorios";
 import AdminCte from "./pages/admin/AdminCte";
 import MotoristaAuth from "./pages/motorista/MotoristaAuth";
@@ -133,14 +129,12 @@ const App = () => (
                       <Route path="faturamento" element={<AdminFaturamento />} />
                       <Route path="remessas" element={<AdminRemessas />} />
                      <Route path="cte" element={<AdminCte />} />
-                       <Route path="tabelas" element={<AdminTabelas />} />
-                       <Route path="importar-jadlog" element={<AdminJadlogImport />} />
+                       <Route path="api-externa" element={<AdminApiExterna />} />
                        <Route path="relatorios" element={<AdminRelatorios />} />
                        <Route path="integracoes" element={<AdminIntegracoes />} />
                        <Route path="webhooks" element={<AdminWebhooks />} />
                        <Route path="api-keys" element={<AdminApiKeys />} />
                        <Route path="api-docs" element={<Navigate to="/api-docs" replace />} />
-                       <Route path="agente-ia" element={<AdminAgenteIA />} />
                       
                       
                     </Routes>

@@ -1,5 +1,8 @@
 project_id = "dhznyjtisfdxzbnzinab"
 
+[functions.external-quote-api]
+verify_jwt = false
+
 [functions.api-v1-etiquetas]
 verify_jwt = false
 
@@ -47,18 +50,6 @@ verify_jwt = false
 
 [functions.cte-webhook]
 verify_jwt = false
-
-[functions.ai-quote-agent]
-verify_jwt = false
-
-[functions.import-jadlog-data]
-verify_jwt = true
-
-[functions.import-alfa-data]
-verify_jwt = true
-
-[functions.reimport-pricing-tables]
-verify_jwt = true
 
 [functions.auto-webhook-dispatcher]
 verify_jwt = false
