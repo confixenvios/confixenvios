@@ -730,10 +730,16 @@ serve(async (req) => {
           }
           
           // Calcular seguro (1.3% do valor da mercadoria)
+          // EXCEÇÃO: Não aplicar seguro em registros de teste
           let insurance_value = 0;
-          if (merchandise_value && merchandise_value > 0) {
+          const isTestRecord = priceRecord.zone_code?.toUpperCase().includes('TESTE') || 
+                               priceRecord.state?.toUpperCase().includes('TESTE');
+          
+          if (merchandise_value && merchandise_value > 0 && !isTestRecord) {
             insurance_value = merchandise_value * 0.013; // 1.3%
             console.log(`[AI Quote Agent] 🛡️ Seguro calculado: R$ ${insurance_value.toFixed(2)} (1.3% de R$ ${merchandise_value.toFixed(2)})`);
+          } else if (isTestRecord) {
+            console.log(`[AI Quote Agent] ⚠️ Registro de TESTE detectado - seguro não aplicado`);
           }
           
           const final_price = base_price + peso_adicional_taxa + insurance_value;
