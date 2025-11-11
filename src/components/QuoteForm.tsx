@@ -1329,21 +1329,10 @@ const QuoteForm = () => {
                   return null;
                 })()}
                 
-                <div className="text-center mb-6">
-                  <h3 className="text-xl font-semibold flex items-center justify-center space-x-2">
-                    <Truck className="h-5 w-5 text-primary" />
-                    <span>Opções de Entrega e Coleta</span>
-                  </h3>
-                  <p className="text-muted-foreground mt-2">
-                    Escolha como será feita a coleta do seu envio
-                  </p>
-                </div>
-
-                {/* Freight Options - Economic and Express */}
+                {/* Freight Options */}
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-4 text-center">Selecione a opção de frete</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Economic Option */}
+                    {/* Economic Option - Mais barato */}
                     <Card 
                       className={`shadow-card cursor-pointer transition-all duration-200 ${
                         shippingOption === 'economic' 
@@ -1356,7 +1345,7 @@ const QuoteForm = () => {
                         <div className="flex items-center justify-between">
                           <CardTitle className="flex items-center space-x-2 text-base">
                             <DollarSign className="h-4 w-4 text-success" />
-                            <span>{quoteData.shippingQuote.economicCarrier || 'Econômico'}</span>
+                            <span>Mais barato</span>
                           </CardTitle>
                           <Badge variant="secondary" className="text-xs">
                             Melhor custo
@@ -1380,7 +1369,7 @@ const QuoteForm = () => {
                       </CardContent>
                     </Card>
 
-                    {/* Express Option */}
+                    {/* Express Option - Mais rápido */}
                     <Card 
                       className={`shadow-card cursor-pointer transition-all duration-200 ${
                         shippingOption === 'express' 
@@ -1393,10 +1382,10 @@ const QuoteForm = () => {
                         <div className="flex items-center justify-between">
                           <CardTitle className="flex items-center space-x-2 text-base">
                             <Clock className="h-4 w-4 text-primary" />
-                            <span>{quoteData.shippingQuote.expressCarrier || 'Expresso'}</span>
+                            <span>Mais rápido</span>
                           </CardTitle>
                           <Badge variant="default" className="text-xs">
-                            Mais rápido
+                            Menor prazo
                           </Badge>
                         </div>
                       </CardHeader>

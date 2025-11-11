@@ -248,11 +248,11 @@ const Results = () => {
             </CardContent>
           </Card>
 
-          {/* Freight Options - Economic and Express */}
+          {/* Freight Options */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 text-center">Escolha como será feita a coleta do seu envio</h2>
+            <h2 className="text-xl font-semibold mb-4 text-center">Selecione a opção de frete</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-              {/* Economic Option */}
+              {/* Economic Option - Mais barato */}
               <Card 
                 className={`shadow-card cursor-pointer transition-all duration-200 ${
                   shippingOption === 'economic' 
@@ -265,13 +265,13 @@ const Results = () => {
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center space-x-2">
                       <DollarSign className="h-5 w-5 text-success" />
-                      <span>{quoteData.shippingQuote.economicCarrier || 'Econômico'}</span>
+                      <span>Mais barato</span>
                     </CardTitle>
                     <Badge variant="secondary">
-                      Melhor custo-benefício
+                      Melhor custo
                     </Badge>
                   </div>
-                  <CardDescription>Entrega padrão com melhor preço</CardDescription>
+                  <CardDescription>Entrega com melhor preço</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -292,7 +292,7 @@ const Results = () => {
                 </CardContent>
               </Card>
 
-              {/* Express Option */}
+              {/* Express Option - Mais rápido */}
               <Card 
                 className={`shadow-card cursor-pointer transition-all duration-200 ${
                   shippingOption === 'express' 
@@ -305,10 +305,10 @@ const Results = () => {
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center space-x-2">
                       <Clock className="h-5 w-5 text-primary" />
-                      <span>{quoteData.shippingQuote.expressCarrier || 'Expresso'}</span>
+                      <span>Mais rápido</span>
                     </CardTitle>
                     <Badge variant="default">
-                      Mais rápido
+                      Menor prazo
                     </Badge>
                   </div>
                   <CardDescription>Entrega expressa em menor prazo</CardDescription>
