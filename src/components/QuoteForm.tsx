@@ -154,6 +154,7 @@ const QuoteForm = () => {
   // Step 2: Resultados e opções
   const [quoteData, setQuoteData] = useState<any>(null);
   const [pickupOption, setPickupOption] = useState<string>("");
+  const [shippingOption, setShippingOption] = useState<"economic" | "express">("economic");
   
   // Step 3: Dados da etiqueta
   const [senderData, setSenderData] = useState<AddressData>({
@@ -764,6 +765,15 @@ const QuoteForm = () => {
       });
       return;
     }
+
+    if (!shippingOption) {
+      toast({
+        title: "Seleção obrigatória",
+        description: "Selecione uma opção de frete para continuar",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setCurrentStep(3);
     toast({
@@ -1329,15 +1339,95 @@ const QuoteForm = () => {
                   </p>
                 </div>
 
-                {/* Quote Summary */}
-                <Card className="bg-accent/20 border-primary/20">
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-4">
+                {/* Freight Options - Economic and Express */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-4 text-center">Selecione a opção de frete</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Economic Option */}
+                    <Card 
+                      className={`shadow-card cursor-pointer transition-all duration-200 ${
+                        shippingOption === 'economic' 
+                          ? 'border-primary ring-2 ring-primary' 
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                      onClick={() => setShippingOption('economic')}
+                    >
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="flex items-center space-x-2 text-base">
+                            <DollarSign className="h-4 w-4 text-success" />
+                            <span>{quoteData.shippingQuote.economicCarrier || 'Econômico'}</span>
+                          </CardTitle>
+                          <Badge variant="secondary" className="text-xs">
+                            Melhor custo
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xl font-bold text-success">
+                            R$ {quoteData.shippingQuote.economicPrice.toFixed(2)}
+                          </span>
+                          <div className="text-right">
+                            <div className="text-lg font-semibold">
+                              {quoteData.shippingQuote.economicDays} dias
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              úteis
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Express Option */}
+                    <Card 
+                      className={`shadow-card cursor-pointer transition-all duration-200 ${
+                        shippingOption === 'express' 
+                          ? 'border-primary ring-2 ring-primary' 
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                      onClick={() => setShippingOption('express')}
+                    >
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="flex items-center space-x-2 text-base">
+                            <Clock className="h-4 w-4 text-primary" />
+                            <span>{quoteData.shippingQuote.expressCarrier || 'Expresso'}</span>
+                          </CardTitle>
+                          <Badge variant="default" className="text-xs">
+                            Mais rápido
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xl font-bold text-primary">
+                            R$ {quoteData.shippingQuote.expressPrice.toFixed(2)}
+                          </span>
+                          <div className="text-right">
+                            <div className="text-lg font-semibold">
+                              {quoteData.shippingQuote.expressDays} dias
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              úteis
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+
+                {/* Quote Summary with Selected Option */}
+                <Card className="bg-accent/20 border-primary/20 mb-6">
+                  <CardContent className="pt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                       <div className="flex items-center space-x-2">
                         <MapPin className="h-4 w-4 text-primary" />
                         <span className="text-muted-foreground">Destino:</span>
                         <span className="font-medium">
-                          {formatCep(quoteData.destinyCep)} - {getCepInfo(quoteData.destinyCep).state} ({getCepInfo(quoteData.destinyCep).type})
+                          {formatCep(quoteData.destinyCep)} - {getCepInfo(quoteData.destinyCep).state}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -1348,25 +1438,11 @@ const QuoteForm = () => {
                       <div className="flex items-center space-x-2">
                         <DollarSign className="h-4 w-4 text-primary" />
                         <span className="text-muted-foreground">Frete:</span>
-                        <span className="font-medium">R$ {quoteData.shippingQuote.economicPrice.toFixed(2)}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-4 bg-card rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <DollarSign className="h-5 w-5 text-success" />
-                        <div>
-                          <div className="font-semibold">
-                            {quoteData.shippingQuote.tableName || 'Frete Padrão'}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Melhor custo-benefício selecionado
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-primary">R$ {quoteData.shippingQuote.economicPrice.toFixed(2)}</div>
-                        <div className="text-sm text-muted-foreground">{quoteData.shippingQuote.economicDays} dias úteis</div>
+                        <span className="font-medium">
+                          R$ {(shippingOption === "economic" 
+                            ? quoteData.shippingQuote.economicPrice 
+                            : quoteData.shippingQuote.expressPrice).toFixed(2)}
+                        </span>
                       </div>
                     </div>
                   </CardContent>
