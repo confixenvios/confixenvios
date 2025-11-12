@@ -584,6 +584,14 @@ const QuoteForm = () => {
       return;
     }
 
+    // Limpar dados antigos antes de calcular nova cotação
+    setQuoteData(null);
+    setShippingOption("economic");
+    setPickupOption("");
+    
+    // Limpar cache do sessionStorage
+    sessionStorage.removeItem('completeQuoteData');
+
     setIsLoading(true);
 
     try {
@@ -666,14 +674,25 @@ const QuoteForm = () => {
       }
 
       const apiData = await response.json();
-      console.log('📥 Resposta da API Confix:', apiData);
+      console.log('📥 Resposta COMPLETA da API Confix:', JSON.stringify(apiData, null, 2));
 
       // Verificar se temos dados das transportadoras
       if (!apiData.jadlog && !apiData.magalog) {
         throw new Error('Nenhuma cotação disponível para este CEP');
       }
 
+      // Log detalhado dos dados recebidos
+      console.log('📊 Magalog recebido:', apiData.magalog);
+      console.log('   - preco_total:', apiData.magalog?.preco_total);
+      console.log('   - peso_real:', apiData.magalog?.peso_real);
+      console.log('   - peso_cubado:', apiData.magalog?.peso_cubado);
+      console.log('📊 Jadlog recebido:', apiData.jadlog);
+      console.log('   - preco_total:', apiData.jadlog?.preco_total);
+      console.log('   - peso_real:', apiData.jadlog?.peso_real);
+      console.log('   - peso_cubado:', apiData.jadlog?.peso_cubado);
+
       // Montar objeto de cotação no formato esperado
+      // IMPORTANTE: Passar os objetos completos sem modificação para preservar todos os campos
       const shippingQuote = {
         jadlog: apiData.jadlog || null,
         magalog: apiData.magalog || null,
@@ -688,6 +707,8 @@ const QuoteForm = () => {
         tableName: 'Confix API',
         cnpj: ''
       };
+
+      console.log('📦 Objeto shippingQuote montado:', JSON.stringify(shippingQuote, null, 2));
 
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log('📋 [QuoteForm] COTAÇÃO PROCESSADA');
@@ -1328,9 +1349,24 @@ const QuoteForm = () => {
                 {(() => {
                   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                   console.log('🖼️ [Step 2] RENDERIZANDO TELA');
-                  console.log('💰 Preço exibido:', quoteData.shippingQuote.economicPrice);
-                  console.log('🏢 Transportadora:', quoteData.shippingQuote.tableName);
-                  console.log('📅 Prazo:', quoteData.shippingQuote.economicDays, 'dias');
+                  console.log('📦 Magalog:');
+                  if (quoteData.shippingQuote.magalog) {
+                    console.log('   - preco_total:', quoteData.shippingQuote.magalog.preco_total);
+                    console.log('   - peso_real:', quoteData.shippingQuote.magalog.peso_real);
+                    console.log('   - peso_cubado:', quoteData.shippingQuote.magalog.peso_cubado);
+                    console.log('   - prazo:', quoteData.shippingQuote.magalog.prazo);
+                  } else {
+                    console.log('   - Não disponível');
+                  }
+                  console.log('📦 Jadlog:');
+                  if (quoteData.shippingQuote.jadlog) {
+                    console.log('   - preco_total:', quoteData.shippingQuote.jadlog.preco_total);
+                    console.log('   - peso_real:', quoteData.shippingQuote.jadlog.peso_real);
+                    console.log('   - peso_cubado:', quoteData.shippingQuote.jadlog.peso_cubado);
+                    console.log('   - prazo:', quoteData.shippingQuote.jadlog.prazo);
+                  } else {
+                    console.log('   - Não disponível');
+                  }
                   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                   return null;
                 })()}
