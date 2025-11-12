@@ -316,6 +316,11 @@ const QuoteForm = () => {
     );
   };
 
+  const getInsuranceValue = (): number => {
+    const merchandiseValue = getTotalMerchandiseValue();
+    return merchandiseValue * 0.013;
+  };
+
   const getTotalPrice = () => {
     if (!quoteData?.shippingQuote) return 0;
     const freightPrice = quoteData.shippingQuote.economicPrice;
@@ -1544,9 +1549,9 @@ const QuoteForm = () => {
                         <DollarSign className="h-4 w-4 text-primary" />
                         <span className="text-muted-foreground">Frete:</span>
                         <span className="font-medium">
-                          R$ {(shippingOption === "economic" 
+                          R$ {((shippingOption === "economic" 
                             ? quoteData.shippingQuote.economicPrice 
-                            : quoteData.shippingQuote.expressPrice).toFixed(2)}
+                            : quoteData.shippingQuote.expressPrice) + getInsuranceValue()).toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -1608,7 +1613,7 @@ const QuoteForm = () => {
                         <div className="text-sm text-muted-foreground">Valor Total</div>
                         <div className="text-3xl font-bold text-primary">R$ {getTotalPrice().toFixed(2)}</div>
                         <div className="text-sm text-muted-foreground">
-                          Frete: R$ {quoteData.shippingQuote.economicPrice.toFixed(2)}
+                          Frete: R$ {(quoteData.shippingQuote.economicPrice + getInsuranceValue()).toFixed(2)}
                           {pickupOption === 'pickup' && ' + Coleta: R$ 10,00'}
                         </div>
                       </div>
