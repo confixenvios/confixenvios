@@ -323,7 +323,9 @@ const QuoteForm = () => {
 
   const getTotalPrice = () => {
     if (!quoteData?.shippingQuote) return 0;
-    const freightPrice = quoteData.shippingQuote.economicPrice;
+    const freightPrice = shippingOption === "economic" 
+      ? quoteData.shippingQuote.economicPrice 
+      : quoteData.shippingQuote.expressPrice;
     const insuranceValue = getInsuranceValue();
     const pickupCost = getPickupCost(pickupOption);
     return freightPrice + insuranceValue + pickupCost;
@@ -1538,23 +1540,12 @@ const QuoteForm = () => {
                 {/* Quote Summary with Selected Option */}
                 <Card className="bg-accent/20 border-primary/20 mb-6">
                   <CardContent className="pt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="h-4 w-4 text-primary" />
-                        <span className="text-muted-foreground">Destino:</span>
-                        <span className="font-medium">
-                          {formatCep(quoteData.destinyCep)} - {getCepInfo(quoteData.destinyCep).state}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <DollarSign className="h-4 w-4 text-primary" />
-                        <span className="text-muted-foreground">Frete:</span>
-                        <span className="font-medium">
-                          R$ {((shippingOption === "economic" 
-                            ? quoteData.shippingQuote.economicPrice 
-                            : quoteData.shippingQuote.expressPrice) + getInsuranceValue()).toFixed(2)}
-                        </span>
-                      </div>
+                    <div className="flex items-center justify-center space-x-2 text-sm">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      <span className="text-muted-foreground">Destino:</span>
+                      <span className="font-medium">
+                        {formatCep(quoteData.destinyCep)} - {getCepInfo(quoteData.destinyCep).state}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
@@ -1614,8 +1605,7 @@ const QuoteForm = () => {
                         <div className="text-sm text-muted-foreground">Valor Total</div>
                         <div className="text-3xl font-bold text-primary">R$ {getTotalPrice().toFixed(2)}</div>
                         <div className="text-sm text-muted-foreground">
-                          Frete: R$ {(quoteData.shippingQuote.economicPrice + getInsuranceValue()).toFixed(2)}
-                          {pickupOption === 'pickup' && ' + Coleta: R$ 10,00'}
+                          {pickupOption === 'pickup' && 'Inclui coleta no endereço'}
                         </div>
                       </div>
                     </CardContent>
