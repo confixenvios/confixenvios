@@ -750,11 +750,6 @@ const QuoteForm = () => {
       sessionStorage.setItem('completeQuoteData', JSON.stringify(completeQuoteData));
       
       setCurrentStep(2);
-      
-      toast({
-        title: "Cotação calculada com sucesso!",
-        description: `${shippingQuote.tableName || 'Frete'}: R$ ${shippingQuote.economicPrice.toFixed(2)} - Escolha uma opção de coleta`,
-      });
 
     } catch (error) {
       console.error('Erro ao calcular frete:', error);
