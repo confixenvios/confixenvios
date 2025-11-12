@@ -1407,16 +1407,9 @@ const QuoteForm = () => {
                           <h3 className="text-lg font-semibold text-destructive mb-2">
                             Nenhuma transportadora disponível
                           </h3>
-                          <div className="space-y-2 text-sm text-muted-foreground">
-                            <div className="flex items-center justify-center space-x-2">
-                              <span className="font-medium">Magalog:</span>
-                              <span>{translateErrorReason(quoteData.shippingQuote.magalog.motivo_nao_permitido)}</span>
-                            </div>
-                            <div className="flex items-center justify-center space-x-2">
-                              <span className="font-medium">Jadlog:</span>
-                              <span>{translateErrorReason(quoteData.shippingQuote.jadlog.motivo_nao_permitido)}</span>
-                            </div>
-                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Não há transportadoras disponíveis para as especificações informadas.
+                          </p>
                         </div>
                       </div>
                     </div>
