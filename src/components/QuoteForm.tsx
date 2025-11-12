@@ -1505,35 +1505,6 @@ const QuoteForm = () => {
                           </Card>
                         )}
                       </div>
-
-                      {/* Avisos individuais de transportadoras não disponíveis */}
-                      {quoteData.shippingQuote.magalog && !quoteData.shippingQuote.magalog.permitido && (
-                        <div className="mt-4 p-3 bg-warning/10 border border-warning/20 rounded-lg">
-                          <div className="flex items-start space-x-2">
-                            <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
-                            <div className="text-sm">
-                              <span className="font-medium">Magalog não disponível:</span>
-                              <span className="text-muted-foreground ml-1">
-                                {translateErrorReason(quoteData.shippingQuote.magalog.motivo_nao_permitido)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {quoteData.shippingQuote.jadlog && !quoteData.shippingQuote.jadlog.permitido && (
-                        <div className="mt-4 p-3 bg-warning/10 border border-warning/20 rounded-lg">
-                          <div className="flex items-start space-x-2">
-                            <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
-                            <div className="text-sm">
-                              <span className="font-medium">Jadlog não disponível:</span>
-                              <span className="text-muted-foreground ml-1">
-                                {translateErrorReason(quoteData.shippingQuote.jadlog.motivo_nao_permitido)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </>
                   )}
                 </div>
