@@ -635,57 +635,71 @@ const QuoteForm = () => {
         quantity 
       });
 
-      // 🧹 SEMPRE limpar caches relacionados a cotações antes de calcular nova
-      console.log('🧹 [QuoteForm] Limpando caches para garantir cotação fresca...');
-      sessionStorage.removeItem('completeQuoteData');
-      sessionStorage.removeItem('quoteData');
-      sessionStorage.removeItem('selectedQuote');
-      
-      // Limpar também caches do pricing service
-      const cacheKeys = Object.keys(sessionStorage);
-      cacheKeys.forEach(key => {
-        if (key.startsWith('pricing_') || key.includes('_quote') || key.includes('Quote')) {
-          sessionStorage.removeItem(key);
-          console.log('🧹 Cache removido:', key);
-        }
+      // Pegar dimensões do primeiro volume
+      const firstVolume = formData.volumes[0];
+      const length = parseFloat(firstVolume?.length) || 0;
+      const width = parseFloat(firstVolume?.width) || 0;
+      const height = parseFloat(firstVolume?.height) || 0;
+      const merchandiseValue = getTotalMerchandiseValue();
+      const tipo = firstVolume?.merchandiseType === 'normal' ? 'Normal' : 'Normal'; // Sempre Normal por enquanto
+
+      // Chamar API externa Confix
+      const API_URL = 'https://api-freteconfix.onrender.com';
+      const BEARER_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI5ZTM2MDc2YS0yZWE2LTRiMDktOGY2Mi05ZGE5NTViYzBiNmYiLCJlbWFpbCI6Im1hcmNvc0Bjb25maXguY29tIiwianRpIjoiZWMxNDAzMTYtNWQzNy00N2MwLWIwODEtNTI3YzU5Yjc4MTU4IiwiaWF0IjoxNzYyODg0NjQ1LCJleHAiOjE3NjI5NzEwNDV9.aqPsac1PX_PCtDoJeR_c4qe_zLeqtCDGi2WwwXAnPJE';
+
+      const requestBody = {
+        cep: formData.destinyCep.replace(/\D/g, ''),
+        quantidade: quantity,
+        valorDeclarado: merchandiseValue || 1,
+        peso: consideredWeight,
+        comprimento: length,
+        largura: width,
+        altura: height,
+        tipo: tipo
+      };
+
+      console.log('📤 Enviando request para API Confix:', requestBody);
+
+      const response = await fetch(`${API_URL}/frete/confix`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${BEARER_TOKEN}`
+        },
+        body: JSON.stringify(requestBody)
       });
 
-      // Limpar cache antigo se necessário (cache de mais de 10 minutos)
-      const lastCacheCheck = sessionStorage.getItem('last_cache_check');
-      const now = Date.now();
-      if (!lastCacheCheck || now - parseInt(lastCacheCheck) > 10 * 60 * 1000) {
-        console.log('Limpando cache antigo...');
-        // Importar e usar a função de limpeza
-        const { clearQuoteCache } = await import('@/services/shippingService');
-        clearQuoteCache();
-        sessionStorage.setItem('last_cache_check', now.toString());
+      if (!response.ok) {
+        throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
       }
 
-      // Pegar dimensões do primeiro volume (ou maior volume) para o cálculo
-      const firstVolume = formData.volumes[0];
-      const length = parseFloat(firstVolume?.length) || undefined;
-      const width = parseFloat(firstVolume?.width) || undefined;
-      const height = parseFloat(firstVolume?.height) || undefined;
-      const merchandiseValue = getTotalMerchandiseValue();
+      const apiData = await response.json();
+      console.log('📥 Resposta da API Confix:', apiData);
 
-      const shippingQuote = await calculateShippingQuote({
-        destinyCep: formData.destinyCep,
-        weight: consideredWeight,
-        quantity: quantity,
-        length,
-        width,
-        height,
-        merchandiseValue: merchandiseValue > 0 ? merchandiseValue : undefined
-      });
+      // Verificar se temos dados das transportadoras
+      if (!apiData.jadlog && !apiData.magalog) {
+        throw new Error('Nenhuma cotação disponível para este CEP');
+      }
+
+      // Montar objeto de cotação no formato esperado
+      const shippingQuote = {
+        jadlog: apiData.jadlog || null,
+        magalog: apiData.magalog || null,
+        economicPrice: apiData.magalog?.preco_total || apiData.jadlog?.preco_total || 0,
+        economicDays: apiData.magalog?.prazo || apiData.jadlog?.prazo || 0,
+        expressPrice: apiData.jadlog?.preco_total || apiData.magalog?.preco_total || 0,
+        expressDays: apiData.jadlog?.prazo || apiData.magalog?.prazo || 0,
+        cubicWeight: apiData.jadlog?.peso_cubado || apiData.magalog?.peso_cubado || calculateTotalCubicWeight(),
+        zone: apiData.jadlog?.regiao || apiData.magalog?.regiao || 'N/A',
+        zoneName: apiData.jadlog?.regiao || apiData.magalog?.regiao || 'N/A',
+        tableId: 'confix-api',
+        tableName: 'Confix API',
+        cnpj: ''
+      };
 
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('📋 [QuoteForm] RESPOSTA RECEBIDA DO SERVIÇO');
+      console.log('📋 [QuoteForm] COTAÇÃO PROCESSADA');
       console.log('🔍 Objeto Completo:', JSON.stringify(shippingQuote, null, 2));
-      console.log('🏢 tableName:', shippingQuote.tableName);
-      console.log('🏢 tableId:', shippingQuote.tableId);
-      console.log('💰 economicPrice:', shippingQuote.economicPrice);
-      console.log('📅 economicDays:', shippingQuote.economicDays);
-      console.log('📍 zone:', shippingQuote.zone);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       // Salvar todos os dados da cotação completa
@@ -1286,7 +1300,7 @@ const QuoteForm = () => {
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">Peso Total Cubado</p>
-                          <p className="text-2xl font-bold">{calculateTotalCubicWeight().toFixed(2)} kg</p>
+                          <p className="text-2xl font-bold">{Math.round(calculateTotalCubicWeight())} kg</p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">Volume Total</p>
@@ -1329,72 +1343,88 @@ const QuoteForm = () => {
                   return null;
                 })()}
                 
-                {/* Freight Options */}
+                {/* Freight Options - Magalog e Jadlog */}
                 <div className="mb-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Economic Option - Mais barato */}
-                    <Card 
-                      className={`shadow-card cursor-pointer transition-all duration-200 ${
-                        shippingOption === 'economic' 
-                          ? 'border-primary ring-2 ring-primary' 
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                      onClick={() => setShippingOption('economic')}
-                    >
-                      <CardHeader>
-                        <CardTitle className="flex items-center space-x-2 text-base">
-                          <DollarSign className="h-4 w-4 text-success" />
-                          <span>Mais barato</span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xl font-bold text-success">
-                            R$ {quoteData.shippingQuote.economicPrice.toFixed(2)}
-                          </span>
-                          <div className="text-right">
-                            <div className="text-lg font-semibold">
-                              {quoteData.shippingQuote.economicDays} dias
+                    {/* Magalog - Mais barato */}
+                    {quoteData.shippingQuote.magalog && (
+                      <Card 
+                        className={`shadow-card cursor-pointer transition-all duration-200 ${
+                          shippingOption === 'economic' 
+                            ? 'border-primary ring-2 ring-primary' 
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                        onClick={() => setShippingOption('economic')}
+                      >
+                        <CardHeader>
+                          <CardTitle className="flex items-center space-x-2 text-base">
+                            <DollarSign className="h-4 w-4 text-success" />
+                            <span>Magalog - Mais barato</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xl font-bold text-success">
+                                R$ {quoteData.shippingQuote.magalog.preco_total.toFixed(2)}
+                              </span>
+                              <div className="text-right">
+                                <div className="text-lg font-semibold">
+                                  {quoteData.shippingQuote.magalog.prazo} dias
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  úteis
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              úteis
+                            <div className="text-xs text-muted-foreground space-y-1">
+                              <div>Peso Cubado: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.peso_cubado} kg</span></div>
+                              <div>Região: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.regiao}</span></div>
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    )}
 
-                    {/* Express Option - Mais rápido */}
-                    <Card 
-                      className={`shadow-card cursor-pointer transition-all duration-200 ${
-                        shippingOption === 'express' 
-                          ? 'border-primary ring-2 ring-primary' 
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                      onClick={() => setShippingOption('express')}
-                    >
-                      <CardHeader>
-                        <CardTitle className="flex items-center space-x-2 text-base">
-                          <Clock className="h-4 w-4 text-primary" />
-                          <span>Mais rápido</span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xl font-bold text-primary">
-                            R$ {quoteData.shippingQuote.expressPrice.toFixed(2)}
-                          </span>
-                          <div className="text-right">
-                            <div className="text-lg font-semibold">
-                              {quoteData.shippingQuote.expressDays} dias
+                    {/* Jadlog - Mais rápido */}
+                    {quoteData.shippingQuote.jadlog && (
+                      <Card 
+                        className={`shadow-card cursor-pointer transition-all duration-200 ${
+                          shippingOption === 'express' 
+                            ? 'border-primary ring-2 ring-primary' 
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                        onClick={() => setShippingOption('express')}
+                      >
+                        <CardHeader>
+                          <CardTitle className="flex items-center space-x-2 text-base">
+                            <Clock className="h-4 w-4 text-primary" />
+                            <span>Jadlog - Mais rápido</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xl font-bold text-primary">
+                                R$ {quoteData.shippingQuote.jadlog.preco_total.toFixed(2)}
+                              </span>
+                              <div className="text-right">
+                                <div className="text-lg font-semibold">
+                                  {quoteData.shippingQuote.jadlog.prazo} dias
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  úteis
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              úteis
+                            <div className="text-xs text-muted-foreground space-y-1">
+                              <div>Peso Cubado: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.peso_cubado} kg</span></div>
+                              <div>Região: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.regiao}</span></div>
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 </div>
 
