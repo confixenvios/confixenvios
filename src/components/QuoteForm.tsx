@@ -279,6 +279,12 @@ const QuoteForm = () => {
     return (length * width * height) / 5988;
   };
 
+  // Arredonda para cima apenas se a primeira casa decimal for >= 0.1
+  const roundWeightForDisplay = (value: number): number => {
+    const fractional = value % 1;
+    return fractional >= 0.1 ? Math.ceil(value) : Math.floor(value);
+  };
+
   const calculateTotalCubicWeight = (): number => {
     return formData.volumes.reduce((total, volume) => {
       const length = parseFloat(volume.length) || 0;
@@ -1275,11 +1281,11 @@ const QuoteForm = () => {
                           <div className="mt-3 text-sm text-muted-foreground">
                             Peso cúbico deste volume:{" "}
                             <span className="font-medium text-foreground">
-                              {calculateCubicWeight(
+                              {roundWeightForDisplay(calculateCubicWeight(
                                 parseFloat(volume.length) || 0,
                                 parseFloat(volume.width) || 0,
                                 parseFloat(volume.height) || 0
-                              ).toFixed(2)} kg
+                              ))} kg
                             </span>
                           </div>
                         </CardContent>
@@ -1322,7 +1328,7 @@ const QuoteForm = () => {
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">Peso Total Cubado</p>
-                          <p className="text-2xl font-bold">{calculateTotalCubicWeight().toFixed(2)} kg</p>
+                          <p className="text-2xl font-bold">{roundWeightForDisplay(calculateTotalCubicWeight())} kg</p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">Volume Total</p>
@@ -1441,7 +1447,7 @@ const QuoteForm = () => {
                                 </div>
                                 <div className="text-xs text-muted-foreground space-y-1">
                                   <div>Peso: <span className="font-medium text-foreground">{calculateTotalWeight()} kg</span></div>
-                                  <div>Peso Cubado: <span className="font-medium text-foreground">{calculateTotalCubicWeight().toFixed(2)} kg</span></div>
+                                  <div>Peso Cubado: <span className="font-medium text-foreground">{roundWeightForDisplay(calculateTotalCubicWeight())} kg</span></div>
                                   <div>Região: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.regiao}</span></div>
                                 </div>
                               </div>
@@ -1482,7 +1488,7 @@ const QuoteForm = () => {
                                 </div>
                                 <div className="text-xs text-muted-foreground space-y-1">
                                   <div>Peso: <span className="font-medium text-foreground">{calculateTotalWeight()} kg</span></div>
-                                  <div>Peso Cubado: <span className="font-medium text-foreground">{calculateTotalCubicWeight().toFixed(2)} kg</span></div>
+                                  <div>Peso Cubado: <span className="font-medium text-foreground">{roundWeightForDisplay(calculateTotalCubicWeight())} kg</span></div>
                                   <div>Região: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.regiao}</span></div>
                                 </div>
                               </div>
