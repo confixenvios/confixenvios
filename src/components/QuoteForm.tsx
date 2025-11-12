@@ -1338,7 +1338,7 @@ const QuoteForm = () => {
                 {/* Freight Options - Magalog e Jadlog */}
                 <div className="mb-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Magalog - Mais barato */}
+                    {/* Magalog */}
                     {quoteData.shippingQuote.magalog && quoteData.shippingQuote.magalog.permitido && quoteData.shippingQuote.magalog.preco_total !== null && (
                       <Card 
                         className={`shadow-card cursor-pointer transition-all duration-200 ${
@@ -1350,14 +1350,14 @@ const QuoteForm = () => {
                       >
                         <CardHeader>
                           <CardTitle className="flex items-center space-x-2 text-base">
-                            <DollarSign className="h-4 w-4 text-success" />
-                            <span>Magalog - Mais barato</span>
+                            <Truck className="h-4 w-4 text-primary" />
+                            <span>Magalog</span>
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                              <span className="text-xl font-bold text-success">
+                              <span className="text-xl font-bold text-primary">
                                 R$ {quoteData.shippingQuote.magalog.preco_total.toFixed(2)}
                               </span>
                               <div className="text-right">
@@ -1378,7 +1378,7 @@ const QuoteForm = () => {
                       </Card>
                     )}
 
-                    {/* Jadlog - Mais rápido */}
+                    {/* Jadlog */}
                     {quoteData.shippingQuote.jadlog && quoteData.shippingQuote.jadlog.permitido && quoteData.shippingQuote.jadlog.preco_total !== null && (
                       <Card 
                         className={`shadow-card cursor-pointer transition-all duration-200 ${
@@ -1390,8 +1390,8 @@ const QuoteForm = () => {
                       >
                         <CardHeader>
                           <CardTitle className="flex items-center space-x-2 text-base">
-                            <Clock className="h-4 w-4 text-primary" />
-                            <span>Jadlog - Mais rápido</span>
+                            <Truck className="h-4 w-4 text-primary" />
+                            <span>Jadlog</span>
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
