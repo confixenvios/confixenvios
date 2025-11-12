@@ -1370,6 +1370,7 @@ const QuoteForm = () => {
                               </div>
                             </div>
                             <div className="text-xs text-muted-foreground space-y-1">
+                              <div>Peso: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.peso_real} kg</span></div>
                               <div>Peso Cubado: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.peso_cubado} kg</span></div>
                               <div>Região: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.regiao}</span></div>
                             </div>
@@ -1410,6 +1411,7 @@ const QuoteForm = () => {
                               </div>
                             </div>
                             <div className="text-xs text-muted-foreground space-y-1">
+                              <div>Peso: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.peso_real} kg</span></div>
                               <div>Peso Cubado: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.peso_cubado} kg</span></div>
                               <div>Região: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.regiao}</span></div>
                             </div>
@@ -1440,18 +1442,13 @@ const QuoteForm = () => {
                 {/* Quote Summary with Selected Option */}
                 <Card className="bg-accent/20 border-primary/20 mb-6">
                   <CardContent className="pt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div className="flex items-center space-x-2">
                         <MapPin className="h-4 w-4 text-primary" />
                         <span className="text-muted-foreground">Destino:</span>
                         <span className="font-medium">
                           {formatCep(quoteData.destinyCep)} - {getCepInfo(quoteData.destinyCep).state}
                         </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Package className="h-4 w-4 text-primary" />
-                        <span className="text-muted-foreground">Peso:</span>
-                        <span className="font-medium">{quoteData.weight}kg</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <DollarSign className="h-4 w-4 text-primary" />
