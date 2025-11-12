@@ -1275,11 +1275,11 @@ const QuoteForm = () => {
                           <div className="mt-3 text-sm text-muted-foreground">
                             Peso cúbico deste volume:{" "}
                             <span className="font-medium text-foreground">
-                              {Math.ceil(calculateCubicWeight(
+                              {calculateCubicWeight(
                                 parseFloat(volume.length) || 0,
                                 parseFloat(volume.width) || 0,
                                 parseFloat(volume.height) || 0
-                              ))} kg
+                              ).toFixed(2)} kg
                             </span>
                           </div>
                         </CardContent>
@@ -1322,7 +1322,7 @@ const QuoteForm = () => {
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">Peso Total Cubado</p>
-                          <p className="text-2xl font-bold">{Math.ceil(calculateTotalCubicWeight())} kg</p>
+                          <p className="text-2xl font-bold">{calculateTotalCubicWeight().toFixed(2)} kg</p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">Volume Total</p>
@@ -1441,7 +1441,7 @@ const QuoteForm = () => {
                                 </div>
                                 <div className="text-xs text-muted-foreground space-y-1">
                                   <div>Peso: <span className="font-medium text-foreground">{calculateTotalWeight()} kg</span></div>
-                                  <div>Peso Cubado: <span className="font-medium text-foreground">{Math.ceil(calculateTotalCubicWeight())} kg</span></div>
+                                  <div>Peso Cubado: <span className="font-medium text-foreground">{calculateTotalCubicWeight().toFixed(2)} kg</span></div>
                                   <div>Região: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.regiao}</span></div>
                                 </div>
                               </div>
@@ -1482,7 +1482,7 @@ const QuoteForm = () => {
                                 </div>
                                 <div className="text-xs text-muted-foreground space-y-1">
                                   <div>Peso: <span className="font-medium text-foreground">{calculateTotalWeight()} kg</span></div>
-                                  <div>Peso Cubado: <span className="font-medium text-foreground">{Math.ceil(calculateTotalCubicWeight())} kg</span></div>
+                                  <div>Peso Cubado: <span className="font-medium text-foreground">{calculateTotalCubicWeight().toFixed(2)} kg</span></div>
                                   <div>Região: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.regiao}</span></div>
                                 </div>
                               </div>
