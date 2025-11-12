@@ -1440,8 +1440,8 @@ const QuoteForm = () => {
                                   </div>
                                 </div>
                                 <div className="text-xs text-muted-foreground space-y-1">
-                                  <div>Peso: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.peso_real} kg</span></div>
-                                  <div>Peso Cubado: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.peso_cubado} kg</span></div>
+                                  <div>Peso: <span className="font-medium text-foreground">{calculateTotalWeight()} kg</span></div>
+                                  <div>Peso Cubado: <span className="font-medium text-foreground">{Math.ceil(calculateTotalCubicWeight())} kg</span></div>
                                   <div>Região: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.regiao}</span></div>
                                 </div>
                               </div>
@@ -1481,8 +1481,8 @@ const QuoteForm = () => {
                                   </div>
                                 </div>
                                 <div className="text-xs text-muted-foreground space-y-1">
-                                  <div>Peso: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.peso_real} kg</span></div>
-                                  <div>Peso Cubado: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.peso_cubado} kg</span></div>
+                                  <div>Peso: <span className="font-medium text-foreground">{calculateTotalWeight()} kg</span></div>
+                                  <div>Peso Cubado: <span className="font-medium text-foreground">{Math.ceil(calculateTotalCubicWeight())} kg</span></div>
                                   <div>Região: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.regiao}</span></div>
                                 </div>
                               </div>
