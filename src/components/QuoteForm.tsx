@@ -326,7 +326,7 @@ const QuoteForm = () => {
     const freightPrice = shippingOption === "economic" 
       ? quoteData.shippingQuote.economicPrice 
       : quoteData.shippingQuote.expressPrice;
-    const insuranceValue = getInsuranceValue();
+    const insuranceValue = pickupOption ? getInsuranceValue() : 0;
     const pickupCost = getPickupCost(pickupOption);
     return freightPrice + insuranceValue + pickupCost;
   };
