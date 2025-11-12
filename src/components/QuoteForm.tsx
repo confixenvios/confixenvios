@@ -155,7 +155,6 @@ const QuoteForm = () => {
   const [quoteData, setQuoteData] = useState<any>(null);
   const [pickupOption, setPickupOption] = useState<string>("");
   const [shippingOption, setShippingOption] = useState<"economic" | "express">("economic");
-  const [includeInsurance, setIncludeInsurance] = useState<boolean>(false);
   
   // Step 3: Dados da etiqueta
   const [senderData, setSenderData] = useState<AddressData>({
@@ -327,9 +326,8 @@ const QuoteForm = () => {
     const freightPrice = shippingOption === "economic" 
       ? quoteData.shippingQuote.economicPrice 
       : quoteData.shippingQuote.expressPrice;
-    const insuranceValue = includeInsurance ? getInsuranceValue() : 0;
     const pickupCost = getPickupCost(pickupOption);
-    return freightPrice + insuranceValue + pickupCost;
+    return freightPrice + pickupCost;
   };
 
   const handleInputChange = (field: keyof QuoteFormData, value: string) => {
@@ -1561,37 +1559,6 @@ const QuoteForm = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Insurance Option */}
-                {pickupOption && (
-                  <Card className="border-primary/20 bg-accent/10 animate-scale-in">
-                    <CardContent className="pt-4">
-                      <div 
-                        className="flex items-center justify-between cursor-pointer"
-                        onClick={() => setIncludeInsurance(!includeInsurance)}
-                      >
-                        <div className="flex items-center space-x-3">
-                          <input
-                            type="checkbox"
-                            checked={includeInsurance}
-                            onChange={(e) => setIncludeInsurance(e.target.checked)}
-                            className="h-4 w-4 text-primary border-border rounded focus:ring-primary cursor-pointer"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <div>
-                            <h4 className="font-medium">Adicionar Seguro</h4>
-                            <p className="text-sm text-muted-foreground">
-                              Proteja sua mercadoria (1,3% do valor declarado)
-                            </p>
-                          </div>
-                        </div>
-                        <Badge variant="outline">
-                          + R$ {getInsuranceValue().toFixed(2)}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
 
                 {/* Total Price */}
                 {pickupOption && (
