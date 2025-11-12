@@ -573,14 +573,6 @@ const QuoteForm = () => {
 
   // Step 1: Calcular Cotação
   const handleStep1Submit = async () => {
-    // Verificar se o usuário está logado antes de prosseguir
-    if (!user) {
-      // Salvar os dados do formulário no sessionStorage
-      sessionStorage.setItem('quoteFormData', JSON.stringify(formData));
-      setShowAuthModal(true);
-      return;
-    }
-
     await processQuoteCalculation();
   };
 
