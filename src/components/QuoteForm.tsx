@@ -276,7 +276,7 @@ const QuoteForm = () => {
   };
 
   const calculateCubicWeight = (length: number, width: number, height: number): number => {
-    return (length * width * height) / 6000;
+    return (length * width * height) / 5988;
   };
 
   const calculateTotalCubicWeight = (): number => {
