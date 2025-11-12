@@ -324,8 +324,9 @@ const QuoteForm = () => {
   const getTotalPrice = () => {
     if (!quoteData?.shippingQuote) return 0;
     const freightPrice = quoteData.shippingQuote.economicPrice;
+    const insuranceValue = getInsuranceValue();
     const pickupCost = getPickupCost(pickupOption);
-    return freightPrice + pickupCost;
+    return freightPrice + insuranceValue + pickupCost;
   };
 
   const handleInputChange = (field: keyof QuoteFormData, value: string) => {
