@@ -1339,7 +1339,7 @@ const QuoteForm = () => {
                 <div className="mb-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Magalog - Mais barato */}
-                    {quoteData.shippingQuote.magalog && (
+                    {quoteData.shippingQuote.magalog && quoteData.shippingQuote.magalog.permitido && quoteData.shippingQuote.magalog.preco_total !== null && (
                       <Card 
                         className={`shadow-card cursor-pointer transition-all duration-200 ${
                           shippingOption === 'economic' 
@@ -1379,7 +1379,7 @@ const QuoteForm = () => {
                     )}
 
                     {/* Jadlog - Mais rápido */}
-                    {quoteData.shippingQuote.jadlog && (
+                    {quoteData.shippingQuote.jadlog && quoteData.shippingQuote.jadlog.permitido && quoteData.shippingQuote.jadlog.preco_total !== null && (
                       <Card 
                         className={`shadow-card cursor-pointer transition-all duration-200 ${
                           shippingOption === 'express' 
@@ -1418,6 +1418,23 @@ const QuoteForm = () => {
                       </Card>
                     )}
                   </div>
+
+                  {/* Avisos de transportadoras não disponíveis */}
+                  {quoteData.shippingQuote.magalog && !quoteData.shippingQuote.magalog.permitido && (
+                    <div className="mt-4 p-3 bg-warning/10 border border-warning/20 rounded-lg">
+                      <div className="flex items-start space-x-2">
+                        <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
+                        <div className="text-sm">
+                          <span className="font-medium">Magalog não disponível:</span>
+                          <span className="text-muted-foreground ml-1">
+                            {quoteData.shippingQuote.magalog.motivo_nao_permitido === 'peso_excede_30kg' 
+                              ? 'Peso excede o limite de 30kg' 
+                              : quoteData.shippingQuote.magalog.motivo_nao_permitido || 'Não disponível para este envio'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Quote Summary with Selected Option */}
