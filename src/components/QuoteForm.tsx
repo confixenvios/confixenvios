@@ -975,6 +975,20 @@ const QuoteForm = () => {
     );
   };
 
+  // Traduz códigos de erro para mensagens amigáveis
+  const translateErrorReason = (reason: string | null): string => {
+    if (!reason) return 'Não disponível para este envio';
+    
+    const translations: Record<string, string> = {
+      'region_not_found': 'Região não disponível',
+      'peso_excede_30kg': 'Peso excede o limite',
+      'dimensao_max_excedida_80cm': 'Dimensão excede o limite',
+      'soma_dimensoes_excede_200cm': 'Soma das dimensões excede o limite'
+    };
+    
+    return translations[reason] || reason;
+  };
+
   const renderStepIndicator = () => (
     <div className="mb-6 sm:mb-8">
       <div className="flex items-center justify-center">
@@ -1368,105 +1382,144 @@ const QuoteForm = () => {
                 
                 {/* Freight Options - Magalog e Jadlog */}
                 <div className="mb-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Magalog */}
-                    {quoteData.shippingQuote.magalog && quoteData.shippingQuote.magalog.permitido && quoteData.shippingQuote.magalog.preco_total !== null && (
-                      <Card 
-                        className={`shadow-card cursor-pointer transition-all duration-200 ${
-                          shippingOption === 'economic' 
-                            ? 'border-primary ring-2 ring-primary' 
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                        onClick={() => setShippingOption('economic')}
-                      >
-                        <CardHeader>
-                          <CardTitle className="flex items-center space-x-2 text-base">
-                            <Truck className="h-4 w-4 text-primary" />
-                            <span>Magalog</span>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xl font-bold text-primary">
-                                R$ {quoteData.shippingQuote.magalog.preco_total.toFixed(2)}
-                              </span>
-                              <div className="text-right">
-                                <div className="text-lg font-semibold">
-                                  {quoteData.shippingQuote.magalog.prazo} dias
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  úteis
-                                </div>
-                              </div>
+                  {/* Verificar se ambas transportadoras falharam */}
+                  {quoteData.shippingQuote.magalog && !quoteData.shippingQuote.magalog.permitido &&
+                   quoteData.shippingQuote.jadlog && !quoteData.shippingQuote.jadlog.permitido ? (
+                    <div className="p-6 bg-destructive/10 border-2 border-destructive/20 rounded-lg">
+                      <div className="flex flex-col items-center space-y-3 text-center">
+                        <AlertTriangle className="h-12 w-12 text-destructive" />
+                        <div>
+                          <h3 className="text-lg font-semibold text-destructive mb-2">
+                            Nenhuma transportadora disponível
+                          </h3>
+                          <div className="space-y-2 text-sm text-muted-foreground">
+                            <div className="flex items-center justify-center space-x-2">
+                              <span className="font-medium">Magalog:</span>
+                              <span>{translateErrorReason(quoteData.shippingQuote.magalog.motivo_nao_permitido)}</span>
                             </div>
-                            <div className="text-xs text-muted-foreground space-y-1">
-                              <div>Peso: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.peso_real} kg</span></div>
-                              <div>Peso Cubado: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.peso_cubado} kg</span></div>
-                              <div>Região: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.regiao}</span></div>
+                            <div className="flex items-center justify-center space-x-2">
+                              <span className="font-medium">Jadlog:</span>
+                              <span>{translateErrorReason(quoteData.shippingQuote.jadlog.motivo_nao_permitido)}</span>
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* Jadlog */}
-                    {quoteData.shippingQuote.jadlog && quoteData.shippingQuote.jadlog.permitido && quoteData.shippingQuote.jadlog.preco_total !== null && (
-                      <Card 
-                        className={`shadow-card cursor-pointer transition-all duration-200 ${
-                          shippingOption === 'express' 
-                            ? 'border-primary ring-2 ring-primary' 
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                        onClick={() => setShippingOption('express')}
-                      >
-                        <CardHeader>
-                          <CardTitle className="flex items-center space-x-2 text-base">
-                            <Truck className="h-4 w-4 text-primary" />
-                            <span>Jadlog</span>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xl font-bold text-primary">
-                                R$ {quoteData.shippingQuote.jadlog.preco_total.toFixed(2)}
-                              </span>
-                              <div className="text-right">
-                                <div className="text-lg font-semibold">
-                                  {quoteData.shippingQuote.jadlog.prazo} dias
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  úteis
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-xs text-muted-foreground space-y-1">
-                              <div>Peso: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.peso_real} kg</span></div>
-                              <div>Peso Cubado: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.peso_cubado} kg</span></div>
-                              <div>Região: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.regiao}</span></div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
-
-                  {/* Avisos de transportadoras não disponíveis */}
-                  {quoteData.shippingQuote.magalog && !quoteData.shippingQuote.magalog.permitido && (
-                    <div className="mt-4 p-3 bg-warning/10 border border-warning/20 rounded-lg">
-                      <div className="flex items-start space-x-2">
-                        <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
-                        <div className="text-sm">
-                          <span className="font-medium">Magalog não disponível:</span>
-                          <span className="text-muted-foreground ml-1">
-                            {quoteData.shippingQuote.magalog.motivo_nao_permitido === 'peso_excede_30kg' 
-                              ? 'Peso excede o limite de 30kg' 
-                              : quoteData.shippingQuote.magalog.motivo_nao_permitido || 'Não disponível para este envio'}
-                          </span>
                         </div>
                       </div>
                     </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Magalog */}
+                        {quoteData.shippingQuote.magalog && quoteData.shippingQuote.magalog.permitido && quoteData.shippingQuote.magalog.preco_total !== null && (
+                          <Card 
+                            className={`shadow-card cursor-pointer transition-all duration-200 ${
+                              shippingOption === 'economic' 
+                                ? 'border-primary ring-2 ring-primary' 
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                            onClick={() => setShippingOption('economic')}
+                          >
+                            <CardHeader>
+                              <CardTitle className="flex items-center space-x-2 text-base">
+                                <Truck className="h-4 w-4 text-primary" />
+                                <span>Magalog</span>
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xl font-bold text-primary">
+                                    R$ {quoteData.shippingQuote.magalog.preco_total.toFixed(2)}
+                                  </span>
+                                  <div className="text-right">
+                                    <div className="text-lg font-semibold">
+                                      {quoteData.shippingQuote.magalog.prazo} dias
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      úteis
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-xs text-muted-foreground space-y-1">
+                                  <div>Peso: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.peso_real} kg</span></div>
+                                  <div>Peso Cubado: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.peso_cubado} kg</span></div>
+                                  <div>Região: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.regiao}</span></div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {/* Jadlog */}
+                        {quoteData.shippingQuote.jadlog && quoteData.shippingQuote.jadlog.permitido && quoteData.shippingQuote.jadlog.preco_total !== null && (
+                          <Card 
+                            className={`shadow-card cursor-pointer transition-all duration-200 ${
+                              shippingOption === 'express' 
+                                ? 'border-primary ring-2 ring-primary' 
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                            onClick={() => setShippingOption('express')}
+                          >
+                            <CardHeader>
+                              <CardTitle className="flex items-center space-x-2 text-base">
+                                <Truck className="h-4 w-4 text-primary" />
+                                <span>Jadlog</span>
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xl font-bold text-primary">
+                                    R$ {quoteData.shippingQuote.jadlog.preco_total.toFixed(2)}
+                                  </span>
+                                  <div className="text-right">
+                                    <div className="text-lg font-semibold">
+                                      {quoteData.shippingQuote.jadlog.prazo} dias
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      úteis
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-xs text-muted-foreground space-y-1">
+                                  <div>Peso: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.peso_real} kg</span></div>
+                                  <div>Peso Cubado: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.peso_cubado} kg</span></div>
+                                  <div>Região: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.regiao}</span></div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
+
+                      {/* Avisos individuais de transportadoras não disponíveis */}
+                      {quoteData.shippingQuote.magalog && !quoteData.shippingQuote.magalog.permitido && (
+                        <div className="mt-4 p-3 bg-warning/10 border border-warning/20 rounded-lg">
+                          <div className="flex items-start space-x-2">
+                            <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
+                            <div className="text-sm">
+                              <span className="font-medium">Magalog não disponível:</span>
+                              <span className="text-muted-foreground ml-1">
+                                {translateErrorReason(quoteData.shippingQuote.magalog.motivo_nao_permitido)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {quoteData.shippingQuote.jadlog && !quoteData.shippingQuote.jadlog.permitido && (
+                        <div className="mt-4 p-3 bg-warning/10 border border-warning/20 rounded-lg">
+                          <div className="flex items-start space-x-2">
+                            <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
+                            <div className="text-sm">
+                              <span className="font-medium">Jadlog não disponível:</span>
+                              <span className="text-muted-foreground ml-1">
+                                {translateErrorReason(quoteData.shippingQuote.jadlog.motivo_nao_permitido)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
