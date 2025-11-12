@@ -1313,7 +1313,7 @@ const QuoteForm = () => {
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">Peso Total Cubado</p>
-                          <p className="text-2xl font-bold">{Math.round(calculateTotalCubicWeight())} kg</p>
+                          <p className="text-2xl font-bold">{Math.ceil(calculateTotalCubicWeight())} kg</p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">Volume Total</p>
