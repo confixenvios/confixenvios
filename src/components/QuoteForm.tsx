@@ -1372,87 +1372,187 @@ const QuoteForm = () => {
                   ) : (
                     <>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Magalog */}
-                        {quoteData.shippingQuote.magalog && quoteData.shippingQuote.magalog.permitido && quoteData.shippingQuote.magalog.preco_total !== null && (
-                          <Card 
-                            className={`shadow-card cursor-pointer transition-all duration-200 ${
-                              shippingOption === 'economic' 
-                                ? 'border-primary ring-2 ring-primary' 
-                                : 'border-border hover:border-primary/50'
-                            }`}
-                            onClick={() => setShippingOption('economic')}
-                          >
-                            <CardHeader>
-                              <CardTitle className="flex items-center space-x-2 text-base">
-                                <Truck className="h-4 w-4 text-primary" />
-                                <span>Opção 2</span>
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xl font-bold text-primary">
-                                    R$ {quoteData.shippingQuote.magalog.preco_total.toFixed(2)}
-                                  </span>
-                                  <div className="text-right">
-                                    <div className="text-lg font-semibold">
-                                      {quoteData.shippingQuote.magalog.prazo} dias
+                        {(() => {
+                          const magalog = quoteData.shippingQuote.magalog;
+                          const jadlog = quoteData.shippingQuote.jadlog;
+                          
+                          // Verificar quais estão disponíveis
+                          const magalogDisponivel = magalog && magalog.permitido && magalog.preco_total !== null;
+                          const jadlogDisponivel = jadlog && jadlog.permitido && jadlog.preco_total !== null;
+                          
+                          if (!magalogDisponivel && !jadlogDisponivel) return null;
+                          
+                          // Se só uma está disponível, mostrar apenas ela
+                          if (magalogDisponivel && !jadlogDisponivel) {
+                            return (
+                              <Card 
+                                className="shadow-card cursor-pointer transition-all duration-200 border-primary ring-2 ring-primary"
+                                onClick={() => setShippingOption('economic')}
+                              >
+                                <CardHeader>
+                                  <CardTitle className="flex items-center space-x-2 text-base">
+                                    <Truck className="h-4 w-4 text-primary" />
+                                    <span>Mais barato</span>
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xl font-bold text-primary">
+                                        R$ {magalog.preco_total.toFixed(2)}
+                                      </span>
+                                      <div className="text-right">
+                                        <div className="text-lg font-semibold">
+                                          {magalog.prazo} dias
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                          úteis
+                                        </div>
+                                      </div>
                                     </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      úteis
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="text-xs text-muted-foreground space-y-1">
-                                  <div>Peso: <span className="font-medium text-foreground">{calculateTotalWeight()} kg</span></div>
-                                  <div>Peso Cubado: <span className="font-medium text-foreground">{roundWeightForDisplay(calculateTotalCubicWeight())} kg</span></div>
-                                  <div>Região: <span className="font-medium text-foreground">{quoteData.shippingQuote.magalog.regiao}</span></div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        )}
-
-                        {/* Jadlog */}
-                        {quoteData.shippingQuote.jadlog && quoteData.shippingQuote.jadlog.permitido && quoteData.shippingQuote.jadlog.preco_total !== null && (
-                          <Card 
-                            className={`shadow-card cursor-pointer transition-all duration-200 ${
-                              shippingOption === 'express' 
-                                ? 'border-primary ring-2 ring-primary' 
-                                : 'border-border hover:border-primary/50'
-                            }`}
-                            onClick={() => setShippingOption('express')}
-                          >
-                            <CardHeader>
-                              <CardTitle className="flex items-center space-x-2 text-base">
-                                <Truck className="h-4 w-4 text-primary" />
-                                <span>Opção 1</span>
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xl font-bold text-primary">
-                                    R$ {quoteData.shippingQuote.jadlog.preco_total.toFixed(2)}
-                                  </span>
-                                  <div className="text-right">
-                                    <div className="text-lg font-semibold">
-                                      {quoteData.shippingQuote.jadlog.prazo} dias
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      úteis
+                                    <div className="text-xs text-muted-foreground space-y-1">
+                                      <div>Peso: <span className="font-medium text-foreground">{calculateTotalWeight()} kg</span></div>
+                                      <div>Peso Cubado: <span className="font-medium text-foreground">{roundWeightForDisplay(calculateTotalCubicWeight())} kg</span></div>
+                                      <div>Região: <span className="font-medium text-foreground">{magalog.regiao}</span></div>
                                     </div>
                                   </div>
-                                </div>
-                                <div className="text-xs text-muted-foreground space-y-1">
-                                  <div>Peso: <span className="font-medium text-foreground">{calculateTotalWeight()} kg</span></div>
-                                  <div>Peso Cubado: <span className="font-medium text-foreground">{roundWeightForDisplay(calculateTotalCubicWeight())} kg</span></div>
-                                  <div>Região: <span className="font-medium text-foreground">{quoteData.shippingQuote.jadlog.regiao}</span></div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        )}
+                                </CardContent>
+                              </Card>
+                            );
+                          }
+                          
+                          if (jadlogDisponivel && !magalogDisponivel) {
+                            return (
+                              <Card 
+                                className="shadow-card cursor-pointer transition-all duration-200 border-primary ring-2 ring-primary"
+                                onClick={() => setShippingOption('express')}
+                              >
+                                <CardHeader>
+                                  <CardTitle className="flex items-center space-x-2 text-base">
+                                    <Truck className="h-4 w-4 text-primary" />
+                                    <span>Mais barato</span>
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xl font-bold text-primary">
+                                        R$ {jadlog.preco_total.toFixed(2)}
+                                      </span>
+                                      <div className="text-right">
+                                        <div className="text-lg font-semibold">
+                                          {jadlog.prazo} dias
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                          úteis
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground space-y-1">
+                                      <div>Peso: <span className="font-medium text-foreground">{calculateTotalWeight()} kg</span></div>
+                                      <div>Peso Cubado: <span className="font-medium text-foreground">{roundWeightForDisplay(calculateTotalCubicWeight())} kg</span></div>
+                                      <div>Região: <span className="font-medium text-foreground">{jadlog.regiao}</span></div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          }
+                          
+                          // Ambas disponíveis - determinar qual é mais barata e qual é mais rápida
+                          const magalogMaisBarata = magalog.preco_total <= jadlog.preco_total;
+                          const magalogMaisRapida = magalog.prazo <= jadlog.prazo;
+                          
+                          const opcaoEsquerda = magalogMaisBarata ? magalog : jadlog;
+                          const opcaoEsquerdaTipo = magalogMaisBarata ? 'economic' : 'express';
+                          const opcaoEsquerdaNome = 'Mais barato';
+                          
+                          const opcaoDireita = magalogMaisRapida ? magalog : jadlog;
+                          const opcaoDireitaTipo = magalogMaisRapida ? 'economic' : 'express';
+                          const opcaoDireitaNome = 'Mais rápido';
+                          
+                          return (
+                            <>
+                              {/* Opção Esquerda - Mais Barato */}
+                              <Card 
+                                className={`shadow-card cursor-pointer transition-all duration-200 ${
+                                  shippingOption === opcaoEsquerdaTipo
+                                    ? 'border-primary ring-2 ring-primary' 
+                                    : 'border-border hover:border-primary/50'
+                                }`}
+                                onClick={() => setShippingOption(opcaoEsquerdaTipo)}
+                              >
+                                <CardHeader>
+                                  <CardTitle className="flex items-center space-x-2 text-base">
+                                    <Truck className="h-4 w-4 text-primary" />
+                                    <span>{opcaoEsquerdaNome}</span>
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xl font-bold text-primary">
+                                        R$ {opcaoEsquerda.preco_total.toFixed(2)}
+                                      </span>
+                                      <div className="text-right">
+                                        <div className="text-lg font-semibold">
+                                          {opcaoEsquerda.prazo} dias
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                          úteis
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground space-y-1">
+                                      <div>Peso: <span className="font-medium text-foreground">{calculateTotalWeight()} kg</span></div>
+                                      <div>Peso Cubado: <span className="font-medium text-foreground">{roundWeightForDisplay(calculateTotalCubicWeight())} kg</span></div>
+                                      <div>Região: <span className="font-medium text-foreground">{opcaoEsquerda.regiao}</span></div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                              
+                              {/* Opção Direita - Mais Rápido */}
+                              <Card 
+                                className={`shadow-card cursor-pointer transition-all duration-200 ${
+                                  shippingOption === opcaoDireitaTipo
+                                    ? 'border-primary ring-2 ring-primary' 
+                                    : 'border-border hover:border-primary/50'
+                                }`}
+                                onClick={() => setShippingOption(opcaoDireitaTipo)}
+                              >
+                                <CardHeader>
+                                  <CardTitle className="flex items-center space-x-2 text-base">
+                                    <Truck className="h-4 w-4 text-primary" />
+                                    <span>{opcaoDireitaNome}</span>
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xl font-bold text-primary">
+                                        R$ {opcaoDireita.preco_total.toFixed(2)}
+                                      </span>
+                                      <div className="text-right">
+                                        <div className="text-lg font-semibold">
+                                          {opcaoDireita.prazo} dias
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                          úteis
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground space-y-1">
+                                      <div>Peso: <span className="font-medium text-foreground">{calculateTotalWeight()} kg</span></div>
+                                      <div>Peso Cubado: <span className="font-medium text-foreground">{roundWeightForDisplay(calculateTotalCubicWeight())} kg</span></div>
+                                      <div>Região: <span className="font-medium text-foreground">{opcaoDireita.regiao}</span></div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            </>
+                          );
+                        })()}
                       </div>
                     </>
                   )}
