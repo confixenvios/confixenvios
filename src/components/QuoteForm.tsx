@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { Calculator, MapPin, Package, Truck, User, CheckCircle, Circle, DollarSign, Clock, FileText, Plus, Trash2, AlertTriangle } from "lucide-react";
+import { Calculator, MapPin, Package, Truck, User, CheckCircle, Circle, DollarSign, Clock, FileText, Plus, Trash2, AlertTriangle, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { calculateShippingQuote, validateCep, formatCep } from "@/services/shippingService";
@@ -1402,7 +1402,8 @@ const QuoteForm = () => {
                               >
                                 <CardHeader>
                                   <CardTitle className="flex items-center space-x-2 text-base">
-                                    <Truck className="h-4 w-4 text-primary" />
+                                    <DollarSign className="h-4 w-4 text-success" />
+                                    <Zap className="h-4 w-4 text-primary" />
                                     <span>Mais barato e mais rápido</span>
                                   </CardTitle>
                                 </CardHeader>
@@ -1435,7 +1436,8 @@ const QuoteForm = () => {
                               >
                                 <CardHeader>
                                   <CardTitle className="flex items-center space-x-2 text-base">
-                                    <Truck className="h-4 w-4 text-primary" />
+                                    <DollarSign className="h-4 w-4 text-success" />
+                                    <Zap className="h-4 w-4 text-primary" />
                                     <span>Mais barato e mais rápido</span>
                                   </CardTitle>
                                 </CardHeader>
@@ -1484,7 +1486,8 @@ const QuoteForm = () => {
                               >
                                 <CardHeader>
                                   <CardTitle className="flex items-center space-x-2 text-base">
-                                    <Truck className="h-4 w-4 text-primary" />
+                                    <DollarSign className="h-4 w-4 text-success" />
+                                    <Zap className="h-4 w-4 text-primary" />
                                     <span>Mais barato e mais rápido</span>
                                   </CardTitle>
                                 </CardHeader>
@@ -1522,7 +1525,7 @@ const QuoteForm = () => {
                               >
                                 <CardHeader>
                                   <CardTitle className="flex items-center space-x-2 text-base">
-                                    <Truck className="h-4 w-4 text-primary" />
+                                    <DollarSign className="h-4 w-4 text-success" />
                                     <span>{opcaoEsquerdaNome}</span>
                                   </CardTitle>
                                 </CardHeader>
@@ -1556,7 +1559,7 @@ const QuoteForm = () => {
                               >
                                 <CardHeader>
                                   <CardTitle className="flex items-center space-x-2 text-base">
-                                    <Truck className="h-4 w-4 text-primary" />
+                                    <Zap className="h-4 w-4 text-primary" />
                                     <span>{opcaoDireitaNome}</span>
                                   </CardTitle>
                                 </CardHeader>
