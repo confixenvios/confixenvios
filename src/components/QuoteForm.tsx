@@ -1392,7 +1392,7 @@ const QuoteForm = () => {
                                 <CardHeader>
                                   <CardTitle className="flex items-center space-x-2 text-base">
                                     <Truck className="h-4 w-4 text-primary" />
-                                    <span>Mais barato</span>
+                                    <span>Mais barato e mais rápido</span>
                                   </CardTitle>
                                 </CardHeader>
                                 <CardContent>
@@ -1425,7 +1425,7 @@ const QuoteForm = () => {
                                 <CardHeader>
                                   <CardTitle className="flex items-center space-x-2 text-base">
                                     <Truck className="h-4 w-4 text-primary" />
-                                    <span>Mais barato</span>
+                                    <span>Mais barato e mais rápido</span>
                                   </CardTitle>
                                 </CardHeader>
                                 <CardContent>
@@ -1474,7 +1474,7 @@ const QuoteForm = () => {
                                 <CardHeader>
                                   <CardTitle className="flex items-center space-x-2 text-base">
                                     <Truck className="h-4 w-4 text-primary" />
-                                    <span>Mais barato</span>
+                                    <span>Mais barato e mais rápido</span>
                                   </CardTitle>
                                 </CardHeader>
                                 <CardContent>
