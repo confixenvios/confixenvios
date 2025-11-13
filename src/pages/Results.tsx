@@ -5,7 +5,7 @@ import AuthModal from "@/components/AuthModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, DollarSign, MapPin, Package, Truck } from "lucide-react";
+import { Clock, DollarSign, MapPin, Package, Truck, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCep } from "@/services/shippingService";
@@ -298,7 +298,7 @@ const Results = () => {
               >
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <Clock className="h-5 w-5 text-primary" />
+                    <Zap className="h-5 w-5 text-primary" />
                     <span>Mais rápido</span>
                   </CardTitle>
                   <CardDescription>Entrega expressa em menor prazo</CardDescription>
