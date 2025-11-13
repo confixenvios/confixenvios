@@ -1410,11 +1410,6 @@ const QuoteForm = () => {
                                         </div>
                                       </div>
                                     </div>
-                                    <div className="text-xs text-muted-foreground space-y-1">
-                                      <div>Peso: <span className="font-medium text-foreground">{calculateTotalWeight()} kg</span></div>
-                                      <div>Peso Cubado: <span className="font-medium text-foreground">{roundWeightForDisplay(calculateTotalCubicWeight())} kg</span></div>
-                                      <div>Região: <span className="font-medium text-foreground">{magalog.regiao}</span></div>
-                                    </div>
                                   </div>
                                 </CardContent>
                               </Card>
@@ -1448,11 +1443,6 @@ const QuoteForm = () => {
                                         </div>
                                       </div>
                                     </div>
-                                    <div className="text-xs text-muted-foreground space-y-1">
-                                      <div>Peso: <span className="font-medium text-foreground">{calculateTotalWeight()} kg</span></div>
-                                      <div>Peso Cubado: <span className="font-medium text-foreground">{roundWeightForDisplay(calculateTotalCubicWeight())} kg</span></div>
-                                      <div>Região: <span className="font-medium text-foreground">{jadlog.regiao}</span></div>
-                                    </div>
                                   </div>
                                 </CardContent>
                               </Card>
@@ -1463,6 +1453,9 @@ const QuoteForm = () => {
                           const magalogMaisBarata = magalog.preco_total <= jadlog.preco_total;
                           const magalogMaisRapida = magalog.prazo <= jadlog.prazo;
                           
+                          // Se as duas opções são da mesma transportadora, mostrar apenas uma
+                          const mesmaTransportadora = magalogMaisBarata === magalogMaisRapida;
+                          
                           const opcaoEsquerda = magalogMaisBarata ? magalog : jadlog;
                           const opcaoEsquerdaTipo = magalogMaisBarata ? 'economic' : 'express';
                           const opcaoEsquerdaNome = 'Mais barato';
@@ -1471,10 +1464,44 @@ const QuoteForm = () => {
                           const opcaoDireitaTipo = magalogMaisRapida ? 'economic' : 'express';
                           const opcaoDireitaNome = 'Mais rápido';
                           
+                          // Se for a mesma transportadora, mostrar apenas um cartão
+                          if (mesmaTransportadora) {
+                            return (
+                              <Card 
+                                className="shadow-card cursor-pointer transition-all duration-200 border-primary ring-2 ring-primary md:col-span-2"
+                                onClick={() => setShippingOption(opcaoEsquerdaTipo)}
+                              >
+                                <CardHeader>
+                                  <CardTitle className="flex items-center space-x-2 text-base">
+                                    <Truck className="h-4 w-4 text-primary" />
+                                    <span>Mais barato</span>
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xl font-bold text-primary">
+                                        R$ {opcaoEsquerda.preco_total.toFixed(2)}
+                                      </span>
+                                      <div className="text-right">
+                                        <div className="text-lg font-semibold">
+                                          {opcaoEsquerda.prazo} dias
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                          úteis
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          }
+                          
                           return (
                             <>
                               {/* Opção Esquerda - Mais Barato */}
-                              <Card 
+                              <Card
                                 className={`shadow-card cursor-pointer transition-all duration-200 ${
                                   shippingOption === opcaoEsquerdaTipo
                                     ? 'border-primary ring-2 ring-primary' 
@@ -1502,11 +1529,6 @@ const QuoteForm = () => {
                                           úteis
                                         </div>
                                       </div>
-                                    </div>
-                                    <div className="text-xs text-muted-foreground space-y-1">
-                                      <div>Peso: <span className="font-medium text-foreground">{calculateTotalWeight()} kg</span></div>
-                                      <div>Peso Cubado: <span className="font-medium text-foreground">{roundWeightForDisplay(calculateTotalCubicWeight())} kg</span></div>
-                                      <div>Região: <span className="font-medium text-foreground">{opcaoEsquerda.regiao}</span></div>
                                     </div>
                                   </div>
                                 </CardContent>
@@ -1541,11 +1563,6 @@ const QuoteForm = () => {
                                           úteis
                                         </div>
                                       </div>
-                                    </div>
-                                    <div className="text-xs text-muted-foreground space-y-1">
-                                      <div>Peso: <span className="font-medium text-foreground">{calculateTotalWeight()} kg</span></div>
-                                      <div>Peso Cubado: <span className="font-medium text-foreground">{roundWeightForDisplay(calculateTotalCubicWeight())} kg</span></div>
-                                      <div>Região: <span className="font-medium text-foreground">{opcaoDireita.regiao}</span></div>
                                     </div>
                                   </div>
                                 </CardContent>
