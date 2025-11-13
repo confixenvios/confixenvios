@@ -374,45 +374,11 @@ const QuoteForm = () => {
 
   const handleQuantityChange = (value: string) => {
     const sanitizedValue = sanitizeTextInput(value);
-    const quantity = parseInt(sanitizedValue) || 0;
     
-    setFormData(prev => {
-      const currentVolumes = prev.volumes;
-      let newVolumes = [...currentVolumes];
-      
-      if (quantity > currentVolumes.length) {
-        // Adicionar volumes necessários
-        for (let i = currentVolumes.length; i < quantity; i++) {
-          newVolumes.push({
-            id: `${Date.now()}-${i}`,
-            weight: "",
-            length: "",
-            width: "",
-            height: "",
-            merchandiseType: ""
-          });
-        }
-      } else if (quantity < currentVolumes.length && quantity > 0) {
-        // Remover volumes excedentes
-        newVolumes = currentVolumes.slice(0, quantity);
-      } else if (quantity === 0) {
-        // Manter pelo menos 1 volume
-        newVolumes = [{
-          id: "1",
-          weight: "",
-          length: "",
-          width: "",
-          height: "",
-          merchandiseType: ""
-        }];
-      }
-      
-      return { 
-        ...prev, 
-        quantity: sanitizedValue,
-        volumes: newVolumes 
-      };
-    });
+    setFormData(prev => ({ 
+      ...prev, 
+      quantity: sanitizedValue
+    }));
   };
 
   const handleAddressChange = (type: 'sender' | 'recipient', field: keyof AddressData, value: string) => {
