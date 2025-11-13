@@ -1107,14 +1107,6 @@ const QuoteForm = () => {
                           className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg pl-12"
                         />
                       </div>
-                      {formData.unitValue && parseFloat(formData.unitValue) > 0 && (
-                        <p className="text-sm text-muted-foreground flex items-center justify-between">
-                          <span>Valor do seguro:</span>
-                          <span className="font-semibold text-primary">
-                            R$ {(getTotalMerchandiseValue() * 0.013).toFixed(2)}
-                          </span>
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>
