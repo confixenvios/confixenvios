@@ -552,6 +552,17 @@ const QuoteForm = () => {
 
   // Step 1: Calcular Cotação
   const handleStep1Submit = async () => {
+    // Verificar se o usuário está logado
+    if (!user) {
+      toast({
+        title: "Login necessário",
+        description: "Você precisa estar logado para calcular o frete",
+        variant: "destructive"
+      });
+      setShowAuthModal(true);
+      return;
+    }
+    
     await processQuoteCalculation();
   };
 
