@@ -771,10 +771,8 @@ const QuoteForm = () => {
       const merchandiseValue = getTotalMerchandiseValue();
       const tipo = firstVolume?.merchandiseType === "normal" ? "Normal" : "Normal"; // Sempre Normal por enquanto
 
-      // Chamar API externa Confix
-      const WEBHOOK_URL = "https://webhook.grupoconfix.com/webhook/98395979-70aa-4246-9fdf-e79de1202935";
-      const BEARER_TOKEN =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI5ZTM2MDc2YS0yZWE2LTRiMDktOGY2Mi05ZGE5NTViYzBiNmYiLCJlbWFpbCI6Im1hcmNvc0Bjb25maXguY29tIiwianRpIjoiZWMxNDAzMTYtNWQzNy00N2MwLWIwODEtNTI3YzU5Yjc4MTU4IiwiaWF0IjoxNzYyODg0NjQ1LCJleHAiOjE3NjI5NzEwNDV9.aqPsac1PX_PCtDoJeR_c4qe_zLeqtCDGi2WwwXAnPJE";
+      // Chamar Webhook N8N (que conecta à API Confix)
+      const WEBHOOK_URL = "https://n8n.grupoconfix.com/webhook-test/98395979-70aa-4246-9fdf-e79de1202935";
 
       const requestData = {
         cep: formData.destinyCep.replace(/\D/g, ""),
