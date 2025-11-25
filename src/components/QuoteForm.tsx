@@ -772,7 +772,7 @@ const QuoteForm = () => {
       const tipo = firstVolume?.merchandiseType === "normal" ? "Normal" : "Normal"; // Sempre Normal por enquanto
 
       // Chamar Webhook N8N (que conecta à API Confix)
-      const WEBHOOK_URL = "https://n8n.grupoconfix.com/webhook-test/98395979-70aa-4246-9fdf-e79de1202935";
+      const WEBHOOK_URL = "https://webhook.grupoconfix.com/webhook/98395979-70aa-4246-9fdf-e79de1202935";
 
       const requestData = {
         cep: formData.destinyCep.replace(/\D/g, ""),
