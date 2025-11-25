@@ -769,43 +769,50 @@ const QuoteForm = () => {
       const width = parseFloat(firstVolume?.width) || 0;
       const height = parseFloat(firstVolume?.height) || 0;
       const merchandiseValue = getTotalMerchandiseValue();
-      const tipo = firstVolume?.merchandiseType === "normal" ? "Normal" : "Normal"; // Sempre Normal por enquanto
-
-      // Chamar Webhook N8N (que conecta à API Confix)
-      const WEBHOOK_URL = "https://webhook.grupoconfix.com/webhook/98395979-70aa-4246-9fdf-e79de1202935";
-
-      const requestData = {
-        cep: formData.destinyCep.replace(/\D/g, ""),
-        quantidade: quantity,
-        valorDeclarado: merchandiseValue || 1,
-        peso: consideredWeight,
-        comprimento: length,
-        largura: width,
-        altura: height,
-        tipo: tipo,
-      };
-
-      const queryParams = new URLSearchParams(requestData as any).toString();
-      const fullUrl = `${WEBHOOK_URL}?${queryParams}`;
-
-      console.log("📤 Enviando request para Webhook N8N:", fullUrl);
-
-      // Nova Chamada: Usa a URL completa com parâmetros e método GET
-      const response = await fetch(fullUrl, {
-        method: "GET", // <--- CORRETO: Método GET
-        headers: {
-          "Content-Type": "application/json",
-          // O Header 'Authorization' é removido, pois o token está configurado dentro do N8N
-        },
-        // O 'body' é removido (correto para GET)
+      // Chamar API de cotação via serviço (sem n8n)
+      const quote = await calculateShippingQuote({
+        destinyCep: formData.destinyCep,
+        weight: consideredWeight,
+        quantity: quantity,
+        length: length,
+        width: width,
+        height: height,
+        merchandiseValue: merchandiseValue || 0
       });
 
-      if (!response.ok) {
-        throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
-      }
+      // Montar resposta no formato esperado (compatível com formato antigo)
+      const apiData = {
+        jadlog: {
+          transportadora: 'jadlog',
+          regiao: quote.zoneName || 'Padrão',
+          preco_total: quote.economicPrice,
+          prazo: quote.economicDays,
+          peso_real: consideredWeight,
+          peso_cubado: quote.cubicWeight || 0
+        },
+        magalog: {
+          transportadora: 'magalog',
+          regiao: quote.zoneName || 'Padrão',
+          preco_total: quote.expressPrice,
+          prazo: quote.expressDays,
+          peso_real: consideredWeight,
+          peso_cubado: quote.cubicWeight || 0
+        },
+        maisbarato: {
+          transportadora: quote.tableName || 'Confix',
+          regiao: quote.zoneName || 'Padrão',
+          preco_total: quote.economicPrice,
+          prazo: quote.economicDays
+        },
+        maisRapido: {
+          transportadora: quote.tableName || 'Confix',
+          regiao: quote.zoneName || 'Padrão',
+          preco_total: quote.expressPrice,
+          prazo: quote.expressDays
+        }
+      };
 
-      const apiData = await response.json();
-      console.log("📥 Resposta COMPLETA da API Confix:", JSON.stringify(apiData, null, 2));
+      console.log("📥 Resposta da API:", JSON.stringify(apiData, null, 2));
 
       // Verificar se temos dados das transportadoras
       if (!apiData.jadlog && !apiData.magalog) {
