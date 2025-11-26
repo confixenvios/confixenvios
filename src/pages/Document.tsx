@@ -78,60 +78,65 @@ const Document = () => {
     try {
       console.log('Document - Dados do currentShipment:', currentShipment);
       const completeShipmentData = JSON.parse(sessionStorage.getItem('completeShipmentData') || '{}');
-      const selectedQuote = JSON.parse(sessionStorage.getItem('selectedQuote') || '{}');
       
-      // Buscar dados completos dos endereços
-      const { data: senderAddress } = await supabase
-        .from('addresses')
-        .select('*')
-        .eq('id', currentShipment.sender_address_id)
-        .single();
-
-      const { data: recipientAddress } = await supabase
-        .from('addresses')
-        .select('*')
-        .eq('id', currentShipment.recipient_address_id)
-        .single();
-      
-      // Buscar dados pessoais salvos no sessionStorage
+      // Pegar dados pessoais salvos no sessionStorage
       const senderPersonalData = JSON.parse(sessionStorage.getItem('senderPersonalData') || '{}');
       const recipientPersonalData = JSON.parse(sessionStorage.getItem('recipientPersonalData') || '{}');
+      
+      // Pegar dados de endereço do completeShipmentData
+      const senderAddress = completeShipmentData.addressData?.sender || {};
+      const recipientAddress = completeShipmentData.addressData?.recipient || {};
+      
+      // Pegar dados técnicos e de entrega
+      const deliveryDetails = completeShipmentData.deliveryDetails || {};
+      const merchandiseDetails = completeShipmentData.merchandiseDetails || {};
+      const technicalData = completeShipmentData.technicalData || {};
+      
+      console.log('Document - Dados completos para webhook:', {
+        senderAddress,
+        recipientAddress,
+        senderPersonalData,
+        recipientPersonalData,
+        deliveryDetails,
+        merchandiseDetails
+      });
       
       // Enviar para webhook com todos os dados como query parameters
       try {
         const queryParams = new URLSearchParams();
         
         // Valor Total
-        queryParams.append('valorTotal', String(selectedQuote.totalPrice || currentShipment.quote_data?.totalPrice || 0));
+        const totalPrice = deliveryDetails.totalPrice || 0;
+        queryParams.append('valorTotal', String(totalPrice));
         
         // Dados do Remetente
-        queryParams.append('remetente_nome', senderAddress?.name || '');
+        queryParams.append('remetente_nome', senderAddress.name || '');
         queryParams.append('remetente_documento', senderPersonalData.document || '');
         queryParams.append('remetente_inscricaoEstadual', senderPersonalData.inscricaoEstadual || '');
         queryParams.append('remetente_telefone', senderPersonalData.phone || '');
         queryParams.append('remetente_email', senderPersonalData.email || '');
-        queryParams.append('remetente_cep', senderAddress?.cep || '');
-        queryParams.append('remetente_endereco', senderAddress?.street || '');
-        queryParams.append('remetente_numero', senderAddress?.number || '');
-        queryParams.append('remetente_complemento', senderAddress?.complement || '');
-        queryParams.append('remetente_bairro', senderAddress?.neighborhood || '');
-        queryParams.append('remetente_cidade', senderAddress?.city || '');
-        queryParams.append('remetente_estado', senderAddress?.state || '');
+        queryParams.append('remetente_cep', senderAddress.cep || '');
+        queryParams.append('remetente_endereco', senderAddress.street || '');
+        queryParams.append('remetente_numero', senderAddress.number || '');
+        queryParams.append('remetente_complemento', senderAddress.complement || '');
+        queryParams.append('remetente_bairro', senderAddress.neighborhood || '');
+        queryParams.append('remetente_cidade', senderAddress.city || '');
+        queryParams.append('remetente_estado', senderAddress.state || '');
         
         // Dados do Destinatário
-        queryParams.append('destinatario_nome', recipientAddress?.name || '');
+        queryParams.append('destinatario_nome', recipientAddress.name || '');
         queryParams.append('destinatario_documento', recipientPersonalData.document || '');
         queryParams.append('destinatario_inscricaoEstadual', recipientPersonalData.inscricaoEstadual || '');
         queryParams.append('destinatario_telefone', recipientPersonalData.phone || '');
         queryParams.append('destinatario_email', recipientPersonalData.email || '');
-        queryParams.append('destinatario_cep', recipientAddress?.cep || '');
-        queryParams.append('destinatario_endereco', recipientAddress?.street || '');
-        queryParams.append('destinatario_numero', recipientAddress?.number || '');
-        queryParams.append('destinatario_complemento', recipientAddress?.complement || '');
-        queryParams.append('destinatario_bairro', recipientAddress?.neighborhood || '');
-        queryParams.append('destinatario_cidade', recipientAddress?.city || '');
-        queryParams.append('destinatario_estado', recipientAddress?.state || '');
-        queryParams.append('destinatario_referencia', recipientAddress?.reference || '');
+        queryParams.append('destinatario_cep', recipientAddress.cep || '');
+        queryParams.append('destinatario_endereco', recipientAddress.street || '');
+        queryParams.append('destinatario_numero', recipientAddress.number || '');
+        queryParams.append('destinatario_complemento', recipientAddress.complement || '');
+        queryParams.append('destinatario_bairro', recipientAddress.neighborhood || '');
+        queryParams.append('destinatario_cidade', recipientAddress.city || '');
+        queryParams.append('destinatario_estado', recipientAddress.state || '');
+        queryParams.append('destinatario_referencia', recipientAddress.reference || '');
         
         // Documento Fiscal
         queryParams.append('documento_tipo', documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo');
@@ -142,16 +147,21 @@ const Document = () => {
         }
         
         // Dados da Remessa
-        queryParams.append('remessa_codigoRastreio', currentShipment.tracking_code || '');
-        queryParams.append('remessa_peso', String(currentShipment.weight || 0));
-        queryParams.append('remessa_comprimento', String(currentShipment.length || 0));
-        queryParams.append('remessa_largura', String(currentShipment.width || 0));
-        queryParams.append('remessa_altura', String(currentShipment.height || 0));
-        queryParams.append('remessa_formato', currentShipment.format || '');
+        const peso = technicalData.consideredWeight || merchandiseDetails.weight || 0;
+        const volumes = merchandiseDetails.volumes || [];
+        const primeiroVolume = volumes[0] || {};
+        
+        queryParams.append('remessa_codigoRastreio', ''); // Tracking code será gerado após pagamento
+        queryParams.append('remessa_peso', String(peso));
+        queryParams.append('remessa_comprimento', String(primeiroVolume.length || 0));
+        queryParams.append('remessa_largura', String(primeiroVolume.width || 0));
+        queryParams.append('remessa_altura', String(primeiroVolume.height || 0));
+        queryParams.append('remessa_formato', primeiroVolume.merchandiseType || 'caixa');
         
         const webhookUrl = `https://n8n.grupoconfix.com/webhook-test/cd6d1d7d-b6a0-483d-8314-662e54dda78b?${queryParams.toString()}`;
         
-        console.log('Document - Enviando webhook com query params:', webhookUrl);
+        console.log('Document - URL completa do webhook:', webhookUrl);
+        console.log('Document - Query params detalhados:', Object.fromEntries(queryParams));
         
         await fetch(webhookUrl, {
           method: 'GET',
