@@ -772,7 +772,7 @@ const QuoteForm = () => {
       const tipo = firstVolume?.merchandiseType === "normal" ? "Normal" : "Normal";
 
       // Chamar Webhook N8N
-      const WEBHOOK_URL = "https://webhook.grupoconfix.com/webhook/98395979-70aa-4246-9fdf-e79de1202935";
+      const WEBHOOK_URL = "https://webhook.grupoconfix.com/webhook/98395979-70aa-4246-9fdf-e79de1202935-v2";
 
       const requestData = {
         cep: formData.destinyCep.replace(/\D/g, ""),
