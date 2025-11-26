@@ -238,6 +238,7 @@ interface AddressData {
   city: string;
   state: string;
   reference: string;
+  inscricaoEstadual?: string;
 }
 
 const QuoteForm = () => {
@@ -290,6 +291,7 @@ const QuoteForm = () => {
     city: "",
     state: "",
     reference: "",
+    inscricaoEstadual: "",
   });
 
   const [recipientData, setRecipientData] = useState<AddressData>({
@@ -305,10 +307,13 @@ const QuoteForm = () => {
     city: "",
     state: "",
     reference: "",
+    inscricaoEstadual: "",
   });
 
   const [samePickupAddress, setSamePickupAddress] = useState<boolean>(true);
   const [alternativePickupAddress, setAlternativePickupAddress] = useState<string>("");
+  const [senderDocType, setSenderDocType] = useState<'cpf' | 'cnpj'>('cpf');
+  const [recipientDocType, setRecipientDocType] = useState<'cpf' | 'cnpj'>('cpf');
 
   // Restaurar dados do formulário quando o usuário faz login
   useEffect(() => {
@@ -950,6 +955,25 @@ const QuoteForm = () => {
 
     const senderValid = requiredFields.every((field) => senderData[field].trim() !== "");
     const recipientValid = requiredFields.every((field) => recipientData[field].trim() !== "");
+    
+    // Validate IE for CNPJ
+    if (senderDocType === 'cnpj' && !senderData.inscricaoEstadual?.trim()) {
+      toast({
+        title: "Inscrição Estadual obrigatória",
+        description: "Para CNPJ, a Inscrição Estadual é obrigatória",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (recipientDocType === 'cnpj' && !recipientData.inscricaoEstadual?.trim()) {
+      toast({
+        title: "Inscrição Estadual obrigatória",
+        description: "Para CNPJ do destinatário, a Inscrição Estadual é obrigatória",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Validate alternative pickup address if needed
     const pickupValid = pickupOption !== "pickup" || samePickupAddress || alternativePickupAddress.trim() !== "";
@@ -1066,6 +1090,21 @@ const QuoteForm = () => {
       };
 
       console.log("QuoteForm - Salvando dados COMPLETOS no sessionStorage:", completeShipmentData);
+
+      // Salvar dados pessoais para uso no webhook
+      sessionStorage.setItem('senderPersonalData', JSON.stringify({
+        document: senderData.document,
+        phone: senderData.phone,
+        email: senderData.email,
+        inscricaoEstadual: senderData.inscricaoEstadual || '',
+      }));
+      
+      sessionStorage.setItem('recipientPersonalData', JSON.stringify({
+        document: recipientData.document,
+        phone: recipientData.phone,
+        email: recipientData.email,
+        inscricaoEstadual: recipientData.inscricaoEstadual || '',
+      }));
 
       // Salvar TODOS os dados coletados no sessionStorage para as próximas etapas
       sessionStorage.setItem("completeShipmentData", JSON.stringify(completeShipmentData));
@@ -1829,6 +1868,32 @@ const QuoteForm = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-1 gap-4">
+                        {/* Document Type Selection */}
+                        <div className="space-y-2">
+                          <Label>Tipo de Documento *</Label>
+                          <RadioGroup
+                            value={senderDocType}
+                            onValueChange={(value: 'cpf' | 'cnpj') => {
+                              setSenderDocType(value);
+                              setSenderData(prev => ({ ...prev, document: '', inscricaoEstadual: '' }));
+                            }}
+                            className="flex space-x-4"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="cpf" id="sender-doc-cpf" />
+                              <Label htmlFor="sender-doc-cpf" className="cursor-pointer font-normal">
+                                CPF
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="cnpj" id="sender-doc-cnpj" />
+                              <Label htmlFor="sender-doc-cnpj" className="cursor-pointer font-normal">
+                                CNPJ
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                        
                         <div className="space-y-2">
                           <Label>Nome completo *</Label>
                           <Input
@@ -1841,15 +1906,21 @@ const QuoteForm = () => {
 
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label>CPF/CNPJ *</Label>
-                            <Input
-                              type="text"
+                            <Label>{senderDocType === 'cpf' ? 'CPF *' : 'CNPJ *'}</Label>
+                            <InputMask
+                              mask={senderDocType === 'cnpj' ? "99.999.999/9999-99" : "999.999.999-99"}
                               value={senderData.document}
                               onChange={(e) => handleAddressChange("sender", "document", e.target.value)}
-                              placeholder="CPF ou CNPJ (apenas números)"
-                              className="h-12"
-                              maxLength={18}
-                            />
+                            >
+                              {(inputProps: any) => (
+                                <Input 
+                                  {...inputProps} 
+                                  type="text" 
+                                  placeholder={senderDocType === 'cpf' ? 'CPF' : 'CNPJ'} 
+                                  className="h-12" 
+                                />
+                              )}
+                            </InputMask>
                           </div>
                           <div className="space-y-2">
                             <Label>Telefone *</Label>
@@ -1864,6 +1935,19 @@ const QuoteForm = () => {
                             </InputMask>
                           </div>
                         </div>
+
+                        {/* IE Field - Only for CNPJ */}
+                        {senderDocType === 'cnpj' && (
+                          <div className="space-y-2">
+                            <Label>Inscrição Estadual *</Label>
+                            <Input
+                              value={senderData.inscricaoEstadual || ''}
+                              onChange={(e) => handleAddressChange("sender", "inscricaoEstadual", e.target.value)}
+                              placeholder="Inscrição Estadual"
+                              className="h-12"
+                            />
+                          </div>
+                        )}
 
                         <div className="space-y-2">
                           <Label>E-mail *</Label>
@@ -2017,6 +2101,32 @@ const QuoteForm = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-1 gap-4">
+                        {/* Document Type Selection */}
+                        <div className="space-y-2">
+                          <Label>Tipo de Documento *</Label>
+                          <RadioGroup
+                            value={recipientDocType}
+                            onValueChange={(value: 'cpf' | 'cnpj') => {
+                              setRecipientDocType(value);
+                              setRecipientData(prev => ({ ...prev, document: '', inscricaoEstadual: '' }));
+                            }}
+                            className="flex space-x-4"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="cpf" id="recipient-doc-cpf" />
+                              <Label htmlFor="recipient-doc-cpf" className="cursor-pointer font-normal">
+                                CPF
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="cnpj" id="recipient-doc-cnpj" />
+                              <Label htmlFor="recipient-doc-cnpj" className="cursor-pointer font-normal">
+                                CNPJ
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                        
                         <div className="space-y-2">
                           <Label>Nome completo *</Label>
                           <Input
@@ -2029,15 +2139,21 @@ const QuoteForm = () => {
 
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label>CPF/CNPJ *</Label>
-                            <Input
-                              type="text"
+                            <Label>{recipientDocType === 'cpf' ? 'CPF *' : 'CNPJ *'}</Label>
+                            <InputMask
+                              mask={recipientDocType === 'cnpj' ? "99.999.999/9999-99" : "999.999.999-99"}
                               value={recipientData.document}
                               onChange={(e) => handleAddressChange("recipient", "document", e.target.value)}
-                              placeholder="CPF ou CNPJ (apenas números)"
-                              className="h-12"
-                              maxLength={18}
-                            />
+                            >
+                              {(inputProps: any) => (
+                                <Input 
+                                  {...inputProps} 
+                                  type="text" 
+                                  placeholder={recipientDocType === 'cpf' ? 'CPF' : 'CNPJ'} 
+                                  className="h-12" 
+                                />
+                              )}
+                            </InputMask>
                           </div>
                           <div className="space-y-2">
                             <Label>Telefone *</Label>
@@ -2052,6 +2168,19 @@ const QuoteForm = () => {
                             </InputMask>
                           </div>
                         </div>
+
+                        {/* IE Field - Only for CNPJ */}
+                        {recipientDocType === 'cnpj' && (
+                          <div className="space-y-2">
+                            <Label>Inscrição Estadual *</Label>
+                            <Input
+                              value={recipientData.inscricaoEstadual || ''}
+                              onChange={(e) => handleAddressChange("recipient", "inscricaoEstadual", e.target.value)}
+                              placeholder="Inscrição Estadual"
+                              className="h-12"
+                            />
+                          </div>
+                        )}
 
                         <div className="space-y-2">
                           <Label>E-mail *</Label>
