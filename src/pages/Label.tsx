@@ -413,7 +413,7 @@ const Label = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Document Type Selection */}
+        {/* Document Type Selection - CPF or CNPJ */}
         <div className="space-y-2">
           <FormLabel>Tipo de Documento *</FormLabel>
           <RadioGroup
