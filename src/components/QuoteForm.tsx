@@ -771,8 +771,9 @@ const QuoteForm = () => {
       const merchandiseValue = getTotalMerchandiseValue();
       const tipo = firstVolume?.merchandiseType === "normal" ? "Normal" : "Normal";
 
-      // Chamar Webhook N8N
-      const WEBHOOK_URL = "https://webhook.grupoconfix.com/webhook/98395979-70aa-4246-9fdf-e79de1202935-v2";
+      // Chamar API Confix diretamente
+      const API_URL = "https://api-freteconfix.onrender.com/frete/confix";
+      const BEARER_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI5ZTM2MDc2YS0yZWE2LTRiMDktOGY2Mi05ZGE5NTViYzBiNmYiLCJlbWFpbCI6Im1hcmNvc0Bjb25maXguY29tIiwianRpIjoiZWMxNDAzMTYtNWQzNy00N2MwLWIwODEtNTI3YzU5Yjc4MTU4IiwiaWF0IjoxNzYyODg0NjQ1LCJleHAiOjE3NjI5NzEwNDV9.aqPsac1PX_PCtDoJeR_c4qe_zLeqtCDGi2WwwXAnPJE";
 
       const requestData = {
         cep: formData.destinyCep.replace(/\D/g, ""),
@@ -785,16 +786,16 @@ const QuoteForm = () => {
         tipo: tipo,
       };
 
-      const queryParams = new URLSearchParams(requestData as any).toString();
-      const fullUrl = `${WEBHOOK_URL}?${queryParams}`;
+      console.log("📤 Enviando POST para API Confix:", API_URL, requestData);
 
-      console.log("📤 Enviando GET para Webhook N8N:", fullUrl);
-
-      const response = await fetch(fullUrl, {
-        method: "GET",
+      const response = await fetch(API_URL, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${BEARER_TOKEN}`,
         },
+        body: JSON.stringify(requestData),
       });
 
       if (!response.ok) {
@@ -802,7 +803,7 @@ const QuoteForm = () => {
       }
 
       const apiData = await response.json();
-      console.log("📥 Resposta COMPLETA do N8N:", JSON.stringify(apiData, null, 2));
+      console.log("📥 Resposta COMPLETA da API:", JSON.stringify(apiData, null, 2));
 
       // Verificar se temos dados das transportadoras
       if (!apiData.jadlog && !apiData.magalog) {
