@@ -39,6 +39,7 @@ const Label = () => {
   const [samePickupAddress, setSamePickupAddress] = useState<boolean>(true);
   const [alternativePickupAddress, setAlternativePickupAddress] = useState<string>("");
   const [senderDocType, setSenderDocType] = useState<'cpf' | 'cnpj'>('cpf');
+  const [recipientDocType, setRecipientDocType] = useState<'cpf' | 'cnpj'>('cpf');
 
   const [senderData, setSenderData] = useState<AddressData>({
     name: "",
@@ -68,7 +69,8 @@ const Label = () => {
     neighborhood: "",
     city: "",
     state: "",
-    reference: ""
+    reference: "",
+    inscricaoEstadual: ""
   });
 
   useEffect(() => {
@@ -190,6 +192,11 @@ const Label = () => {
     const recipientDocError = validateDocument(recipientData.document);
     if (recipientDocError) return `Destinatário: ${recipientDocError}`;
     
+    // Validate IE for CNPJ (recipient)
+    if (recipientDocType === 'cnpj' && !recipientData.inscricaoEstadual?.trim()) {
+      return 'Destinatário: Inscrição Estadual é obrigatória para CNPJ';
+    }
+    
     const recipientCepError = validateCEP(recipientData.cep);
     if (recipientCepError) return `Destinatário: ${recipientCepError}`;
     
@@ -253,6 +260,7 @@ const Label = () => {
         document: recipientData.document,
         phone: recipientData.phone,
         email: recipientData.email,
+        inscricaoEstadual: recipientData.inscricaoEstadual || '',
       }));
       
       // Create sender address using secure service
@@ -405,33 +413,36 @@ const Label = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Document Type Selection - Only for sender */}
-        {type === 'sender' && (
-          <div className="space-y-2">
-            <FormLabel>Tipo de Documento *</FormLabel>
-            <RadioGroup
-              value={senderDocType}
-              onValueChange={(value: 'cpf' | 'cnpj') => {
+        {/* Document Type Selection */}
+        <div className="space-y-2">
+          <FormLabel>Tipo de Documento *</FormLabel>
+          <RadioGroup
+            value={type === 'sender' ? senderDocType : recipientDocType}
+            onValueChange={(value: 'cpf' | 'cnpj') => {
+              if (type === 'sender') {
                 setSenderDocType(value);
                 setSenderData(prev => ({ ...prev, document: '', inscricaoEstadual: '' }));
-              }}
-              className="flex space-x-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="cpf" id="doc-cpf" />
-                <FormLabel htmlFor="doc-cpf" className="cursor-pointer font-normal">
-                  CPF
-                </FormLabel>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="cnpj" id="doc-cnpj" />
-                <FormLabel htmlFor="doc-cnpj" className="cursor-pointer font-normal">
-                  CNPJ
-                </FormLabel>
-              </div>
-            </RadioGroup>
-          </div>
-        )}
+              } else {
+                setRecipientDocType(value);
+                setRecipientData(prev => ({ ...prev, document: '', inscricaoEstadual: '' }));
+              }
+            }}
+            className="flex space-x-4"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="cpf" id={`${type}-doc-cpf`} />
+              <FormLabel htmlFor={`${type}-doc-cpf`} className="cursor-pointer font-normal">
+                CPF
+              </FormLabel>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="cnpj" id={`${type}-doc-cnpj`} />
+              <FormLabel htmlFor={`${type}-doc-cnpj`} className="cursor-pointer font-normal">
+                CNPJ
+              </FormLabel>
+            </div>
+          </RadioGroup>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -446,13 +457,16 @@ const Label = () => {
           </div>
           <div className="space-y-2">
             <FormLabel htmlFor={`${type}-document`}>
-              {type === 'sender' ? (senderDocType === 'cpf' ? 'CPF *' : 'CNPJ *') : 'CPF/CNPJ *'}
+              {type === 'sender' 
+                ? (senderDocType === 'cpf' ? 'CPF *' : 'CNPJ *') 
+                : (recipientDocType === 'cpf' ? 'CPF *' : 'CNPJ *')
+              }
             </FormLabel>
             <InputMask
               mask={
                 type === 'sender' 
                   ? (senderDocType === 'cnpj' ? "99.999.999/9999-99" : "999.999.999-99")
-                  : (data.document?.replace(/\D/g, "").length > 11 ? "99.999.999/9999-99" : "999.999.999-99")
+                  : (recipientDocType === 'cnpj' ? "99.999.999/9999-99" : "999.999.999-99")
               }
               value={data.document}
               onChange={(e) => handleAddressChange(type, 'document', e.target.value)}
@@ -462,7 +476,10 @@ const Label = () => {
                   {...inputProps}
                   id={`${type}-document`}
                   type="text"
-                  placeholder={type === 'sender' ? (senderDocType === 'cpf' ? 'CPF' : 'CNPJ') : 'CPF ou CNPJ'}
+                  placeholder={type === 'sender' 
+                    ? (senderDocType === 'cpf' ? 'CPF' : 'CNPJ') 
+                    : (recipientDocType === 'cpf' ? 'CPF' : 'CNPJ')
+                  }
                   className="border-input-border focus:border-primary focus:ring-primary"
                 />
               )}
@@ -470,12 +487,12 @@ const Label = () => {
           </div>
         </div>
 
-        {/* IE Field - Only for sender with CNPJ */}
-        {type === 'sender' && senderDocType === 'cnpj' && (
+        {/* IE Field - For CNPJ */}
+        {((type === 'sender' && senderDocType === 'cnpj') || (type === 'recipient' && recipientDocType === 'cnpj')) && (
           <div className="space-y-2">
-            <FormLabel htmlFor="sender-ie">Inscrição Estadual *</FormLabel>
+            <FormLabel htmlFor={`${type}-ie`}>Inscrição Estadual *</FormLabel>
             <Input
-              id="sender-ie"
+              id={`${type}-ie`}
               value={data.inscricaoEstadual || ''}
               onChange={(e) => handleAddressChange(type, 'inscricaoEstadual', e.target.value)}
               placeholder="Inscrição Estadual"

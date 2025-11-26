@@ -121,6 +121,7 @@ const Document = () => {
         // Dados do Destinatário
         queryParams.append('destinatario_nome', recipientAddress?.name || '');
         queryParams.append('destinatario_documento', recipientPersonalData.document || '');
+        queryParams.append('destinatario_inscricaoEstadual', recipientPersonalData.inscricaoEstadual || '');
         queryParams.append('destinatario_telefone', recipientPersonalData.phone || '');
         queryParams.append('destinatario_email', recipientPersonalData.email || '');
         queryParams.append('destinatario_cep', recipientAddress?.cep || '');
