@@ -1045,12 +1045,16 @@ const QuoteForm = () => {
 
         // === DADOS DE ENTREGA E COLETA ===
         deliveryDetails: {
-          selectedOption: "standard",
-          shippingPrice: quoteData?.shippingQuote?.economicPrice || 0,
+          selectedOption: shippingOption,
+          shippingPrice: shippingOption === "economic" 
+            ? (quoteData?.shippingQuote?.economicPrice || 0)
+            : (quoteData?.shippingQuote?.expressPrice || 0),
           pickupOption: pickupOption,
           pickupCost: getPickupCost(pickupOption),
           totalPrice: getTotalPrice(),
-          estimatedDays: quoteData?.shippingQuote?.estimatedDays || 5,
+          deliveryDays: shippingOption === "economic" 
+            ? (quoteData?.shippingQuote?.economicDays || 0)
+            : (quoteData?.shippingQuote?.expressDays || 0),
           pickupDetails: {
             option: pickupOption,
             sameAsOrigin: samePickupAddress,
@@ -1090,6 +1094,8 @@ const QuoteForm = () => {
       };
 
       console.log("QuoteForm - Salvando dados COMPLETOS no sessionStorage:", completeShipmentData);
+      console.log("QuoteForm - deliveryDays sendo salvo:", completeShipmentData.deliveryDetails?.deliveryDays);
+      console.log("QuoteForm - shippingOption selecionado:", shippingOption);
 
       // Salvar dados pessoais para uso no webhook
       sessionStorage.setItem('senderPersonalData', JSON.stringify({
