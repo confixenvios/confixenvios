@@ -97,60 +97,60 @@ const Document = () => {
       const senderPersonalData = JSON.parse(sessionStorage.getItem('senderPersonalData') || '{}');
       const recipientPersonalData = JSON.parse(sessionStorage.getItem('recipientPersonalData') || '{}');
       
-      // Preparar dados para webhook
-      const webhookData = {
-        valorTotal: selectedQuote.totalPrice || currentShipment.quote_data?.totalPrice || 0,
-        remetente: {
-          nome: senderAddress?.name || '',
-          documento: senderPersonalData.document || '',
-          inscricaoEstadual: senderPersonalData.inscricaoEstadual || '',
-          telefone: senderPersonalData.phone || '',
-          email: senderPersonalData.email || '',
-          cep: senderAddress?.cep || '',
-          endereco: senderAddress?.street || '',
-          numero: senderAddress?.number || '',
-          complemento: senderAddress?.complement || '',
-          bairro: senderAddress?.neighborhood || '',
-          cidade: senderAddress?.city || '',
-          estado: senderAddress?.state || '',
-        },
-        destinatario: {
-          nome: recipientAddress?.name || '',
-          documento: recipientPersonalData.document || '',
-          telefone: recipientPersonalData.phone || '',
-          email: recipientPersonalData.email || '',
-          cep: recipientAddress?.cep || '',
-          endereco: recipientAddress?.street || '',
-          numero: recipientAddress?.number || '',
-          complemento: recipientAddress?.complement || '',
-          bairro: recipientAddress?.neighborhood || '',
-          cidade: recipientAddress?.city || '',
-          estado: recipientAddress?.state || '',
-          referencia: recipientAddress?.reference || '',
-        },
-        documentoFiscal: {
-          tipo: documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo',
-          chaveNfe: documentType === 'nfe' ? nfeKey : null,
-          descricaoConteudo: documentType === 'declaration' ? merchandiseDescription : null,
-        },
-        remessa: {
-          codigoRastreio: currentShipment.tracking_code,
-          peso: currentShipment.weight,
-          comprimento: currentShipment.length,
-          largura: currentShipment.width,
-          altura: currentShipment.height,
-          formato: currentShipment.format,
-        }
-      };
-
-      // Enviar para webhook
+      // Enviar para webhook com todos os dados como query parameters
       try {
         const queryParams = new URLSearchParams();
-        queryParams.append('data', JSON.stringify(webhookData));
+        
+        // Valor Total
+        queryParams.append('valorTotal', String(selectedQuote.totalPrice || currentShipment.quote_data?.totalPrice || 0));
+        
+        // Dados do Remetente
+        queryParams.append('remetente_nome', senderAddress?.name || '');
+        queryParams.append('remetente_documento', senderPersonalData.document || '');
+        queryParams.append('remetente_inscricaoEstadual', senderPersonalData.inscricaoEstadual || '');
+        queryParams.append('remetente_telefone', senderPersonalData.phone || '');
+        queryParams.append('remetente_email', senderPersonalData.email || '');
+        queryParams.append('remetente_cep', senderAddress?.cep || '');
+        queryParams.append('remetente_endereco', senderAddress?.street || '');
+        queryParams.append('remetente_numero', senderAddress?.number || '');
+        queryParams.append('remetente_complemento', senderAddress?.complement || '');
+        queryParams.append('remetente_bairro', senderAddress?.neighborhood || '');
+        queryParams.append('remetente_cidade', senderAddress?.city || '');
+        queryParams.append('remetente_estado', senderAddress?.state || '');
+        
+        // Dados do Destinatário
+        queryParams.append('destinatario_nome', recipientAddress?.name || '');
+        queryParams.append('destinatario_documento', recipientPersonalData.document || '');
+        queryParams.append('destinatario_telefone', recipientPersonalData.phone || '');
+        queryParams.append('destinatario_email', recipientPersonalData.email || '');
+        queryParams.append('destinatario_cep', recipientAddress?.cep || '');
+        queryParams.append('destinatario_endereco', recipientAddress?.street || '');
+        queryParams.append('destinatario_numero', recipientAddress?.number || '');
+        queryParams.append('destinatario_complemento', recipientAddress?.complement || '');
+        queryParams.append('destinatario_bairro', recipientAddress?.neighborhood || '');
+        queryParams.append('destinatario_cidade', recipientAddress?.city || '');
+        queryParams.append('destinatario_estado', recipientAddress?.state || '');
+        queryParams.append('destinatario_referencia', recipientAddress?.reference || '');
+        
+        // Documento Fiscal
+        queryParams.append('documento_tipo', documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo');
+        if (documentType === 'nfe') {
+          queryParams.append('documento_chaveNfe', nfeKey);
+        } else if (documentType === 'declaration') {
+          queryParams.append('documento_descricaoConteudo', merchandiseDescription);
+        }
+        
+        // Dados da Remessa
+        queryParams.append('remessa_codigoRastreio', currentShipment.tracking_code || '');
+        queryParams.append('remessa_peso', String(currentShipment.weight || 0));
+        queryParams.append('remessa_comprimento', String(currentShipment.length || 0));
+        queryParams.append('remessa_largura', String(currentShipment.width || 0));
+        queryParams.append('remessa_altura', String(currentShipment.height || 0));
+        queryParams.append('remessa_formato', currentShipment.format || '');
         
         const webhookUrl = `https://webhook.grupoconfix.com/webhook/cd6d1d7d-b6a0-483d-8314-662e54dda78b?${queryParams.toString()}`;
         
-        console.log('Document - Enviando webhook:', webhookUrl);
+        console.log('Document - Enviando webhook com query params:', webhookUrl);
         
         await fetch(webhookUrl, {
           method: 'GET',
