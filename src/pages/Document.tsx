@@ -109,6 +109,10 @@ const Document = () => {
         const totalPrice = deliveryDetails.totalPrice || 0;
         queryParams.append('valorTotal', String(totalPrice));
         
+        // Prazo de Entrega
+        const deliveryDays = deliveryDetails.deliveryDays || 0;
+        queryParams.append('remessa_prazo', String(deliveryDays));
+        
         // Dados do Remetente
         queryParams.append('remetente_nome', senderAddress.name || '');
         queryParams.append('remetente_documento', senderPersonalData.document || '');
