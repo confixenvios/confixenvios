@@ -168,7 +168,7 @@ const Document = () => {
         queryParams.append('remessa_altura', String(primeiroVolume.height || 0));
         queryParams.append('remessa_formato', primeiroVolume.merchandiseType || 'caixa');
         
-        const webhookUrl = `https://webhook.grupoconfix.com/webhook/cd6d1d7d-b6a0-483d-8314-662e54dda78b?${queryParams.toString()}`;
+        const webhookUrl = `https://n8n.grupoconfix.com/webhook-test/cd6d1d7d-b6a0-483d-8314-662e54dda78b?${queryParams.toString()}`;
         
         console.log('Document - URL completa do webhook:', webhookUrl);
         console.log('Document - Query params detalhados:', Object.fromEntries(queryParams));
