@@ -28,6 +28,7 @@ interface AddressData {
   city: string;
   state: string;
   reference: string;
+  inscricaoEstadual?: string;
 }
 
 const Label = () => {
@@ -37,6 +38,7 @@ const Label = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [samePickupAddress, setSamePickupAddress] = useState<boolean>(true);
   const [alternativePickupAddress, setAlternativePickupAddress] = useState<string>("");
+  const [senderDocType, setSenderDocType] = useState<'cpf' | 'cnpj'>('cpf');
 
   const [senderData, setSenderData] = useState<AddressData>({
     name: "",
@@ -50,7 +52,8 @@ const Label = () => {
     neighborhood: "",
     city: "",
     state: "",
-    reference: ""
+    reference: "",
+    inscricaoEstadual: ""
   });
 
   const [recipientData, setRecipientData] = useState<AddressData>({
@@ -175,6 +178,11 @@ const Label = () => {
     const senderDocError = validateDocument(senderData.document);
     if (senderDocError) return `Remetente: ${senderDocError}`;
     
+    // Validate IE for CNPJ
+    if (senderDocType === 'cnpj' && !senderData.inscricaoEstadual?.trim()) {
+      return 'Remetente: Inscrição Estadual é obrigatória para CNPJ';
+    }
+    
     const senderCepError = validateCEP(senderData.cep);
     if (senderCepError) return `Remetente: ${senderCepError}`;
     
@@ -232,6 +240,20 @@ const Label = () => {
       console.log('Label - Iniciando criação de endereços com segurança');
       console.log('Label - Dados do remetente:', senderData);
       console.log('Label - Dados do destinatário:', recipientData);
+      
+      // Salvar dados pessoais no sessionStorage para uso posterior
+      sessionStorage.setItem('senderPersonalData', JSON.stringify({
+        document: senderData.document,
+        phone: senderData.phone,
+        email: senderData.email,
+        inscricaoEstadual: senderData.inscricaoEstadual || '',
+      }));
+      
+      sessionStorage.setItem('recipientPersonalData', JSON.stringify({
+        document: recipientData.document,
+        phone: recipientData.phone,
+        email: recipientData.email,
+      }));
       
       // Create sender address using secure service
       const senderAddress = await createAddress({
@@ -383,6 +405,34 @@ const Label = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Document Type Selection - Only for sender */}
+        {type === 'sender' && (
+          <div className="space-y-2">
+            <FormLabel>Tipo de Documento *</FormLabel>
+            <RadioGroup
+              value={senderDocType}
+              onValueChange={(value: 'cpf' | 'cnpj') => {
+                setSenderDocType(value);
+                setSenderData(prev => ({ ...prev, document: '', inscricaoEstadual: '' }));
+              }}
+              className="flex space-x-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="cpf" id="doc-cpf" />
+                <FormLabel htmlFor="doc-cpf" className="cursor-pointer font-normal">
+                  CPF
+                </FormLabel>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="cnpj" id="doc-cnpj" />
+                <FormLabel htmlFor="doc-cnpj" className="cursor-pointer font-normal">
+                  CNPJ
+                </FormLabel>
+              </div>
+            </RadioGroup>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <FormLabel htmlFor={`${type}-name`}>Nome Completo *</FormLabel>
@@ -395,9 +445,15 @@ const Label = () => {
             />
           </div>
           <div className="space-y-2">
-            <FormLabel htmlFor={`${type}-document`}>CPF/CNPJ *</FormLabel>
+            <FormLabel htmlFor={`${type}-document`}>
+              {type === 'sender' ? (senderDocType === 'cpf' ? 'CPF *' : 'CNPJ *') : 'CPF/CNPJ *'}
+            </FormLabel>
             <InputMask
-              mask={data.document?.replace(/\D/g, "").length > 11 ? "99.999.999/9999-99" : "999.999.999-99"}
+              mask={
+                type === 'sender' 
+                  ? (senderDocType === 'cnpj' ? "99.999.999/9999-99" : "999.999.999-99")
+                  : (data.document?.replace(/\D/g, "").length > 11 ? "99.999.999/9999-99" : "999.999.999-99")
+              }
               value={data.document}
               onChange={(e) => handleAddressChange(type, 'document', e.target.value)}
             >
@@ -406,13 +462,27 @@ const Label = () => {
                   {...inputProps}
                   id={`${type}-document`}
                   type="text"
-                  placeholder="CPF ou CNPJ"
+                  placeholder={type === 'sender' ? (senderDocType === 'cpf' ? 'CPF' : 'CNPJ') : 'CPF ou CNPJ'}
                   className="border-input-border focus:border-primary focus:ring-primary"
                 />
               )}
             </InputMask>
           </div>
         </div>
+
+        {/* IE Field - Only for sender with CNPJ */}
+        {type === 'sender' && senderDocType === 'cnpj' && (
+          <div className="space-y-2">
+            <FormLabel htmlFor="sender-ie">Inscrição Estadual *</FormLabel>
+            <Input
+              id="sender-ie"
+              value={data.inscricaoEstadual || ''}
+              onChange={(e) => handleAddressChange(type, 'inscricaoEstadual', e.target.value)}
+              placeholder="Inscrição Estadual"
+              className="border-input-border focus:border-primary focus:ring-primary"
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
