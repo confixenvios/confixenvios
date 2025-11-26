@@ -785,14 +785,16 @@ const QuoteForm = () => {
         tipo: tipo,
       };
 
-      console.log("📤 Enviando POST para Webhook N8N:", WEBHOOK_URL, requestData);
+      const queryParams = new URLSearchParams(requestData as any).toString();
+      const fullUrl = `${WEBHOOK_URL}?${queryParams}`;
 
-      const response = await fetch(WEBHOOK_URL, {
-        method: "POST",
+      console.log("📤 Enviando GET para Webhook N8N:", fullUrl);
+
+      const response = await fetch(fullUrl, {
+        method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(requestData),
       });
 
       if (!response.ok) {
