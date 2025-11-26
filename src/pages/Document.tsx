@@ -111,6 +111,8 @@ const Document = () => {
         
         // Prazo de Entrega
         const deliveryDays = deliveryDetails.deliveryDays || 0;
+        console.log('Document - deliveryDays recuperado:', deliveryDays);
+        console.log('Document - deliveryDetails completo:', deliveryDetails);
         queryParams.append('remessa_prazo', String(deliveryDays));
         
         // Dados do Remetente
