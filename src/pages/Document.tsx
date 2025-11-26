@@ -78,6 +78,89 @@ const Document = () => {
     try {
       console.log('Document - Dados do currentShipment:', currentShipment);
       const completeShipmentData = JSON.parse(sessionStorage.getItem('completeShipmentData') || '{}');
+      const selectedQuote = JSON.parse(sessionStorage.getItem('selectedQuote') || '{}');
+      
+      // Buscar dados completos dos endereços
+      const { data: senderAddress } = await supabase
+        .from('addresses')
+        .select('*')
+        .eq('id', currentShipment.sender_address_id)
+        .single();
+
+      const { data: recipientAddress } = await supabase
+        .from('addresses')
+        .select('*')
+        .eq('id', currentShipment.recipient_address_id)
+        .single();
+      
+      // Buscar dados pessoais salvos no sessionStorage
+      const senderPersonalData = JSON.parse(sessionStorage.getItem('senderPersonalData') || '{}');
+      const recipientPersonalData = JSON.parse(sessionStorage.getItem('recipientPersonalData') || '{}');
+      
+      // Preparar dados para webhook
+      const webhookData = {
+        valorTotal: selectedQuote.totalPrice || currentShipment.quote_data?.totalPrice || 0,
+        remetente: {
+          nome: senderAddress?.name || '',
+          documento: senderPersonalData.document || '',
+          inscricaoEstadual: senderPersonalData.inscricaoEstadual || '',
+          telefone: senderPersonalData.phone || '',
+          email: senderPersonalData.email || '',
+          cep: senderAddress?.cep || '',
+          endereco: senderAddress?.street || '',
+          numero: senderAddress?.number || '',
+          complemento: senderAddress?.complement || '',
+          bairro: senderAddress?.neighborhood || '',
+          cidade: senderAddress?.city || '',
+          estado: senderAddress?.state || '',
+        },
+        destinatario: {
+          nome: recipientAddress?.name || '',
+          documento: recipientPersonalData.document || '',
+          telefone: recipientPersonalData.phone || '',
+          email: recipientPersonalData.email || '',
+          cep: recipientAddress?.cep || '',
+          endereco: recipientAddress?.street || '',
+          numero: recipientAddress?.number || '',
+          complemento: recipientAddress?.complement || '',
+          bairro: recipientAddress?.neighborhood || '',
+          cidade: recipientAddress?.city || '',
+          estado: recipientAddress?.state || '',
+          referencia: recipientAddress?.reference || '',
+        },
+        documentoFiscal: {
+          tipo: documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo',
+          chaveNfe: documentType === 'nfe' ? nfeKey : null,
+          descricaoConteudo: documentType === 'declaration' ? merchandiseDescription : null,
+        },
+        remessa: {
+          codigoRastreio: currentShipment.tracking_code,
+          peso: currentShipment.weight,
+          comprimento: currentShipment.length,
+          largura: currentShipment.width,
+          altura: currentShipment.height,
+          formato: currentShipment.format,
+        }
+      };
+
+      // Enviar para webhook
+      try {
+        const queryParams = new URLSearchParams();
+        queryParams.append('data', JSON.stringify(webhookData));
+        
+        const webhookUrl = `https://webhook.grupoconfix.com/webhook/cd6d1d7d-b6a0-483d-8314-662e54dda78b?${queryParams.toString()}`;
+        
+        console.log('Document - Enviando webhook:', webhookUrl);
+        
+        await fetch(webhookUrl, {
+          method: 'GET',
+        });
+        
+        console.log('Document - Webhook enviado com sucesso');
+      } catch (webhookError) {
+        console.error('Document - Erro ao enviar webhook:', webhookError);
+        // Não bloqueia o fluxo se o webhook falhar
+      }
       
       // Dados COMPLETOS do documento fiscal
       const documentData = {
