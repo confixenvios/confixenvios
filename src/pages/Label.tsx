@@ -41,6 +41,9 @@ const Label = () => {
   const [senderDocType, setSenderDocType] = useState<'cpf' | 'cnpj'>('cpf');
   const [recipientDocType, setRecipientDocType] = useState<'cpf' | 'cnpj'>('cpf');
 
+  // Debug log
+  console.log('Label - Component rendered with docTypes:', { senderDocType, recipientDocType });
+
   const [senderData, setSenderData] = useState<AddressData>({
     name: "",
     document: "",
@@ -413,12 +416,13 @@ const Label = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Document Type Selection - CPF or CNPJ */}
+        {/* Document Type Selection - CPF or CNPJ - Updated */}
         <div className="space-y-2">
-          <FormLabel>Tipo de Documento *</FormLabel>
+          <FormLabel htmlFor={`${type}-doc-type`}>Tipo de Documento *</FormLabel>
           <RadioGroup
             value={type === 'sender' ? senderDocType : recipientDocType}
             onValueChange={(value: 'cpf' | 'cnpj') => {
+              console.log(`${type} document type changed to:`, value);
               if (type === 'sender') {
                 setSenderDocType(value);
                 setSenderData(prev => ({ ...prev, document: '', inscricaoEstadual: '' }));
