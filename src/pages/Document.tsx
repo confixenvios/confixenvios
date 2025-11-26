@@ -105,9 +105,13 @@ const Document = () => {
       try {
         const queryParams = new URLSearchParams();
         
-        // Valor Total
+        // Valor Total do Frete
         const totalPrice = deliveryDetails.totalPrice || 0;
         queryParams.append('valorTotal', String(totalPrice));
+        
+        // Valor Total Declarado da Mercadoria
+        const declaredMerchandiseValue = merchandiseDetails.totalValue || 0;
+        queryParams.append('mercadoria_valorDeclarado', String(declaredMerchandiseValue));
         
         // Prazo de Entrega
         const deliveryDays = deliveryDetails.deliveryDays || 0;
