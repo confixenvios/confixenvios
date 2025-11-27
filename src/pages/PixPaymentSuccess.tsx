@@ -171,8 +171,115 @@ const PixPaymentSuccess = () => {
       console.log('✅ Remessa criada com sucesso:', newShipment);
       setShipmentId(newShipment.id);
       
-      // Webhook será disparado automaticamente pelo trigger do banco de dados
-      console.log('✅ Remessa criada:', newShipment.id, '- Webhook será disparado automaticamente');
+      // ===== DISPARAR WEBHOOK APÓS PAGAMENTO CONFIRMADO =====
+      try {
+        console.log('🔔 Disparando webhook após pagamento confirmado...');
+        
+        // Preparar dados para o webhook
+        const addressData = completeShipmentData.addressData || {};
+        const technicalData = completeShipmentData.technicalData || {};
+        const deliveryDetails = completeShipmentData.deliveryDetails || {};
+        const shippingQuote = completeShipmentData.shippingQuote || {};
+        
+        const senderPersonalData = completeShipmentData.senderPersonalData || {};
+        const recipientPersonalData = completeShipmentData.recipientPersonalData || {};
+        
+        const queryParams = new URLSearchParams();
+        
+        // Valor total do frete
+        queryParams.append('valorTotal', String(shippingQuote.totalPrice || 0));
+        
+        // Valor declarado da mercadoria
+        queryParams.append('mercadoria_valorDeclarado', String(shippingQuote.declaredValue || 0));
+        
+        // Prazo de entrega
+        queryParams.append('remessa_prazo', String(deliveryDetails.deliveryDays || shippingQuote.deliveryDays || 5));
+        
+        // Dados da transportadora selecionada
+        queryParams.append('transportadora_nome', shippingQuote.carrierName || deliveryDetails.selectedCarrier || 'Confix');
+        queryParams.append('transportadora_servico', deliveryDetails.selectedOption || 'standard');
+        
+        // CNPJ do transportador destino (sempre vazio)
+        queryParams.append('cnpjTransportadorDestinto', '');
+        
+        // Expedidor (sempre "Juri Express")
+        queryParams.append('expedidor', 'Juri Express');
+        
+        // Dados do remetente (TOMADOR DO SERVIÇO)
+        queryParams.append('remetente_nome', addressData.sender?.name || '');
+        queryParams.append('remetente_documento', senderPersonalData.document || '');
+        queryParams.append('remetente_inscricaoEstadual', senderPersonalData.inscricaoEstadual || '');
+        queryParams.append('remetente_email', senderPersonalData.email || '');
+        queryParams.append('remetente_telefone', senderPersonalData.phone || '');
+        queryParams.append('remetente_endereco', addressData.sender?.street || '');
+        queryParams.append('remetente_numero', addressData.sender?.number || '');
+        queryParams.append('remetente_complemento', addressData.sender?.complement || '');
+        queryParams.append('remetente_bairro', addressData.sender?.neighborhood || '');
+        queryParams.append('remetente_cidade', addressData.sender?.city || '');
+        queryParams.append('remetente_estado', addressData.sender?.state || '');
+        queryParams.append('remetente_cep', addressData.sender?.cep || '');
+        
+        // Dados do destinatário
+        queryParams.append('destinatario_nome', addressData.recipient?.name || '');
+        queryParams.append('destinatario_documento', recipientPersonalData.document || '');
+        queryParams.append('destinatario_inscricaoEstadual', recipientPersonalData.inscricaoEstadual || '');
+        queryParams.append('destinatario_email', recipientPersonalData.email || '');
+        queryParams.append('destinatario_telefone', recipientPersonalData.phone || '');
+        queryParams.append('destinatario_endereco', addressData.recipient?.street || '');
+        queryParams.append('destinatario_numero', addressData.recipient?.number || '');
+        queryParams.append('destinatario_complemento', addressData.recipient?.complement || '');
+        queryParams.append('destinatario_bairro', addressData.recipient?.neighborhood || '');
+        queryParams.append('destinatario_cidade', addressData.recipient?.city || '');
+        queryParams.append('destinatario_estado', addressData.recipient?.state || '');
+        queryParams.append('destinatario_cep', addressData.recipient?.cep || '');
+        
+        // Dados do documento fiscal
+        if (documentData.documentType === 'nfe') {
+          queryParams.append('chaveNotaFiscal', documentData.nfeKey || '');
+        } else {
+          // Para declaração de conteúdo, enviar chave fictícia
+          queryParams.append('chaveNotaFiscal', '99999999999999999999999999999999999999999999');
+          queryParams.append('descricaoMercadoria', documentData.merchandiseDescription || 'Mercadoria Geral');
+        }
+        
+        // Dados técnicos da remessa
+        const primeiroVolume = technicalData.volumes?.[0] || technicalData;
+        queryParams.append('remessa_peso', String(technicalData.consideredWeight || technicalData.weight || 1));
+        queryParams.append('remessa_cubagemTotal', (technicalData.totalCubicWeight || 0).toFixed(3));
+        queryParams.append('remessa_largura', String(primeiroVolume.width || technicalData.width || 15));
+        queryParams.append('remessa_comprimento', String(primeiroVolume.length || technicalData.length || 20));
+        queryParams.append('remessa_altura', String(primeiroVolume.height || technicalData.height || 10));
+        queryParams.append('remessa_formato', primeiroVolume.merchandiseType || 'caixa');
+        
+        // Adicionar shipmentId para o webhook poder associar o CT-e
+        queryParams.append('shipmentId', newShipment.id);
+        
+        const webhookUrl = `https://webhook.grupoconfix.com/webhook/cd6d1d7d-b6a0-483d-8314-662e54dda78b?${queryParams.toString()}`;
+        
+        console.log('🌐 URL do webhook:', webhookUrl);
+
+        // Fazer chamada ao webhook
+        const webhookResponse = await fetch(webhookUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        console.log('📡 Resposta do webhook:', webhookResponse.status, webhookResponse.statusText);
+        
+        if (webhookResponse.ok) {
+          console.log('✅ Webhook disparado com sucesso! CT-e será processado pelo n8n.');
+        } else {
+          const errorText = await webhookResponse.text();
+          console.error('⚠️ Erro na resposta do webhook:', errorText);
+          // Não falhar a criação da remessa por erro no webhook
+        }
+        
+      } catch (webhookError) {
+        console.error('⚠️ Erro ao disparar webhook (não bloqueante):', webhookError);
+        // Não falhar a criação da remessa por erro no webhook
+      }
       
       // Limpar dados do sessionStorage após criar a remessa
       sessionStorage.removeItem('completeShipmentData');
