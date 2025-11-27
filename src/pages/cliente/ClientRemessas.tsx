@@ -393,7 +393,7 @@ const ClientRemessas = () => {
                             <span className="ml-1">{formatDateTime(shipment.created_at)}</span>
                           </div>
                         </div>
-                        <div className="flex space-x-2">
+                        <div className="flex flex-wrap gap-2">
                           <Button
                             variant="outline"
                             size="sm"
@@ -402,6 +402,40 @@ const ClientRemessas = () => {
                             <Eye className="w-4 h-4 mr-2" />
                             Ver Detalhes
                           </Button>
+                          
+                          {/* Botões XML e DACTE - apenas se CT-e foi emitido */}
+                          {shipment.cte_emission && (
+                            <>
+                              {shipment.cte_emission.xml_url && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    console.log('Abrindo XML:', shipment.cte_emission!.xml_url);
+                                    window.open(shipment.cte_emission!.xml_url!, '_blank');
+                                  }}
+                                  title="Visualizar XML do CT-e"
+                                >
+                                  <FileText className="w-4 h-4 mr-2" />
+                                  XML
+                                </Button>
+                              )}
+                              {shipment.cte_emission.dacte_url && (
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => {
+                                    console.log('Abrindo DACTE:', shipment.cte_emission!.dacte_url);
+                                    window.open(shipment.cte_emission!.dacte_url!, '_blank');
+                                  }}
+                                  title="Visualizar DACTE (PDF)"
+                                >
+                                  <Receipt className="w-4 h-4 mr-2" />
+                                  DACTE
+                                </Button>
+                              )}
+                            </>
+                          )}
                         </div>
                       </div>
 
