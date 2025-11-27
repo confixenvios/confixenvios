@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Plus, Calendar, MapPin, Eye, Search, Filter, ArrowUpDown, FileText, Receipt, RefreshCw, CheckCircle2 } from "lucide-react";
+import { Package, Plus, Calendar, MapPin, Eye, Search, Filter, ArrowUpDown, FileText, Receipt, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -145,14 +145,15 @@ const ClientRemessas = () => {
 
       if (error) throw error;
       
-      // Buscar CT-es para cada remessa
+      // Buscar CT-es para cada remessa (aprovado ou reprovado)
       const shipmentsWithCte = await Promise.all(
         (data || []).map(async (shipment) => {
           const { data: cteData, error: cteError } = await supabase
             .from('cte_emissoes')
             .select('*')
             .eq('shipment_id', shipment.id)
-            .eq('status', 'aprovado')
+            .order('created_at', { ascending: false })
+            .limit(1)
             .maybeSingle();
           
           return {
@@ -434,36 +435,27 @@ const ClientRemessas = () => {
                             Ver Detalhes
                           </Button>
                           
-                          {/* Botões XML e DACTE - apenas se CT-e foi emitido */}
-                          {shipment.cte_emission && (
-                            <>
-                              {shipment.cte_emission.xml_url && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    window.open(shipment.cte_emission!.xml_url, '_blank');
-                                  }}
-                                  title="Visualizar XML do CT-e"
-                                >
-                                  <FileText className="w-4 h-4 mr-2" />
-                                  XML
-                                </Button>
-                              )}
-                              {shipment.cte_emission.dacte_url && (
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  onClick={() => {
-                                    window.open(shipment.cte_emission!.dacte_url, '_blank');
-                                  }}
-                                  title="Visualizar DACTE (PDF)"
-                                >
-                                  <Receipt className="w-4 h-4 mr-2" />
-                                  DACTE
-                                </Button>
-                              )}
-                            </>
+                          {/* Botão XML - apenas se CT-e foi emitido e aprovado */}
+                          {shipment.cte_emission && shipment.cte_emission.status === 'aprovado' && shipment.cte_emission.xml_url && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                window.open(shipment.cte_emission!.xml_url, '_blank');
+                              }}
+                              title="Visualizar XML do CT-e"
+                            >
+                              <FileText className="w-4 h-4 mr-2" />
+                              XML
+                            </Button>
+                          )}
+                          
+                          {/* Badge de CT-e Reprovado */}
+                          {shipment.cte_emission && shipment.cte_emission.status === 'reprovado' && (
+                            <Badge variant="destructive" className="flex items-center gap-1">
+                              <XCircle className="w-3 h-3" />
+                              CT-e Reprovado
+                            </Badge>
                           )}
                         </div>
                       </div>
