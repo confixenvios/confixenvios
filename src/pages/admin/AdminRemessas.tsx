@@ -882,7 +882,7 @@ const AdminRemessas = () => {
                                        size="sm"
                                        onClick={() => {
                                          window.open(
-                                           `https://n8n.grupoconfix.com/webhook-test/baixar-cte?uuid=${shipment.cte_emission!.uuid_cte}`,
+                                           `https://webhook.grupoconfix.com/webhook/baixar-cte?uuid=${shipment.cte_emission!.uuid_cte}`,
                                            '_blank'
                                          );
                                        }}
