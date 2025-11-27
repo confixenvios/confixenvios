@@ -187,11 +187,14 @@ const PixPaymentSuccess = () => {
         
         const queryParams = new URLSearchParams();
         
-        // Valor total do frete
-        queryParams.append('valorTotal', String(shippingQuote.totalPrice || 0));
+        // Valor total do frete - pegar do deliveryDetails ou do amount pago
+        const valorFrete = deliveryDetails.totalPrice || amount || 0;
+        queryParams.append('valorTotal', String(valorFrete));
         
-        // Valor declarado da mercadoria
-        queryParams.append('mercadoria_valorDeclarado', String(shippingQuote.declaredValue || 0));
+        // Valor declarado da mercadoria - pegar dos dados do formulário original
+        const valorDeclarado = completeShipmentData.quoteData?.totalMerchandiseValue || 
+                              completeShipmentData.originalFormData?.totalMerchandiseValue || 0;
+        queryParams.append('mercadoria_valorDeclarado', String(valorDeclarado));
         
         // Prazo de entrega
         queryParams.append('remessa_prazo', String(deliveryDetails.deliveryDays || shippingQuote.deliveryDays || 5));
