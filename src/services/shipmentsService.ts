@@ -49,6 +49,20 @@ export interface AdminShipment extends BaseShipment {
     telefone: string;
     email: string;
   };
+  cte_emission?: {
+    id: string;
+    chave_cte: string;
+    uuid_cte: string;
+    serie: string;
+    numero_cte: string;
+    status: string;
+    motivo: string | null;
+    modelo: string;
+    xml_url: string | null;
+    dacte_url: string | null;
+    payload_bruto: any;
+    created_at: string;
+  } | null;
 }
 
 export interface MotoristaShipment extends BaseShipment {

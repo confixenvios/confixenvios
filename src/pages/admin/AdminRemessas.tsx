@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, Package, Eye, Download, Filter, UserPlus, Truck, Calendar as CalendarIcon, MapPin, Clock, FileText, Send, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Search, Package, Eye, Download, Filter, UserPlus, Truck, Calendar as CalendarIcon, MapPin, Clock, FileText, Send, CheckCircle, XCircle, AlertCircle, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -69,6 +69,20 @@ interface Shipment {
     telefone: string;
     email: string;
   };
+  cte_emission?: {
+    id: string;
+    chave_cte: string;
+    uuid_cte: string;
+    serie: string;
+    numero_cte: string;
+    status: string;
+    motivo: string | null;
+    modelo: string;
+    xml_url: string | null;
+    dacte_url: string | null;
+    payload_bruto: any;
+    created_at: string;
+  } | null;
 }
 
 interface Motorista {
@@ -163,10 +177,28 @@ const AdminRemessas = () => {
       const adminShipments = await getAdminShipments();
       console.log(`✅ [ADMIN REMESSAS] ${adminShipments.length} remessas carregadas`);
       
-      setShipments(adminShipments);
+      // Buscar CT-es para cada remessa (aprovado ou reprovado)
+      const shipmentsWithCte = await Promise.all(
+        adminShipments.map(async (shipment) => {
+          const { data: cteData, error: cteError } = await supabase
+            .from('cte_emissoes')
+            .select('*')
+            .eq('shipment_id', shipment.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          return {
+            ...shipment,
+            cte_emission: cteData
+          };
+        })
+      );
+      
+      setShipments(shipmentsWithCte);
       
       // Verificar status dos webhooks para cada remessa
-      await checkWebhookStatuses(adminShipments);
+      await checkWebhookStatuses(shipmentsWithCte);
     } catch (error) {
       console.error('❌ [ADMIN REMESSAS] Erro ao carregar remessas:', error);
       toast({
@@ -795,6 +827,20 @@ const AdminRemessas = () => {
                         </div>
                         <div className="flex items-center space-x-2">
                           {getStatusBadge(shipment.status)}
+                          {/* Badge de CT-e Disponível */}
+                          {shipment.cte_emission && shipment.cte_emission.status === 'aprovado' && (
+                            <Badge variant="success" className="flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3" />
+                              CT-e Disponível
+                            </Badge>
+                          )}
+                          {/* Badge de CT-e Reprovado */}
+                          {shipment.cte_emission && shipment.cte_emission.status === 'reprovado' && (
+                            <Badge variant="destructive" className="flex items-center gap-1">
+                              <XCircle className="w-3 h-3" />
+                              CT-e Reprovado
+                            </Badge>
+                          )}
                           {!isB2BExpresso && (
                             <div className="flex space-x-1">
                               <Button
@@ -814,6 +860,37 @@ const AdminRemessas = () => {
                               >
                                 <FileText className="h-4 w-4" />
                               </Button>
+                              {/* Botões XML e DACTE - apenas se CT-e foi emitido e aprovado */}
+                              {shipment.cte_emission && shipment.cte_emission.status === 'aprovado' && (
+                                <>
+                                  {shipment.cte_emission.xml_url && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        window.open(shipment.cte_emission!.xml_url, '_blank');
+                                      }}
+                                      className="h-8 w-8 p-0 hover:bg-primary/10"
+                                      title="Visualizar XML do CT-e"
+                                    >
+                                      <FileText className="h-4 w-4 text-blue-600" />
+                                    </Button>
+                                  )}
+                                  {shipment.cte_emission.dacte_url && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        window.open(shipment.cte_emission!.dacte_url, '_blank');
+                                      }}
+                                      className="h-8 w-8 p-0 hover:bg-primary/10"
+                                      title="Visualizar DACTE (PDF)"
+                                    >
+                                      <Receipt className="h-4 w-4 text-green-600" />
+                                    </Button>
+                                  )}
+                                </>
+                              )}
                             </div>
                           )}
                         </div>
