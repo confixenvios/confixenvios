@@ -146,12 +146,21 @@ const ClientRemessas = () => {
       // Buscar CT-es para cada remessa
       const shipmentsWithCte = await Promise.all(
         (data || []).map(async (shipment) => {
-          const { data: cteData } = await supabase
+          const { data: cteData, error: cteError } = await supabase
             .from('cte_emissoes')
             .select('*')
             .eq('shipment_id', shipment.id)
             .eq('status', 'aprovado')
             .maybeSingle();
+          
+          console.log(`🔍 [CT-e] Shipment ${shipment.tracking_code}:`, {
+            shipment_id: shipment.id,
+            cte_found: !!cteData,
+            cte_data: cteData,
+            xml_url: cteData?.xml_url,
+            dacte_url: cteData?.dacte_url,
+            error: cteError
+          });
           
           return {
             ...shipment,
@@ -159,6 +168,13 @@ const ClientRemessas = () => {
           };
         })
       );
+      
+      console.log('📦 [SHIPMENTS WITH CT-E]:', shipmentsWithCte.map(s => ({
+        tracking_code: s.tracking_code,
+        has_cte: !!s.cte_emission,
+        xml_url: s.cte_emission?.xml_url,
+        dacte_url: s.cte_emission?.dacte_url
+      })));
       
       setShipments(shipmentsWithCte);
     } catch (error) {
@@ -433,6 +449,15 @@ const ClientRemessas = () => {
                           </Button>
                           
                           {/* Botões XML e DACTE - apenas se CT-e foi emitido */}
+                          {(() => {
+                            console.log(`🔘 [RENDER] ${shipment.tracking_code}:`, {
+                              has_cte_emission: !!shipment.cte_emission,
+                              xml_url: shipment.cte_emission?.xml_url,
+                              dacte_url: shipment.cte_emission?.dacte_url,
+                              full_cte: shipment.cte_emission
+                            });
+                            return null;
+                          })()}
                           {shipment.cte_emission && (
                             <>
                               {shipment.cte_emission.xml_url && (
