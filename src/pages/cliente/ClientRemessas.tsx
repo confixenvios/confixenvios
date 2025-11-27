@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Plus, Calendar, MapPin, Eye, Search, Filter, ArrowUpDown, FileText, Receipt } from "lucide-react";
+import { Package, Plus, Calendar, MapPin, Eye, Search, Filter, ArrowUpDown, FileText, Receipt, RefreshCw, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,6 +82,17 @@ const ClientRemessas = () => {
     if (user) {
       loadShipments();
     }
+  }, [user]);
+
+  // Auto-refresh a cada 30 segundos para pegar novos CT-es
+  useEffect(() => {
+    if (!user) return;
+    
+    const interval = setInterval(() => {
+      loadShipments();
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(interval);
   }, [user]);
 
   const loadShipments = async () => {
@@ -257,16 +268,27 @@ const ClientRemessas = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/95">
       <div className="container mx-auto p-4 md:p-6 lg:p-8 max-w-7xl">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl lg:text-4xl font-bold text-foreground flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-xl">
-              <Package className="w-8 h-8 text-primary" />
-            </div>
-            Minhas Remessas
-          </h1>
-          <p className="text-muted-foreground mt-2 text-base lg:text-lg">
-            Gerencie todas as suas remessas em um só lugar
-          </p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl lg:text-4xl font-bold text-foreground flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-xl">
+                <Package className="w-8 h-8 text-primary" />
+              </div>
+              Minhas Remessas
+            </h1>
+            <p className="text-muted-foreground mt-2 text-base lg:text-lg">
+              Gerencie todas as suas remessas em um só lugar
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={loadShipments}
+            disabled={loading}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
         </div>
 
         {/* Filters */}
@@ -380,13 +402,20 @@ const ClientRemessas = () => {
                   <Card key={shipment.id} className="border-border/30 hover:shadow-md transition-shadow">
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between mb-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <h3 className="font-semibold text-lg">
-                              {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
-                            </h3>
-                            {getStatusBadge(shipment.status)}
-                          </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-lg">
+                            {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
+                          </h3>
+                          {getStatusBadge(shipment.status)}
+                          {/* Badge de CT-e Disponível */}
+                          {shipment.cte_emission && (
+                            <Badge variant="success" className="flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" />
+                              CT-e Disponível
+                            </Badge>
+                          )}
+                        </div>
                           <div className="flex items-center text-sm text-muted-foreground">
                             <Calendar className="w-4 h-4 mr-2" />
                             <span className="font-medium">Criado em:</span>
