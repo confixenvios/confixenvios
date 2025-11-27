@@ -454,7 +454,7 @@ const ClientRemessas = () => {
                                   title="Visualizar DACTE (PDF)"
                                 >
                                   <a 
-                                    href={shipment.cte_emission.dacte_url} 
+                                    href={`${shipment.cte_emission.dacte_url}?v=${Date.now()}`}
                                     target="_blank" 
                                     rel="noopener noreferrer"
                                   >
