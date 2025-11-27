@@ -28,13 +28,41 @@ serve(async (req) => {
       );
     }
 
-    const webhookData = await req.json();
+    let webhookData = await req.json();
     
-    console.log('CTE Webhook - Received data:', JSON.stringify(webhookData, null, 2));
+    console.log('CTE Webhook - Received raw data:', JSON.stringify(webhookData, null, 2));
+
+    // Extrair shipmentId do query parameter se não estiver no body
+    const url = new URL(req.url);
+    const shipmentIdParam = url.searchParams.get('shipmentId');
+    
+    // Se recebeu um array, pegar o primeiro item
+    if (Array.isArray(webhookData)) {
+      console.log('CTE Webhook - Received array, using first item');
+      webhookData = webhookData[0];
+    }
+
+    // Mapear campos da API do CT-e para o formato esperado pela edge function
+    const normalizedData = {
+      remessa_id: webhookData.remessa_id || webhookData.tracking_code || null,
+      chave_cte: webhookData.chave_cte || webhookData.chave || null,
+      uuid_cte: webhookData.uuid_cte || webhookData.uuid || null,
+      serie: webhookData.serie ? String(webhookData.serie) : null,
+      numero_cte: webhookData.numero_cte || webhookData.cte ? String(webhookData.numero_cte || webhookData.cte) : null,
+      status: webhookData.status || null,
+      modelo: webhookData.modelo || null,
+      motivo: webhookData.motivo || null,
+      epec: webhookData.epec !== undefined ? webhookData.epec : null,
+      xml_url: webhookData.xml_url || webhookData.xml || null,
+      dacte_url: webhookData.dacte_url || webhookData.dacte || null,
+      log: webhookData.log || null,
+      shipment_id: webhookData.shipment_id || shipmentIdParam || null
+    };
+
+    console.log('CTE Webhook - Normalized data:', JSON.stringify(normalizedData, null, 2));
 
     // Validar campos obrigatórios
     const requiredFields = [
-      'remessa_id',
       'chave_cte', 
       'uuid_cte',
       'serie',
@@ -43,13 +71,14 @@ serve(async (req) => {
       'modelo'
     ];
 
-    const missingFields = requiredFields.filter(field => !webhookData[field]);
+    const missingFields = requiredFields.filter(field => !normalizedData[field]);
     if (missingFields.length > 0) {
       console.error('CTE Webhook - Missing required fields:', missingFields);
       return new Response(
         JSON.stringify({ 
           error: 'Missing required fields', 
-          missing_fields: missingFields 
+          missing_fields: missingFields,
+          received_data: normalizedData 
         }),
         { 
           status: 400, 
@@ -57,6 +86,9 @@ serve(async (req) => {
         }
       );
     }
+
+    // Usar dados normalizados daqui em diante
+    webhookData = normalizedData;
 
     // Validar status
     const validStatuses = ['aprovado', 'reprovado', 'cancelado', 'processando', 'contingencia'];
@@ -75,9 +107,10 @@ serve(async (req) => {
       );
     }
 
-    // Buscar shipment_id se fornecido o remessa_id
-    let shipmentId = null;
-    if (webhookData.remessa_id) {
+    // Buscar shipment_id se fornecido o remessa_id ou usar o shipment_id fornecido
+    let shipmentId = webhookData.shipment_id || null;
+    
+    if (!shipmentId && webhookData.remessa_id) {
       const { data: shipment, error: shipmentError } = await supabase
         .from('shipments')
         .select('id')
@@ -88,10 +121,12 @@ serve(async (req) => {
         console.error('CTE Webhook - Error finding shipment:', shipmentError);
       } else if (shipment) {
         shipmentId = shipment.id;
-        console.log('CTE Webhook - Found shipment ID:', shipmentId);
+        console.log('CTE Webhook - Found shipment ID via tracking code:', shipmentId);
       } else {
         console.warn('CTE Webhook - No shipment found for remessa_id:', webhookData.remessa_id);
       }
+    } else if (shipmentId) {
+      console.log('CTE Webhook - Using provided shipment ID:', shipmentId);
     }
 
     // Preparar dados para inserção/atualização
