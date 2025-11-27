@@ -153,28 +153,12 @@ const ClientRemessas = () => {
             .eq('status', 'aprovado')
             .maybeSingle();
           
-          console.log(`🔍 [CT-e] Shipment ${shipment.tracking_code}:`, {
-            shipment_id: shipment.id,
-            cte_found: !!cteData,
-            cte_data: cteData,
-            xml_url: cteData?.xml_url,
-            dacte_url: cteData?.dacte_url,
-            error: cteError
-          });
-          
           return {
             ...shipment,
             cte_emission: cteData
           };
         })
       );
-      
-      console.log('📦 [SHIPMENTS WITH CT-E]:', shipmentsWithCte.map(s => ({
-        tracking_code: s.tracking_code,
-        has_cte: !!s.cte_emission,
-        xml_url: s.cte_emission?.xml_url,
-        dacte_url: s.cte_emission?.dacte_url
-      })));
       
       setShipments(shipmentsWithCte);
     } catch (error) {
@@ -449,25 +433,13 @@ const ClientRemessas = () => {
                           </Button>
                           
                           {/* Botões XML e DACTE - apenas se CT-e foi emitido */}
-                          {(() => {
-                            console.log(`🔘 [RENDER] ${shipment.tracking_code}:`, {
-                              has_cte_emission: !!shipment.cte_emission,
-                              xml_url: shipment.cte_emission?.xml_url,
-                              dacte_url: shipment.cte_emission?.dacte_url,
-                              full_cte: shipment.cte_emission
-                            });
-                            return null;
-                          })()}
                           {shipment.cte_emission && (
                             <>
                               {shipment.cte_emission.xml_url && (
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => {
-                                    console.log('Abrindo XML:', shipment.cte_emission!.xml_url);
-                                    window.open(shipment.cte_emission!.xml_url!, '_blank');
-                                  }}
+                                  onClick={() => window.open(shipment.cte_emission!.xml_url!, '_blank')}
                                   title="Visualizar XML do CT-e"
                                 >
                                   <FileText className="w-4 h-4 mr-2" />
@@ -479,8 +451,31 @@ const ClientRemessas = () => {
                                   variant="default"
                                   size="sm"
                                   onClick={() => {
-                                    console.log('Abrindo DACTE:', shipment.cte_emission!.dacte_url);
-                                    window.open(shipment.cte_emission!.dacte_url!, '_blank');
+                                    const dacteUrl = shipment.cte_emission!.dacte_url!;
+                                    console.log('Abrindo DACTE:', dacteUrl);
+                                    
+                                    // Adiciona timestamp para evitar cache e bloqueios
+                                    const urlWithParams = `${dacteUrl}?t=${Date.now()}`;
+                                    
+                                    // Tenta abrir em nova aba
+                                    const newWindow = window.open(urlWithParams, '_blank', 'noopener,noreferrer');
+                                    
+                                    // Se falhar (bloqueado), mostra mensagem
+                                    if (!newWindow) {
+                                      toast({
+                                        title: "Bloqueio detectado",
+                                        description: "Desative bloqueadores de anúncios ou permita pop-ups para visualizar o DACTE.",
+                                        variant: "destructive"
+                                      });
+                                      
+                                      // Fallback: copia URL para clipboard
+                                      navigator.clipboard.writeText(dacteUrl).then(() => {
+                                        toast({
+                                          title: "URL copiada!",
+                                          description: "Cole a URL do DACTE no navegador para visualizar.",
+                                        });
+                                      });
+                                    }
                                   }}
                                   title="Visualizar DACTE (PDF)"
                                 >
