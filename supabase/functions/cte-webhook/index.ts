@@ -107,32 +107,87 @@ serve(async (req) => {
       );
     }
 
-    // Buscar shipment_id se fornecido o remessa_id ou usar o shipment_id fornecido
+    // Buscar shipment completo para obter tracking_code e confirmar shipment_id
     let shipmentId = webhookData.shipment_id || null;
+    let trackingCode = webhookData.remessa_id || null;
     
-    if (!shipmentId && webhookData.remessa_id) {
+    // Se temos shipment_id, buscar dados completos do shipment
+    if (shipmentId) {
       const { data: shipment, error: shipmentError } = await supabase
         .from('shipments')
-        .select('id')
-        .eq('tracking_code', webhookData.remessa_id)
+        .select('id, tracking_code')
+        .eq('id', shipmentId)
         .maybeSingle();
 
       if (shipmentError) {
-        console.error('CTE Webhook - Error finding shipment:', shipmentError);
+        console.error('CTE Webhook - Error finding shipment by ID:', shipmentError);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Shipment not found',
+            details: shipmentError.message,
+            shipment_id: shipmentId
+          }),
+          { 
+            status: 404, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+      
+      if (shipment) {
+        trackingCode = shipment.tracking_code;
+        console.log('CTE Webhook - Found shipment:', { id: shipmentId, tracking_code: trackingCode });
+      } else {
+        console.error('CTE Webhook - Shipment not found with ID:', shipmentId);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Shipment not found with provided ID',
+            shipment_id: shipmentId
+          }),
+          { 
+            status: 404, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+    } else if (trackingCode) {
+      // Se só temos tracking code, buscar o shipment
+      const { data: shipment, error: shipmentError } = await supabase
+        .from('shipments')
+        .select('id, tracking_code')
+        .eq('tracking_code', trackingCode)
+        .maybeSingle();
+
+      if (shipmentError) {
+        console.error('CTE Webhook - Error finding shipment by tracking code:', shipmentError);
       } else if (shipment) {
         shipmentId = shipment.id;
-        console.log('CTE Webhook - Found shipment ID via tracking code:', shipmentId);
+        console.log('CTE Webhook - Found shipment via tracking code:', { id: shipmentId, tracking_code: trackingCode });
       } else {
-        console.warn('CTE Webhook - No shipment found for remessa_id:', webhookData.remessa_id);
+        console.warn('CTE Webhook - No shipment found for tracking code:', trackingCode);
       }
-    } else if (shipmentId) {
-      console.log('CTE Webhook - Using provided shipment ID:', shipmentId);
+    }
+    
+    // Validar que temos pelo menos o tracking_code (obrigatório para remessa_id)
+    if (!trackingCode) {
+      console.error('CTE Webhook - No tracking code available');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Missing tracking code (remessa_id is required)',
+          shipment_id: shipmentId,
+          received_data: normalizedData
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
-    // Preparar dados para inserção/atualização
+    // Preparar dados para inserção/atualização com tracking_code garantido
     const cteData = {
       shipment_id: shipmentId,
-      remessa_id: webhookData.remessa_id,
+      remessa_id: trackingCode, // Usar tracking_code buscado do shipment
       chave_cte: webhookData.chave_cte,
       uuid_cte: webhookData.uuid_cte,
       serie: webhookData.serie,
@@ -145,6 +200,8 @@ serve(async (req) => {
       dacte_url: webhookData.dacte_url || null,
       payload_bruto: webhookData
     };
+    
+    console.log('CTE Webhook - Prepared data for database:', JSON.stringify(cteData, null, 2));
 
     // Verificar se já existe um registro com essa chave
     const { data: existingCte, error: checkError } = await supabase
