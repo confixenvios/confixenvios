@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { generateDacteSecureUrl, generateXmlSecureUrl } from "@/utils/cteTokenGenerator";
+
 
 interface Shipment {
   id: string;
@@ -442,20 +442,30 @@ const ClientRemessas = () => {
                                   variant="outline"
                                   size="sm"
                                   onClick={async () => {
-                                    // Extrair CPF/CNPJ do destinatário
-                                    const recipientDoc = shipment.quote_data?.addressData?.recipient?.document || 
-                                                        shipment.quote_data?.recipientData?.document;
-                                    
-                                    if (recipientDoc && shipment.cte_emission?.uuid_cte) {
-                                      const secureUrl = await generateXmlSecureUrl(
-                                        shipment.cte_emission.chave_cte,
-                                        shipment.cte_emission.uuid_cte,
-                                        recipientDoc
-                                      );
-                                      window.open(secureUrl, '_blank');
-                                    } else {
-                                      // Fallback para URL sem token
-                                      window.open(shipment.cte_emission!.xml_url!, '_blank');
+                                    try {
+                                      const { data, error } = await supabase.functions.invoke('webmania-document-fetch', {
+                                        body: { 
+                                          url: shipment.cte_emission!.xml_url,
+                                          type: 'xml'
+                                        }
+                                      });
+
+                                      if (error) throw error;
+
+                                      // Create a blob URL and open in new tab
+                                      const blob = new Blob([data], { type: 'application/xml' });
+                                      const blobUrl = URL.createObjectURL(blob);
+                                      window.open(blobUrl, '_blank');
+                                      
+                                      // Clean up the blob URL after a delay
+                                      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+                                    } catch (error) {
+                                      console.error('Error fetching XML:', error);
+                                      toast({
+                                        variant: "destructive",
+                                        title: "Erro ao buscar XML",
+                                        description: "Não foi possível acessar o documento XML.",
+                                      });
                                     }
                                   }}
                                   title="Visualizar XML do CT-e"
@@ -469,20 +479,30 @@ const ClientRemessas = () => {
                                   variant="default"
                                   size="sm"
                                   onClick={async () => {
-                                    // Extrair CPF/CNPJ do destinatário
-                                    const recipientDoc = shipment.quote_data?.addressData?.recipient?.document || 
-                                                        shipment.quote_data?.recipientData?.document;
-                                    
-                                    if (recipientDoc && shipment.cte_emission?.uuid_cte) {
-                                      const secureUrl = await generateDacteSecureUrl(
-                                        shipment.cte_emission.chave_cte,
-                                        shipment.cte_emission.uuid_cte,
-                                        recipientDoc
-                                      );
-                                      window.open(secureUrl, '_blank');
-                                    } else {
-                                      // Fallback para URL sem token
-                                      window.open(shipment.cte_emission.dacte_url, '_blank');
+                                    try {
+                                      const { data, error } = await supabase.functions.invoke('webmania-document-fetch', {
+                                        body: { 
+                                          url: shipment.cte_emission!.dacte_url,
+                                          type: 'pdf'
+                                        }
+                                      });
+
+                                      if (error) throw error;
+
+                                      // Create a blob URL and open in new tab
+                                      const blob = new Blob([data], { type: 'application/pdf' });
+                                      const blobUrl = URL.createObjectURL(blob);
+                                      window.open(blobUrl, '_blank');
+                                      
+                                      // Clean up the blob URL after a delay
+                                      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+                                    } catch (error) {
+                                      console.error('Error fetching DACTE:', error);
+                                      toast({
+                                        variant: "destructive",
+                                        title: "Erro ao buscar DACTE",
+                                        description: "Não foi possível acessar o documento DACTE.",
+                                      });
                                     }
                                   }}
                                   title="Visualizar DACTE (PDF)"
