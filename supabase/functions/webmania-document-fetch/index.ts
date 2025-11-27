@@ -11,16 +11,19 @@ serve(async (req) => {
   }
 
   try {
-    const { url, type } = await req.json();
+    // Get URL from query parameter for GET request
+    const url = new URL(req.url);
+    const documentUrl = url.searchParams.get('url');
+    const type = url.searchParams.get('type');
     
-    if (!url || !type) {
+    if (!documentUrl || !type) {
       return new Response(
-        JSON.stringify({ error: 'URL and type are required' }),
+        JSON.stringify({ error: 'URL and type query parameters are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Fetching Webmania document:', { url, type });
+    console.log('Fetching Webmania document:', { url: documentUrl, type });
 
     const webmaniaToken = Deno.env.get('WEBMANIA_BEARER_TOKEN');
     
@@ -32,8 +35,8 @@ serve(async (req) => {
       );
     }
 
-    // Fetch document from Webmania with bearer token
-    const response = await fetch(url, {
+    // Fetch document from Webmania with bearer token using GET
+    const response = await fetch(documentUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${webmaniaToken}`,
