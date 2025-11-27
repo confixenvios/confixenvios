@@ -877,44 +877,20 @@ const AdminRemessas = () => {
                                     </Button>
                                   )}
                                   {shipment.cte_emission.uuid_cte && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={async () => {
-                                        try {
-                                          const response = await fetch(
-                                            `https://n8n.grupoconfix.com/webhook-test/baixar-cte?uuid=${shipment.cte_emission!.uuid_cte}`
-                                          );
-                                          
-                                          if (!response.ok) {
-                                            throw new Error('Erro ao buscar DACTE');
-                                          }
-                                          
-                                          const data = await response.json();
-                                          
-                                          if (data.dacte_url) {
-                                            window.open(data.dacte_url, '_blank');
-                                          } else {
-                                            toast({
-                                              title: "Erro",
-                                              description: "URL do DACTE não encontrada na resposta",
-                                              variant: "destructive"
-                                            });
-                                          }
-                                        } catch (error) {
-                                          console.error('Erro ao buscar DACTE:', error);
-                                          toast({
-                                            title: "Erro",
-                                            description: "Erro ao buscar DACTE",
-                                            variant: "destructive"
-                                          });
-                                        }
-                                      }}
-                                      className="h-8 w-8 p-0 hover:bg-primary/10"
-                                      title="Visualizar DACTE (PDF)"
-                                    >
-                                      <Receipt className="h-4 w-4 text-green-600" />
-                                    </Button>
+                                     <Button
+                                       variant="ghost"
+                                       size="sm"
+                                       onClick={() => {
+                                         window.open(
+                                           `https://n8n.grupoconfix.com/webhook-test/baixar-cte?uuid=${shipment.cte_emission!.uuid_cte}`,
+                                           '_blank'
+                                         );
+                                       }}
+                                       className="h-8 w-8 p-0 hover:bg-primary/10"
+                                       title="Visualizar DACTE (PDF)"
+                                     >
+                                       <Receipt className="h-4 w-4 text-green-600" />
+                                     </Button>
                                   )}
                                 </>
                               )}
