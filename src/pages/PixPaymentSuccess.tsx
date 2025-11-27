@@ -181,8 +181,9 @@ const PixPaymentSuccess = () => {
         const deliveryDetails = completeShipmentData.deliveryDetails || {};
         const shippingQuote = completeShipmentData.shippingQuote || {};
         
-        const senderPersonalData = completeShipmentData.senderPersonalData || {};
-        const recipientPersonalData = completeShipmentData.recipientPersonalData || {};
+        // Dados pessoais estão dentro de addressData.sender e addressData.recipient
+        const sender = addressData.sender || {};
+        const recipient = addressData.recipient || {};
         
         const queryParams = new URLSearchParams();
         
@@ -206,32 +207,32 @@ const PixPaymentSuccess = () => {
         queryParams.append('expedidor', 'Juri Express');
         
         // Dados do remetente (TOMADOR DO SERVIÇO)
-        queryParams.append('remetente_nome', addressData.sender?.name || '');
-        queryParams.append('remetente_documento', senderPersonalData.document || '');
-        queryParams.append('remetente_inscricaoEstadual', senderPersonalData.inscricaoEstadual || '');
-        queryParams.append('remetente_email', senderPersonalData.email || '');
-        queryParams.append('remetente_telefone', senderPersonalData.phone || '');
-        queryParams.append('remetente_endereco', addressData.sender?.street || '');
-        queryParams.append('remetente_numero', addressData.sender?.number || '');
-        queryParams.append('remetente_complemento', addressData.sender?.complement || '');
-        queryParams.append('remetente_bairro', addressData.sender?.neighborhood || '');
-        queryParams.append('remetente_cidade', addressData.sender?.city || '');
-        queryParams.append('remetente_estado', addressData.sender?.state || '');
-        queryParams.append('remetente_cep', addressData.sender?.cep || '');
+        queryParams.append('remetente_nome', sender.name || '');
+        queryParams.append('remetente_documento', sender.document || '');
+        queryParams.append('remetente_inscricaoEstadual', sender.inscricaoEstadual || '');
+        queryParams.append('remetente_email', sender.email || '');
+        queryParams.append('remetente_telefone', sender.phone || '');
+        queryParams.append('remetente_endereco', sender.street || '');
+        queryParams.append('remetente_numero', sender.number || '');
+        queryParams.append('remetente_complemento', sender.complement || '');
+        queryParams.append('remetente_bairro', sender.neighborhood || '');
+        queryParams.append('remetente_cidade', sender.city || '');
+        queryParams.append('remetente_estado', sender.state || '');
+        queryParams.append('remetente_cep', sender.cep || '');
         
         // Dados do destinatário
-        queryParams.append('destinatario_nome', addressData.recipient?.name || '');
-        queryParams.append('destinatario_documento', recipientPersonalData.document || '');
-        queryParams.append('destinatario_inscricaoEstadual', recipientPersonalData.inscricaoEstadual || '');
-        queryParams.append('destinatario_email', recipientPersonalData.email || '');
-        queryParams.append('destinatario_telefone', recipientPersonalData.phone || '');
-        queryParams.append('destinatario_endereco', addressData.recipient?.street || '');
-        queryParams.append('destinatario_numero', addressData.recipient?.number || '');
-        queryParams.append('destinatario_complemento', addressData.recipient?.complement || '');
-        queryParams.append('destinatario_bairro', addressData.recipient?.neighborhood || '');
-        queryParams.append('destinatario_cidade', addressData.recipient?.city || '');
-        queryParams.append('destinatario_estado', addressData.recipient?.state || '');
-        queryParams.append('destinatario_cep', addressData.recipient?.cep || '');
+        queryParams.append('destinatario_nome', recipient.name || '');
+        queryParams.append('destinatario_documento', recipient.document || '');
+        queryParams.append('destinatario_inscricaoEstadual', recipient.inscricaoEstadual || '');
+        queryParams.append('destinatario_email', recipient.email || '');
+        queryParams.append('destinatario_telefone', recipient.phone || '');
+        queryParams.append('destinatario_endereco', recipient.street || '');
+        queryParams.append('destinatario_numero', recipient.number || '');
+        queryParams.append('destinatario_complemento', recipient.complement || '');
+        queryParams.append('destinatario_bairro', recipient.neighborhood || '');
+        queryParams.append('destinatario_cidade', recipient.city || '');
+        queryParams.append('destinatario_estado', recipient.state || '');
+        queryParams.append('destinatario_cep', recipient.cep || '');
         
         // Dados do documento fiscal
         if (documentData.documentType === 'nfe') {
