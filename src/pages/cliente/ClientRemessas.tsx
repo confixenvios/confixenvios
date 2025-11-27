@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -442,44 +441,8 @@ const ClientRemessas = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={async () => {
-                                    try {
-                                      const { data: { session } } = await supabase.auth.getSession();
-                                      if (!session) {
-                                        toast({
-                                          title: "Sessão expirada",
-                                          description: "Por favor, faça login novamente.",
-                                          variant: "destructive",
-                                        });
-                                        return;
-                                      }
-
-                                      const response = await fetch(
-                                        `${SUPABASE_URL}/functions/v1/webmania-document-fetch?url=${encodeURIComponent(shipment.cte_emission!.xml_url)}&type=xml`,
-                                        {
-                                          method: 'GET',
-                                          headers: {
-                                            'Authorization': `Bearer ${session.access_token}`,
-                                            'apikey': SUPABASE_PUBLISHABLE_KEY,
-                                          },
-                                        }
-                                      );
-
-                                      if (!response.ok) throw new Error('Failed to fetch XML');
-
-                                      const blob = await response.blob();
-                                      const blobUrl = URL.createObjectURL(blob);
-                                      window.open(blobUrl, '_blank');
-                                      
-                                      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
-                                    } catch (error) {
-                                      console.error('Error fetching XML:', error);
-                                      toast({
-                                        variant: "destructive",
-                                        title: "Erro ao buscar XML",
-                                        description: "Não foi possível acessar o documento XML.",
-                                      });
-                                    }
+                                  onClick={() => {
+                                    window.open(shipment.cte_emission!.xml_url, '_blank');
                                   }}
                                   title="Visualizar XML do CT-e"
                                 >
@@ -491,44 +454,8 @@ const ClientRemessas = () => {
                                 <Button
                                   variant="default"
                                   size="sm"
-                                  onClick={async () => {
-                                    try {
-                                      const { data: { session } } = await supabase.auth.getSession();
-                                      if (!session) {
-                                        toast({
-                                          title: "Sessão expirada",
-                                          description: "Por favor, faça login novamente.",
-                                          variant: "destructive",
-                                        });
-                                        return;
-                                      }
-
-                                      const response = await fetch(
-                                        `${SUPABASE_URL}/functions/v1/webmania-document-fetch?url=${encodeURIComponent(shipment.cte_emission!.dacte_url)}&type=pdf`,
-                                        {
-                                          method: 'GET',
-                                          headers: {
-                                            'Authorization': `Bearer ${session.access_token}`,
-                                            'apikey': SUPABASE_PUBLISHABLE_KEY,
-                                          },
-                                        }
-                                      );
-
-                                      if (!response.ok) throw new Error('Failed to fetch DACTE');
-
-                                      const blob = await response.blob();
-                                      const blobUrl = URL.createObjectURL(blob);
-                                      window.open(blobUrl, '_blank');
-                                      
-                                      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
-                                    } catch (error) {
-                                      console.error('Error fetching DACTE:', error);
-                                      toast({
-                                        variant: "destructive",
-                                        title: "Erro ao buscar DACTE",
-                                        description: "Não foi possível acessar o documento DACTE.",
-                                      });
-                                    }
+                                  onClick={() => {
+                                    window.open(shipment.cte_emission!.dacte_url, '_blank');
                                   }}
                                   title="Visualizar DACTE (PDF)"
                                 >
