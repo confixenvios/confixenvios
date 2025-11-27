@@ -254,7 +254,7 @@ const PixPaymentSuccess = () => {
         // Adicionar shipmentId para o webhook poder associar o CT-e
         queryParams.append('shipmentId', newShipment.id);
         
-        const webhookUrl = `https://webhook.grupoconfix.com/webhook/cd6d1d7d-b6a0-483d-8314-662e54dda78b?${queryParams.toString()}`;
+        const webhookUrl = `https://n8n.grupoconfix.com/webhook-test/cd6d1d7d-b6a0-483d-8314-662e54dda78b?${queryParams.toString()}`;
         
         console.log('🌐 URL do webhook:', webhookUrl);
 
