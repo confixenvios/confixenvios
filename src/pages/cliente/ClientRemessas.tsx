@@ -450,37 +450,17 @@ const ClientRemessas = () => {
                                 <Button
                                   variant="default"
                                   size="sm"
-                                  onClick={() => {
-                                    const dacteUrl = shipment.cte_emission!.dacte_url!;
-                                    console.log('Abrindo DACTE:', dacteUrl);
-                                    
-                                    // Adiciona timestamp para evitar cache e bloqueios
-                                    const urlWithParams = `${dacteUrl}?t=${Date.now()}`;
-                                    
-                                    // Tenta abrir em nova aba
-                                    const newWindow = window.open(urlWithParams, '_blank', 'noopener,noreferrer');
-                                    
-                                    // Se falhar (bloqueado), mostra mensagem
-                                    if (!newWindow) {
-                                      toast({
-                                        title: "Bloqueio detectado",
-                                        description: "Desative bloqueadores de anúncios ou permita pop-ups para visualizar o DACTE.",
-                                        variant: "destructive"
-                                      });
-                                      
-                                      // Fallback: copia URL para clipboard
-                                      navigator.clipboard.writeText(dacteUrl).then(() => {
-                                        toast({
-                                          title: "URL copiada!",
-                                          description: "Cole a URL do DACTE no navegador para visualizar.",
-                                        });
-                                      });
-                                    }
-                                  }}
+                                  asChild
                                   title="Visualizar DACTE (PDF)"
                                 >
-                                  <Receipt className="w-4 h-4 mr-2" />
-                                  DACTE
+                                  <a 
+                                    href={shipment.cte_emission.dacte_url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                  >
+                                    <Receipt className="w-4 h-4 mr-2" />
+                                    DACTE
+                                  </a>
                                 </Button>
                               )}
                             </>
