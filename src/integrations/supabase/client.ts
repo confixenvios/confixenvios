@@ -6,6 +6,8 @@ import { SessionManager } from "@/utils/sessionManager";
 const SUPABASE_URL = "https://dhznyjtisfdxzbnzinab.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRoem55anRpc2ZkeHpibnppbmFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0MDMyNjAsImV4cCI6MjA3MTk3OTI2MH0.8HFgijn6E2LQSgvP0SQqYA8QDCOoZOqfAC3CMwkf6Co";
 
+export { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY };
+
 // Create enhanced client that supports secure session headers  
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {

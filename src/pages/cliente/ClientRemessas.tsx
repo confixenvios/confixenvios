@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -443,21 +444,38 @@ const ClientRemessas = () => {
                                   size="sm"
                                   onClick={async () => {
                                     try {
-                                      const { data, error } = await supabase.functions.invoke('webmania-document-fetch', {
-                                        body: { 
-                                          url: shipment.cte_emission!.xml_url,
-                                          type: 'xml'
+                                      const { data: { session } } = await supabase.auth.getSession();
+                                      if (!session) {
+                                        toast({
+                                          title: "Sessão expirada",
+                                          description: "Por favor, faça login novamente.",
+                                          variant: "destructive",
+                                        });
+                                        return;
+                                      }
+
+                                      const response = await fetch(
+                                        `${SUPABASE_URL}/functions/v1/webmania-document-fetch`,
+                                        {
+                                          method: 'POST',
+                                          headers: {
+                                            'Content-Type': 'application/json',
+                                            'Authorization': `Bearer ${session.access_token}`,
+                                            'apikey': SUPABASE_PUBLISHABLE_KEY,
+                                          },
+                                          body: JSON.stringify({ 
+                                            url: shipment.cte_emission!.xml_url,
+                                            type: 'xml'
+                                          })
                                         }
-                                      });
+                                      );
 
-                                      if (error) throw error;
+                                      if (!response.ok) throw new Error('Failed to fetch XML');
 
-                                      // Create a blob URL and open in new tab
-                                      const blob = new Blob([data], { type: 'application/xml' });
+                                      const blob = await response.blob();
                                       const blobUrl = URL.createObjectURL(blob);
                                       window.open(blobUrl, '_blank');
                                       
-                                      // Clean up the blob URL after a delay
                                       setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
                                     } catch (error) {
                                       console.error('Error fetching XML:', error);
@@ -480,21 +498,38 @@ const ClientRemessas = () => {
                                   size="sm"
                                   onClick={async () => {
                                     try {
-                                      const { data, error } = await supabase.functions.invoke('webmania-document-fetch', {
-                                        body: { 
-                                          url: shipment.cte_emission!.dacte_url,
-                                          type: 'pdf'
+                                      const { data: { session } } = await supabase.auth.getSession();
+                                      if (!session) {
+                                        toast({
+                                          title: "Sessão expirada",
+                                          description: "Por favor, faça login novamente.",
+                                          variant: "destructive",
+                                        });
+                                        return;
+                                      }
+
+                                      const response = await fetch(
+                                        `${SUPABASE_URL}/functions/v1/webmania-document-fetch`,
+                                        {
+                                          method: 'POST',
+                                          headers: {
+                                            'Content-Type': 'application/json',
+                                            'Authorization': `Bearer ${session.access_token}`,
+                                            'apikey': SUPABASE_PUBLISHABLE_KEY,
+                                          },
+                                          body: JSON.stringify({ 
+                                            url: shipment.cte_emission!.dacte_url,
+                                            type: 'pdf'
+                                          })
                                         }
-                                      });
+                                      );
 
-                                      if (error) throw error;
+                                      if (!response.ok) throw new Error('Failed to fetch DACTE');
 
-                                      // Create a blob URL and open in new tab
-                                      const blob = new Blob([data], { type: 'application/pdf' });
+                                      const blob = await response.blob();
                                       const blobUrl = URL.createObjectURL(blob);
                                       window.open(blobUrl, '_blank');
                                       
-                                      // Clean up the blob URL after a delay
                                       setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
                                     } catch (error) {
                                       console.error('Error fetching DACTE:', error);
