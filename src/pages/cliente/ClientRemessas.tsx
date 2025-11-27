@@ -411,13 +411,6 @@ const ClientRemessas = () => {
                             {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
                           </h3>
                           {getStatusBadge(shipment.status)}
-                          {/* Badge de CT-e Disponível */}
-                          {shipment.cte_emission && (
-                            <Badge variant="success" className="flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3" />
-                              CT-e Disponível
-                            </Badge>
-                          )}
                         </div>
                           <div className="flex items-center text-sm text-muted-foreground">
                             <Calendar className="w-4 h-4 mr-2" />
@@ -434,21 +427,6 @@ const ClientRemessas = () => {
                             <Eye className="w-4 h-4 mr-2" />
                             Ver Detalhes
                           </Button>
-                          
-                          {/* Botão XML - apenas se CT-e foi emitido e aprovado */}
-                          {shipment.cte_emission && shipment.cte_emission.status === 'aprovado' && shipment.cte_emission.xml_url && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                window.open(shipment.cte_emission!.xml_url, '_blank');
-                              }}
-                              title="Visualizar XML do CT-e"
-                            >
-                              <FileText className="w-4 h-4 mr-2" />
-                              XML
-                            </Button>
-                          )}
                           
                           {/* Badge de CT-e Reprovado */}
                           {shipment.cte_emission && shipment.cte_emission.status === 'reprovado' && (
