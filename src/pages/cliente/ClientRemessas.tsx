@@ -455,18 +455,13 @@ const ClientRemessas = () => {
                                       }
 
                                       const response = await fetch(
-                                        `${SUPABASE_URL}/functions/v1/webmania-document-fetch`,
+                                        `${SUPABASE_URL}/functions/v1/webmania-document-fetch?url=${encodeURIComponent(shipment.cte_emission!.xml_url)}&type=xml`,
                                         {
-                                          method: 'POST',
+                                          method: 'GET',
                                           headers: {
-                                            'Content-Type': 'application/json',
                                             'Authorization': `Bearer ${session.access_token}`,
                                             'apikey': SUPABASE_PUBLISHABLE_KEY,
                                           },
-                                          body: JSON.stringify({ 
-                                            url: shipment.cte_emission!.xml_url,
-                                            type: 'xml'
-                                          })
                                         }
                                       );
 
@@ -509,18 +504,13 @@ const ClientRemessas = () => {
                                       }
 
                                       const response = await fetch(
-                                        `${SUPABASE_URL}/functions/v1/webmania-document-fetch`,
+                                        `${SUPABASE_URL}/functions/v1/webmania-document-fetch?url=${encodeURIComponent(shipment.cte_emission!.dacte_url)}&type=pdf`,
                                         {
-                                          method: 'POST',
+                                          method: 'GET',
                                           headers: {
-                                            'Content-Type': 'application/json',
                                             'Authorization': `Bearer ${session.access_token}`,
                                             'apikey': SUPABASE_PUBLISHABLE_KEY,
                                           },
-                                          body: JSON.stringify({ 
-                                            url: shipment.cte_emission!.dacte_url,
-                                            type: 'pdf'
-                                          })
                                         }
                                       );
 
