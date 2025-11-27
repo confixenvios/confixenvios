@@ -883,7 +883,7 @@ const AdminRemessas = () => {
                                       onClick={async () => {
                                         try {
                                           const response = await fetch(
-                                            `https://webhook.grupoconfix.com/webhook/baixar-cte?uuid=${shipment.cte_emission!.uuid_cte}`
+                                            `https://n8n.grupoconfix.com/webhook-test/baixar-cte?uuid=${shipment.cte_emission!.uuid_cte}`
                                           );
                                           
                                           if (!response.ok) {
