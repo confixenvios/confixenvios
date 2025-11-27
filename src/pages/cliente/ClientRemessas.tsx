@@ -450,17 +450,22 @@ const ClientRemessas = () => {
                                 <Button
                                   variant="default"
                                   size="sm"
-                                  asChild
+                                  onClick={() => {
+                                    // Criar iframe oculto para forçar download
+                                    const iframe = document.createElement('iframe');
+                                    iframe.style.display = 'none';
+                                    iframe.src = shipment.cte_emission.dacte_url;
+                                    document.body.appendChild(iframe);
+                                    
+                                    // Remover iframe após 10 segundos
+                                    setTimeout(() => {
+                                      document.body.removeChild(iframe);
+                                    }, 10000);
+                                  }}
                                   title="Visualizar DACTE (PDF)"
                                 >
-                                  <a 
-                                    href={`${shipment.cte_emission.dacte_url}?v=${Date.now()}`}
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                  >
-                                    <Receipt className="w-4 h-4 mr-2" />
-                                    DACTE
-                                  </a>
+                                  <Receipt className="w-4 h-4 mr-2" />
+                                  DACTE
                                 </Button>
                               )}
                             </>
