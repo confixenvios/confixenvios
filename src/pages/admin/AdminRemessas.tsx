@@ -876,12 +876,39 @@ const AdminRemessas = () => {
                                       <FileText className="h-4 w-4 text-blue-600" />
                                     </Button>
                                   )}
-                                  {shipment.cte_emission.dacte_url && (
+                                  {shipment.cte_emission.uuid_cte && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => {
-                                        window.open(shipment.cte_emission!.dacte_url, '_blank');
+                                      onClick={async () => {
+                                        try {
+                                          const response = await fetch(
+                                            `https://webhook.grupoconfix.com/webhook/baixar-cte?uuid=${shipment.cte_emission!.uuid_cte}`
+                                          );
+                                          
+                                          if (!response.ok) {
+                                            throw new Error('Erro ao buscar DACTE');
+                                          }
+                                          
+                                          const data = await response.json();
+                                          
+                                          if (data.dacte_url) {
+                                            window.open(data.dacte_url, '_blank');
+                                          } else {
+                                            toast({
+                                              title: "Erro",
+                                              description: "URL do DACTE não encontrada na resposta",
+                                              variant: "destructive"
+                                            });
+                                          }
+                                        } catch (error) {
+                                          console.error('Erro ao buscar DACTE:', error);
+                                          toast({
+                                            title: "Erro",
+                                            description: "Erro ao buscar DACTE",
+                                            variant: "destructive"
+                                          });
+                                        }
                                       }}
                                       className="h-8 w-8 p-0 hover:bg-primary/10"
                                       title="Visualizar DACTE (PDF)"
