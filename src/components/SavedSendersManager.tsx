@@ -691,12 +691,13 @@ const SenderFormContent = ({ editingSender, isNewSender, onSave, onCancel, loadi
 
         {/* Complemento */}
         <div className="md:col-span-2">
-          <Label htmlFor="complement">Complemento</Label>
+          <Label htmlFor="complement">Complemento *</Label>
           <Input
             id="complement"
             value={formData.complement}
             onChange={(e) => handleInputChange("complement", e.target.value)}
             placeholder="Apto, bloco, etc."
+            required
           />
         </div>
       </div>
