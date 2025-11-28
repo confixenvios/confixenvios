@@ -209,7 +209,7 @@ const Label = () => {
   const isFormValid = () => {
     const requiredFields: (keyof AddressData)[] = [
       'name', 'document', 'phone', 'email', 'cep', 'street', 
-      'number', 'neighborhood', 'city', 'state'
+      'number', 'complement', 'neighborhood', 'city', 'state'
     ];
 
     const senderValid = requiredFields.every(field => senderData[field].trim() !== "");
@@ -582,7 +582,7 @@ const Label = () => {
             />
           </div>
           <div className="space-y-2 md:col-span-2">
-            <FormLabel htmlFor={`${type}-complement`}>Complemento</FormLabel>
+            <FormLabel htmlFor={`${type}-complement`}>Complemento *</FormLabel>
             <Input
               id={`${type}-complement`}
               value={data.complement}
