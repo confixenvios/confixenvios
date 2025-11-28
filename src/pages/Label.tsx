@@ -211,7 +211,6 @@ const Label = () => {
       'name', 'document', 'phone', 'email', 'cep', 'street', 
       'number', 'complement', 'neighborhood', 'city', 'state'
     ];
-    console.log('🔍 VALIDAÇÃO - Complemento obrigatório incluído:', requiredFields.includes('complement'));
 
     const senderValid = requiredFields.every(field => senderData[field].trim() !== "");
     const recipientValid = requiredFields.every(field => recipientData[field].trim() !== "");
