@@ -555,7 +555,7 @@ const AddressFormContent = ({ editingAddress, isNewAddress, onSave, onCancel, lo
   const isFormValid = () => {
     const requiredFields: (keyof AddressData)[] = [
       'name', 'document', 'phone', 'email', 'cep', 'street', 
-      'number', 'neighborhood', 'city', 'state'
+      'number', 'complement', 'neighborhood', 'city', 'state'
     ];
     return requiredFields.every(field => formData[field].trim() !== "");
   };
@@ -668,11 +668,12 @@ const AddressFormContent = ({ editingAddress, isNewAddress, onSave, onCancel, lo
             />
           </div>
           <div className="space-y-2">
-            <Label>Complemento</Label>
+            <Label>Complemento *</Label>
             <Input
               value={formData.complement}
               onChange={(e) => handleInputChange('complement', e.target.value)}
               placeholder="Apto, Bloco..."
+              required
             />
           </div>
         </div>

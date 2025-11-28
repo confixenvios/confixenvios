@@ -948,6 +948,7 @@ const QuoteForm = () => {
       "cep",
       "street",
       "number",
+      "complement",
       "neighborhood",
       "city",
       "state",
@@ -2011,7 +2012,7 @@ const QuoteForm = () => {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label>Complemento</Label>
+                            <Label>Complemento *</Label>
                             <Input
                               value={senderData.complement}
                               onChange={(e) => handleAddressChange("sender", "complement", e.target.value)}
@@ -2244,7 +2245,7 @@ const QuoteForm = () => {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label>Complemento</Label>
+                            <Label>Complemento *</Label>
                             <Input
                               value={recipientData.complement}
                               onChange={(e) => handleAddressChange("recipient", "complement", e.target.value)}
