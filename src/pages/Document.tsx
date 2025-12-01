@@ -136,6 +136,105 @@ const Document = () => {
         description: "Dados salvos. Redirecionando para pagamento...",
       });
 
+      // ========== WEBHOOK DE TESTE (DEBUG) ==========
+      try {
+        console.log('🔍 Disparando webhook de teste para debug...');
+        
+        // Recuperar todos os dados necessários
+        const technicalData = JSON.parse(sessionStorage.getItem('technicalData') || '{}');
+        const senderData = JSON.parse(sessionStorage.getItem('senderData') || '{}');
+        const recipientData = JSON.parse(sessionStorage.getItem('recipientData') || '{}');
+        
+        // Construir query parameters (mesmo formato do PIX webhook)
+        const queryParams = new URLSearchParams();
+        
+        // Dados financeiros
+        queryParams.append('valorTotal', String(currentShipment.price || 0));
+        queryParams.append('mercadoria_valorDeclarado', String(currentShipment.declaredValue || 0));
+        
+        // Dados da remessa
+        queryParams.append('remessa_prazo', String(currentShipment.deliveryTime || 0));
+        
+        // Dados da transportadora
+        queryParams.append('transportadora_nome', currentShipment.carrier || 'Não especificado');
+        queryParams.append('transportadora_servico', currentShipment.serviceType || 'Não especificado');
+        
+        // Dados do Remetente
+        queryParams.append('remetente_nome', senderData.name || '');
+        queryParams.append('remetente_documento', senderData.document || '');
+        queryParams.append('remetente_tipoDocumento', senderData.documentType || '');
+        queryParams.append('remetente_inscricaoEstadual', senderData.inscricaoEstadual || '');
+        queryParams.append('remetente_email', senderData.email || '');
+        queryParams.append('remetente_telefone', senderData.phone || '');
+        queryParams.append('remetente_cep', senderData.cep || '');
+        queryParams.append('remetente_logradouro', senderData.street || '');
+        queryParams.append('remetente_numero', senderData.number || '');
+        queryParams.append('remetente_complemento', senderData.complement || '');
+        queryParams.append('remetente_bairro', senderData.neighborhood || '');
+        queryParams.append('remetente_cidade', senderData.city || '');
+        queryParams.append('remetente_uf', senderData.state || '');
+        
+        // Dados do Destinatário
+        queryParams.append('destinatario_nome', recipientData.name || '');
+        queryParams.append('destinatario_documento', recipientData.document || '');
+        queryParams.append('destinatario_tipoDocumento', recipientData.documentType || '');
+        queryParams.append('destinatario_inscricaoEstadual', recipientData.inscricaoEstadual || '');
+        queryParams.append('destinatario_email', recipientData.email || '');
+        queryParams.append('destinatario_telefone', recipientData.phone || '');
+        queryParams.append('destinatario_cep', recipientData.cep || '');
+        queryParams.append('destinatario_logradouro', recipientData.street || '');
+        queryParams.append('destinatario_numero', recipientData.number || '');
+        queryParams.append('destinatario_complemento', recipientData.complement || '');
+        queryParams.append('destinatario_bairro', recipientData.neighborhood || '');
+        queryParams.append('destinatario_cidade', recipientData.city || '');
+        queryParams.append('destinatario_uf', recipientData.state || '');
+        
+        // Dados Fiscais
+        queryParams.append('documento_tipo', documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo');
+        queryParams.append('documento_chaveNfe', documentType === 'nfe' ? nfeKey : '99999999999999999999999999999999999999999999');
+        queryParams.append('documento_descricaoConteudo', merchandiseDescription || '');
+        
+        // Dados técnicos do primeiro volume
+        const primeiroVolume = technicalData.volumes?.[0] || technicalData;
+        queryParams.append('remessa_peso', String(primeiroVolume.weight || technicalData.weight || 1));
+        queryParams.append('remessa_largura', String(primeiroVolume.width || technicalData.width || 15));
+        queryParams.append('remessa_comprimento', String(primeiroVolume.length || technicalData.length || 20));
+        queryParams.append('remessa_altura', String(primeiroVolume.height || technicalData.height || 10));
+        queryParams.append('remessa_formato', primeiroVolume.merchandiseType || 'caixa');
+        
+        // Informações detalhadas de cada volume
+        const volumes = technicalData.volumes || [technicalData];
+        volumes.forEach((volume: any, index: number) => {
+          const volumeNumber = index + 1;
+          const volumePrefix = `volume${volumeNumber}`;
+          
+          queryParams.append(`${volumePrefix}_peso`, String(volume.weight || 1));
+          queryParams.append(`${volumePrefix}_comprimento`, String(volume.length || 20));
+          queryParams.append(`${volumePrefix}_largura`, String(volume.width || 15));
+          queryParams.append(`${volumePrefix}_altura`, String(volume.height || 10));
+          
+          const volumeCubagem = ((volume.length || 20) * (volume.width || 15) * (volume.height || 10)) / 1000000;
+          queryParams.append(`${volumePrefix}_cubagemVolume`, volumeCubagem.toFixed(3));
+          queryParams.append(`${volumePrefix}_tipoMercadoria`, volume.merchandiseType || 'Normal');
+        });
+        
+        // URL de teste
+        const testWebhookUrl = `https://n8n.grupoconfix.com/webhook-test/cd6d1d7d-b6a0-483d-8314-662e54dda78b?${queryParams.toString()}`;
+        
+        console.log('🔍 Enviando para webhook de teste:', testWebhookUrl);
+        
+        // Disparar webhook (não aguardar resposta para não bloquear)
+        fetch(testWebhookUrl, { method: 'GET' }).catch(err => {
+          console.warn('⚠️ Erro ao disparar webhook de teste (não crítico):', err);
+        });
+        
+        console.log('✅ Webhook de teste disparado com sucesso');
+      } catch (testError) {
+        console.error('❌ Erro ao disparar webhook de teste:', testError);
+        // Não bloqueia o fluxo normal
+      }
+      // ========== FIM DO WEBHOOK DE TESTE ==========
+
       console.log('Document - Navegando para pagamento (remessa será criada após pagamento)');
       navigate("/pagamento");
 
