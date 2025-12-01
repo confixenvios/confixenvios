@@ -1098,21 +1098,10 @@ const AdminRemessas = () => {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => handleSendWebhook(shipment)}
-                                      disabled={sendingWebhook[shipment.id]}
                                       className="h-6 px-2 text-xs hover:bg-primary/10"
                                     >
-                                      {sendingWebhook[shipment.id] ? (
-                                        <>
-                                          <div className="w-3 h-3 mr-1 animate-spin rounded-full border border-primary border-t-transparent" />
-                                          Enviando...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Send className="w-3 h-3 mr-1" />
-                                          Enviar Webhook
-                                        </>
-                                      )}
+                                      <Send className="w-3 h-3 mr-1" />
+                                      Enviar Webhook
                                     </Button>
                                   )}
                                 </div>
