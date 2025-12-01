@@ -1275,39 +1275,22 @@ const QuoteForm = () => {
                     <span>Detalhes da Mercadoria</span>
                   </Label>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <Label htmlFor="quantity" className="text-base font-medium">
-                        Quantidade
-                      </Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="totalValue" className="text-base font-medium">
+                      Valor Total Declarado (R$)
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium text-muted-foreground">
+                        R$
+                      </span>
                       <Input
-                        id="quantity"
-                        type="number"
-                        min="1"
-                        placeholder="1"
-                        value={formData.quantity}
-                        onChange={(e) => handleQuantityChange(e.target.value)}
-                        className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
+                        id="totalValue"
+                        type="text"
+                        placeholder="0,00"
+                        value={getCurrencyDisplayValue()}
+                        onChange={(e) => handleCurrencyChange(e.target.value)}
+                        className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg pl-12"
                       />
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label htmlFor="totalValue" className="text-base font-medium">
-                        Valor Total Declarado (R$)
-                      </Label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium text-muted-foreground">
-                          R$
-                        </span>
-                        <Input
-                          id="totalValue"
-                          type="text"
-                          placeholder="0,00"
-                          value={getCurrencyDisplayValue()}
-                          onChange={(e) => handleCurrencyChange(e.target.value)}
-                          className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg pl-12"
-                        />
-                      </div>
                     </div>
                   </div>
                 </div>
