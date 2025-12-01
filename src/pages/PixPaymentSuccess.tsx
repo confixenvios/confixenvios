@@ -255,6 +255,26 @@ const PixPaymentSuccess = () => {
         queryParams.append('remessa_altura', String(primeiroVolume.height || technicalData.height || 10));
         queryParams.append('remessa_formato', primeiroVolume.merchandiseType || 'caixa');
         
+        // Informações detalhadas de cada volume
+        const volumes = technicalData.volumes || [technicalData];
+        volumes.forEach((volume, index) => {
+          const volumeNumber = index + 1;
+          const volumePrefix = `volume${volumeNumber}`;
+          
+          // Dados básicos do volume
+          queryParams.append(`${volumePrefix}_peso`, String(volume.weight || 1));
+          queryParams.append(`${volumePrefix}_comprimento`, String(volume.length || 20));
+          queryParams.append(`${volumePrefix}_largura`, String(volume.width || 15));
+          queryParams.append(`${volumePrefix}_altura`, String(volume.height || 10));
+          
+          // Cubagem individual do volume (calculada em m³)
+          const volumeCubagem = ((volume.length || 20) * (volume.width || 15) * (volume.height || 10)) / 1000000;
+          queryParams.append(`${volumePrefix}_cubagemVolume`, volumeCubagem.toFixed(3));
+          
+          // Tipo de mercadoria do volume
+          queryParams.append(`${volumePrefix}_tipoMercadoria`, volume.merchandiseType || 'Normal');
+        });
+        
         // Adicionar shipmentId para o webhook poder associar o CT-e
         queryParams.append('shipmentId', newShipment.id);
         
