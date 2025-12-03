@@ -350,7 +350,7 @@ const AdminRemessas = () => {
     return () => clearInterval(interval);
   }, [authLoading, user, isAdmin]);
 
-  // Função para enviar webhook manualmente
+  // Função para enviar webhook manualmente - envia TODOS os dados da remessa
   const handleSendWebhook = async (shipment: AdminShipment) => {
     setSendingWebhook(prev => ({ ...prev, [shipment.id]: true }));
     
@@ -370,28 +370,97 @@ const AdminRemessas = () => {
           pricingTableData = data;
         }
       }
+
+      // Preparar todos os dados da remessa para envio
+      const webhookData: Record<string, string> = {
+        // Dados básicos
+        shipment_id: shipment.id || '',
+        tracking_code: shipment.tracking_code || '',
+        status: shipment.status || '',
+        created_at: shipment.created_at || '',
+        
+        // Dimensões e peso
+        weight: String(shipment.weight || 0),
+        length: String(shipment.length || 0),
+        width: String(shipment.width || 0),
+        height: String(shipment.height || 0),
+        format: shipment.format || '',
+        
+        // Opções de envio
+        selected_option: shipment.selected_option || '',
+        pickup_option: shipment.pickup_option || '',
+        document_type: shipment.document_type || '',
+        pricing_table_name: shipment.pricing_table_name || '',
+        pricing_table_id: shipment.pricing_table_id || '',
+        
+        // CTE
+        cte_key: shipment.cte_key || '',
+        label_pdf_url: shipment.label_pdf_url || '',
+        
+        // Remetente
+        sender_name: shipment.sender_address?.name || '',
+        sender_street: shipment.sender_address?.street || '',
+        sender_number: shipment.sender_address?.number || '',
+        sender_complement: shipment.sender_address?.complement || '',
+        sender_neighborhood: shipment.sender_address?.neighborhood || '',
+        sender_city: shipment.sender_address?.city || '',
+        sender_state: shipment.sender_address?.state || '',
+        sender_cep: shipment.sender_address?.cep || '',
+        sender_phone: shipment.sender_address?.phone || '',
+        sender_document: (shipment.quote_data as any)?.addressData?.sender?.document || '',
+        sender_email: (shipment.quote_data as any)?.addressData?.sender?.email || '',
+        
+        // Destinatário
+        recipient_name: shipment.recipient_address?.name || '',
+        recipient_street: shipment.recipient_address?.street || '',
+        recipient_number: shipment.recipient_address?.number || '',
+        recipient_complement: shipment.recipient_address?.complement || '',
+        recipient_neighborhood: shipment.recipient_address?.neighborhood || '',
+        recipient_city: shipment.recipient_address?.city || '',
+        recipient_state: shipment.recipient_address?.state || '',
+        recipient_cep: shipment.recipient_address?.cep || '',
+        recipient_phone: shipment.recipient_address?.phone || '',
+        recipient_document: (shipment.quote_data as any)?.addressData?.recipient?.document || '',
+        recipient_email: (shipment.quote_data as any)?.addressData?.recipient?.email || '',
+        
+        // Motorista
+        motorista_nome: shipment.motoristas?.nome || '',
+        motorista_telefone: shipment.motoristas?.telefone || '',
+        motorista_email: shipment.motoristas?.email || '',
+        
+        // Dados de cotação e pagamento como JSON
+        quote_data: shipment.quote_data ? JSON.stringify(shipment.quote_data) : '',
+        payment_data: shipment.payment_data ? JSON.stringify(shipment.payment_data) : '',
+        pricing_table_data: pricingTableData ? JSON.stringify(pricingTableData) : '',
+        
+        // CTE emission se existir
+        cte_uuid: shipment.cte_emission?.uuid_cte || '',
+        cte_chave: shipment.cte_emission?.chave_cte || '',
+        cte_numero: shipment.cte_emission?.numero_cte || '',
+        cte_status: shipment.cte_emission?.status || '',
+        cte_xml_url: shipment.cte_emission?.xml_url || '',
+        cte_dacte_url: shipment.cte_emission?.dacte_url || ''
+      };
+
+      // Construir URL com query params
+      const params = new URLSearchParams(webhookData);
+      const webhookUrl = `https://n8n.grupoconfix.com/webhook-test/f5d4f949-29fd-4200-b7a1-b9a140e8c16c?${params.toString()}`;
       
-      const { data, error } = await supabase.functions.invoke('shipment-webhook-dispatch', {
-        body: {
-          shipmentId: shipment.id,
-          shipmentData: {
-            tracking_code: shipment.tracking_code,
-            status: shipment.status,
-            created_at: shipment.created_at,
-            // Incluir dados completos da tabela de preços
-            pricing_table_name: shipment.pricing_table_name,
-            pricing_table_data: pricingTableData,
-            // Incluir todos os dados da remessa
-            ...shipment
-          }
+      console.log('📤 [WEBHOOK MANUAL] Enviando para URL:', webhookUrl.substring(0, 100) + '...');
+      
+      // Enviar via GET
+      const response = await fetch(webhookUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
         }
       });
 
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      console.log('✅ [WEBHOOK MANUAL] Webhook enviado com sucesso:', data);
+      console.log('✅ [WEBHOOK MANUAL] Webhook enviado com sucesso');
       
       // Atualizar status do webhook
       setWebhookStatuses(prev => ({ 
@@ -405,7 +474,7 @@ const AdminRemessas = () => {
         variant: "default"
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [WEBHOOK MANUAL] Erro ao enviar webhook:', error);
       
       setWebhookStatuses(prev => ({ 
