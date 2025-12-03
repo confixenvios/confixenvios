@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, Package, Eye, Download, Filter, UserPlus, Truck, Calendar as CalendarIcon, MapPin, Clock, FileText, Send, CheckCircle, XCircle, AlertCircle, Receipt } from "lucide-react";
+import { Search, Package, Eye, Download, Filter, UserPlus, Truck, Calendar as CalendarIcon, MapPin, Clock, FileText, Send, CheckCircle, XCircle, AlertCircle, Receipt, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -1162,14 +1162,19 @@ const AdminRemessas = () => {
                                 {/* Status do Webhook e Botão Manual */}
                                 <div className="flex items-center gap-2 text-xs mt-2">
                                   {getWebhookStatusBadge(shipment)}
-                                  {(webhookStatuses[shipment.id] === 'pending' || webhookStatuses[shipment.id] === 'error') && 
-                                   ['PAID', 'PAYMENT_CONFIRMED', 'LABEL_GENERATED', 'PAGO_AGUARDANDO_ETIQUETA'].includes(shipment.status) && (
+                                  {['PAID', 'PAYMENT_CONFIRMED', 'LABEL_GENERATED', 'PAGO_AGUARDANDO_ETIQUETA'].includes(shipment.status) && (
                                     <Button
                                       variant="outline"
                                       size="sm"
                                       className="h-6 px-2 text-xs hover:bg-primary/10"
+                                      onClick={() => handleSendWebhook(shipment)}
+                                      disabled={sendingWebhook[shipment.id]}
                                     >
-                                      <Send className="w-3 h-3 mr-1" />
+                                      {sendingWebhook[shipment.id] ? (
+                                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                      ) : (
+                                        <Send className="w-3 h-3 mr-1" />
+                                      )}
                                       Enviar Webhook
                                     </Button>
                                   )}
