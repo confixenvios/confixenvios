@@ -4,15 +4,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Package, Loader2, Truck, Car, Bike, MapPin } from 'lucide-react';
+import { Package, Loader2, Truck, Car, Bike, MapPin, Scale, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface B2BClient {
   id: string;
   company_name: string;
+  email: string;
+  phone: string | null;
+  cnpj: string | null;
+  user_id: string | null;
 }
 
 const B2BNovaRemessa = () => {
@@ -25,7 +28,25 @@ const B2BNovaRemessa = () => {
     vehicle_type: '',
     same_cep: 'yes',
     delivery_ceps: [''],
+    volume_weights: [''] as string[],
   });
+
+  // Calcula o valor total do frete
+  const calculateTotal = () => {
+    const basePrice = 15;
+    const weights = formData.volume_weights.map(w => parseFloat(w) || 0);
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    
+    if (totalWeight <= 5) {
+      return basePrice;
+    }
+    
+    const extraKgs = Math.ceil(totalWeight - 5);
+    return basePrice + extraKgs;
+  };
+
+  const totalWeight = formData.volume_weights.map(w => parseFloat(w) || 0).reduce((sum, w) => sum + w, 0);
+  const totalPrice = calculateTotal();
 
   useEffect(() => {
     loadClient();
@@ -41,7 +62,7 @@ const B2BNovaRemessa = () => {
 
       const { data: clientData, error } = await supabase
         .from('b2b_clients')
-        .select('id, company_name')
+        .select('id, company_name, email, phone, cnpj, user_id')
         .eq('user_id', user.id)
         .single();
 
@@ -61,29 +82,38 @@ const B2BNovaRemessa = () => {
     e.preventDefault();
     if (!client) return;
 
+    // Validar pesos
+    const hasValidWeights = formData.volume_weights.every(w => parseFloat(w) > 0);
+    if (!hasValidWeights) {
+      toast.error('Preencha o peso de todos os volumes');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const { error } = await supabase
-        .from('b2b_shipments')
-        .insert({
-          b2b_client_id: client.id,
-          volume_count: parseInt(formData.volume_count),
-          delivery_date: formData.delivery_date,
-          status: 'PENDENTE',
-          observations: JSON.stringify({
-            vehicle_type: formData.vehicle_type,
-            delivery_ceps: formData.delivery_ceps.filter(cep => cep.trim() !== '')
-          })
-        });
-
-      if (error) throw error;
-
-      toast.success('Solicitação de coleta enviada com sucesso!');
-      navigate('/b2b-expresso/dashboard');
+      // Navegar para tela de pagamento PIX
+      navigate('/b2b-expresso/pix-pagamento', {
+        state: {
+          amount: totalPrice,
+          shipmentData: {
+            clientId: client.id,
+            clientName: client.company_name,
+            clientEmail: client.email,
+            clientPhone: client.phone,
+            clientDocument: client.cnpj,
+            userId: client.user_id,
+            volumeCount: parseInt(formData.volume_count),
+            deliveryDate: formData.delivery_date,
+            vehicleType: formData.vehicle_type,
+            deliveryCeps: formData.delivery_ceps.filter(cep => cep.trim() !== ''),
+            volumeWeights: formData.volume_weights.map(w => parseFloat(w) || 0),
+            totalWeight: totalWeight
+          }
+        }
+      });
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao solicitar coleta');
-    } finally {
+      toast.error(error.message || 'Erro ao processar solicitação');
       setLoading(false);
     }
   };
@@ -95,7 +125,8 @@ const B2BNovaRemessa = () => {
       setFormData(prev => ({
         ...prev,
         [field]: value,
-        delivery_ceps: Array(cepCount).fill('').map((_, i) => prev.delivery_ceps[i] || '')
+        delivery_ceps: Array(cepCount).fill('').map((_, i) => prev.delivery_ceps[i] || ''),
+        volume_weights: Array(volumeCount).fill('').map((_, i) => prev.volume_weights[i] || '')
       }));
     } else if (field === 'same_cep') {
       const volumeCount = parseInt(formData.volume_count) || 0;
@@ -111,7 +142,6 @@ const B2BNovaRemessa = () => {
   };
 
   const handleCepChange = (index: number, value: string) => {
-    // Formata CEP automaticamente
     const formatted = value
       .replace(/\D/g, '')
       .replace(/(\d{5})(\d)/, '$1-$2')
@@ -120,6 +150,16 @@ const B2BNovaRemessa = () => {
     setFormData(prev => ({
       ...prev,
       delivery_ceps: prev.delivery_ceps.map((cep, i) => i === index ? formatted : cep)
+    }));
+  };
+
+  const handleWeightChange = (index: number, value: string) => {
+    // Permitir apenas números e ponto decimal
+    const formatted = value.replace(/[^\d.]/g, '');
+    
+    setFormData(prev => ({
+      ...prev,
+      volume_weights: prev.volume_weights.map((w, i) => i === index ? formatted : w)
     }));
   };
 
@@ -174,7 +214,46 @@ const B2BNovaRemessa = () => {
               </div>
             </div>
 
-            {/* Seção 2: Tipo de Veículo */}
+            {/* Seção 2: Peso dos Volumes */}
+            {parseInt(formData.volume_count) > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b">
+                  <Scale className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold text-lg">Peso dos Volumes</h3>
+                </div>
+
+                <p className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-200 dark:border-blue-900">
+                  Informe o peso em kg de cada volume
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {formData.volume_weights.map((weight, index) => (
+                    <div key={index} className="space-y-2 p-4 bg-muted/30 rounded-lg">
+                      <Label htmlFor={`weight_${index}`} className="text-base font-medium">
+                        Volume {index + 1} - Peso (kg) *
+                      </Label>
+                      <Input
+                        id={`weight_${index}`}
+                        type="text"
+                        value={weight}
+                        onChange={(e) => handleWeightChange(index, e.target.value)}
+                        required
+                        placeholder="Ex: 2.5"
+                        className="h-12 text-base"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Peso total:</strong> {totalWeight.toFixed(2)} kg
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Seção 3: Tipo de Veículo */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 pb-2 border-b">
                 <Truck className="h-5 w-5 text-primary" />
@@ -237,7 +316,7 @@ const B2BNovaRemessa = () => {
               </div>
             </div>
 
-            {/* Seção 3: Endereços de Entrega */}
+            {/* Seção 4: Endereços de Entrega */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 pb-2 border-b">
                 <MapPin className="h-5 w-5 text-primary" />
@@ -308,12 +387,37 @@ const B2BNovaRemessa = () => {
               </div>
             </div>
 
+            {/* Seção 5: Valor Total */}
+            {parseInt(formData.volume_count) > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b">
+                  <DollarSign className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold text-lg">Valor do Frete</h3>
+                </div>
+
+                <div className="p-6 bg-primary/5 border-2 border-primary/20 rounded-lg">
+                  <div className="text-center space-y-2">
+                    <p className="text-sm text-muted-foreground">Valor Total a Pagar</p>
+                    <p className="text-4xl font-bold text-primary">
+                      R$ {totalPrice.toFixed(2)}
+                    </p>
+                    <div className="text-xs text-muted-foreground space-y-1 mt-4">
+                      <p>• Valor base: R$ 15,00 (até 5kg)</p>
+                      {totalWeight > 5 && (
+                        <p>• Adicional: R$ {(totalPrice - 15).toFixed(2)} ({Math.ceil(totalWeight - 5)}kg extras)</p>
+                      )}
+                      <p>• Peso total: {totalWeight.toFixed(2)} kg</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <Button type="submit" className="w-full" size="lg" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando solicitação...
+                  Processando...
                 </>
               ) : (
                 <>
