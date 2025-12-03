@@ -428,6 +428,7 @@ const AdminRemessas = () => {
         sender_phone: shipment.sender_address?.phone || '',
         sender_document: (shipment.quote_data as any)?.addressData?.sender?.document || '',
         sender_email: (shipment.quote_data as any)?.addressData?.sender?.email || '',
+        sender_inscricao_estadual: (shipment.quote_data as any)?.addressData?.sender?.inscricaoEstadual || '',
         
         // Destinatário
         recipient_name: shipment.recipient_address?.name || '',
@@ -441,6 +442,7 @@ const AdminRemessas = () => {
         recipient_phone: shipment.recipient_address?.phone || '',
         recipient_document: (shipment.quote_data as any)?.addressData?.recipient?.document || '',
         recipient_email: (shipment.quote_data as any)?.addressData?.recipient?.email || '',
+        recipient_inscricao_estadual: (shipment.quote_data as any)?.addressData?.recipient?.inscricaoEstadual || '',
         
         // Motorista
         motorista_nome: shipment.motoristas?.nome || '',
