@@ -478,6 +478,9 @@ const AdminRemessas = () => {
                            (shipment.payment_data as any)?.amount || 0),
         valor_mercadoria: String((shipment.quote_data as any)?.quoteData?.totalMerchandiseValue || 
                                  (shipment.quote_data as any)?.originalFormData?.totalMerchandiseValue || 0),
+        prazo: String((shipment.quote_data as any)?.deliveryDetails?.deliveryDays || 
+                     (shipment.quote_data as any)?.quoteData?.shippingQuote?.economicDays ||
+                     (shipment.quote_data as any)?.quoteData?.shippingQuote?.expressDays || 0),
         
         // Volumes individuais mapeados
         ...(() => {
