@@ -464,9 +464,40 @@ const AdminRemessas = () => {
         cte_uuid: shipment.cte_emission?.uuid_cte || '',
         cte_chave: shipment.cte_emission?.chave_cte || '',
         cte_numero: shipment.cte_emission?.numero_cte || '',
+        cte_serie: shipment.cte_emission?.serie || '',
         cte_status: shipment.cte_emission?.status || '',
         cte_xml_url: shipment.cte_emission?.xml_url || '',
-        cte_dacte_url: shipment.cte_emission?.dacte_url || ''
+        cte_dacte_url: shipment.cte_emission?.dacte_url || '',
+        
+        // Peso total e valor total
+        peso_total: String((shipment.quote_data as any)?.quoteData?.totalWeight || 
+                          (shipment.quote_data as any)?.technicalData?.totalWeight || 
+                          shipment.weight || 0),
+        valor_total: String((shipment.quote_data as any)?.deliveryDetails?.totalPrice || 
+                           (shipment.quote_data as any)?.quoteData?.shippingQuote?.economicPrice ||
+                           (shipment.payment_data as any)?.amount || 0),
+        valor_mercadoria: String((shipment.quote_data as any)?.quoteData?.totalMerchandiseValue || 
+                                 (shipment.quote_data as any)?.originalFormData?.totalMerchandiseValue || 0),
+        
+        // Volumes individuais mapeados
+        ...(() => {
+          const volumes = (shipment.quote_data as any)?.quoteData?.volumes || 
+                         (shipment.quote_data as any)?.technicalData?.volumes || 
+                         (shipment.quote_data as any)?.originalFormData?.volumes || [];
+          const volumeParams: Record<string, string> = {};
+          volumeParams['total_volumes'] = String(volumes.length);
+          
+          volumes.forEach((vol: any, index: number) => {
+            const num = index + 1;
+            volumeParams[`volume${num}_peso`] = String(vol.weight || 0);
+            volumeParams[`volume${num}_comprimento`] = String(vol.length || 0);
+            volumeParams[`volume${num}_largura`] = String(vol.width || 0);
+            volumeParams[`volume${num}_altura`] = String(vol.height || 0);
+            volumeParams[`volume${num}_tipo`] = vol.merchandiseType || 'normal';
+          });
+          
+          return volumeParams;
+        })()
       };
 
       // Construir URL com query params
