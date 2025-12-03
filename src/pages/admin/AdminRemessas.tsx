@@ -428,6 +428,12 @@ const AdminRemessas = () => {
         motorista_telefone: shipment.motoristas?.telefone || '',
         motorista_email: shipment.motoristas?.email || '',
         
+        // Descrição do conteúdo (declaração de conteúdo)
+        content_description: (shipment.quote_data as any)?.fiscalData?.contentDescription || 
+                            (shipment.quote_data as any)?.documentData?.merchandiseDescription ||
+                            (shipment.quote_data as any)?.descricaoMercadoria ||
+                            (shipment.quote_data as any)?.merchandiseDescription || '',
+        
         // Dados de cotação e pagamento como JSON
         quote_data: shipment.quote_data ? JSON.stringify(shipment.quote_data) : '',
         payment_data: shipment.payment_data ? JSON.stringify(shipment.payment_data) : '',
