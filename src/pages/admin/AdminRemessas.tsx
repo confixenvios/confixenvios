@@ -393,6 +393,25 @@ const AdminRemessas = () => {
         pricing_table_name: shipment.pricing_table_name || '',
         pricing_table_id: shipment.pricing_table_id || '',
         
+        // Transportadora selecionada (magalog ou jadlog)
+        selected_carrier: (() => {
+          const quoteInfo = (shipment.quote_data as any)?.quoteData?.shippingQuote;
+          if (!quoteInfo) return '';
+          const jadlog = quoteInfo.jadlog;
+          const magalog = quoteInfo.magalog;
+          if (!jadlog || !magalog) return '';
+          
+          const selectedOpt = shipment.selected_option;
+          if (selectedOpt === 'economic') {
+            // Escolheu o mais barato
+            return magalog.preco_total <= jadlog.preco_total ? 'magalog' : 'jadlog';
+          } else if (selectedOpt === 'express') {
+            // Escolheu o mais rápido
+            return jadlog.prazo <= magalog.prazo ? 'jadlog' : 'magalog';
+          }
+          return '';
+        })(),
+        
         // CTE
         cte_key: shipment.cte_key || '',
         label_pdf_url: shipment.label_pdf_url || '',
