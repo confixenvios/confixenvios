@@ -60,6 +60,7 @@ import B2BLayout from "./pages/b2b/B2BLayout";
 import B2BDashboard from "./pages/b2b/B2BDashboard";
 import B2BNovaRemessa from "./pages/b2b/B2BNovaRemessa";
 import B2BRelatorios from "./pages/b2b/B2BRelatorios";
+import B2BPixPayment from "./pages/b2b/B2BPixPayment";
 
 const queryClient = new QueryClient();
 
@@ -155,6 +156,7 @@ const App = () => (
             <Route path="/b2b-expresso/*" element={<B2BLayout />}>
               <Route path="dashboard" element={<B2BDashboard />} />
               <Route path="nova-remessa" element={<B2BNovaRemessa />} />
+              <Route path="pix-pagamento" element={<B2BPixPayment />} />
               <Route path="relatorios" element={<B2BRelatorios />} />
             </Route>
 
