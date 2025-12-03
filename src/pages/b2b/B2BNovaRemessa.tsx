@@ -82,6 +82,12 @@ const B2BNovaRemessa = () => {
     e.preventDefault();
     if (!client) return;
 
+    // Validar tipo de veículo
+    if (!formData.vehicle_type) {
+      toast.error('Selecione o tipo de veículo para coleta e entrega');
+      return;
+    }
+
     // Validar pesos
     const hasValidWeights = formData.volume_weights.every(w => parseFloat(w) > 0);
     if (!hasValidWeights) {
