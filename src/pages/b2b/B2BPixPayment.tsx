@@ -71,7 +71,17 @@ const B2BPixPayment = () => {
         cpf: shipmentData?.clientDocument || "000.000.000-00",
         amount,
         description: `B2B Expresso - ${shipmentData?.volumeCount} volumes`,
-        userId: shipmentData?.userId || null
+        userId: shipmentData?.userId || null,
+        isB2B: true,
+        b2bData: {
+          clientId: shipmentData?.clientId,
+          volumeCount: shipmentData?.volumeCount,
+          volumeWeights: shipmentData?.volumeWeights,
+          totalWeight: shipmentData?.totalWeight,
+          deliveryDate: shipmentData?.deliveryDate,
+          vehicleType: shipmentData?.vehicleType,
+          deliveryCeps: shipmentData?.deliveryCeps
+        }
       };
 
       const { data, error } = await supabase.functions.invoke('create-pix-payment', {

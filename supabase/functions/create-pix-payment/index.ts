@@ -108,7 +108,7 @@ serve(async (req) => {
       );
     }
     
-    const { name, phone, email, cpf, amount, description, userId, quoteData, documentData } = requestBody;
+    const { name, phone, email, cpf, amount, description, userId, quoteData, documentData, isB2B, b2bData } = requestBody;
 
     // Get API key
     const abacateApiKey = Deno.env.get('ABACATE_PAY_API_KEY');
@@ -142,61 +142,99 @@ serve(async (req) => {
 
     // NOVO: Salvar cotação temporária antes de gerar PIX
     console.log('💾 Salvando cotação temporária...');
+    console.log('📦 isB2B:', isB2B);
     console.log('📦 Dados da cotação recebidos:', quoteData);
     
-    // Verificar se os dados completos da cotação foram enviados
-    if (!quoteData || !quoteData.senderData || !quoteData.recipientData) {
-      console.error('❌ Dados da cotação incompletos');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Dados da cotação não encontrados. Reinicie o processo.' 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
+    let tempQuoteData;
     
-    // Usar dados reais da cotação
-    const tempQuoteData = {
-      external_id: externalId,
-      user_id: userId || null,
-      sender_data: quoteData.senderData,
-      recipient_data: quoteData.recipientData,
-      package_data: quoteData.formData ? {
-        weight: parseFloat(quoteData.formData.weight) || 1,
-        length: parseFloat(quoteData.formData.length) || 20,
-        width: parseFloat(quoteData.formData.width) || 20,
-        height: parseFloat(quoteData.formData.height) || 20,
-        format: quoteData.formData.format || 'caixa',
-        quantity: parseInt(quoteData.formData.quantity) || 1,
-        unitValue: parseFloat(quoteData.formData.unitValue) || amount,
-        totalValue: quoteData.totalMerchandiseValue || amount
-      } : {
-        weight: 1,
-        length: 20,
-        width: 20,
-        height: 20,
-        format: 'caixa',
-        quantity: 1,
-        unitValue: amount,
-        totalValue: amount
-      },
-      quote_options: {
-        selectedOption: quoteData.selectedOption || 'standard',
-        pickupOption: quoteData.pickupOption || 'dropoff',
-        amount: amount,
-        description: description || 'Pagamento PIX - Confix Envios',
-        shippingQuote: quoteData.quoteData?.shippingQuote || null,
-        pickupDetails: quoteData.pickupDetails || null,
-        documentType: documentData?.documentType || null,
-        nfeKey: documentData?.nfeKey || null,
-        merchandiseDescription: documentData?.merchandiseDescription || null
-      },
-      status: 'pending_payment'
-    };
+    // B2B flow - não requer quoteData completo
+    if (isB2B && b2bData) {
+      console.log('📦 Fluxo B2B detectado');
+      tempQuoteData = {
+        external_id: externalId,
+        user_id: userId || null,
+        sender_data: {
+          name: name,
+          email: email,
+          phone: phone,
+          document: cpf,
+          clientId: b2bData.clientId
+        },
+        recipient_data: {
+          deliveryCeps: b2bData.deliveryCeps || [],
+          vehicleType: b2bData.vehicleType,
+          deliveryDate: b2bData.deliveryDate
+        },
+        package_data: {
+          volumeCount: b2bData.volumeCount || 1,
+          volumeWeights: b2bData.volumeWeights || [],
+          totalWeight: b2bData.totalWeight || 0
+        },
+        quote_options: {
+          selectedOption: 'b2b_express',
+          pickupOption: 'coleta',
+          amount: amount,
+          description: description || 'B2B Expresso - Confix Envios',
+          isB2B: true,
+          vehicleType: b2bData.vehicleType
+        },
+        status: 'pending_payment'
+      };
+    } else {
+      // Fluxo regular - requer quoteData completo
+      if (!quoteData || !quoteData.senderData || !quoteData.recipientData) {
+        console.error('❌ Dados da cotação incompletos');
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Dados da cotação não encontrados. Reinicie o processo.' 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400 
+          }
+        );
+      }
+      
+      // Usar dados reais da cotação
+      tempQuoteData = {
+        external_id: externalId,
+        user_id: userId || null,
+        sender_data: quoteData.senderData,
+        recipient_data: quoteData.recipientData,
+        package_data: quoteData.formData ? {
+          weight: parseFloat(quoteData.formData.weight) || 1,
+          length: parseFloat(quoteData.formData.length) || 20,
+          width: parseFloat(quoteData.formData.width) || 20,
+          height: parseFloat(quoteData.formData.height) || 20,
+          format: quoteData.formData.format || 'caixa',
+          quantity: parseInt(quoteData.formData.quantity) || 1,
+          unitValue: parseFloat(quoteData.formData.unitValue) || amount,
+          totalValue: quoteData.totalMerchandiseValue || amount
+        } : {
+          weight: 1,
+          length: 20,
+          width: 20,
+          height: 20,
+          format: 'caixa',
+          quantity: 1,
+          unitValue: amount,
+          totalValue: amount
+        },
+        quote_options: {
+          selectedOption: quoteData.selectedOption || 'standard',
+          pickupOption: quoteData.pickupOption || 'dropoff',
+          amount: amount,
+          description: description || 'Pagamento PIX - Confix Envios',
+          shippingQuote: quoteData.quoteData?.shippingQuote || null,
+          pickupDetails: quoteData.pickupDetails || null,
+          documentType: documentData?.documentType || null,
+          nfeKey: documentData?.nfeKey || null,
+          merchandiseDescription: documentData?.merchandiseDescription || null
+        },
+        status: 'pending_payment'
+      };
+    }
 
     const { data: savedQuote, error: quoteError } = await supabase
       .from('temp_quotes')
