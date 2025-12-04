@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, Loader2 } from 'lucide-react';
+import { Package, Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 const B2BAuth = () => {
@@ -51,7 +51,15 @@ const B2BAuth = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <div className="w-full max-w-md">
+        <Link 
+          to="/" 
+          className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar
+        </Link>
+        <Card>
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
             <div className="p-3 bg-primary/10 rounded-full">
@@ -102,6 +110,7 @@ const B2BAuth = () => {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };
