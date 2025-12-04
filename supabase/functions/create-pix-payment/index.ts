@@ -110,10 +110,19 @@ serve(async (req) => {
     
     const { name, phone, email, cpf, amount, description, userId, quoteData, documentData, isB2B, b2bData } = requestBody;
 
-    // Get API key
-    const abacateApiKey = Deno.env.get('ABACATE_PAY_API_KEY');
+    // Get API key - usar API key B2B para remessas B2B expresso
+    let abacateApiKey: string | undefined;
+    
+    if (isB2B) {
+      abacateApiKey = Deno.env.get('ABACATE_PAY_B2B_API_KEY');
+      console.log('🏢 Usando API key B2B para remessa expresso');
+    } else {
+      abacateApiKey = Deno.env.get('ABACATE_PAY_API_KEY');
+      console.log('📦 Usando API key padrão para remessa normal');
+    }
+    
     if (!abacateApiKey) {
-      console.error('❌ ABACATE_PAY_API_KEY not found');
+      console.error('❌ API key não encontrada:', isB2B ? 'ABACATE_PAY_B2B_API_KEY' : 'ABACATE_PAY_API_KEY');
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -126,7 +135,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('✅ API Key found');
+    console.log('✅ API Key found (B2B:', isB2B, ')');
 
     // Gerar external ID único
     const externalId = `confix_${Date.now()}_${Math.random().toString(36).substring(7)}`;
