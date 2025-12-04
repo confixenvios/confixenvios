@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Package, Plus, BarChart3, LogOut, LayoutDashboard } from 'lucide-react';
+import { Package, Plus, BarChart3, LogOut, LayoutDashboard, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Sidebar,
@@ -65,6 +65,7 @@ const B2BLayout = () => {
   const menuItems = [
     { title: 'Dashboard', url: '/b2b-expresso/dashboard', icon: LayoutDashboard },
     { title: 'Novo Envio', url: '/b2b-expresso/nova-remessa', icon: Plus },
+    { title: 'Endereços', url: '/b2b-expresso/enderecos', icon: MapPin },
     { title: 'Relatórios', url: '/b2b-expresso/relatorios', icon: BarChart3 },
   ];
 

@@ -458,6 +458,74 @@ export type Database = {
         }
         Relationships: []
       }
+      b2b_delivery_addresses: {
+        Row: {
+          b2b_client_id: string
+          cep: string
+          city: string
+          complement: string | null
+          created_at: string
+          id: string
+          is_default: boolean | null
+          name: string
+          neighborhood: string
+          number: string
+          recipient_document: string | null
+          recipient_name: string
+          recipient_phone: string
+          reference: string | null
+          state: string
+          street: string
+          updated_at: string
+        }
+        Insert: {
+          b2b_client_id: string
+          cep: string
+          city: string
+          complement?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          name: string
+          neighborhood: string
+          number: string
+          recipient_document?: string | null
+          recipient_name: string
+          recipient_phone: string
+          reference?: string | null
+          state: string
+          street: string
+          updated_at?: string
+        }
+        Update: {
+          b2b_client_id?: string
+          cep?: string
+          city?: string
+          complement?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          neighborhood?: string
+          number?: string
+          recipient_document?: string | null
+          recipient_name?: string
+          recipient_phone?: string
+          reference?: string | null
+          state?: string
+          street?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "b2b_delivery_addresses_b2b_client_id_fkey"
+            columns: ["b2b_client_id"]
+            isOneToOne: false
+            referencedRelation: "b2b_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       b2b_shipments: {
         Row: {
           b2b_client_id: string
