@@ -238,7 +238,6 @@ const B2BDashboard = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <p className="font-mono text-sm font-semibold">{shipment.tracking_code}</p>
-                        {getStatusBadge(shipment.status)}
                         {shipment.volume_count && (
                           <Badge variant="outline" className="text-xs">
                             {shipment.volume_count} volume(s)
@@ -299,16 +298,12 @@ const B2BDashboard = () => {
                   <p className="font-mono font-semibold">{selectedShipment.tracking_code}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <div>{getStatusBadge(selectedShipment.status)}</div>
+                  <p className="text-sm text-muted-foreground">Volumes</p>
+                  <p className="font-semibold">{selectedShipment.volume_count || '-'}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Volumes</p>
-                  <p className="font-semibold">{selectedShipment.volume_count || '-'}</p>
-                </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Data de Entrega</p>
                   <p className="font-semibold">
@@ -317,13 +312,12 @@ const B2BDashboard = () => {
                       : '-'}
                   </p>
                 </div>
-              </div>
-
-              <div>
-                <p className="text-sm text-muted-foreground">Criado em</p>
-                <p className="font-semibold">
-                  {format(new Date(selectedShipment.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                </p>
+                <div>
+                  <p className="text-sm text-muted-foreground">Criado em</p>
+                  <p className="font-semibold">
+                    {format(new Date(selectedShipment.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  </p>
+                </div>
               </div>
 
               {(() => {
