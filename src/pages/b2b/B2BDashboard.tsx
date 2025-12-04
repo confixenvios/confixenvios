@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Package, Plus, Clock, CheckCircle, Send, Eye, Loader2 } from 'lucide-react';
+import { Package, Plus, Clock, CheckCircle, Send, Eye, Loader2, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -163,6 +163,26 @@ const B2BDashboard = () => {
     setShowDetailsModal(true);
   };
 
+  const handleSendWhatsApp = (shipment: B2BShipment) => {
+    const observations = parseObservations(shipment.observations);
+    
+    // Montar mensagem do WhatsApp
+    const message = `*Novo Pedido B2B Expresso*\n\n` +
+      `📦 *Código:* ${shipment.tracking_code}\n` +
+      `📅 *Data Entrega:* ${shipment.delivery_date ? format(new Date(shipment.delivery_date), 'dd/MM/yyyy') : '-'}\n` +
+      `📊 *Volumes:* ${shipment.volume_count || 0}\n` +
+      `🚗 *Veículo:* ${observations?.vehicle_type || '-'}\n` +
+      `⚖️ *Peso Total:* ${observations?.total_weight?.toFixed(2) || 0} kg\n` +
+      `💰 *Valor:* R$ ${observations?.amount_paid?.toFixed(2) || '0.00'}\n\n` +
+      `📍 *CEPs:* ${observations?.delivery_ceps?.join(', ') || '-'}\n` +
+      `⚖️ *Pesos:* ${observations?.volume_weights?.map((w: number) => `${w}kg`).join(', ') || '-'}`;
+    
+    // Abrir WhatsApp com a mensagem
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+    toast.success('Abrindo WhatsApp...');
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline', label: string }> = {
       PENDENTE: { variant: 'secondary', label: 'Pendente' },
@@ -276,9 +296,6 @@ const B2BDashboard = () => {
           ) : (
             <div className="space-y-4">
               {shipments.map((shipment) => {
-                const observations = parseObservations(shipment.observations);
-                const isPaid = shipment.status === 'PAGO';
-                
                 return (
                   <div
                     key={shipment.id}
@@ -316,31 +333,25 @@ const B2BDashboard = () => {
                       </p>
                     </div>
                     
-                    {isPaid && (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleShowDetails(shipment)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Detalhes
-                        </Button>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => handleSendWebhook(shipment)}
-                          disabled={sendingWebhook === shipment.id}
-                        >
-                          {sendingWebhook === shipment.id ? (
-                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                          ) : (
-                            <Send className="h-4 w-4 mr-1" />
-                          )}
-                          Enviar Webhook
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleShowDetails(shipment)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Detalhes
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSendWhatsApp(shipment)}
+                        className="text-green-600 border-green-600 hover:bg-green-50"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        WhatsApp
+                      </Button>
+                    </div>
                   </div>
                 );
               })}
