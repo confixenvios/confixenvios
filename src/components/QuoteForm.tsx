@@ -777,7 +777,7 @@ const QuoteForm = () => {
       const tipo = firstVolume?.merchandiseType === "normal" ? "Normal" : "Normal";
 
       // Chamar API Confix diretamente
-      const API_URL = "https://api-freteconfix.onrender.com/frete/confix";
+      const API_URL = "https://api-frete-confix-producao-production.up.railway.app/frete/confix";
       const BEARER_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI5ZTM2MDc2YS0yZWE2LTRiMDktOGY2Mi05ZGE5NTViYzBiNmYiLCJlbWFpbCI6Im1hcmNvc0Bjb25maXguY29tIiwianRpIjoiZWMxNDAzMTYtNWQzNy00N2MwLWIwODEtNTI3YzU5Yjc4MTU4IiwiaWF0IjoxNzYyODg0NjQ1LCJleHAiOjE3NjI5NzEwNDV9.aqPsac1PX_PCtDoJeR_c4qe_zLeqtCDGi2WwwXAnPJE";
 
       const requestData = {
