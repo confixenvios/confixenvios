@@ -112,6 +112,11 @@ const AdminRemessas = () => {
   const [sendingWebhook, setSendingWebhook] = useState<Record<string, boolean>>({});
   const [dateFrom, setDateFrom] = useState<Date>();
   const [dateTo, setDateTo] = useState<Date>();
+  
+  // Estados para modal de detalhes B2B
+  const [b2bDetailsModalOpen, setB2bDetailsModalOpen] = useState(false);
+  const [selectedB2BShipment, setSelectedB2BShipment] = useState<AdminShipment | null>(null);
+  const [b2bClientData, setB2bClientData] = useState<any>(null);
 
   // Função para verificar status dos webhooks das remessas
   const checkWebhookStatuses = async (remessas: AdminShipment[]) => {
@@ -613,7 +618,52 @@ const AdminRemessas = () => {
     );
   };
 
+  // Função para parsear observations de remessas B2B
+  const parseB2BObservations = (observations: string | null) => {
+    if (!observations) return null;
+    try {
+      return JSON.parse(observations);
+    } catch {
+      return null;
+    }
+  };
+
+  // Handler para ver detalhes de remessa B2B express
+  const handleViewB2BShipment = async (shipment: AdminShipment) => {
+    setSelectedB2BShipment(shipment);
+    setB2bDetailsModalOpen(true);
+    
+    // Buscar dados do cliente B2B se houver tracking_code com prefixo B2B
+    if (shipment.tracking_code?.startsWith('B2B-')) {
+      try {
+        const { data: b2bShipmentData } = await supabase
+          .from('b2b_shipments')
+          .select(`
+            *,
+            b2b_clients (*)
+          `)
+          .eq('tracking_code', shipment.tracking_code)
+          .single();
+        
+        if (b2bShipmentData?.b2b_clients) {
+          setB2bClientData(b2bShipmentData.b2b_clients);
+        }
+      } catch (error) {
+        console.log('Erro ao buscar dados B2B:', error);
+        setB2bClientData(null);
+      }
+    }
+  };
+
   const handleViewShipment = async (shipment: AdminShipment) => {
+    const isB2BExpresso = shipment.tracking_code?.startsWith('B2B-') || shipment.client_name.includes('(Expresso)');
+    
+    // Se for B2B Expresso, abrir modal específico
+    if (isB2BExpresso) {
+      handleViewB2BShipment(shipment);
+      return;
+    }
+    
     console.log('🔍 [ADMIN REMESSAS] Abrindo detalhes da remessa:', {
       id: shipment.id,
       tracking_code: shipment.tracking_code,
@@ -1783,6 +1833,119 @@ const AdminRemessas = () => {
                     )}
                   </CardContent>
                 </Card>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Detalhes B2B Express */}
+      <Dialog open={b2bDetailsModalOpen} onOpenChange={setB2bDetailsModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Pedido B2B Express</DialogTitle>
+          </DialogHeader>
+          {selectedB2BShipment && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Código de Rastreio</p>
+                  <p className="font-mono font-semibold">{selectedB2BShipment.tracking_code}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <div>{getStatusBadge(selectedB2BShipment.status)}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Volumes</p>
+                  <p className="font-semibold">{selectedB2BShipment.quote_data?.volume_count || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Data de Entrega</p>
+                  <p className="font-semibold">
+                    {selectedB2BShipment.quote_data?.delivery_date 
+                      ? format(new Date(selectedB2BShipment.quote_data.delivery_date), 'dd/MM/yyyy')
+                      : '-'}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm text-muted-foreground">Criado em</p>
+                <p className="font-semibold">
+                  {format(new Date(selectedB2BShipment.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </p>
+              </div>
+
+              {(() => {
+                const obs = parseB2BObservations(selectedB2BShipment.quote_data?.observations || null);
+                if (!obs) return null;
+                
+                return (
+                  <>
+                    <hr className="border-border" />
+                    <h4 className="font-semibold">Dados do Pagamento</h4>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Veículo</p>
+                        <p className="font-semibold capitalize">{obs.vehicle_type || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Valor Pago</p>
+                        <p className="font-semibold text-green-600">
+                          R$ {obs.amount_paid?.toFixed(2) || '0.00'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Peso Total</p>
+                        <p className="font-semibold">{obs.total_weight?.toFixed(2) || '0'} kg</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Pesos por Volume</p>
+                        <p className="font-semibold text-sm">
+                          {obs.volume_weights?.map((w: number, i: number) => `${w}kg`).join(', ') || '-'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {obs.delivery_ceps && obs.delivery_ceps.length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">CEPs de Entrega</p>
+                        <p className="font-semibold">{obs.delivery_ceps.join(', ')}</p>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
+              <hr className="border-border" />
+              <h4 className="font-semibold">Dados do Cliente</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Empresa</p>
+                  <p className="font-semibold">{b2bClientData?.company_name || selectedB2BShipment.client_name.replace(' (Expresso)', '') || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">CNPJ</p>
+                  <p className="font-semibold">{b2bClientData?.cnpj || '-'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Email</p>
+                  <p className="font-semibold text-sm">{b2bClientData?.email || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Telefone</p>
+                  <p className="font-semibold">{b2bClientData?.phone || '-'}</p>
+                </div>
               </div>
             </div>
           )}
