@@ -165,13 +165,13 @@ serve(async (req) => {
                 const trackingCode = `B2B-${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
                 console.log('🏷️ Gerando tracking code:', trackingCode);
                 
-                // Criar remessa B2B com status 'pendente' (válido na constraint)
+                // Criar remessa B2B com status 'PENDENTE' (maiúsculo - válido na constraint)
                 const b2bShipmentData = {
                   b2b_client_id: b2bClientId,
                   tracking_code: trackingCode,
                   volume_count: packageData?.volumeCount || 1,
                   delivery_date: recipientData?.deliveryDate || new Date().toISOString().split('T')[0],
-                  status: 'pendente',
+                  status: 'PENDENTE',
                   recipient_cep: recipientData?.deliveryCeps?.[0] || null,
                   observations: JSON.stringify({
                     vehicle_type: recipientData?.vehicleType || quoteOptions?.vehicleType,
