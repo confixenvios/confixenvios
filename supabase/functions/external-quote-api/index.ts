@@ -57,7 +57,7 @@ serve(async (req) => {
     console.log('[External Quote API] Calling external API with:', apiPayload);
 
     // Chamar API externa
-    const response = await fetch('https://api-freteconfix.onrender.com/frete/confix', {
+    const response = await fetch('https://api-freteconfix-production.up.railway.app/frete/confix', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
