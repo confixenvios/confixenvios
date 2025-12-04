@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, Package, Eye, Download, Filter, UserPlus, Truck, Calendar as CalendarIcon, MapPin, Clock, FileText, Send, CheckCircle, XCircle, AlertCircle, Receipt, Loader2 } from "lucide-react";
+import { Search, Package, Eye, Download, Filter, UserPlus, Truck, Calendar as CalendarIcon, MapPin, Clock, FileText, Send, CheckCircle, XCircle, AlertCircle, Receipt, Loader2, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -971,7 +971,29 @@ const AdminRemessas = () => {
                               CT-e Reprovado
                             </Badge>
                           )}
-                          {!isB2BExpresso && (
+                          {isB2BExpresso ? (
+                            <div className="flex space-x-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewShipment(shipment)}
+                                className="h-8 px-2 hover:bg-orange-100"
+                                title="Ver detalhes"
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                Detalhes
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2 text-green-600 hover:bg-green-100"
+                                title="Enviar para WhatsApp"
+                              >
+                                <MessageCircle className="h-4 w-4 mr-1" />
+                                Enviar para WhatsApp
+                              </Button>
+                            </div>
+                          ) : (
                             <div className="flex space-x-1">
                               <Button
                                 variant="ghost"
