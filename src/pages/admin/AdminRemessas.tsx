@@ -1006,6 +1006,12 @@ const AdminRemessas = () => {
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
+                          {/* Badge de Pagamento Confirmado para B2B */}
+                          {isB2BExpresso && (
+                            <Badge className="bg-red-500 text-white hover:bg-red-600">
+                              Pagamento Confirmado
+                            </Badge>
+                          )}
                           {getStatusBadge(shipment.status)}
                           {/* Badge de CT-e Disponível */}
                           {shipment.cte_emission && shipment.cte_emission.status === 'aprovado' && (
@@ -1027,20 +1033,18 @@ const AdminRemessas = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleViewShipment(shipment)}
-                                className="h-8 px-2 hover:bg-orange-100"
+                                className="h-8 w-8 p-0 hover:bg-orange-100"
                                 title="Ver detalhes"
                               >
-                                <Eye className="h-4 w-4 mr-1" />
-                                Detalhes
+                                <Eye className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 px-2 text-green-600 hover:bg-green-100"
+                                className="h-8 w-8 p-0 text-green-600 hover:bg-green-100"
                                 title="Enviar para WhatsApp"
                               >
-                                <MessageCircle className="h-4 w-4 mr-1" />
-                                Enviar para WhatsApp
+                                <MessageCircle className="h-4 w-4" />
                               </Button>
                             </div>
                           ) : (
