@@ -146,7 +146,7 @@ const B2BPixPayment = () => {
 
       if (data?.success && data.isPaid) {
         setPaymentStatus('PAID');
-        await createB2BShipment();
+        // Remessa B2B é criada automaticamente pela edge function check-pix-status
         navigate('/b2b-expresso/dashboard', {
           state: { paymentSuccess: true }
         });
@@ -215,7 +215,7 @@ const B2BPixPayment = () => {
           title: "Pagamento confirmado!",
           description: "PIX processado com sucesso. Redirecionando..."
         });
-        await createB2BShipment();
+        // Remessa B2B é criada automaticamente pela edge function check-pix-status
         navigate('/b2b-expresso/dashboard', {
           state: { paymentSuccess: true }
         });

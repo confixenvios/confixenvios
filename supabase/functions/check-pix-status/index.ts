@@ -151,16 +151,20 @@ serve(async (req) => {
             console.log('👤 ClientId B2B:', b2bClientId);
             
             if (b2bClientId) {
-              // Verificar se já existe remessa com esse external_id
-              const { data: existingShipment } = await supabase
-                .from('b2b_shipments')
-                .select('id')
-                .eq('observations', `%${b2bQuote.external_id}%`)
-                .limit(1);
-              
-              if (existingShipment && existingShipment.length > 0) {
-                console.log('⚠️ Remessa B2B já existe para este pedido');
+              // Verificar se temp_quote já foi processada (evita duplicação)
+              if (b2bQuote.status === 'processed') {
+                console.log('⚠️ Temp_quote já foi processada, remessa B2B já existe');
               } else {
+                // Marcar como processada ANTES de criar para evitar race condition
+                const { error: lockError } = await supabase
+                  .from('temp_quotes')
+                  .update({ status: 'processing' })
+                  .eq('id', b2bQuote.id)
+                  .eq('status', 'pending_payment');
+                
+                if (lockError) {
+                  console.log('⚠️ Não foi possível obter lock, provavelmente já está sendo processada');
+                } else {
                 // Gerar código de rastreamento B2B
                 const trackingCode = `B2B-${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
                 console.log('🏷️ Gerando tracking code:', trackingCode);
@@ -232,6 +236,7 @@ serve(async (req) => {
                     }]);
                   
                   console.log('📋 Log de webhook criado');
+                }
                 }
               }
             } else {
