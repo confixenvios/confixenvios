@@ -165,13 +165,13 @@ serve(async (req) => {
                 const trackingCode = `B2B-${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
                 console.log('🏷️ Gerando tracking code:', trackingCode);
                 
-                // Criar remessa B2B
+                // Criar remessa B2B com status 'pendente' (válido na constraint)
                 const b2bShipmentData = {
                   b2b_client_id: b2bClientId,
                   tracking_code: trackingCode,
                   volume_count: packageData?.volumeCount || 1,
                   delivery_date: recipientData?.deliveryDate || new Date().toISOString().split('T')[0],
-                  status: 'PAGO',
+                  status: 'pendente',
                   recipient_cep: recipientData?.deliveryCeps?.[0] || null,
                   observations: JSON.stringify({
                     vehicle_type: recipientData?.vehicleType || quoteOptions?.vehicleType,
@@ -182,6 +182,7 @@ serve(async (req) => {
                     payment_id: paymentId,
                     external_id: b2bQuote.external_id,
                     paid_at: new Date().toISOString(),
+                    paid: true,
                     created_via: 'check-pix-status-fallback'
                   })
                 };

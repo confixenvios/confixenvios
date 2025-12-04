@@ -167,13 +167,15 @@ const B2BPixPayment = () => {
           b2b_client_id: shipmentData.clientId,
           volume_count: shipmentData.volumeCount,
           delivery_date: shipmentData.deliveryDate,
-          status: 'PAGO',
+          status: 'pendente',
           observations: JSON.stringify({
             vehicle_type: shipmentData.vehicleType,
             delivery_ceps: shipmentData.deliveryCeps,
             volume_weights: shipmentData.volumeWeights,
             total_weight: shipmentData.totalWeight,
-            amount_paid: amount
+            amount_paid: amount,
+            paid: true,
+            paid_at: new Date().toISOString()
           })
         });
 
