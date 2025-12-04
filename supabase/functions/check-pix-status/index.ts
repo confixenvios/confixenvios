@@ -16,7 +16,7 @@ serve(async (req) => {
   }
 
   try {
-    const { paymentId } = await req.json();
+    const { paymentId, isB2B: requestIsB2B } = await req.json();
     
     if (!paymentId) {
       console.error('❌ PaymentId não fornecido');
@@ -31,10 +31,40 @@ serve(async (req) => {
 
     console.log('🔍 Verificando status PIX via API Abacate Pay para:', paymentId);
 
-    // Buscar API key
-    const abacateApiKey = Deno.env.get('ABACATE_PAY_API_KEY');
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Determinar se é B2B verificando temp_quotes ou pelo parâmetro
+    let isB2B = requestIsB2B || false;
+    
+    if (!isB2B) {
+      // Tentar identificar se é B2B pelo temp_quote pendente mais recente
+      const { data: recentQuotes } = await supabase
+        .from('temp_quotes')
+        .select('quote_options')
+        .eq('status', 'pending_payment')
+        .gte('created_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (recentQuotes && recentQuotes.length > 0 && recentQuotes[0].quote_options?.isB2B) {
+        isB2B = true;
+        console.log('🏢 Detectado pagamento B2B pelo temp_quote');
+      }
+    }
+
+    // Buscar API key correta baseado no tipo de pagamento
+    let abacateApiKey: string | undefined;
+    
+    if (isB2B) {
+      abacateApiKey = Deno.env.get('ABACATE_PAY_B2B_API_KEY');
+      console.log('🏢 Usando API key B2B para verificação');
+    } else {
+      abacateApiKey = Deno.env.get('ABACATE_PAY_API_KEY');
+      console.log('📦 Usando API key padrão para verificação');
+    }
+    
     if (!abacateApiKey) {
-      console.error('❌ ABACATE_PAY_API_KEY não configurada');
+      console.error('❌ API key não configurada:', isB2B ? 'ABACATE_PAY_B2B_API_KEY' : 'ABACATE_PAY_API_KEY');
       return new Response(JSON.stringify({ 
         success: false,
         error: 'API key não configurada'
@@ -46,7 +76,7 @@ serve(async (req) => {
 
     // Fazer requisição usando a documentação fornecida
     const url = `https://api.abacatepay.com/v1/pixQrCode/check?id=${paymentId}`;
-    console.log('🌐 Consultando API:', url);
+    console.log('🌐 Consultando API:', url, '(B2B:', isB2B, ')');
     const options = {
       method: 'GET',
       headers: {
@@ -91,8 +121,7 @@ serve(async (req) => {
       console.log('✅ Pagamento confirmado - verificando se precisa criar remessa B2B');
       
       try {
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-        
+        // supabase já foi criado anteriormente
         // Buscar temp_quote que tenha esse paymentId nos webhook_logs
         const { data: webhookLogs } = await supabase
           .from('webhook_logs')

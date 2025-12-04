@@ -139,7 +139,7 @@ const B2BPixPayment = () => {
       setIsCheckingPayment(true);
       
       const { data, error } = await supabase.functions.invoke('check-pix-status', {
-        body: { paymentId: paymentIntent.paymentId }
+        body: { paymentId: paymentIntent.paymentId, isB2B: true }
       });
 
       if (error) return;
@@ -195,7 +195,7 @@ const B2BPixPayment = () => {
       });
       
       const { data, error } = await supabase.functions.invoke('check-pix-status', {
-        body: { paymentId: paymentIntent.paymentId }
+        body: { paymentId: paymentIntent.paymentId, isB2B: true }
       });
 
       if (error) {
@@ -241,7 +241,7 @@ const B2BPixPayment = () => {
       setIsProcessing(true);
       
       const { data } = await supabase.functions.invoke('check-pix-status', {
-        body: { paymentId: paymentIntent.paymentId }
+        body: { paymentId: paymentIntent.paymentId, isB2B: true }
       });
       
       if (data?.isPaid) {
