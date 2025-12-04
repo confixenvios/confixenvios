@@ -17,7 +17,7 @@ serve(async (req) => {
 
   try {
     const webhookData = await req.json();
-    console.log('Webhook recebido da Abacate Pay:', webhookData);
+    console.log('📩 Webhook recebido da Abacate Pay:', JSON.stringify(webhookData, null, 2));
 
     // Verificar se é um pagamento PIX aprovado (evento correto do Abacate Pay)
     if (webhookData.event === 'billing.paid' && webhookData.data?.pixQrCode?.status === 'PAID') {
@@ -25,11 +25,11 @@ serve(async (req) => {
       const externalId = pixData.metadata?.externalId;
       const userId = pixData.metadata?.userId;
       
-      console.log('Pagamento PIX aprovado:', { pixData, externalId, userId });
+      console.log('💰 Pagamento PIX aprovado:', { externalId, userId, amount: pixData.amount });
 
       // Validação de segurança: verificar se externalId tem formato esperado
       if (!externalId || !externalId.startsWith('confix_')) {
-        console.error('ExternalId inválido ou ausente:', externalId);
+        console.error('❌ ExternalId inválido ou ausente:', externalId);
         return new Response(
           JSON.stringify({ error: 'ExternalId inválido' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -39,10 +39,9 @@ serve(async (req) => {
       // Criar client do Supabase com service role
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
       
-      console.log('User ID extraído do pagamento:', userId);
-      console.log('External ID validado:', externalId);
+      console.log('🔍 Buscando cotação temporária com externalId:', externalId);
 
-      // NOVO: Buscar cotação temporária usando externalId
+      // Buscar cotação temporária usando externalId
       const { data: tempQuote, error: quoteError } = await supabase
         .from('temp_quotes')
         .select('*')
@@ -59,7 +58,7 @@ serve(async (req) => {
           .from('temp_quotes')
           .select('external_id, status, created_at')
           .limit(5);
-        console.log('Cotações disponíveis:', allQuotes);
+        console.log('📋 Cotações disponíveis:', allQuotes);
         
         return new Response(
           JSON.stringify({ error: 'Cotação não encontrada para este pagamento' }),
@@ -74,6 +73,117 @@ serve(async (req) => {
       const recipientData = tempQuote.recipient_data;
       const packageData = tempQuote.package_data;
       const quoteOptions = tempQuote.quote_options;
+
+      console.log('📦 Dados da cotação:', { 
+        isB2B: quoteOptions?.isB2B, 
+        senderData: senderData?.clientId,
+        packageData 
+      });
+
+      // =====================================================
+      // FLUXO B2B - Criar remessa na tabela b2b_shipments
+      // =====================================================
+      if (quoteOptions?.isB2B === true) {
+        console.log('🏢 Detectado pagamento B2B - criando remessa B2B');
+        
+        const b2bClientId = senderData?.clientId;
+        
+        if (!b2bClientId) {
+          console.error('❌ Client ID B2B não encontrado');
+          return new Response(
+            JSON.stringify({ error: 'Client ID B2B não encontrado' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Gerar código de rastreamento B2B
+        const trackingCode = `B2B-${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
+
+        // Criar remessa B2B
+        const b2bShipmentData = {
+          b2b_client_id: b2bClientId,
+          tracking_code: trackingCode,
+          volume_count: packageData?.volumeCount || 1,
+          delivery_date: recipientData?.deliveryDate || new Date().toISOString().split('T')[0],
+          status: 'PAGO',
+          observations: JSON.stringify({
+            vehicle_type: recipientData?.vehicleType || quoteOptions?.vehicleType,
+            delivery_ceps: recipientData?.deliveryCeps || [],
+            volume_weights: packageData?.volumeWeights || [],
+            total_weight: packageData?.totalWeight || 0,
+            amount_paid: pixData.amount / 100,
+            payment_id: pixData.id,
+            external_id: externalId,
+            paid_at: new Date().toISOString()
+          })
+        };
+
+        console.log('📝 Inserindo remessa B2B:', b2bShipmentData);
+
+        const { data: newB2BShipment, error: b2bError } = await supabase
+          .from('b2b_shipments')
+          .insert([b2bShipmentData])
+          .select()
+          .single();
+
+        if (b2bError) {
+          console.error('❌ Erro ao criar remessa B2B:', b2bError);
+          throw b2bError;
+        }
+
+        console.log('✅ Remessa B2B criada com sucesso:', newB2BShipment);
+
+        // Marcar cotação temporária como processada
+        await supabase
+          .from('temp_quotes')
+          .update({ 
+            status: 'processed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', tempQuote.id);
+
+        console.log('✅ Cotação temporária marcada como processada');
+
+        // Log do webhook B2B
+        await supabase
+          .from('webhook_logs')
+          .insert([{
+            event_type: 'b2b_shipment.payment_received',
+            shipment_id: newB2BShipment.id,
+            payload: {
+              b2b_shipment: newB2BShipment,
+              payment: {
+                method: 'pix',
+                amount: pixData.amount / 100,
+                pixPaymentId: pixData.id,
+                externalId: externalId,
+                userId: userId,
+                status: 'paid',
+                paidAt: new Date().toISOString()
+              }
+            },
+            response_status: 200,
+            response_body: { success: true, message: 'B2B shipment created' }
+          }]);
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'Pagamento B2B processado e remessa criada',
+            trackingCode: trackingCode,
+            shipmentId: newB2BShipment.id,
+            type: 'b2b'
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+
+      // =====================================================
+      // FLUXO NORMAL - Criar remessa na tabela shipments
+      // =====================================================
+      console.log('📦 Fluxo normal - criando remessa padrão');
 
       // Dados do cliente do PIX para fallback
       const customerData = pixData.customer?.metadata || {};
@@ -96,7 +206,7 @@ serve(async (req) => {
         .single();
 
       if (senderError) {
-        console.error('Erro ao criar endereço do remetente:', senderError);
+        console.error('❌ Erro ao criar endereço do remetente:', senderError);
         throw senderError;
       }
 
@@ -118,7 +228,7 @@ serve(async (req) => {
         .single();
 
       if (recipientError) {
-        console.error('Erro ao criar endereço do destinatário:', recipientError);
+        console.error('❌ Erro ao criar endereço do destinatário:', recipientError);
         throw recipientError;
       }
 
@@ -168,11 +278,11 @@ serve(async (req) => {
         .single();
 
       if (shipmentError) {
-        console.error('Erro ao criar remessa:', shipmentError);
+        console.error('❌ Erro ao criar remessa:', shipmentError);
         throw shipmentError;
       }
 
-      console.log('Remessa criada com sucesso:', newShipment);
+      console.log('✅ Remessa criada com sucesso:', newShipment);
 
       // Marcar cotação temporária como processada
       await supabase
@@ -195,7 +305,7 @@ serve(async (req) => {
         }]);
 
       if (historyError) {
-        console.error('Erro ao criar histórico:', historyError);
+        console.error('⚠️ Erro ao criar histórico:', historyError);
       }
 
       // Disparar webhook para integrações
@@ -225,7 +335,7 @@ serve(async (req) => {
         if (!integrationsError && integrations) {
           for (const integration of integrations) {
             try {
-              console.log(`Enviando webhook para: ${integration.webhook_url}`);
+              console.log(`📤 Enviando webhook para: ${integration.webhook_url}`);
               
               const webhookResponse = await fetch(integration.webhook_url, {
                 method: 'POST',
@@ -250,10 +360,10 @@ serve(async (req) => {
                     { error: await webhookResponse.text() }
                 }]);
 
-              console.log(`Webhook enviado para ${integration.name}: ${webhookResponse.status}`);
+              console.log(`✅ Webhook enviado para ${integration.name}: ${webhookResponse.status}`);
               
             } catch (error) {
-              console.error(`Erro ao enviar webhook para ${integration.name}:`, error);
+              console.error(`❌ Erro ao enviar webhook para ${integration.name}:`, error);
               
               // Log do erro
               await supabase
@@ -269,7 +379,7 @@ serve(async (req) => {
           }
         }
       } catch (error) {
-        console.error('Erro ao processar webhooks:', error);
+        console.error('❌ Erro ao processar webhooks:', error);
       }
 
       return new Response(
@@ -277,14 +387,15 @@ serve(async (req) => {
           success: true, 
           message: 'Pagamento processado e remessa criada',
           trackingCode: trackingCode,
-          shipmentId: newShipment.id
+          shipmentId: newShipment.id,
+          type: 'standard'
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
     } else {
-      console.log('Webhook ignorado - não é um pagamento PIX aprovado');
+      console.log('⏭️ Webhook ignorado - não é um pagamento PIX aprovado');
       return new Response(
         JSON.stringify({ success: true, message: 'Webhook recebido mas ignorado' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -292,9 +403,9 @@ serve(async (req) => {
     }
 
   } catch (error) {
-    console.error('Erro no webhook:', error);
+    console.error('❌ Erro no webhook:', error);
     return new Response(
-      JSON.stringify({ error: 'Erro interno do servidor' }),
+      JSON.stringify({ error: 'Erro interno do servidor', details: error.message }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
