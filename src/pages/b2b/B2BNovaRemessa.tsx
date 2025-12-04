@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Package, Loader2, Truck, Car, Bike, MapPin, Scale, DollarSign, Plus, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -43,12 +44,29 @@ const B2BNovaRemessa = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [client, setClient] = useState<B2BClient | null>(null);
   const [addresses, setAddresses] = useState<DeliveryAddress[]>([]);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [loadingCep, setLoadingCep] = useState(false);
+  const [newAddress, setNewAddress] = useState({
+    name: '',
+    recipient_name: '',
+    recipient_phone: '',
+    recipient_document: '',
+    cep: '',
+    street: '',
+    number: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+    reference: '',
+  });
   const [formData, setFormData] = useState({
     volume_count: '',
     delivery_date: '',
     vehicle_type: '',
     volume_weights: [''] as string[],
-    volume_addresses: [''] as string[], // IDs dos endereços selecionados
+    volume_addresses: [''] as string[],
   });
 
   // Calcula o valor total do frete
@@ -201,6 +219,105 @@ const B2BNovaRemessa = () => {
 
   const getAddressById = (id: string) => addresses.find(a => a.id === id);
 
+  const handleCepLookup = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) return;
+
+    setLoadingCep(true);
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await response.json();
+      
+      if (data.erro) {
+        toast.error('CEP não encontrado');
+        return;
+      }
+
+      setNewAddress(prev => ({
+        ...prev,
+        street: data.logradouro || '',
+        neighborhood: data.bairro || '',
+        city: data.localidade || '',
+        state: data.uf || '',
+      }));
+    } catch (error) {
+      toast.error('Erro ao buscar CEP');
+    } finally {
+      setLoadingCep(false);
+    }
+  };
+
+  const handleNewAddressChange = (field: string, value: string) => {
+    setNewAddress(prev => ({ ...prev, [field]: value }));
+    
+    if (field === 'cep' && value.replace(/\D/g, '').length === 8) {
+      handleCepLookup(value);
+    }
+  };
+
+  const resetNewAddress = () => {
+    setNewAddress({
+      name: '',
+      recipient_name: '',
+      recipient_phone: '',
+      recipient_document: '',
+      cep: '',
+      street: '',
+      number: '',
+      complement: '',
+      neighborhood: '',
+      city: '',
+      state: '',
+      reference: '',
+    });
+  };
+
+  const handleSaveNewAddress = async () => {
+    if (!client) return;
+
+    // Validação
+    if (!newAddress.name || !newAddress.recipient_name || !newAddress.recipient_phone ||
+        !newAddress.cep || !newAddress.street || !newAddress.number ||
+        !newAddress.neighborhood || !newAddress.city || !newAddress.state || !newAddress.complement) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    setSavingAddress(true);
+    try {
+      const { data, error } = await supabase
+        .from('b2b_delivery_addresses')
+        .insert({
+          b2b_client_id: client.id,
+          name: newAddress.name,
+          recipient_name: newAddress.recipient_name,
+          recipient_phone: newAddress.recipient_phone,
+          recipient_document: newAddress.recipient_document || null,
+          cep: newAddress.cep.replace(/\D/g, ''),
+          street: newAddress.street,
+          number: newAddress.number,
+          complement: newAddress.complement,
+          neighborhood: newAddress.neighborhood,
+          city: newAddress.city,
+          state: newAddress.state,
+          reference: newAddress.reference || null,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success('Endereço cadastrado com sucesso!');
+      setAddresses(prev => [...prev, data]);
+      setShowAddressModal(false);
+      resetNewAddress();
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao salvar endereço');
+    } finally {
+      setSavingAddress(false);
+    }
+  };
+
   if (loadingData) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
@@ -226,16 +343,17 @@ const B2BNovaRemessa = () => {
         </CardHeader>
         <CardContent>
           {addresses.length === 0 ? (
-            <Alert className="mb-6">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="flex items-center justify-between">
-                <span>Você precisa cadastrar endereços de entrega antes de solicitar um envio.</span>
-                <Button size="sm" onClick={() => navigate('/b2b-expresso/enderecos')}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Cadastrar Endereços
-                </Button>
-              </AlertDescription>
-            </Alert>
+            <div className="text-center py-8 space-y-4">
+              <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground" />
+              <div>
+                <p className="font-medium">Nenhum endereço cadastrado</p>
+                <p className="text-sm text-muted-foreground">Cadastre endereços de entrega para solicitar um envio.</p>
+              </div>
+              <Button onClick={() => setShowAddressModal(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Cadastrar Primeiro Endereço
+              </Button>
+            </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Seção 1: Informações Básicas */}
@@ -310,7 +428,19 @@ const B2BNovaRemessa = () => {
                           </div>
                           
                           <div className="space-y-2">
-                            <Label htmlFor={`address_${index}`} className="text-sm">Endereço de Entrega *</Label>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor={`address_${index}`} className="text-sm">Endereço de Entrega *</Label>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowAddressModal(true)}
+                                className="h-6 text-xs text-primary hover:text-primary/80"
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Novo
+                              </Button>
+                            </div>
                             <Select
                               value={formData.volume_addresses[index] || ''}
                               onValueChange={(value) => handleAddressChange(index, value)}
@@ -468,6 +598,185 @@ const B2BNovaRemessa = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal para cadastrar novo endereço */}
+      <Dialog open={showAddressModal} onOpenChange={setShowAddressModal}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              Novo Endereço de Entrega
+            </DialogTitle>
+            <DialogDescription>
+              Cadastre um novo endereço para usar nas suas entregas
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="addr_name">Nome do Endereço *</Label>
+              <Input
+                id="addr_name"
+                value={newAddress.name}
+                onChange={(e) => handleNewAddressChange('name', e.target.value)}
+                placeholder="Ex: Casa do João, Escritório Centro"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="addr_recipient_name">Nome do Destinatário *</Label>
+                <Input
+                  id="addr_recipient_name"
+                  value={newAddress.recipient_name}
+                  onChange={(e) => handleNewAddressChange('recipient_name', e.target.value)}
+                  placeholder="Nome completo"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="addr_recipient_phone">Telefone *</Label>
+                <Input
+                  id="addr_recipient_phone"
+                  value={newAddress.recipient_phone}
+                  onChange={(e) => handleNewAddressChange('recipient_phone', e.target.value)}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="addr_recipient_document">CPF/CNPJ (opcional)</Label>
+              <Input
+                id="addr_recipient_document"
+                value={newAddress.recipient_document}
+                onChange={(e) => handleNewAddressChange('recipient_document', e.target.value)}
+                placeholder="Documento do destinatário"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="addr_cep">CEP *</Label>
+                <div className="relative">
+                  <Input
+                    id="addr_cep"
+                    value={newAddress.cep}
+                    onChange={(e) => handleNewAddressChange('cep', e.target.value)}
+                    placeholder="00000-000"
+                    maxLength={9}
+                  />
+                  {loadingCep && (
+                    <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="addr_state">Estado *</Label>
+                <Input
+                  id="addr_state"
+                  value={newAddress.state}
+                  onChange={(e) => handleNewAddressChange('state', e.target.value)}
+                  placeholder="UF"
+                  maxLength={2}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="addr_street">Rua *</Label>
+              <Input
+                id="addr_street"
+                value={newAddress.street}
+                onChange={(e) => handleNewAddressChange('street', e.target.value)}
+                placeholder="Nome da rua"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="addr_number">Número *</Label>
+                <Input
+                  id="addr_number"
+                  value={newAddress.number}
+                  onChange={(e) => handleNewAddressChange('number', e.target.value)}
+                  placeholder="Número"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="addr_complement">Complemento *</Label>
+                <Input
+                  id="addr_complement"
+                  value={newAddress.complement}
+                  onChange={(e) => handleNewAddressChange('complement', e.target.value)}
+                  placeholder="Apto, Bloco, etc."
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="addr_neighborhood">Bairro *</Label>
+              <Input
+                id="addr_neighborhood"
+                value={newAddress.neighborhood}
+                onChange={(e) => handleNewAddressChange('neighborhood', e.target.value)}
+                placeholder="Bairro"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="addr_city">Cidade *</Label>
+              <Input
+                id="addr_city"
+                value={newAddress.city}
+                onChange={(e) => handleNewAddressChange('city', e.target.value)}
+                placeholder="Cidade"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="addr_reference">Referência (opcional)</Label>
+              <Input
+                id="addr_reference"
+                value={newAddress.reference}
+                onChange={(e) => handleNewAddressChange('reference', e.target.value)}
+                placeholder="Ponto de referência"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowAddressModal(false);
+                  resetNewAddress();
+                }}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSaveNewAddress}
+                disabled={savingAddress}
+                className="flex-1"
+              >
+                {savingAddress ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Salvar Endereço
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
