@@ -85,7 +85,7 @@ const ClientRastreio = () => {
         user_id: user?.id || null
       };
 
-      await fetch('https://webhook.grupoconfix.com/webhook/47827545-77ca-4e68-8b43-9c50467a3f55', {
+      await fetch('https://n8n.grupoconfix.com/webhook-test/47827545-77ca-4e68-8b43-9c50467a3f55', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
