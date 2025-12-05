@@ -54,6 +54,51 @@ const ClientRastreio = () => {
   const [loading, setLoading] = useState(false);
   const [userShipments, setUserShipments] = useState<ShipmentInfo[]>([]);
   const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([]);
+  const [lastWebhookShipmentId, setLastWebhookShipmentId] = useState<string | null>(null);
+
+  const sendTrackingWebhook = async (shipment: ShipmentInfo) => {
+    // Only send if it's a different shipment than the last one
+    if (shipment.id === lastWebhookShipmentId) {
+      return;
+    }
+
+    try {
+      const webhookPayload = {
+        event_type: 'shipment_tracking_viewed',
+        shipment_id: shipment.id,
+        tracking_code: shipment.tracking_code,
+        status: shipment.status,
+        created_at: shipment.created_at,
+        weight: shipment.weight,
+        sender: {
+          name: shipment.sender_address?.name || shipment.quote_data?.senderData?.name || '',
+          city: shipment.sender_address?.city || shipment.quote_data?.senderData?.address?.city || '',
+          state: shipment.sender_address?.state || shipment.quote_data?.senderData?.address?.state || ''
+        },
+        recipient: {
+          name: shipment.recipient_address?.name || shipment.quote_data?.recipientData?.name || '',
+          city: shipment.recipient_address?.city || shipment.quote_data?.recipientData?.address?.city || '',
+          state: shipment.recipient_address?.state || shipment.quote_data?.recipientData?.address?.state || ''
+        },
+        quote_data: shipment.quote_data,
+        viewed_at: new Date().toISOString(),
+        user_id: user?.id || null
+      };
+
+      await fetch('https://webhook.grupoconfix.com/webhook/47827545-77ca-4e68-8b43-9c50467a3f55', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookPayload)
+      });
+
+      setLastWebhookShipmentId(shipment.id);
+      console.log('Webhook de rastreio enviado:', shipment.tracking_code);
+    } catch (error) {
+      console.error('Erro ao enviar webhook de rastreio:', error);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -420,6 +465,7 @@ const ClientRastreio = () => {
                     setTrackingCode(shipment.tracking_code);
                     setShipmentInfo(shipment);
                     await loadTrackingEvents(shipment.id);
+                    await sendTrackingWebhook(shipment);
                   }}
                 >
                   <div className="flex-1">
