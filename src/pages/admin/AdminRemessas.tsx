@@ -400,13 +400,13 @@ const AdminRemessas = () => {
         
         // Transportadora selecionada (magalog ou jadlog)
         selected_carrier: (() => {
-          // Primeiro, verificar se há selectedCarrier salvo diretamente
+          // Primeiro, verificar se há selectedCarrier salvo diretamente (remessas novas)
           const directCarrier = (shipment.quote_data as any)?.deliveryDetails?.selectedCarrier;
           if (directCarrier && (directCarrier === 'jadlog' || directCarrier === 'magalog')) {
             return directCarrier;
           }
           
-          // Fallback: determinar pela lógica antiga baseada em preço/prazo
+          // Fallback para remessas antigas: usar o PREÇO PAGO como indicador confiável
           const quoteInfo = (shipment.quote_data as any)?.quoteData?.shippingQuote;
           if (!quoteInfo) return '';
           const jadlog = quoteInfo.jadlog;
@@ -418,16 +418,31 @@ const AdminRemessas = () => {
             return '';
           }
           
-          // Determinar qual é mais barata e qual é mais rápida
-          const maisBarataCarrier = magalog.preco_total <= jadlog.preco_total ? 'magalog' : 'jadlog';
-          const maisRapidaCarrier = magalog.prazo <= jadlog.prazo ? 'magalog' : 'jadlog';
+          // Usar o preço pago como indicador confiável (mais preciso que selected_option para remessas antigas)
+          const paidAmount = (shipment.payment_data as any)?.amount || 
+                            (shipment.quote_data as any)?.deliveryDetails?.totalPrice ||
+                            (shipment.quote_data as any)?.deliveryDetails?.shippingPrice;
           
-          const selectedOpt = shipment.selected_option;
-          if (selectedOpt === 'economic') {
-            return maisBarataCarrier;
-          } else if (selectedOpt === 'express') {
-            return maisRapidaCarrier;
+          if (paidAmount) {
+            const jadlogPrice = jadlog.preco_total;
+            const magalogPrice = magalog.preco_total;
+            
+            // Comparar com tolerância de 0.01 para evitar problemas de arredondamento
+            if (Math.abs(paidAmount - jadlogPrice) < 0.01) {
+              return 'jadlog';
+            }
+            if (Math.abs(paidAmount - magalogPrice) < 0.01) {
+              return 'magalog';
+            }
           }
+          
+          // Último fallback: usar prazo de entrega salvo
+          const savedDays = (shipment.quote_data as any)?.deliveryDetails?.deliveryDays;
+          if (savedDays) {
+            if (savedDays === jadlog.prazo) return 'jadlog';
+            if (savedDays === magalog.prazo) return 'magalog';
+          }
+          
           return '';
         })(),
         
