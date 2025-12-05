@@ -85,6 +85,8 @@ serve(async (req) => {
     // A API retorna dois objetos: maisbarato (econômico) e maisRapido (expresso)
     const maisbarato = externalData.maisbarato || {};
     const maisRapido = externalData.maisRapido || {};
+    const jadlog = externalData.jadlog || {};
+    const magalog = externalData.magalog || {};
     
     const quote = {
       // Opção Econômica (mais barato)
@@ -113,7 +115,11 @@ serve(async (req) => {
       economicCarrier: maisbarato.transportadora || '',
       expressCarrier: maisRapido.transportadora || '',
       economicRegion: maisbarato.regiao || '',
-      expressRegion: maisRapido.regiao || ''
+      expressRegion: maisRapido.regiao || '',
+      
+      // Dados completos das transportadoras (para uso no webhook)
+      jadlog: jadlog,
+      magalog: magalog
     };
 
     console.log('[External Quote API] Mapped quote:', quote);
