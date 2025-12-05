@@ -32,6 +32,7 @@ interface ShipmentInfo {
   tracking_code: string;
   status: string;
   created_at: string;
+  cte_key?: string;
   sender_address: {
     name: string;
     city: string;
@@ -61,6 +62,7 @@ const ClientRastreio = () => {
         event_type: 'shipment_tracking_consulted',
         shipment_id: shipment.id,
         tracking_code: shipment.tracking_code,
+        cte_key: shipment.cte_key || null,
         status: shipment.status,
         created_at: shipment.created_at,
         weight: shipment.weight,
@@ -111,6 +113,7 @@ const ClientRastreio = () => {
           created_at,
           weight,
           quote_data,
+          cte_key,
           sender_address:addresses!sender_address_id (
             name,
             city,
