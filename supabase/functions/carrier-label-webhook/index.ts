@@ -17,28 +17,45 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Parse request body
-    const body = await req.json();
+    // Parse request body - handle array response from Jadlog
+    let body = await req.json();
+    
+    // If response is array, take first item
+    if (Array.isArray(body)) {
+      body = body[0];
+    }
+    
     console.log('📦 Carrier label webhook received:', JSON.stringify({
       codigo: body.codigo,
       shipmentId: body.shipmentId,
+      tracking_code: body.tracking_code,
       status: body.status,
       hasEtiqueta: !!body.etiqueta,
-      etiquetaLength: body.etiqueta?.length || 0
+      etiquetaType: typeof body.etiqueta
     }));
 
-    const { codigo, etiqueta, shipmentId, status } = body;
+    const { codigo, shipmentId, status } = body;
+    
+    // Handle etiqueta - can be string or object with 'arquivo' property (Jadlog format)
+    let etiquetaBase64 = body.etiqueta;
+    if (typeof body.etiqueta === 'object' && body.etiqueta?.arquivo) {
+      etiquetaBase64 = body.etiqueta.arquivo;
+      console.log('📄 Etiqueta extraída do formato Jadlog (etiqueta.arquivo)');
+    }
+    
+    // Get tracking_code from body (can be sent separately or we'll use shipmentId)
+    const trackingCode = body.tracking_code || body.trackingCode;
 
-    // Validate required fields
-    if (!shipmentId) {
-      console.error('❌ Missing shipmentId');
+    // Validate - need at least one identifier
+    if (!shipmentId && !trackingCode) {
+      console.error('❌ Missing shipmentId or tracking_code');
       return new Response(
-        JSON.stringify({ success: false, error: 'shipmentId é obrigatório' }),
+        JSON.stringify({ success: false, error: 'shipmentId ou tracking_code é obrigatório' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (!etiqueta) {
+    if (!etiquetaBase64) {
       console.error('❌ Missing etiqueta (base64 PDF)');
       return new Response(
         JSON.stringify({ success: false, error: 'etiqueta (base64 PDF) é obrigatória' }),
@@ -46,17 +63,74 @@ serve(async (req) => {
       );
     }
 
-    // Find the shipment
-    const { data: shipment, error: findError } = await supabase
-      .from('shipments')
-      .select('id, tracking_code')
-      .eq('id', shipmentId)
-      .single();
+    // Find the shipment - try multiple strategies
+    let shipment = null;
+    let findError = null;
+    
+    // Strategy 1: Try by UUID if it looks like a UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (shipmentId && uuidRegex.test(shipmentId)) {
+      console.log('🔍 Buscando por UUID:', shipmentId);
+      const result = await supabase
+        .from('shipments')
+        .select('id, tracking_code')
+        .eq('id', shipmentId)
+        .maybeSingle();
+      
+      shipment = result.data;
+      findError = result.error;
+    }
+    
+    // Strategy 2: Try by tracking_code (exact match)
+    if (!shipment && trackingCode) {
+      console.log('🔍 Buscando por tracking_code:', trackingCode);
+      const result = await supabase
+        .from('shipments')
+        .select('id, tracking_code')
+        .eq('tracking_code', trackingCode)
+        .maybeSingle();
+      
+      shipment = result.data;
+      findError = result.error;
+    }
+    
+    // Strategy 3: Try by tracking_code with year prefix pattern (e.g., "2025QLKXXK")
+    if (!shipment && trackingCode) {
+      // Remove common prefixes
+      const cleanCode = trackingCode.replace(/^(ID|CONFIX-|CFX-)/i, '');
+      console.log('🔍 Buscando por tracking_code limpo:', cleanCode);
+      const result = await supabase
+        .from('shipments')
+        .select('id, tracking_code')
+        .eq('tracking_code', cleanCode)
+        .maybeSingle();
+      
+      shipment = result.data;
+      findError = result.error;
+    }
+    
+    // Strategy 4: Try partial match on tracking_code using LIKE
+    if (!shipment && trackingCode) {
+      console.log('🔍 Buscando por tracking_code parcial:', trackingCode);
+      const result = await supabase
+        .from('shipments')
+        .select('id, tracking_code')
+        .ilike('tracking_code', `%${trackingCode}%`)
+        .limit(1)
+        .maybeSingle();
+      
+      shipment = result.data;
+      findError = result.error;
+    }
 
-    if (findError || !shipment) {
-      console.error('❌ Shipment not found:', shipmentId, findError);
+    if (!shipment) {
+      console.error('❌ Shipment not found. Tried shipmentId:', shipmentId, 'tracking_code:', trackingCode, 'Error:', findError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Remessa não encontrada' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Remessa não encontrada',
+          searched: { shipmentId, trackingCode }
+        }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -67,7 +141,7 @@ serve(async (req) => {
     let pdfBuffer: Uint8Array;
     try {
       // Remove data URL prefix if present
-      const base64Data = etiqueta.replace(/^data:application\/pdf;base64,/, '');
+      const base64Data = etiquetaBase64.replace(/^data:application\/pdf;base64,/, '');
       pdfBuffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
       console.log('✅ Decoded PDF, size:', pdfBuffer.length, 'bytes');
     } catch (decodeError) {
@@ -116,7 +190,7 @@ serve(async (req) => {
       updated_at: new Date().toISOString()
     };
 
-    // If carrier returned a tracking code, update it
+    // If carrier returned a tracking code (codigo), save it
     if (codigo) {
       updateData.cte_key = codigo;
     }
@@ -124,7 +198,7 @@ serve(async (req) => {
     const { error: updateError } = await supabase
       .from('shipments')
       .update(updateData)
-      .eq('id', shipmentId);
+      .eq('id', shipment.id);
 
     if (updateError) {
       console.error('❌ Failed to update shipment:', updateError);
@@ -142,9 +216,9 @@ serve(async (req) => {
 
     // Log the webhook
     await supabase.from('webhook_logs').insert({
-      shipment_id: shipmentId,
+      shipment_id: shipment.id,
       event_type: 'carrier_label_received',
-      payload: { codigo, status, etiqueta_size: etiqueta.length },
+      payload: { codigo, status, etiqueta_size: etiquetaBase64.length, original_shipmentId: shipmentId },
       response_status: 200,
       response_body: { label_pdf_url: labelPdfUrl }
     });
@@ -154,7 +228,7 @@ serve(async (req) => {
         success: true,
         message: 'Etiqueta salva com sucesso',
         label_pdf_url: labelPdfUrl,
-        shipment_id: shipmentId,
+        shipment_id: shipment.id,
         tracking_code: shipment.tracking_code
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
