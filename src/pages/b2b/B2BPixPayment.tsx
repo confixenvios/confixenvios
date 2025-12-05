@@ -80,7 +80,7 @@ const B2BPixPayment = () => {
           totalWeight: shipmentData?.totalWeight,
           deliveryDate: shipmentData?.deliveryDate,
           vehicleType: shipmentData?.vehicleType,
-          deliveryCeps: shipmentData?.deliveryCeps
+          volumeAddresses: shipmentData?.volumeAddresses
         }
       };
 
@@ -170,7 +170,7 @@ const B2BPixPayment = () => {
           status: 'PENDENTE',
           observations: JSON.stringify({
             vehicle_type: shipmentData.vehicleType,
-            delivery_ceps: shipmentData.deliveryCeps,
+            volume_addresses: shipmentData.volumeAddresses,
             volume_weights: shipmentData.volumeWeights,
             total_weight: shipmentData.totalWeight,
             amount_paid: amount,
