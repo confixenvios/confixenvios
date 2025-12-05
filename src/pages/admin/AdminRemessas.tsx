@@ -508,18 +508,19 @@ const AdminRemessas = () => {
         })()
       };
 
-      // Construir URL com query params
-      const params = new URLSearchParams(webhookData);
-      const webhookUrl = `https://n8n.grupoconfix.com/webhook-test/f5d4f949-29fd-4200-b7a1-b9a140e8c16c?${params.toString()}`;
+      const webhookUrl = `https://n8n.grupoconfix.com/webhook-test/f5d4f949-29fd-4200-b7a1-b9a140e8c16c`;
       
-      console.log('📤 [WEBHOOK MANUAL] Enviando para URL:', webhookUrl.substring(0, 100) + '...');
+      console.log('📤 [WEBHOOK MANUAL] Enviando para URL via POST:', webhookUrl);
+      console.log('📤 [WEBHOOK MANUAL] Payload:', Object.keys(webhookData).length, 'campos');
       
-      // Enviar via GET
+      // Enviar via POST
       const response = await fetch(webhookUrl, {
-        method: 'GET',
+        method: 'POST',
         headers: {
-          'Accept': 'application/json'
-        }
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(webhookData)
       });
 
       if (!response.ok) {
