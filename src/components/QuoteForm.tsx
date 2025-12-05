@@ -275,7 +275,8 @@ const QuoteForm = () => {
   // Step 2: Resultados e opções
   const [quoteData, setQuoteData] = useState<any>(null);
   const [pickupOption, setPickupOption] = useState<string>("");
-  const [shippingOption, setShippingOption] = useState<"economic" | "express">("economic");
+  // Armazena a transportadora selecionada internamente (jadlog/magalog)
+  const [selectedCarrier, setSelectedCarrier] = useState<"jadlog" | "magalog" | null>(null);
 
   // Step 3: Dados da etiqueta
   const [senderData, setSenderData] = useState<AddressData>({
@@ -462,12 +463,21 @@ const QuoteForm = () => {
     return merchandiseValue * 0.013;
   };
 
+  // Obtém preço e prazo da transportadora selecionada
+  const getSelectedCarrierData = () => {
+    if (!quoteData?.shippingQuote || !selectedCarrier) return { price: 0, days: 0 };
+    const carrierData = quoteData.shippingQuote[selectedCarrier];
+    if (!carrierData || !carrierData.permitido) return { price: 0, days: 0 };
+    return {
+      price: carrierData.preco_total || 0,
+      days: carrierData.prazo || 0,
+    };
+  };
+
   const getTotalPrice = () => {
-    if (!quoteData?.shippingQuote) return 0;
-    const freightPrice =
-      shippingOption === "economic" ? quoteData.shippingQuote.economicPrice : quoteData.shippingQuote.expressPrice;
+    const { price } = getSelectedCarrierData();
     const pickupCost = getPickupCost(pickupOption);
-    return freightPrice + pickupCost;
+    return price + pickupCost;
   };
 
   const handleInputChange = (field: keyof QuoteFormData, value: string) => {
@@ -719,7 +729,7 @@ const QuoteForm = () => {
 
     // Limpar dados antigos antes de calcular nova cotação
     setQuoteData(null);
-    setShippingOption("economic");
+    setSelectedCarrier(null);
     setPickupOption("");
 
     // Limpar cache do sessionStorage
@@ -920,7 +930,7 @@ const QuoteForm = () => {
       return;
     }
 
-    if (!shippingOption) {
+    if (!selectedCarrier) {
       toast({
         title: "Seleção obrigatória",
         description: "Selecione uma opção de frete para continuar",
@@ -1046,16 +1056,13 @@ const QuoteForm = () => {
 
         // === DADOS DE ENTREGA E COLETA ===
         deliveryDetails: {
-          selectedOption: shippingOption,
-          shippingPrice: shippingOption === "economic" 
-            ? (quoteData?.shippingQuote?.economicPrice || 0)
-            : (quoteData?.shippingQuote?.expressPrice || 0),
+          selectedOption: selectedCarrier === "jadlog" ? "express" : "economic", // Compatibilidade
+          selectedCarrier: selectedCarrier, // Transportadora selecionada (jadlog/magalog)
+          shippingPrice: getSelectedCarrierData().price,
           pickupOption: pickupOption,
           pickupCost: getPickupCost(pickupOption),
           totalPrice: getTotalPrice(),
-          deliveryDays: shippingOption === "economic" 
-            ? (quoteData?.shippingQuote?.economicDays || 0)
-            : (quoteData?.shippingQuote?.expressDays || 0),
+          deliveryDays: getSelectedCarrierData().days,
           pickupDetails: {
             option: pickupOption,
             sameAsOrigin: samePickupAddress,
@@ -1096,7 +1103,7 @@ const QuoteForm = () => {
 
       console.log("QuoteForm - Salvando dados COMPLETOS no sessionStorage:", completeShipmentData);
       console.log("QuoteForm - deliveryDays sendo salvo:", completeShipmentData.deliveryDetails?.deliveryDays);
-      console.log("QuoteForm - shippingOption selecionado:", shippingOption);
+      console.log("QuoteForm - selectedCarrier selecionado:", selectedCarrier);
 
       // Salvar dados pessoais para uso no webhook
       sessionStorage.setItem('senderPersonalData', JSON.stringify({
@@ -1569,12 +1576,14 @@ const QuoteForm = () => {
 
                           if (!magalogDisponivel && !jadlogDisponivel) return null;
 
-                          // Se só uma está disponível, mostrar apenas ela
+                          // Se só uma está disponível, mostrar apenas ela e auto-selecionar
                           if (magalogDisponivel && !jadlogDisponivel) {
+                            // Auto-selecionar se ainda não há seleção
+                            if (!selectedCarrier) setSelectedCarrier("magalog");
                             return (
                               <Card
                                 className="shadow-card cursor-pointer transition-all duration-200 border-primary ring-2 ring-primary"
-                                onClick={() => setShippingOption("economic")}
+                                onClick={() => setSelectedCarrier("magalog")}
                               >
                                 <CardHeader>
                                   <CardTitle className="flex items-center space-x-2 text-base">
@@ -1601,10 +1610,12 @@ const QuoteForm = () => {
                           }
 
                           if (jadlogDisponivel && !magalogDisponivel) {
+                            // Auto-selecionar se ainda não há seleção
+                            if (!selectedCarrier) setSelectedCarrier("jadlog");
                             return (
                               <Card
                                 className="shadow-card cursor-pointer transition-all duration-200 border-primary ring-2 ring-primary"
-                                onClick={() => setShippingOption("express")}
+                                onClick={() => setSelectedCarrier("jadlog")}
                               >
                                 <CardHeader>
                                   <CardTitle className="flex items-center space-x-2 text-base">
@@ -1631,26 +1642,22 @@ const QuoteForm = () => {
                           }
 
                           // Ambas disponíveis - determinar qual é mais barata e qual é mais rápida
-                          const magalogMaisBarata = magalog.preco_total <= jadlog.preco_total;
-                          const magalogMaisRapida = magalog.prazo <= jadlog.prazo;
+                          const maisBarataCarrier: "magalog" | "jadlog" = magalog.preco_total <= jadlog.preco_total ? "magalog" : "jadlog";
+                          const maisRapidaCarrier: "magalog" | "jadlog" = magalog.prazo <= jadlog.prazo ? "magalog" : "jadlog";
 
-                          // Se as duas opções são da mesma transportadora, mostrar apenas uma
-                          const mesmaTransportadora = magalogMaisBarata === magalogMaisRapida;
+                          // Se a mesma transportadora é mais barata E mais rápida, mostrar apenas um cartão
+                          const mesmaTransportadora = maisBarataCarrier === maisRapidaCarrier;
 
-                          const opcaoEsquerda = magalogMaisBarata ? magalog : jadlog;
-                          const opcaoEsquerdaTipo = magalogMaisBarata ? "economic" : "express";
-                          const opcaoEsquerdaNome = "Mais barato";
+                          const opcaoMaisBarata = maisBarataCarrier === "magalog" ? magalog : jadlog;
+                          const opcaoMaisRapida = maisRapidaCarrier === "magalog" ? magalog : jadlog;
 
-                          const opcaoDireita = magalogMaisRapida ? magalog : jadlog;
-                          const opcaoDireitaTipo = magalogMaisRapida ? "economic" : "express";
-                          const opcaoDireitaNome = "Mais rápido";
-
-                          // Se for a mesma transportadora, mostrar apenas um cartão
+                          // Se for a mesma transportadora, mostrar apenas um cartão e auto-selecionar
                           if (mesmaTransportadora) {
+                            if (!selectedCarrier) setSelectedCarrier(maisBarataCarrier);
                             return (
                               <Card
                                 className="shadow-card cursor-pointer transition-all duration-200 border-primary ring-2 ring-primary md:col-span-2"
-                                onClick={() => setShippingOption(opcaoEsquerdaTipo)}
+                                onClick={() => setSelectedCarrier(maisBarataCarrier)}
                               >
                                 <CardHeader>
                                   <CardTitle className="flex items-center space-x-2 text-base">
@@ -1663,10 +1670,10 @@ const QuoteForm = () => {
                                   <div className="space-y-3">
                                     <div className="flex items-center justify-between">
                                       <span className="text-xl font-bold text-primary">
-                                        R$ {opcaoEsquerda.preco_total.toFixed(2)}
+                                        R$ {opcaoMaisBarata.preco_total.toFixed(2)}
                                       </span>
                                       <div className="text-right">
-                                        <div className="text-lg font-semibold">{opcaoEsquerda.prazo} dias</div>
+                                        <div className="text-lg font-semibold">{opcaoMaisBarata.prazo} dias</div>
                                         <div className="text-xs text-muted-foreground">úteis</div>
                                       </div>
                                     </div>
@@ -1678,29 +1685,29 @@ const QuoteForm = () => {
 
                           return (
                             <>
-                              {/* Opção Esquerda - Mais Barato */}
+                              {/* Opção Mais Barato */}
                               <Card
                                 className={`shadow-card cursor-pointer transition-all duration-200 ${
-                                  shippingOption === opcaoEsquerdaTipo
+                                  selectedCarrier === maisBarataCarrier
                                     ? "border-primary ring-2 ring-primary"
                                     : "border-border hover:border-primary/50"
                                 }`}
-                                onClick={() => setShippingOption(opcaoEsquerdaTipo)}
+                                onClick={() => setSelectedCarrier(maisBarataCarrier)}
                               >
                                 <CardHeader>
                                   <CardTitle className="flex items-center space-x-2 text-base">
                                     <DollarSign className="h-4 w-4 text-success" />
-                                    <span>{opcaoEsquerdaNome}</span>
+                                    <span>Mais barato</span>
                                   </CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                   <div className="space-y-3">
                                     <div className="flex items-center justify-between">
                                       <span className="text-xl font-bold text-primary">
-                                        R$ {opcaoEsquerda.preco_total.toFixed(2)}
+                                        R$ {opcaoMaisBarata.preco_total.toFixed(2)}
                                       </span>
                                       <div className="text-right">
-                                        <div className="text-lg font-semibold">{opcaoEsquerda.prazo} dias</div>
+                                        <div className="text-lg font-semibold">{opcaoMaisBarata.prazo} dias</div>
                                         <div className="text-xs text-muted-foreground">úteis</div>
                                       </div>
                                     </div>
@@ -1708,29 +1715,29 @@ const QuoteForm = () => {
                                 </CardContent>
                               </Card>
 
-                              {/* Opção Direita - Mais Rápido */}
+                              {/* Opção Mais Rápido */}
                               <Card
                                 className={`shadow-card cursor-pointer transition-all duration-200 ${
-                                  shippingOption === opcaoDireitaTipo
+                                  selectedCarrier === maisRapidaCarrier
                                     ? "border-primary ring-2 ring-primary"
                                     : "border-border hover:border-primary/50"
                                 }`}
-                                onClick={() => setShippingOption(opcaoDireitaTipo)}
+                                onClick={() => setSelectedCarrier(maisRapidaCarrier)}
                               >
                                 <CardHeader>
                                   <CardTitle className="flex items-center space-x-2 text-base">
                                     <Zap className="h-4 w-4 text-primary" />
-                                    <span>{opcaoDireitaNome}</span>
+                                    <span>Mais rápido</span>
                                   </CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                   <div className="space-y-3">
                                     <div className="flex items-center justify-between">
                                       <span className="text-xl font-bold text-primary">
-                                        R$ {opcaoDireita.preco_total.toFixed(2)}
+                                        R$ {opcaoMaisRapida.preco_total.toFixed(2)}
                                       </span>
                                       <div className="text-right">
-                                        <div className="text-lg font-semibold">{opcaoDireita.prazo} dias</div>
+                                        <div className="text-lg font-semibold">{opcaoMaisRapida.prazo} dias</div>
                                         <div className="text-xs text-muted-foreground">úteis</div>
                                       </div>
                                     </div>
