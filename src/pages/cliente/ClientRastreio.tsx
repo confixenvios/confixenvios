@@ -54,17 +54,11 @@ const ClientRastreio = () => {
   const [loading, setLoading] = useState(false);
   const [userShipments, setUserShipments] = useState<ShipmentInfo[]>([]);
   const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([]);
-  const [lastWebhookShipmentId, setLastWebhookShipmentId] = useState<string | null>(null);
 
   const sendTrackingWebhook = async (shipment: ShipmentInfo) => {
-    // Only send if it's a different shipment than the last one
-    if (shipment.id === lastWebhookShipmentId) {
-      return;
-    }
-
     try {
       const webhookPayload = {
-        event_type: 'shipment_tracking_viewed',
+        event_type: 'shipment_tracking_consulted',
         shipment_id: shipment.id,
         tracking_code: shipment.tracking_code,
         status: shipment.status,
@@ -81,7 +75,7 @@ const ClientRastreio = () => {
           state: shipment.recipient_address?.state || shipment.quote_data?.recipientData?.address?.state || ''
         },
         quote_data: shipment.quote_data,
-        viewed_at: new Date().toISOString(),
+        consulted_at: new Date().toISOString(),
         user_id: user?.id || null
       };
 
@@ -93,10 +87,10 @@ const ClientRastreio = () => {
         body: JSON.stringify(webhookPayload)
       });
 
-      setLastWebhookShipmentId(shipment.id);
-      console.log('Webhook de rastreio enviado:', shipment.tracking_code);
+      console.log('Webhook de consulta enviado:', shipment.tracking_code);
     } catch (error) {
-      console.error('Erro ao enviar webhook de rastreio:', error);
+      console.error('Erro ao enviar webhook de consulta:', error);
+      throw error;
     }
   };
 
@@ -465,7 +459,6 @@ const ClientRastreio = () => {
                     setTrackingCode(shipment.tracking_code);
                     setShipmentInfo(shipment);
                     await loadTrackingEvents(shipment.id);
-                    await sendTrackingWebhook(shipment);
                   }}
                 >
                   <div className="flex-1">
@@ -489,8 +482,25 @@ const ClientRastreio = () => {
                       })()}
                     </p>
                   </div>
-                  <div className="text-right text-xs text-muted-foreground">
-                    {new Date(shipment.created_at).toLocaleDateString('pt-BR')}
+                  <div className="flex items-center gap-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        await sendTrackingWebhook(shipment);
+                        toast({
+                          title: "Consulta enviada",
+                          description: `Dados da remessa ${shipment.tracking_code} enviados com sucesso`
+                        });
+                      }}
+                    >
+                      <Search className="w-3 h-3 mr-1" />
+                      Consultar Remessa
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(shipment.created_at).toLocaleDateString('pt-BR')}
+                    </span>
                   </div>
                 </div>
               ))}
