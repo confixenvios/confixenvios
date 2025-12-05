@@ -516,25 +516,71 @@ const AdminRemessas = () => {
                      (shipment.quote_data as any)?.quoteData?.shippingQuote?.economicDays ||
                      (shipment.quote_data as any)?.quoteData?.shippingQuote?.expressDays || 0),
         
-        // Peso real e peso cubado da API da transportadora selecionada
+        // Peso real e peso cubado da API da transportadora selecionada (EXATAMENTE como retornado pela API)
         ...(() => {
           const quoteInfo = (shipment.quote_data as any)?.quoteData?.shippingQuote;
-          const selectedCarrier = (shipment.quote_data as any)?.deliveryDetails?.selectedCarrier;
           
-          // Determinar qual transportadora usar
+          // Usar a mesma lógica de determinação de transportadora selecionada
+          let selectedCarrier = '';
+          
+          // Primeiro, verificar se há selectedCarrier salvo diretamente (remessas novas)
+          const directCarrier = (shipment.quote_data as any)?.deliveryDetails?.selectedCarrier;
+          if (directCarrier && (directCarrier === 'jadlog' || directCarrier === 'magalog')) {
+            selectedCarrier = directCarrier;
+          } else if (quoteInfo) {
+            // Fallback para remessas antigas: usar o PREÇO PAGO como indicador confiável
+            const jadlog = quoteInfo.jadlog;
+            const magalog = quoteInfo.magalog;
+            
+            if (jadlog && !magalog) {
+              selectedCarrier = 'jadlog';
+            } else if (magalog && !jadlog) {
+              selectedCarrier = 'magalog';
+            } else if (jadlog && magalog) {
+              // Usar o preço pago como indicador confiável
+              const paidAmount = (shipment.payment_data as any)?.amount || 
+                                (shipment.quote_data as any)?.deliveryDetails?.totalPrice ||
+                                (shipment.quote_data as any)?.deliveryDetails?.shippingPrice;
+              
+              if (paidAmount) {
+                const jadlogPrice = jadlog.preco_total;
+                const magalogPrice = magalog.preco_total;
+                
+                // Comparar com tolerância de 0.01
+                if (Math.abs(paidAmount - jadlogPrice) < 0.01) {
+                  selectedCarrier = 'jadlog';
+                } else if (Math.abs(paidAmount - magalogPrice) < 0.01) {
+                  selectedCarrier = 'magalog';
+                }
+              }
+              
+              // Último fallback: usar prazo de entrega salvo
+              if (!selectedCarrier) {
+                const savedDays = (shipment.quote_data as any)?.deliveryDetails?.deliveryDays;
+                if (savedDays) {
+                  if (savedDays === jadlog.prazo) selectedCarrier = 'jadlog';
+                  else if (savedDays === magalog.prazo) selectedCarrier = 'magalog';
+                }
+              }
+            }
+          }
+          
+          // Obter dados EXATOS da transportadora selecionada
           let carrierData = null;
           if (selectedCarrier === 'jadlog' && quoteInfo?.jadlog) {
             carrierData = quoteInfo.jadlog;
           } else if (selectedCarrier === 'magalog' && quoteInfo?.magalog) {
             carrierData = quoteInfo.magalog;
           } else {
-            // Fallback: usar jadlog ou magalog (o que existir)
+            // Fallback final: usar a primeira transportadora disponível
             carrierData = quoteInfo?.jadlog || quoteInfo?.magalog;
           }
           
+          console.log(`📊 [WEBHOOK] Transportadora selecionada: ${selectedCarrier || 'não identificada'}, peso_real: ${carrierData?.peso_real}, peso_cubado: ${carrierData?.peso_cubado}`);
+          
           return {
-            peso_real: String(carrierData?.peso_real || shipment.weight || 0),
-            peso_cubado: String(carrierData?.peso_cubado || carrierData?.cubagem?.cubic_rounded || 0)
+            peso_real: String(carrierData?.peso_real ?? ''),
+            peso_cubado: String(carrierData?.peso_cubado ?? '')
           };
         })(),
         
