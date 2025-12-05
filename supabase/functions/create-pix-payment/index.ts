@@ -159,6 +159,7 @@ serve(async (req) => {
     // B2B flow - não requer quoteData completo
     if (isB2B && b2bData) {
       console.log('📦 Fluxo B2B detectado');
+      console.log('📦 Volume addresses:', b2bData.volumeAddresses);
       tempQuoteData = {
         external_id: externalId,
         user_id: userId || null,
@@ -170,14 +171,15 @@ serve(async (req) => {
           clientId: b2bData.clientId
         },
         recipient_data: {
-          deliveryCeps: b2bData.deliveryCeps || [],
+          volumeAddresses: b2bData.volumeAddresses || [],
           vehicleType: b2bData.vehicleType,
           deliveryDate: b2bData.deliveryDate
         },
         package_data: {
           volumeCount: b2bData.volumeCount || 1,
           volumeWeights: b2bData.volumeWeights || [],
-          totalWeight: b2bData.totalWeight || 0
+          totalWeight: b2bData.totalWeight || 0,
+          volumeAddresses: b2bData.volumeAddresses || []
         },
         quote_options: {
           selectedOption: 'b2b_express',

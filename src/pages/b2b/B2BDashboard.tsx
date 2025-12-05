@@ -355,11 +355,33 @@ const B2BDashboard = () => {
                       </div>
                     </div>
 
-                    {obs.delivery_ceps && obs.delivery_ceps.length > 0 && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">CEPs de Entrega</p>
-                        <p className="font-semibold">{obs.delivery_ceps.join(', ')}</p>
-                      </div>
+                    {obs.volume_addresses && obs.volume_addresses.length > 0 && (
+                      <>
+                        <hr className="border-border" />
+                        <h4 className="font-semibold">Endereços de Entrega por Volume</h4>
+                        <div className="space-y-3">
+                          {obs.volume_addresses.map((addr: any, index: number) => (
+                            <div key={index} className="p-3 bg-muted/30 rounded-lg border">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="outline" className="text-xs">Volume {index + 1}</Badge>
+                                {obs.volume_weights?.[index] && (
+                                  <span className="text-xs text-muted-foreground">({obs.volume_weights[index]}kg)</span>
+                                )}
+                              </div>
+                              <p className="text-sm font-semibold">{addr?.recipient_name || addr?.name || '-'}</p>
+                              <p className="text-xs text-muted-foreground">{addr?.recipient_phone || '-'}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {addr?.street}, {addr?.number}
+                                {addr?.complement && `, ${addr.complement}`}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {addr?.neighborhood} - {addr?.city}/{addr?.state}
+                              </p>
+                              <p className="text-xs text-muted-foreground">CEP: {addr?.cep}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </>
                 );

@@ -170,16 +170,17 @@ serve(async (req) => {
                 console.log('🏷️ Gerando tracking code:', trackingCode);
                 
                 // Criar remessa B2B com status 'PENDENTE' (maiúsculo - válido na constraint)
+                const volumeAddresses = recipientData?.volumeAddresses || packageData?.volumeAddresses || [];
                 const b2bShipmentData = {
                   b2b_client_id: b2bClientId,
                   tracking_code: trackingCode,
                   volume_count: packageData?.volumeCount || 1,
                   delivery_date: recipientData?.deliveryDate || new Date().toISOString().split('T')[0],
                   status: 'PENDENTE',
-                  recipient_cep: recipientData?.deliveryCeps?.[0] || null,
+                  recipient_cep: volumeAddresses[0]?.cep || null,
                   observations: JSON.stringify({
                     vehicle_type: recipientData?.vehicleType || quoteOptions?.vehicleType,
-                    delivery_ceps: recipientData?.deliveryCeps || [],
+                    volume_addresses: volumeAddresses,
                     volume_weights: packageData?.volumeWeights || [],
                     total_weight: packageData?.totalWeight || 0,
                     amount_paid: quoteOptions?.amount || 0,
