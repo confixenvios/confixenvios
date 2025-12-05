@@ -786,115 +786,90 @@ const QuoteForm = () => {
       const merchandiseValue = getTotalMerchandiseValue();
       const tipo = firstVolume?.merchandiseType === "normal" ? "Normal" : "Normal";
 
-      // Chamar API Confix diretamente
-      const API_URL = "https://api-frete-confix-producao-production.up.railway.app/frete/confix";
-      const BEARER_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI5ZTM2MDc2YS0yZWE2LTRiMDktOGY2Mi05ZGE5NTViYzBiNmYiLCJlbWFpbCI6Im1hcmNvc0Bjb25maXguY29tIiwianRpIjoiZWMxNDAzMTYtNWQzNy00N2MwLWIwODEtNTI3YzU5Yjc4MTU4IiwiaWF0IjoxNzYyODg0NjQ1LCJleHAiOjE3NjI5NzEwNDV9.aqPsac1PX_PCtDoJeR_c4qe_zLeqtCDGi2WwwXAnPJE";
-
+      // Montar payload com todos os dados dos volumes
       const totalWeight = calculateTotalWeight();
-      const requestData = {
-        cep: formData.destinyCep.replace(/\D/g, ""),
-        quantidade: quantity,
-        valorDeclarado: merchandiseValue || 1,
-        peso: totalWeight, // Enviar peso exato digitado pelo usuário
-        comprimento: length,
-        largura: width,
-        altura: height,
-        tipo: tipo,
+      const totalCubicWeight = calculateTotalCubicWeight();
+      
+      // Preparar dados de cada volume
+      const volumesData = formData.volumes.map((vol, index) => {
+        const volLength = parseFloat(vol.length) || 0;
+        const volWidth = parseFloat(vol.width) || 0;
+        const volHeight = parseFloat(vol.height) || 0;
+        const volWeight = parseFloat(vol.weight) || 0;
+        const volCubicWeight = (volLength * volWidth * volHeight) / 5988;
+        
+        return {
+          volumeNumero: index + 1,
+          peso: volWeight,
+          comprimento: volLength,
+          largura: volWidth,
+          altura: volHeight,
+          pesoCubado: Math.round(volCubicWeight * 1000) / 1000,
+          tipoMercadoria: vol.merchandiseType || "normal",
+        };
+      });
+
+      const webhookPayload = {
+        // Dados de CEP
+        cepOrigem: formData.originCep,
+        cepDestino: formData.destinyCep.replace(/\D/g, ""),
+        
+        // Valor declarado
+        valorDeclarado: merchandiseValue || 0,
+        
+        // Resumo dos volumes
+        quantidadeVolumes: formData.volumes.length,
+        pesoTotalDeclarado: totalWeight,
+        pesoTotalCubado: totalCubicWeight,
+        
+        // Detalhes de cada volume
+        volumes: volumesData,
+        
+        // Dados do usuário (se logado)
+        userId: user?.id || null,
+        userEmail: user?.email || null,
+        
+        // Timestamp
+        dataHora: new Date().toISOString(),
       };
 
-      console.log("📤 Enviando POST para API Confix:", API_URL, requestData);
+      console.log("📤 Enviando POST para Webhook:", webhookPayload);
 
-      const response = await fetch(API_URL, {
+      const WEBHOOK_URL = "https://n8n.grupoconfix.com/webhook-test/470b0b62-d2ea-4f66-80c3-5dc013710241";
+
+      const response = await fetch(WEBHOOK_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${BEARER_TOKEN}`,
         },
-        body: JSON.stringify(requestData),
+        body: JSON.stringify(webhookPayload),
       });
 
+      console.log("📥 Webhook resposta status:", response.status);
+
       if (!response.ok) {
-        throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
+        console.warn(`Webhook retornou status ${response.status}, mas continuando...`);
       }
 
-      const apiData = await response.json();
-      console.log("📥 Resposta COMPLETA da API:", JSON.stringify(apiData, null, 2));
-
-      // Verificar se temos dados das transportadoras
-      if (!apiData.jadlog && !apiData.magalog) {
-        throw new Error("Nenhuma cotação disponível para este CEP");
+      // Tentar ler resposta (pode ser vazia)
+      let webhookResponse = null;
+      try {
+        const responseText = await response.text();
+        if (responseText) {
+          webhookResponse = JSON.parse(responseText);
+          console.log("📥 Webhook resposta:", webhookResponse);
+        }
+      } catch (e) {
+        console.log("Webhook não retornou JSON válido, continuando...");
       }
 
-      // Log detalhado dos dados recebidos
-      console.log("📊 Magalog recebido:", apiData.magalog);
-      console.log("   - preco_total:", apiData.magalog?.preco_total);
-      console.log("   - peso_real:", apiData.magalog?.peso_real);
-      console.log("   - peso_cubado:", apiData.magalog?.peso_cubado);
-      console.log("📊 Jadlog recebido:", apiData.jadlog);
-      console.log("   - preco_total:", apiData.jadlog?.preco_total);
-      console.log("   - peso_real:", apiData.jadlog?.peso_real);
-      console.log("   - peso_cubado:", apiData.jadlog?.peso_cubado);
+      toast({
+        title: "Dados enviados",
+        description: "Os dados foram enviados com sucesso para processamento",
+      });
 
-      // Montar objeto de cotação no formato esperado
-      // IMPORTANTE: Passar os objetos completos sem modificação para preservar todos os campos
-      const shippingQuote = {
-        jadlog: apiData.jadlog || null,
-        magalog: apiData.magalog || null,
-        economicPrice: apiData.magalog?.preco_total || apiData.jadlog?.preco_total || 0,
-        economicDays: apiData.magalog?.prazo || apiData.jadlog?.prazo || 0,
-        expressPrice: apiData.jadlog?.preco_total || apiData.magalog?.preco_total || 0,
-        expressDays: apiData.jadlog?.prazo || apiData.magalog?.prazo || 0,
-        cubicWeight: apiData.jadlog?.peso_cubado || apiData.magalog?.peso_cubado || calculateTotalCubicWeight(),
-        zone: apiData.jadlog?.regiao || apiData.magalog?.regiao || "N/A",
-        zoneName: apiData.jadlog?.regiao || apiData.magalog?.regiao || "N/A",
-        tableId: "confix-api",
-        tableName: "Confix API",
-        cnpj: "",
-      };
-
-      console.log("📦 Objeto shippingQuote montado:", JSON.stringify(shippingQuote, null, 2));
-
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("📋 [QuoteForm] COTAÇÃO PROCESSADA");
-      console.log("🔍 Objeto Completo:", JSON.stringify(shippingQuote, null, 2));
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-      // Salvar todos os dados da cotação completa
-      const completeQuoteData = {
-        // Dados da cotação original
-        originCep: formData.originCep,
-        destinyCep: formData.destinyCep,
-        weight: consideredWeight.toString(),
-        totalWeight: calculateTotalWeight(),
-        cubicWeight: calculateTotalCubicWeight(),
-        consideredWeight: consideredWeight,
-        volumes: formData.volumes,
-        quantity: formData.quantity,
-        unitValue: formData.unitValue,
-        totalMerchandiseValue: getTotalMerchandiseValue(),
-
-        // Resultado da cotação
-        shippingQuote,
-
-        // Metadados
-        calculatedAt: new Date().toISOString(),
-      };
-
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("💾 [QuoteForm] DADOS QUE SERÃO SALVOS NO STATE");
-      console.log("🔍 completeQuoteData.shippingQuote:", JSON.stringify(completeQuoteData.shippingQuote, null, 2));
-      console.log("✅ economicPrice:", completeQuoteData.shippingQuote.economicPrice);
-      console.log("✅ tableName:", completeQuoteData.shippingQuote.tableName);
-      console.log("✅ economicDays:", completeQuoteData.shippingQuote.economicDays);
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-      setQuoteData(completeQuoteData);
-
-      // Salvar no sessionStorage para uso posterior
-      sessionStorage.setItem("completeQuoteData", JSON.stringify(completeQuoteData));
-
-      setCurrentStep(2);
+      // Como agora é webhook, não avança para step 2 automaticamente
+      // O fluxo pode ser diferente dependendo do que o webhook retorna
     } catch (error) {
       console.error("Erro ao calcular frete:", error);
 
