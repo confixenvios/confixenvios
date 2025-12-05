@@ -516,19 +516,29 @@ const AdminRemessas = () => {
                      (shipment.quote_data as any)?.quoteData?.shippingQuote?.economicDays ||
                      (shipment.quote_data as any)?.quoteData?.shippingQuote?.expressDays || 0),
         
-        // Peso real e peso cubado da API da transportadora selecionada (EXATAMENTE como retornado pela API)
+        // peso_real = valor EXATO digitado pelo usuário no campo "Peso (kg)" do formulário
+        // peso_cubado = valor EXATO retornado pela API da transportadora selecionada
         ...(() => {
           const quoteInfo = (shipment.quote_data as any)?.quoteData?.shippingQuote;
+          const volumes = (shipment.quote_data as any)?.quoteData?.volumes || 
+                         (shipment.quote_data as any)?.technicalData?.volumes || 
+                         (shipment.quote_data as any)?.originalFormData?.volumes || [];
           
-          // Usar a mesma lógica de determinação de transportadora selecionada
+          // peso_real = soma dos pesos digitados pelo usuário nos volumes
+          let userInputWeight = 0;
+          if (volumes.length > 0) {
+            userInputWeight = volumes.reduce((sum: number, vol: any) => sum + (Number(vol.weight) || 0), 0);
+          } else {
+            // Fallback: usar o peso do shipment (que pode ser o peso do formulário)
+            userInputWeight = Number(shipment.weight) || 0;
+          }
+          
+          // Determinar transportadora selecionada para obter peso_cubado
           let selectedCarrier = '';
-          
-          // Primeiro, verificar se há selectedCarrier salvo diretamente (remessas novas)
           const directCarrier = (shipment.quote_data as any)?.deliveryDetails?.selectedCarrier;
           if (directCarrier && (directCarrier === 'jadlog' || directCarrier === 'magalog')) {
             selectedCarrier = directCarrier;
           } else if (quoteInfo) {
-            // Fallback para remessas antigas: usar o PREÇO PAGO como indicador confiável
             const jadlog = quoteInfo.jadlog;
             const magalog = quoteInfo.magalog;
             
@@ -537,7 +547,6 @@ const AdminRemessas = () => {
             } else if (magalog && !jadlog) {
               selectedCarrier = 'magalog';
             } else if (jadlog && magalog) {
-              // Usar o preço pago como indicador confiável
               const paidAmount = (shipment.payment_data as any)?.amount || 
                                 (shipment.quote_data as any)?.deliveryDetails?.totalPrice ||
                                 (shipment.quote_data as any)?.deliveryDetails?.shippingPrice;
@@ -546,7 +555,6 @@ const AdminRemessas = () => {
                 const jadlogPrice = jadlog.preco_total;
                 const magalogPrice = magalog.preco_total;
                 
-                // Comparar com tolerância de 0.01
                 if (Math.abs(paidAmount - jadlogPrice) < 0.01) {
                   selectedCarrier = 'jadlog';
                 } else if (Math.abs(paidAmount - magalogPrice) < 0.01) {
@@ -554,7 +562,6 @@ const AdminRemessas = () => {
                 }
               }
               
-              // Último fallback: usar prazo de entrega salvo
               if (!selectedCarrier) {
                 const savedDays = (shipment.quote_data as any)?.deliveryDetails?.deliveryDays;
                 if (savedDays) {
@@ -565,22 +572,21 @@ const AdminRemessas = () => {
             }
           }
           
-          // Obter dados EXATOS da transportadora selecionada
-          let carrierData = null;
+          // Obter peso_cubado EXATO da transportadora selecionada
+          let carrierPesoCubado = 0;
           if (selectedCarrier === 'jadlog' && quoteInfo?.jadlog) {
-            carrierData = quoteInfo.jadlog;
+            carrierPesoCubado = quoteInfo.jadlog.peso_cubado;
           } else if (selectedCarrier === 'magalog' && quoteInfo?.magalog) {
-            carrierData = quoteInfo.magalog;
+            carrierPesoCubado = quoteInfo.magalog.peso_cubado;
           } else {
-            // Fallback final: usar a primeira transportadora disponível
-            carrierData = quoteInfo?.jadlog || quoteInfo?.magalog;
+            carrierPesoCubado = quoteInfo?.jadlog?.peso_cubado || quoteInfo?.magalog?.peso_cubado || 0;
           }
           
-          console.log(`📊 [WEBHOOK] Transportadora selecionada: ${selectedCarrier || 'não identificada'}, peso_real: ${carrierData?.peso_real}, peso_cubado: ${carrierData?.peso_cubado}`);
+          console.log(`📊 [WEBHOOK] peso_real (digitado pelo usuário): ${userInputWeight}, peso_cubado (da transportadora ${selectedCarrier || 'fallback'}): ${carrierPesoCubado}`);
           
           return {
-            peso_real: String(carrierData?.peso_real ?? ''),
-            peso_cubado: String(carrierData?.peso_cubado ?? '')
+            peso_real: String(userInputWeight),
+            peso_cubado: String(carrierPesoCubado)
           };
         })(),
         
