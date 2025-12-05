@@ -35,15 +35,19 @@ const Payment = () => {
     setTimeout(() => navigate('/cotacao'), 100);
   }
   
-  // Calcular valores do frete
-  const freightPrice = shipmentData.quoteData?.shippingQuote?.economicPrice || 0;
-  const pickupCost = shipmentData.pickupDetails?.option === 'pickup' ? 10 : 0;
-  const totalAmount = freightPrice + pickupCost;
+  // Calcular valores do frete - usar shippingPrice que já considera a seleção do usuário
+  const freightPrice = shipmentData.deliveryDetails?.shippingPrice || 
+    shipmentData.quoteData?.shippingQuote?.economicPrice || 0;
+  const pickupCost = shipmentData.deliveryDetails?.pickupCost || 
+    (shipmentData.pickupDetails?.option === 'pickup' ? 10 : 0);
+  const totalAmount = shipmentData.deliveryDetails?.totalPrice || (freightPrice + pickupCost);
   
   console.log('Payment - Valores calculados:', {
     freightPrice,
     pickupCost,
-    totalAmount
+    totalAmount,
+    deliveryDetails: shipmentData.deliveryDetails,
+    selectedOption: shipmentData.deliveryDetails?.selectedOption
   });
   
   const handleBack = () => {
