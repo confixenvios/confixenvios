@@ -400,18 +400,28 @@ const AdminRemessas = () => {
         
         // Transportadora selecionada (magalog ou jadlog)
         selected_carrier: (() => {
+          // Primeiro, verificar se há selectedCarrier salvo diretamente
+          const directCarrier = (shipment.quote_data as any)?.deliveryDetails?.selectedCarrier;
+          if (directCarrier && (directCarrier === 'jadlog' || directCarrier === 'magalog')) {
+            return directCarrier;
+          }
+          
+          // Fallback: determinar pela lógica antiga
           const quoteInfo = (shipment.quote_data as any)?.quoteData?.shippingQuote;
           if (!quoteInfo) return '';
           const jadlog = quoteInfo.jadlog;
           const magalog = quoteInfo.magalog;
-          if (!jadlog || !magalog) return '';
+          if (!jadlog || !magalog) {
+            // Se só uma transportadora disponível
+            if (jadlog && !magalog) return 'jadlog';
+            if (magalog && !jadlog) return 'magalog';
+            return '';
+          }
           
           const selectedOpt = shipment.selected_option;
           if (selectedOpt === 'economic') {
-            // Escolheu o mais barato
             return magalog.preco_total <= jadlog.preco_total ? 'magalog' : 'jadlog';
           } else if (selectedOpt === 'express') {
-            // Escolheu o mais rápido
             return jadlog.prazo <= magalog.prazo ? 'jadlog' : 'magalog';
           }
           return '';
