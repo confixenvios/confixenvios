@@ -406,7 +406,7 @@ const AdminRemessas = () => {
             return directCarrier;
           }
           
-          // Fallback: determinar pela lógica antiga
+          // Fallback: determinar pela lógica antiga baseada em preço/prazo
           const quoteInfo = (shipment.quote_data as any)?.quoteData?.shippingQuote;
           if (!quoteInfo) return '';
           const jadlog = quoteInfo.jadlog;
@@ -418,11 +418,15 @@ const AdminRemessas = () => {
             return '';
           }
           
+          // Determinar qual é mais barata e qual é mais rápida
+          const maisBarataCarrier = magalog.preco_total <= jadlog.preco_total ? 'magalog' : 'jadlog';
+          const maisRapidaCarrier = magalog.prazo <= jadlog.prazo ? 'magalog' : 'jadlog';
+          
           const selectedOpt = shipment.selected_option;
           if (selectedOpt === 'economic') {
-            return magalog.preco_total <= jadlog.preco_total ? 'magalog' : 'jadlog';
+            return maisBarataCarrier;
           } else if (selectedOpt === 'express') {
-            return jadlog.prazo <= magalog.prazo ? 'jadlog' : 'magalog';
+            return maisRapidaCarrier;
           }
           return '';
         })(),
