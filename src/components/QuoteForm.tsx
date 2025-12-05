@@ -1056,7 +1056,22 @@ const QuoteForm = () => {
 
         // === DADOS DE ENTREGA E COLETA ===
         deliveryDetails: {
-          selectedOption: selectedCarrier === "jadlog" ? "express" : "economic", // Compatibilidade
+          // Determinar se é economic ou express baseado nos dados reais da API
+          selectedOption: (() => {
+            const jadlog = quoteData?.shippingQuote?.jadlog;
+            const magalog = quoteData?.shippingQuote?.magalog;
+            if (!jadlog || !magalog || !selectedCarrier) return "standard";
+            
+            // Determinar qual é mais barata e qual é mais rápida
+            const maisBarataCarrier = magalog.preco_total <= jadlog.preco_total ? "magalog" : "jadlog";
+            const maisRapidaCarrier = magalog.prazo <= jadlog.prazo ? "magalog" : "jadlog";
+            
+            // Se o usuário selecionou a mais barata, é "economic"
+            // Se selecionou a mais rápida, é "express"
+            if (selectedCarrier === maisBarataCarrier) return "economic";
+            if (selectedCarrier === maisRapidaCarrier) return "express";
+            return "standard";
+          })(),
           selectedCarrier: selectedCarrier, // Transportadora selecionada (jadlog/magalog)
           shippingPrice: getSelectedCarrierData().price,
           pickupOption: pickupOption,
