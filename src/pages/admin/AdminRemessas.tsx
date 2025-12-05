@@ -516,6 +516,28 @@ const AdminRemessas = () => {
                      (shipment.quote_data as any)?.quoteData?.shippingQuote?.economicDays ||
                      (shipment.quote_data as any)?.quoteData?.shippingQuote?.expressDays || 0),
         
+        // Peso real e peso cubado da API da transportadora selecionada
+        ...(() => {
+          const quoteInfo = (shipment.quote_data as any)?.quoteData?.shippingQuote;
+          const selectedCarrier = (shipment.quote_data as any)?.deliveryDetails?.selectedCarrier;
+          
+          // Determinar qual transportadora usar
+          let carrierData = null;
+          if (selectedCarrier === 'jadlog' && quoteInfo?.jadlog) {
+            carrierData = quoteInfo.jadlog;
+          } else if (selectedCarrier === 'magalog' && quoteInfo?.magalog) {
+            carrierData = quoteInfo.magalog;
+          } else {
+            // Fallback: usar jadlog ou magalog (o que existir)
+            carrierData = quoteInfo?.jadlog || quoteInfo?.magalog;
+          }
+          
+          return {
+            peso_real: String(carrierData?.peso_real || shipment.weight || 0),
+            peso_cubado: String(carrierData?.peso_cubado || carrierData?.cubagem?.cubic_rounded || 0)
+          };
+        })(),
+        
         // Volumes individuais mapeados
         ...(() => {
           const volumes = (shipment.quote_data as any)?.quoteData?.volumes || 
