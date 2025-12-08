@@ -80,7 +80,8 @@ const B2BPixPayment = () => {
           totalWeight: shipmentData?.totalWeight,
           deliveryDate: shipmentData?.deliveryDate,
           vehicleType: shipmentData?.vehicleType,
-          volumeAddresses: shipmentData?.volumeAddresses
+          volumeAddresses: shipmentData?.volumeAddresses,
+          pickupAddress: shipmentData?.pickupAddress
         }
       };
 
@@ -173,6 +174,7 @@ const B2BPixPayment = () => {
             volume_addresses: shipmentData.volumeAddresses,
             volume_weights: shipmentData.volumeWeights,
             total_weight: shipmentData.totalWeight,
+            pickup_address: shipmentData.pickupAddress,
             amount_paid: amount,
             paid: true,
             paid_at: new Date().toISOString()

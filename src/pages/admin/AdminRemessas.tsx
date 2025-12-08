@@ -169,6 +169,9 @@ const AdminRemessas = () => {
 
       const clientData = b2bShipment.b2b_clients as any || {};
 
+      // Endereço de coleta do observations (selecionado pelo cliente no momento do envio)
+      const pickupAddress = observations.pickup_address || null;
+
       // Montar payload completo para o webhook
       const webhookPayload = {
         // Dados da remessa B2B
@@ -186,14 +189,29 @@ const AdminRemessas = () => {
         client_email: clientData?.email,
         client_phone: clientData?.phone,
         
-        // Endereço de coleta do cliente
-        pickup_cep: clientData?.default_pickup_cep,
-        pickup_street: clientData?.default_pickup_street,
-        pickup_number: clientData?.default_pickup_number,
-        pickup_complement: clientData?.default_pickup_complement,
-        pickup_neighborhood: clientData?.default_pickup_neighborhood,
-        pickup_city: clientData?.default_pickup_city,
-        pickup_state: clientData?.default_pickup_state,
+        // Endereço de coleta selecionado para esta remessa
+        pickup_address: pickupAddress ? {
+          name: pickupAddress.name,
+          contact_name: pickupAddress.contact_name,
+          contact_phone: pickupAddress.contact_phone,
+          cep: pickupAddress.cep,
+          street: pickupAddress.street,
+          number: pickupAddress.number,
+          complement: pickupAddress.complement,
+          neighborhood: pickupAddress.neighborhood,
+          city: pickupAddress.city,
+          state: pickupAddress.state,
+          reference: pickupAddress.reference
+        } : {
+          // Fallback para endereço padrão do cliente (dados legados)
+          cep: clientData?.default_pickup_cep,
+          street: clientData?.default_pickup_street,
+          number: clientData?.default_pickup_number,
+          complement: clientData?.default_pickup_complement,
+          neighborhood: clientData?.default_pickup_neighborhood,
+          city: clientData?.default_pickup_city,
+          state: clientData?.default_pickup_state
+        },
         
         // Dados do formulário (observations)
         vehicle_type: observations.vehicle_type,
