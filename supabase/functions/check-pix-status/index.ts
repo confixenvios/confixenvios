@@ -183,6 +183,7 @@ serve(async (req) => {
                     volume_addresses: volumeAddresses,
                     volume_weights: packageData?.volumeWeights || [],
                     total_weight: packageData?.totalWeight || 0,
+                    pickup_address: recipientData?.pickupAddress || packageData?.pickupAddress || null,
                     amount_paid: quoteOptions?.amount || 0,
                     payment_id: paymentId,
                     external_id: b2bQuote.external_id,
