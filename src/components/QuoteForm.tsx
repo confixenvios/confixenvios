@@ -1587,11 +1587,11 @@ const QuoteForm = () => {
                           <div className="mt-3 text-sm text-muted-foreground">
                             Peso cúbico deste volume:{" "}
                             <span className="font-medium text-foreground">
-                              {calculateCubicWeight(
+                              {(Math.floor(calculateCubicWeight(
                                 parseFloat(volume.length) || 0,
                                 parseFloat(volume.width) || 0,
                                 parseFloat(volume.height) || 0,
-                              ).toFixed(2)}{" "}
+                              ) * 100) / 100).toFixed(2)}{" "}
                               kg
                             </span>
                           </div>
