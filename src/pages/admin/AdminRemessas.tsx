@@ -117,6 +117,124 @@ const AdminRemessas = () => {
   const [b2bDetailsModalOpen, setB2bDetailsModalOpen] = useState(false);
   const [selectedB2BShipment, setSelectedB2BShipment] = useState<AdminShipment | null>(null);
   const [b2bClientData, setB2bClientData] = useState<any>(null);
+  const [sendingB2BWhatsapp, setSendingB2BWhatsapp] = useState<Record<string, boolean>>({});
+
+  // Função para enviar dados B2B via WhatsApp webhook
+  const handleSendB2BWhatsAppWebhook = async (shipment: AdminShipment) => {
+    const trackingCode = shipment.tracking_code || '';
+    if (!trackingCode.startsWith('B2B-')) {
+      toast({
+        title: "Erro",
+        description: "Esta remessa não é do tipo B2B Expresso",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSendingB2BWhatsapp(prev => ({ ...prev, [shipment.id]: true }));
+
+    try {
+      // Buscar dados completos da remessa B2B
+      const { data: b2bShipment, error: b2bError } = await supabase
+        .from('b2b_shipments')
+        .select('*, b2b_clients(*)')
+        .eq('tracking_code', trackingCode)
+        .maybeSingle();
+
+      if (b2bError || !b2bShipment) {
+        throw new Error('Remessa B2B não encontrada');
+      }
+
+      // Parse observations JSON
+      let observations: any = {};
+      if (b2bShipment.observations) {
+        try {
+          observations = typeof b2bShipment.observations === 'string' 
+            ? JSON.parse(b2bShipment.observations) 
+            : b2bShipment.observations;
+        } catch (e) {
+          console.warn('Erro ao parsear observations:', e);
+        }
+      }
+
+      const clientData = b2bShipment.b2b_clients as any || {};
+
+      // Montar payload completo para o webhook
+      const webhookPayload = {
+        // Dados da remessa B2B
+        b2b_shipment_id: b2bShipment.id,
+        tracking_code: b2bShipment.tracking_code,
+        status: b2bShipment.status,
+        created_at: b2bShipment.created_at,
+        delivery_date: b2bShipment.delivery_date,
+        volume_count: b2bShipment.volume_count,
+        
+        // Dados do cliente B2B
+        client_id: clientData?.id,
+        client_company_name: clientData?.company_name,
+        client_cnpj: clientData?.cnpj,
+        client_email: clientData?.email,
+        client_phone: clientData?.phone,
+        
+        // Endereço de coleta do cliente
+        pickup_cep: clientData?.default_pickup_cep,
+        pickup_street: clientData?.default_pickup_street,
+        pickup_number: clientData?.default_pickup_number,
+        pickup_complement: clientData?.default_pickup_complement,
+        pickup_neighborhood: clientData?.default_pickup_neighborhood,
+        pickup_city: clientData?.default_pickup_city,
+        pickup_state: clientData?.default_pickup_state,
+        
+        // Dados do formulário (observations)
+        vehicle_type: observations.vehicle_type,
+        total_weight: observations.total_weight,
+        volume_weights: observations.volume_weights,
+        amount_paid: observations.amount_paid,
+        payment_id: observations.payment_id,
+        external_id: observations.external_id,
+        paid_at: observations.paid_at,
+        
+        // Endereços de entrega individuais por volume
+        volume_addresses: observations.volume_addresses || [],
+        
+        // Timestamp do envio
+        webhook_sent_at: new Date().toISOString()
+      };
+
+      console.log('📤 [B2B WhatsApp] Enviando webhook para:', 'https://n8n.grupoconfix.com/webhook-test/disparo-wpp');
+      console.log('📤 [B2B WhatsApp] Payload:', webhookPayload);
+
+      const response = await fetch('https://n8n.grupoconfix.com/webhook-test/disparo-wpp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(webhookPayload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro HTTP: ${response.status}`);
+      }
+
+      console.log('✅ [B2B WhatsApp] Webhook enviado com sucesso');
+
+      toast({
+        title: "WhatsApp enviado",
+        description: `Dados da remessa ${trackingCode} enviados para processamento`,
+      });
+
+    } catch (error) {
+      console.error('❌ [B2B WhatsApp] Erro ao enviar webhook:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao enviar dados para WhatsApp",
+        variant: "destructive"
+      });
+    } finally {
+      setSendingB2BWhatsapp(prev => ({ ...prev, [shipment.id]: false }));
+    }
+  };
 
   // Função para verificar status dos webhooks das remessas
   const checkWebhookStatuses = async (remessas: AdminShipment[]) => {
@@ -1121,10 +1239,16 @@ const AdminRemessas = () => {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                onClick={() => handleSendB2BWhatsAppWebhook(shipment)}
+                                disabled={sendingB2BWhatsapp[shipment.id]}
                                 className="h-8 w-8 p-0 text-green-600 hover:bg-green-100"
                                 title="Enviar para WhatsApp"
                               >
-                                <MessageCircle className="h-4 w-4" />
+                                {sendingB2BWhatsapp[shipment.id] ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <MessageCircle className="h-4 w-4" />
+                                )}
                               </Button>
                             </div>
                           ) : (
