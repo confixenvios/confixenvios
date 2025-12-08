@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Copy, ExternalLink, FileText, Search, Calendar, Eye, RefreshCw } from 'lucide-react';
+import { Copy, ExternalLink, FileText, Search, Calendar, Eye, RefreshCw, Loader2 } from 'lucide-react';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -55,6 +55,10 @@ const AdminCte = () => {
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
   const [selectedPayload, setSelectedPayload] = useState<any>(null);
+  const [xmlContent, setXmlContent] = useState<string | null>(null);
+  const [xmlLoading, setXmlLoading] = useState(false);
+  const [xmlDialogOpen, setXmlDialogOpen] = useState(false);
+  const [selectedXmlCte, setSelectedXmlCte] = useState<string>('');
 
   const fetchEmissions = async () => {
     setLoading(true);
@@ -142,6 +146,32 @@ const AdminCte = () => {
     setStatusFilter('all');
     setDateFrom('');
     setDateTo('');
+  };
+
+  const fetchXmlContent = async (xmlUrl: string, numeroCte: string) => {
+    setXmlLoading(true);
+    setSelectedXmlCte(numeroCte);
+    setXmlDialogOpen(true);
+    try {
+      const response = await fetch(xmlUrl);
+      if (!response.ok) {
+        throw new Error('Falha ao buscar XML');
+      }
+      const text = await response.text();
+      // Format XML with indentation
+      const formatted = text.replace(/></g, '>\n<');
+      setXmlContent(formatted);
+    } catch (error) {
+      console.error('Erro ao buscar XML:', error);
+      toast({
+        title: "Erro ao carregar XML",
+        description: "Não foi possível carregar o conteúdo do XML",
+        variant: "destructive"
+      });
+      setXmlContent(null);
+    } finally {
+      setXmlLoading(false);
+    }
   };
 
   return (
@@ -310,12 +340,10 @@ const AdminCte = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              asChild
+                              onClick={() => fetchXmlContent(emission.xml_url!, emission.numero_cte)}
                             >
-                              <a href={emission.xml_url} target="_blank" rel="noopener noreferrer">
-                                <FileText className="h-4 w-4 mr-1" />
-                                XML
-                              </a>
+                              <FileText className="h-4 w-4 mr-1" />
+                              XML
                             </Button>
                           )}
                           {emission.dacte_url && (
@@ -387,6 +415,32 @@ const AdminCte = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* XML Viewer Dialog */}
+      <Dialog open={xmlDialogOpen} onOpenChange={setXmlDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>XML - CT-e {selectedXmlCte}</DialogTitle>
+            <DialogDescription>
+              Conteúdo do arquivo XML do CT-e
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-muted rounded-lg p-4">
+            {xmlLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                <span>Carregando XML...</span>
+              </div>
+            ) : xmlContent ? (
+              <pre className="text-xs overflow-auto whitespace-pre-wrap font-mono">
+                {xmlContent}
+              </pre>
+            ) : (
+              <p className="text-muted-foreground">Não foi possível carregar o XML</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
