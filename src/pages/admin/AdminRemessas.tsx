@@ -520,14 +520,17 @@ const AdminRemessas = () => {
         // peso_cubado = valor EXATO retornado pela API da transportadora selecionada
         ...(() => {
           const quoteInfo = (shipment.quote_data as any)?.quoteData?.shippingQuote;
-          const volumes = (shipment.quote_data as any)?.quoteData?.volumes || 
+          // Priorizar merchandiseDetails.volumes que tem os dados completos
+          const volumes = (shipment.quote_data as any)?.merchandiseDetails?.volumes || 
                          (shipment.quote_data as any)?.technicalData?.volumes || 
-                         (shipment.quote_data as any)?.originalFormData?.volumes || [];
+                         (shipment.quote_data as any)?.originalFormData?.volumes ||
+                         (shipment.quote_data as any)?.quoteData?.volumes || [];
           
           // peso_real = soma dos pesos digitados pelo usuário nos volumes
           let userInputWeight = 0;
           if (volumes.length > 0) {
-            userInputWeight = volumes.reduce((sum: number, vol: any) => sum + (Number(vol.weight) || 0), 0);
+            // Suporte para nomes em português (peso) e inglês (weight)
+            userInputWeight = volumes.reduce((sum: number, vol: any) => sum + (Number(vol.weight) || Number(vol.peso) || 0), 0);
           } else {
             // Fallback: usar o peso do shipment (que pode ser o peso do formulário)
             userInputWeight = Number(shipment.weight) || 0;
@@ -592,19 +595,22 @@ const AdminRemessas = () => {
         
         // Volumes individuais mapeados
         ...(() => {
-          const volumes = (shipment.quote_data as any)?.quoteData?.volumes || 
+          // Priorizar merchandiseDetails.volumes que tem os nomes em inglês
+          const volumes = (shipment.quote_data as any)?.merchandiseDetails?.volumes || 
                          (shipment.quote_data as any)?.technicalData?.volumes || 
-                         (shipment.quote_data as any)?.originalFormData?.volumes || [];
+                         (shipment.quote_data as any)?.originalFormData?.volumes ||
+                         (shipment.quote_data as any)?.quoteData?.volumes || [];
           const volumeParams: Record<string, string> = {};
           volumeParams['total_volumes'] = String(volumes.length);
           
           volumes.forEach((vol: any, index: number) => {
             const num = index + 1;
-            volumeParams[`volume${num}_peso`] = String(vol.weight || 0);
-            volumeParams[`volume${num}_comprimento`] = String(vol.length || 0);
-            volumeParams[`volume${num}_largura`] = String(vol.width || 0);
-            volumeParams[`volume${num}_altura`] = String(vol.height || 0);
-            volumeParams[`volume${num}_tipo`] = vol.merchandiseType || 'normal';
+            // Suporte para nomes em português (quoteData.volumes) e inglês (merchandiseDetails/technicalData)
+            volumeParams[`volume${num}_peso`] = String(vol.weight || vol.peso || 0);
+            volumeParams[`volume${num}_comprimento`] = String(vol.length || vol.comprimento || 0);
+            volumeParams[`volume${num}_largura`] = String(vol.width || vol.largura || 0);
+            volumeParams[`volume${num}_altura`] = String(vol.height || vol.altura || 0);
+            volumeParams[`volume${num}_tipo`] = vol.merchandiseType || vol.tipoMercadoria || 'normal';
           });
           
           return volumeParams;
