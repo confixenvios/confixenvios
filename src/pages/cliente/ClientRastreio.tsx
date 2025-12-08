@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import CarrierTrackingModal from "@/components/cliente/CarrierTrackingModal";
 
 interface TrackingEvent {
   id: string;
@@ -55,9 +56,22 @@ const ClientRastreio = () => {
   const [loading, setLoading] = useState(false);
   const [userShipments, setUserShipments] = useState<ShipmentInfo[]>([]);
   const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([]);
+  
+  // Carrier tracking modal state
+  const [carrierModalOpen, setCarrierModalOpen] = useState(false);
+  const [carrierTrackingData, setCarrierTrackingData] = useState<any>(null);
+  const [carrierLoading, setCarrierLoading] = useState(false);
+  const [carrierError, setCarrierError] = useState<string | null>(null);
+  const [selectedTrackingCode, setSelectedTrackingCode] = useState("");
 
   const sendTrackingWebhook = async (shipment: ShipmentInfo) => {
     try {
+      setCarrierLoading(true);
+      setCarrierError(null);
+      setCarrierTrackingData(null);
+      setSelectedTrackingCode(shipment.tracking_code);
+      setCarrierModalOpen(true);
+
       const webhookPayload = {
         event_type: 'shipment_tracking_consulted',
         shipment_id: shipment.id,
@@ -81,7 +95,7 @@ const ClientRastreio = () => {
         user_id: user?.id || null
       };
 
-      await fetch('https://n8n.grupoconfix.com/webhook-test/47827545-77ca-4e68-8b43-9c50467a3f55', {
+      const response = await fetch('https://n8n.grupoconfix.com/webhook-test/47827545-77ca-4e68-8b43-9c50467a3f55', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -89,10 +103,15 @@ const ClientRastreio = () => {
         body: JSON.stringify(webhookPayload)
       });
 
-      console.log('Webhook de consulta enviado:', shipment.tracking_code);
+      const data = await response.json();
+      console.log('Resposta do webhook de rastreamento:', data);
+      
+      setCarrierTrackingData(data);
+      setCarrierLoading(false);
     } catch (error) {
       console.error('Erro ao enviar webhook de consulta:', error);
-      throw error;
+      setCarrierError('Não foi possível consultar a transportadora. Tente novamente.');
+      setCarrierLoading(false);
     }
   };
 
@@ -492,10 +511,6 @@ const ClientRastreio = () => {
                       onClick={async (e) => {
                         e.stopPropagation();
                         await sendTrackingWebhook(shipment);
-                        toast({
-                          title: "Consulta enviada",
-                          description: `Dados da remessa ${shipment.tracking_code} enviados com sucesso`
-                        });
                       }}
                     >
                       <Search className="w-3 h-3 mr-1" />
@@ -511,6 +526,16 @@ const ClientRastreio = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Carrier Tracking Modal */}
+      <CarrierTrackingModal
+        isOpen={carrierModalOpen}
+        onClose={() => setCarrierModalOpen(false)}
+        trackingData={carrierTrackingData}
+        loading={carrierLoading}
+        error={carrierError}
+        trackingCode={selectedTrackingCode}
+      />
 
       {/* Tracking Results */}
       {shipmentInfo && (
