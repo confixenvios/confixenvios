@@ -1587,13 +1587,11 @@ const QuoteForm = () => {
                           <div className="mt-3 text-sm text-muted-foreground">
                             Peso cúbico deste volume:{" "}
                             <span className="font-medium text-foreground">
-                              {roundWeightForDisplay(
-                                calculateCubicWeight(
-                                  parseFloat(volume.length) || 0,
-                                  parseFloat(volume.width) || 0,
-                                  parseFloat(volume.height) || 0,
-                                ),
-                              )}{" "}
+                              {calculateCubicWeight(
+                                parseFloat(volume.length) || 0,
+                                parseFloat(volume.width) || 0,
+                                parseFloat(volume.height) || 0,
+                              ).toFixed(2)}{" "}
                               kg
                             </span>
                           </div>
@@ -1637,7 +1635,7 @@ const QuoteForm = () => {
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">Peso Total Cubado</p>
-                          <p className="text-2xl font-bold">{roundWeightForDisplay(calculateTotalCubicWeight())} kg</p>
+                          <p className="text-2xl font-bold">{Math.ceil(calculateTotalCubicWeight())} kg</p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">Volume Total</p>
