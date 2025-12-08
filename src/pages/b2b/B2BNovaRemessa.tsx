@@ -38,12 +38,29 @@ interface DeliveryAddress {
   is_default: boolean;
 }
 
+interface PickupAddress {
+  id: string;
+  name: string;
+  contact_name: string;
+  contact_phone: string;
+  cep: string;
+  street: string;
+  number: string;
+  complement: string | null;
+  neighborhood: string;
+  city: string;
+  state: string;
+  reference: string | null;
+  is_default: boolean;
+}
+
 const B2BNovaRemessa = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [client, setClient] = useState<B2BClient | null>(null);
   const [addresses, setAddresses] = useState<DeliveryAddress[]>([]);
+  const [pickupAddresses, setPickupAddresses] = useState<PickupAddress[]>([]);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
@@ -65,6 +82,7 @@ const B2BNovaRemessa = () => {
     volume_count: '',
     delivery_date: '',
     vehicle_type: '',
+    pickup_address_id: '',
     volume_weights: [''] as string[],
     volume_addresses: [''] as string[],
   });
@@ -112,7 +130,7 @@ const B2BNovaRemessa = () => {
 
       setClient(clientData);
 
-      // Buscar endereços cadastrados
+      // Buscar endereços de entrega cadastrados
       const { data: addressesData, error: addressesError } = await supabase
         .from('b2b_delivery_addresses')
         .select('*')
@@ -122,6 +140,23 @@ const B2BNovaRemessa = () => {
 
       if (addressesError) throw addressesError;
       setAddresses(addressesData || []);
+
+      // Buscar endereços de coleta cadastrados
+      const { data: pickupData, error: pickupError } = await supabase
+        .from('b2b_pickup_addresses')
+        .select('*')
+        .eq('b2b_client_id', clientData.id)
+        .order('is_default', { ascending: false })
+        .order('name');
+
+      if (pickupError) throw pickupError;
+      setPickupAddresses(pickupData || []);
+
+      // Auto-selecionar endereço de coleta padrão
+      const defaultPickup = (pickupData || []).find((a: PickupAddress) => a.is_default);
+      if (defaultPickup) {
+        setFormData(prev => ({ ...prev, pickup_address_id: defaultPickup.id }));
+      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -132,6 +167,12 @@ const B2BNovaRemessa = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!client) return;
+
+    // Validar endereço de coleta
+    if (!formData.pickup_address_id) {
+      toast.error('Selecione o endereço de coleta');
+      return;
+    }
 
     // Validar tipo de veículo
     if (!formData.vehicle_type) {
@@ -146,7 +187,7 @@ const B2BNovaRemessa = () => {
       return;
     }
 
-    // Validar endereços
+    // Validar endereços de entrega
     const hasValidAddresses = formData.volume_addresses.every(a => a && a !== '');
     if (!hasValidAddresses) {
       toast.error('Selecione o endereço de entrega para cada volume');
@@ -160,6 +201,9 @@ const B2BNovaRemessa = () => {
       const selectedAddresses = formData.volume_addresses.map(id => 
         addresses.find(a => a.id === id)
       );
+
+      // Encontrar endereço de coleta selecionado
+      const selectedPickupAddress = pickupAddresses.find(a => a.id === formData.pickup_address_id);
 
       // Navegar para tela de pagamento PIX
       navigate('/b2b-expresso/pix-pagamento', {
@@ -177,6 +221,7 @@ const B2BNovaRemessa = () => {
             vehicleType: formData.vehicle_type,
             volumeWeights: formData.volume_weights.map(w => parseFloat(w) || 0),
             volumeAddresses: selectedAddresses,
+            pickupAddress: selectedPickupAddress,
             totalWeight: totalWeight
           }
         }
@@ -218,6 +263,7 @@ const B2BNovaRemessa = () => {
   };
 
   const getAddressById = (id: string) => addresses.find(a => a.id === id);
+  const getPickupAddressById = (id: string) => pickupAddresses.find(a => a.id === id);
 
   const handleCepLookup = async (cep: string) => {
     const cleanCep = cep.replace(/\D/g, '');
@@ -356,6 +402,73 @@ const B2BNovaRemessa = () => {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Seção 0: Endereço de Coleta */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b">
+                  <MapPin className="h-5 w-5 text-green-600" />
+                  <h3 className="font-semibold text-lg">Endereço de Coleta</h3>
+                </div>
+
+                {pickupAddresses.length === 0 ? (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Nenhum endereço de coleta cadastrado.{' '}
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="h-auto p-0"
+                        onClick={() => navigate('/b2b-expresso/enderecos-coleta')}
+                      >
+                        Cadastre um endereço de coleta
+                      </Button>{' '}
+                      para continuar.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <div className="space-y-2">
+                    <Label className="text-base">Selecione o endereço de coleta *</Label>
+                    <Select
+                      value={formData.pickup_address_id}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, pickup_address_id: value }))}
+                      required
+                    >
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Selecione o endereço de coleta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {pickupAddresses.map((addr) => (
+                          <SelectItem key={addr.id} value={addr.id}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{addr.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {addr.contact_name} - {addr.city}/{addr.state}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {formData.pickup_address_id && (
+                      <div className="text-xs text-muted-foreground bg-green-50 dark:bg-green-950/20 p-3 rounded-lg border border-green-200 dark:border-green-900">
+                        {(() => {
+                          const addr = getPickupAddressById(formData.pickup_address_id);
+                          if (!addr) return null;
+                          return (
+                            <>
+                              <p><strong>{addr.contact_name}</strong> - {addr.contact_phone}</p>
+                              <p>{addr.street}, {addr.number}{addr.complement && `, ${addr.complement}`}</p>
+                              <p>{addr.neighborhood} - {addr.city}/{addr.state} - CEP: {addr.cep}</p>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Seção 1: Informações Básicas */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b">
