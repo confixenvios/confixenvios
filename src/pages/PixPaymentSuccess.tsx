@@ -127,16 +127,34 @@ const PixPaymentSuccess = () => {
         descricaoMercadoria: documentData.merchandiseDescription
       };
       
+      // Extrair peso total e dimensões do maior volume para a tabela shipments
+      const volumes = completeShipmentData.merchandiseDetails?.volumes || 
+                     completeShipmentData.technicalData?.volumes || 
+                     completeShipmentData.originalFormData?.volumes || [];
+      
+      // Peso total = soma dos pesos de todos os volumes
+      const totalWeight = volumes.reduce((sum: number, vol: any) => sum + (Number(vol.weight) || 0), 0) || 
+                         completeShipmentData.technicalData?.totalWeight || 1;
+      
+      // Dimensões = usar o maior volume como referência (ou 0 se não houver)
+      const largestVolume = volumes.length > 0 
+        ? volumes.reduce((max: any, vol: any) => {
+            const currentSize = (Number(vol.length) || 0) * (Number(vol.width) || 0) * (Number(vol.height) || 0);
+            const maxSize = (Number(max.length) || 0) * (Number(max.width) || 0) * (Number(max.height) || 0);
+            return currentSize > maxSize ? vol : max;
+          }, volumes[0])
+        : null;
+      
       const newShipmentData = {
         tracking_code: trackingCode,
         user_id: user?.id || null,
         session_id: user ? null : completeShipmentData.metadata?.session_id,
         sender_address_id: senderAddress.id,
         recipient_address_id: recipientAddress.id,
-        weight: completeShipmentData.technicalData?.weight || 1,
-        length: completeShipmentData.technicalData?.length || 20,
-        width: completeShipmentData.technicalData?.width || 15,
-        height: completeShipmentData.technicalData?.height || 10,
+        weight: totalWeight,
+        length: largestVolume ? Number(largestVolume.length) || 0 : 0,
+        width: largestVolume ? Number(largestVolume.width) || 0 : 0,
+        height: largestVolume ? Number(largestVolume.height) || 0 : 0,
         format: completeShipmentData.technicalData?.format || 'pacote',
         pickup_option: completeShipmentData.deliveryDetails?.pickupOption || 'dropoff',
         selected_option: completeShipmentData.deliveryDetails?.selectedOption || 'standard',
