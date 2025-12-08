@@ -134,6 +134,8 @@ const AdminRemessas = () => {
     setSendingB2BWhatsapp(prev => ({ ...prev, [shipment.id]: true }));
 
     try {
+      console.log('📤 [B2B WhatsApp] Buscando remessa:', trackingCode);
+      
       // Buscar dados completos da remessa B2B
       const { data: b2bShipment, error: b2bError } = await supabase
         .from('b2b_shipments')
@@ -141,7 +143,15 @@ const AdminRemessas = () => {
         .eq('tracking_code', trackingCode)
         .maybeSingle();
 
-      if (b2bError || !b2bShipment) {
+      console.log('📤 [B2B WhatsApp] Resultado da busca:', { b2bShipment, b2bError });
+
+      if (b2bError) {
+        console.error('❌ [B2B WhatsApp] Erro na query:', b2bError);
+        throw new Error(`Erro ao buscar remessa: ${b2bError.message}`);
+      }
+      
+      if (!b2bShipment) {
+        console.error('❌ [B2B WhatsApp] Remessa não encontrada para:', trackingCode);
         throw new Error('Remessa B2B não encontrada');
       }
 
