@@ -965,6 +965,91 @@ const QuoteForm = () => {
     }
   };
 
+  // Webhook de teste secreto (ícone da calculadora)
+  const handleSecretTestWebhook = async () => {
+    if (!isStep1Valid()) {
+      toast({
+        title: "Dados incompletos",
+        description: "Preencha todos os campos obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const totalWeight = calculateTotalWeight();
+    const totalCubicWeight = calculateTotalCubicWeight();
+    const merchandiseValue = getTotalMerchandiseValue();
+    
+    const volumesData = formData.volumes.map((vol, index) => {
+      const volLength = parseFloat(vol.length) || 0;
+      const volWidth = parseFloat(vol.width) || 0;
+      const volHeight = parseFloat(vol.height) || 0;
+      const volWeight = parseFloat(vol.weight) || 0;
+      const volCubicWeight = (volLength * volWidth * volHeight) / 5988;
+      
+      return {
+        volumeNumero: index + 1,
+        peso: volWeight,
+        comprimento: volLength,
+        largura: volWidth,
+        altura: volHeight,
+        pesoCubado: Math.round(volCubicWeight * 1000) / 1000,
+        tipoMercadoria: vol.merchandiseType || "normal",
+      };
+    });
+
+    const webhookPayload = {
+      cepOrigem: formData.originCep,
+      cepDestino: formData.destinyCep.replace(/\D/g, ""),
+      valorDeclarado: merchandiseValue || 0,
+      quantidadeVolumes: formData.volumes.length,
+      pesoTotalDeclarado: totalWeight,
+      pesoTotalCubado: totalCubicWeight,
+      volumes: volumesData,
+      userId: user?.id || null,
+      userEmail: user?.email || null,
+      dataHora: new Date().toISOString(),
+      _testMode: true,
+    };
+
+    console.log("🧪 [TESTE] Enviando para webhook de teste:", webhookPayload);
+
+    try {
+      const TEST_WEBHOOK_URL = "https://n8n.grupoconfix.com/webhook-test/470b0b62-d2ea-4f66-80c3-5dc013710241";
+      
+      const response = await fetch(TEST_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(webhookPayload),
+      });
+
+      if (!response.ok) {
+        console.log("🧪 [TESTE] Webhook de teste não está ativo (status:", response.status, ")");
+        toast({
+          title: "Webhook de teste offline",
+          description: "O n8n de teste não está ativo",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const testResponse = await response.json();
+      console.log("🧪 [TESTE] Resposta do webhook de teste:", testResponse);
+
+      toast({
+        title: "✅ Teste enviado com sucesso!",
+        description: `Jadlog: R$${testResponse.preco_total_frete_jadlog || 'N/A'} | Magalog: R$${testResponse.preco_total_frete_magalog || 'N/A'}`,
+      });
+    } catch (error) {
+      console.log("🧪 [TESTE] Erro no webhook de teste:", error);
+      toast({
+        title: "Webhook de teste offline",
+        description: "O n8n de teste não está respondendo",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Step 2: Selecionar opções
   const handleStep2Submit = () => {
     if (!pickupOption) {
@@ -1569,7 +1654,13 @@ const QuoteForm = () => {
                     </div>
                   ) : (
                     <>
-                      <Calculator className="mr-3 h-5 w-5" />
+                      <Calculator 
+                        className="mr-3 h-5 w-5 cursor-pointer hover:text-yellow-300 transition-colors" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSecretTestWebhook();
+                        }}
+                      />
                       Calcular Frete
                     </>
                   )}
