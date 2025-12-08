@@ -1384,6 +1384,12 @@ const QuoteForm = () => {
                 {/* CEP Fields */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
                   <div className="space-y-3">
+                    {/* Área invisível para teste de webhook */}
+                    <div 
+                      className="absolute -mt-4 w-20 h-4 cursor-default opacity-0"
+                      onClick={handleSecretTestWebhook}
+                      aria-hidden="true"
+                    />
                     <Label htmlFor="origin-cep" className="flex items-center space-x-2 text-base font-medium">
                       <MapPin className="h-5 w-5 text-primary" />
                       <span>CEP de Origem</span>
@@ -1653,19 +1659,10 @@ const QuoteForm = () => {
                       <span>Calculando frete...</span>
                     </div>
                   ) : (
-                    <div className="flex items-center">
-                      <span 
-                        className="mr-3 cursor-pointer hover:text-yellow-300 transition-colors p-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          handleSecretTestWebhook();
-                        }}
-                      >
-                        <Calculator className="h-5 w-5" />
-                      </span>
+                    <>
+                      <Calculator className="mr-3 h-5 w-5" />
                       Calcular Frete
-                    </div>
+                    </>
                   )}
                 </Button>
               </div>
