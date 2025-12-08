@@ -22,7 +22,8 @@ import {
   Building2,
   BarChart3,
   Key,
-  Bot
+  Bot,
+  Search
 } from "lucide-react";
 import { NavLink, useLocation } from 'react-router-dom';
 
@@ -66,6 +67,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'Filiais', href: '/admin/filiais', icon: Building2 },
     { name: 'Faturamento', href: '/admin/faturamento', icon: DollarSign },
     { name: 'Remessas', href: '/admin/remessas', icon: Package },
+    { name: 'Rastreamento', href: '/admin/rastreamento', icon: Search },
     { name: 'Cte', href: '/admin/cte', icon: FileText },
     { name: 'API Externa', href: '/admin/api-externa', icon: Puzzle },
     { name: 'Relatórios', href: '/admin/relatorios', icon: BarChart3 },

@@ -51,6 +51,7 @@ import ApiDocs from "./pages/ApiDocs";
 import AdminApiExterna from "./pages/admin/AdminApiExterna";
 import AdminRelatorios from "./pages/admin/AdminRelatorios";
 import AdminCte from "./pages/admin/AdminCte";
+import AdminRastreio from "./pages/admin/AdminRastreio";
 import MotoristaAuth from "./pages/motorista/MotoristaAuth";
 import MotoristaRegistro from "./pages/motorista/MotoristaRegistro";
 import MotoristaDashboard from "./pages/motorista/MotoristaDashboard";
@@ -130,7 +131,8 @@ const App = () => (
                       <Route path="filiais" element={<AdminFiliais />} />
                       <Route path="faturamento" element={<AdminFaturamento />} />
                       <Route path="remessas" element={<AdminRemessas />} />
-                     <Route path="cte" element={<AdminCte />} />
+                      <Route path="rastreamento" element={<AdminRastreio />} />
+                      <Route path="cte" element={<AdminCte />} />
                        <Route path="api-externa" element={<AdminApiExterna />} />
                        <Route path="relatorios" element={<AdminRelatorios />} />
                        <Route path="integracoes" element={<AdminIntegracoes />} />
