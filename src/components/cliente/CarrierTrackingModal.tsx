@@ -28,34 +28,40 @@ interface CarrierTrackingVolume {
   comprimento: number;
 }
 
+// Estrutura flexível para lidar com diferentes formatos de resposta
 interface CarrierTrackingData {
-  consulta: Array<{
-    codigo: string;
-    tracking: {
-      codigo: string;
-      shipmentId: string;
-      dacte: string;
-      dtEmissao: string;
-      status: string;
-      valor: number;
-      peso: number;
-      eventos: CarrierTrackingEvent[];
-      volumes: CarrierTrackingVolume[];
+  consulta?: Array<{
+    codigo?: string;
+    shipmentId?: string;
+    tracking?: {
+      codigo?: string;
+      shipmentId?: string;
+      dacte?: string;
+      dtEmissao?: string;
+      status?: string;
+      valor?: number;
+      peso?: number;
+      eventos?: CarrierTrackingEvent[];
+      volumes?: CarrierTrackingVolume[];
     };
-    previsaoEntrega: string;
+    previsaoEntrega?: string;
   }>;
 }
 
 interface CarrierTrackingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  trackingData: CarrierTrackingData | null;
+  trackingData: CarrierTrackingData | any;
   loading: boolean;
   error: string | null;
   trackingCode: string;
 }
 
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: string | undefined | null) => {
+  if (!status) {
+    return <Badge variant="secondary">Sem dados</Badge>;
+  }
+  
   const statusLower = status.toLowerCase();
   
   if (statusLower.includes('entregue') || statusLower === 'entrega realizada') {
@@ -74,6 +80,20 @@ const getStatusBadge = (status: string) => {
   return <Badge variant="secondary">{status}</Badge>;
 };
 
+const formatValue = (value: any, suffix?: string): string => {
+  if (value === undefined || value === null || value === '') {
+    return 'Sem dados';
+  }
+  return suffix ? `${value}${suffix}` : String(value);
+};
+
+const formatCurrency = (value: number | undefined | null): string => {
+  if (value === undefined || value === null) {
+    return 'Sem dados';
+  }
+  return `R$ ${value.toFixed(2).replace('.', ',')}`;
+};
+
 const CarrierTrackingModal = ({ 
   isOpen, 
   onClose, 
@@ -82,8 +102,25 @@ const CarrierTrackingModal = ({
   error,
   trackingCode 
 }: CarrierTrackingModalProps) => {
-  const consulta = trackingData?.consulta?.[0];
+  // Extrair dados com fallbacks para diferentes estruturas de resposta
+  const rawData = trackingData;
+  const consulta = rawData?.consulta?.[0];
   const tracking = consulta?.tracking;
+  
+  // Dados podem estar no nível consulta ou dentro de tracking
+  const codigo = tracking?.codigo || consulta?.codigo || consulta?.shipmentId;
+  const shipmentId = tracking?.shipmentId || consulta?.shipmentId;
+  const status = tracking?.status;
+  const dtEmissao = tracking?.dtEmissao;
+  const previsaoEntrega = consulta?.previsaoEntrega;
+  const valor = tracking?.valor;
+  const peso = tracking?.peso;
+  const dacte = tracking?.dacte;
+  const eventos = tracking?.eventos || [];
+  const volumes = tracking?.volumes || [];
+
+  // Verifica se há algum dado para exibir
+  const hasAnyData = consulta || tracking;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -110,14 +147,14 @@ const CarrierTrackingModal = ({
           </div>
         )}
 
-        {!loading && !error && !trackingData && (
+        {!loading && !error && !hasAnyData && (
           <div className="flex flex-col items-center justify-center py-12">
             <Package className="w-12 h-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground">Nenhum dado de rastreamento disponível</p>
           </div>
         )}
 
-        {!loading && !error && tracking && (
+        {!loading && !error && hasAnyData && (
           <div className="space-y-6">
             {/* Informações Gerais */}
             <Card>
@@ -125,49 +162,57 @@ const CarrierTrackingModal = ({
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Código</p>
-                    <p className="font-mono font-medium">{tracking.codigo || consulta?.codigo}</p>
+                    <p className="font-mono font-medium">{formatValue(codigo)}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Status</p>
-                    {getStatusBadge(tracking.status)}
+                    {getStatusBadge(status)}
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Emissão</p>
                     <div className="flex items-center gap-1 text-sm">
                       <Calendar className="w-3 h-3 text-muted-foreground" />
-                      {tracking.dtEmissao}
+                      {formatValue(dtEmissao)}
                     </div>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Previsão Entrega</p>
                     <div className="flex items-center gap-1 text-sm font-medium text-primary">
                       <Clock className="w-3 h-3" />
-                      {consulta?.previsaoEntrega || 'Não informado'}
+                      {formatValue(previsaoEntrega)}
                     </div>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Valor Frete</p>
-                    <p className="font-medium">
-                      R$ {tracking.valor?.toFixed(2).replace('.', ',')}
-                    </p>
+                    <p className="font-medium">{formatCurrency(valor)}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Peso</p>
                     <div className="flex items-center gap-1 text-sm">
                       <Weight className="w-3 h-3 text-muted-foreground" />
-                      {tracking.peso} kg
+                      {peso !== undefined && peso !== null ? `${peso} kg` : 'Sem dados'}
                     </div>
                   </div>
                 </div>
 
-                {tracking.dacte && (
+                {dacte && (
                   <>
                     <Separator className="my-4" />
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground uppercase tracking-wide">Chave DACTE</p>
                       <p className="font-mono text-xs break-all bg-muted p-2 rounded">
-                        {tracking.dacte}
+                        {dacte}
                       </p>
+                    </div>
+                  </>
+                )}
+
+                {shipmentId && (
+                  <>
+                    <Separator className="my-4" />
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide">ID Remessa</p>
+                      <p className="font-mono text-sm">{shipmentId}</p>
                     </div>
                   </>
                 )}
@@ -175,7 +220,7 @@ const CarrierTrackingModal = ({
             </Card>
 
             {/* Timeline de Eventos */}
-            {tracking.eventos && tracking.eventos.length > 0 && (
+            {eventos && eventos.length > 0 ? (
               <Card>
                 <CardContent className="pt-4">
                   <h3 className="font-medium mb-4 flex items-center gap-2">
@@ -183,10 +228,10 @@ const CarrierTrackingModal = ({
                     Histórico de Eventos
                   </h3>
                   <div className="relative">
-                    {tracking.eventos.map((evento, index) => (
+                    {eventos.map((evento: CarrierTrackingEvent, index: number) => (
                       <div key={index} className="relative flex items-start gap-3 pb-6 last:pb-0">
                         {/* Timeline line */}
-                        {index < tracking.eventos.length - 1 && (
+                        {index < eventos.length - 1 && (
                           <div className="absolute left-3 top-6 w-0.5 h-full bg-border" />
                         )}
                         
@@ -203,20 +248,20 @@ const CarrierTrackingModal = ({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1">
-                              <p className="font-medium text-sm">{evento.status}</p>
+                              <p className="font-medium text-sm">{evento.status || 'Sem dados'}</p>
                               <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                                 <MapPin className="w-3 h-3 flex-shrink-0" />
-                                <span className="truncate">{evento.unidade}</span>
+                                <span className="truncate">{evento.unidade || 'Sem dados'}</span>
                               </div>
                             </div>
                             <span className="text-xs text-muted-foreground whitespace-nowrap">
-                              {new Date(evento.data.replace(' ', 'T')).toLocaleString('pt-BR', {
+                              {evento.data ? new Date(evento.data.replace(' ', 'T')).toLocaleString('pt-BR', {
                                 day: '2-digit',
                                 month: '2-digit',
                                 year: 'numeric',
                                 hour: '2-digit',
                                 minute: '2-digit'
-                              })}
+                              }) : 'Sem dados'}
                             </span>
                           </div>
                         </div>
@@ -225,25 +270,35 @@ const CarrierTrackingModal = ({
                   </div>
                 </CardContent>
               </Card>
+            ) : (
+              <Card>
+                <CardContent className="pt-4">
+                  <h3 className="font-medium mb-4 flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Histórico de Eventos
+                  </h3>
+                  <p className="text-muted-foreground text-sm">Sem eventos registrados</p>
+                </CardContent>
+              </Card>
             )}
 
             {/* Volumes */}
-            {tracking.volumes && tracking.volumes.length > 0 && (
+            {volumes && volumes.length > 0 ? (
               <Card>
                 <CardContent className="pt-4">
                   <h3 className="font-medium mb-4 flex items-center gap-2">
                     <Package className="w-4 h-4" />
-                    Volumes ({tracking.volumes.length})
+                    Volumes ({volumes.length})
                   </h3>
                   <div className="grid gap-3">
-                    {tracking.volumes.map((volume, index) => (
+                    {volumes.map((volume: CarrierTrackingVolume, index: number) => (
                       <div 
                         key={index} 
                         className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                       >
                         <span className="text-sm font-medium">Volume {index + 1}</span>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>Peso: {volume.peso} kg</span>
+                          <span>Peso: {volume.peso !== undefined ? `${volume.peso} kg` : 'Sem dados'}</span>
                           {(volume.comprimento > 0 || volume.largura > 0 || volume.altura > 0) && (
                             <span>
                               {volume.comprimento}x{volume.largura}x{volume.altura} cm
@@ -253,6 +308,16 @@ const CarrierTrackingModal = ({
                       </div>
                     ))}
                   </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="pt-4">
+                  <h3 className="font-medium mb-4 flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    Volumes
+                  </h3>
+                  <p className="text-muted-foreground text-sm">Sem dados de volumes</p>
                 </CardContent>
               </Card>
             )}
