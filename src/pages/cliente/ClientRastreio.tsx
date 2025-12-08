@@ -106,7 +106,13 @@ const ClientRastreio = () => {
       const data = await response.json();
       console.log('Resposta do webhook de rastreamento:', data);
       
-      setCarrierTrackingData(data);
+      // Normalizar dados: se for array, pegar primeiro elemento
+      let normalizedData = data;
+      if (Array.isArray(data) && data.length > 0) {
+        normalizedData = data[0];
+      }
+      
+      setCarrierTrackingData(normalizedData);
       setCarrierLoading(false);
     } catch (error) {
       console.error('Erro ao enviar webhook de consulta:', error);
