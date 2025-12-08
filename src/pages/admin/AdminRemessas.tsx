@@ -211,10 +211,10 @@ const AdminRemessas = () => {
         webhook_sent_at: new Date().toISOString()
       };
 
-      console.log('📤 [B2B WhatsApp] Enviando webhook para:', 'https://n8n.grupoconfix.com/webhook-test/disparo-wpp');
+      console.log('📤 [B2B WhatsApp] Enviando webhook para:', 'https://n8n.grupoconfix.com/webhook-test/1f813600-efa3-4b0c-9fee-459602599151');
       console.log('📤 [B2B WhatsApp] Payload:', webhookPayload);
 
-      const response = await fetch('https://n8n.grupoconfix.com/webhook-test/disparo-wpp', {
+      const response = await fetch('https://n8n.grupoconfix.com/webhook-test/1f813600-efa3-4b0c-9fee-459602599151', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
