@@ -855,15 +855,22 @@ const QuoteForm = () => {
       const webhookResponse = await response.json();
       console.log("📥 Webhook resposta:", webhookResponse);
 
-      // Extrair preços da resposta
+      // Extrair preços e prazos da resposta
       const precoJadlog = webhookResponse.preco_total_frete_jadlog 
         ? parseFloat(webhookResponse.preco_total_frete_jadlog) 
         : null;
       const precoMagalog = webhookResponse.preco_total_frete_magalog 
         ? parseFloat(webhookResponse.preco_total_frete_magalog) 
         : null;
+      const prazoJadlog = webhookResponse.prazo_frete_jadlog 
+        ? parseInt(webhookResponse.prazo_frete_jadlog) 
+        : 5;
+      const prazoMagalog = webhookResponse.prazo_frete_magalog 
+        ? parseInt(webhookResponse.prazo_frete_magalog) 
+        : 7;
 
       console.log("💰 Preços extraídos - Jadlog:", precoJadlog, "Magalog:", precoMagalog);
+      console.log("📅 Prazos extraídos - Jadlog:", prazoJadlog, "Magalog:", prazoMagalog);
 
       // Aplicar regras de dimensão no frontend
       // Jadlog: não exibir se dimensão > 170cm ou soma > 240cm
@@ -908,10 +915,10 @@ const QuoteForm = () => {
       const newQuoteData = {
         shippingQuote: {
           jadlog: jadlogPermitido && precoJadlog
-            ? { permitido: true, preco_total: precoJadlog, prazo: 5 }
+            ? { permitido: true, preco_total: precoJadlog, prazo: prazoJadlog }
             : { permitido: false, motivo: jadlogMotivo || "Não disponível" },
           magalog: magalogPermitido && precoMagalog
-            ? { permitido: true, preco_total: precoMagalog, prazo: 7 }
+            ? { permitido: true, preco_total: precoMagalog, prazo: prazoMagalog }
             : { permitido: false, motivo: magalogMotivo || "Não disponível" },
         },
         destinyCep: formData.destinyCep.replace(/\D/g, ""),
