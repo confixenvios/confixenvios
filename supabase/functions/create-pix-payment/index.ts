@@ -168,18 +168,21 @@ serve(async (req) => {
           email: email,
           phone: phone,
           document: cpf,
-          clientId: b2bData.clientId
+          clientId: b2bData.clientId,
+          pickupAddress: b2bData.pickupAddress || null
         },
         recipient_data: {
           volumeAddresses: b2bData.volumeAddresses || [],
           vehicleType: b2bData.vehicleType,
-          deliveryDate: b2bData.deliveryDate
+          deliveryDate: b2bData.deliveryDate,
+          pickupAddress: b2bData.pickupAddress || null
         },
         package_data: {
           volumeCount: b2bData.volumeCount || 1,
           volumeWeights: b2bData.volumeWeights || [],
           totalWeight: b2bData.totalWeight || 0,
-          volumeAddresses: b2bData.volumeAddresses || []
+          volumeAddresses: b2bData.volumeAddresses || [],
+          pickupAddress: b2bData.pickupAddress || null
         },
         quote_options: {
           selectedOption: 'b2b_express',
@@ -187,7 +190,8 @@ serve(async (req) => {
           amount: amount,
           description: description || 'B2B Expresso - Confix Envios',
           isB2B: true,
-          vehicleType: b2bData.vehicleType
+          vehicleType: b2bData.vehicleType,
+          pickupAddress: b2bData.pickupAddress || null
         },
         status: 'pending_payment'
       };
