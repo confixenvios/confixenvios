@@ -2133,11 +2133,43 @@ const AdminRemessas = () => {
                       </div>
                     </div>
 
-                    {obs.delivery_ceps && obs.delivery_ceps.length > 0 && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">CEPs de Entrega</p>
-                        <p className="font-semibold">{obs.delivery_ceps.join(', ')}</p>
-                      </div>
+                    {obs.volume_addresses && obs.volume_addresses.length > 0 && (
+                      <>
+                        <hr className="border-border" />
+                        <h4 className="font-semibold">Endereços de Entrega</h4>
+                        {obs.volume_addresses.map((addr: any, idx: number) => (
+                          <div key={idx} className="bg-muted/50 p-3 rounded-lg space-y-2">
+                            <p className="font-semibold text-sm">Volume {idx + 1}</p>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div>
+                                <p className="text-muted-foreground">Destinatário</p>
+                                <p className="font-medium">{addr.recipient_name || addr.recipientName || '-'}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Telefone</p>
+                                <p className="font-medium">{addr.recipient_phone || addr.recipientPhone || '-'}</p>
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">Endereço</p>
+                              <p className="font-medium">
+                                {addr.street || '-'}, {addr.number || 'S/N'}
+                                {addr.complement ? ` - ${addr.complement}` : ''}
+                              </p>
+                              <p className="font-medium">
+                                {addr.neighborhood || '-'}, {addr.city || '-'} - {addr.state || '-'}
+                              </p>
+                              <p className="font-medium">CEP: {addr.cep || '-'}</p>
+                            </div>
+                            {addr.reference && (
+                              <div>
+                                <p className="text-muted-foreground">Referência</p>
+                                <p className="font-medium">{addr.reference}</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </>
                     )}
                   </>
                 );
