@@ -310,13 +310,12 @@ const AdminCte = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => {
-                                console.log('Abrindo XML:', emission.xml_url);
-                                window.open(emission.xml_url, '_blank');
-                              }}
+                              asChild
                             >
-                              <FileText className="h-4 w-4 mr-1" />
-                              XML
+                              <a href={emission.xml_url} target="_blank" rel="noopener noreferrer">
+                                <FileText className="h-4 w-4 mr-1" />
+                                XML
+                              </a>
                             </Button>
                           )}
                           {emission.dacte_url && (
