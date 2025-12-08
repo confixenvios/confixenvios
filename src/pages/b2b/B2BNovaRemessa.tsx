@@ -79,7 +79,7 @@ const B2BNovaRemessa = () => {
     reference: '',
   });
   const [formData, setFormData] = useState({
-    volume_count: '',
+    volume_count: '1',
     delivery_date: '',
     vehicle_type: '',
     pickup_address_id: '',
@@ -376,7 +376,7 @@ const B2BNovaRemessa = () => {
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 md:p-6 max-w-5xl mx-auto">
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3 mb-2">
@@ -476,7 +476,7 @@ const B2BNovaRemessa = () => {
                   <h3 className="font-semibold text-lg">Informações do Envio</h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="volume_count" className="text-base">Quantos volumes? *</Label>
                     <Input
