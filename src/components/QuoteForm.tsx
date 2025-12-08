@@ -914,6 +914,7 @@ const QuoteForm = () => {
             ? { permitido: true, preco_total: precoMagalog, prazo: 7 }
             : { permitido: false, motivo: magalogMotivo || "Não disponível" },
         },
+        destinyCep: formData.destinyCep.replace(/\D/g, ""),
         formData: formData,
         volumes: volumesData,
         totalWeight: totalWeight,
