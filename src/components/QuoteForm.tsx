@@ -872,13 +872,22 @@ const QuoteForm = () => {
       console.log("💰 Preços extraídos - Jadlog:", precoJadlog, "Magalog:", precoMagalog);
       console.log("📅 Prazos extraídos - Jadlog:", prazoJadlog, "Magalog:", prazoMagalog);
 
-      // Aplicar regras de dimensão no frontend
+      // Aplicar regras de dimensão e peso no frontend
       // Jadlog: não exibir se dimensão > 170cm ou soma > 240cm
-      // Magalog: não exibir se dimensão > 80cm ou soma > 200cm
+      // Magalog: não exibir se dimensão > 80cm ou soma > 200cm ou peso total > 30kg
       let jadlogPermitido = precoJadlog !== null && !isNaN(precoJadlog);
       let magalogPermitido = precoMagalog !== null && !isNaN(precoMagalog);
       let jadlogMotivo = "";
       let magalogMotivo = "";
+
+      // Calcular peso total para regra de peso Magalog
+      const pesoTotal = volumesData.reduce((acc, vol) => acc + vol.peso, 0);
+
+      // Regra Magalog: peso máximo 30kg
+      if (magalogPermitido && pesoTotal > 30) {
+        magalogPermitido = false;
+        magalogMotivo = "Peso total excede 30kg";
+      }
 
       // Verificar dimensões de cada volume
       for (const vol of volumesData) {
