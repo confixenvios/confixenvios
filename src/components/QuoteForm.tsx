@@ -848,32 +848,91 @@ const QuoteForm = () => {
       console.log("📥 Webhook resposta status:", response.status);
 
       if (!response.ok) {
-        console.warn(`Webhook retornou status ${response.status}, mas continuando...`);
+        throw new Error(`Erro ao calcular frete: status ${response.status}`);
       }
 
-      // Tentar ler resposta (pode ser vazia)
-      let webhookResponse = null;
-      try {
-        const responseText = await response.text();
-        if (responseText) {
-          webhookResponse = JSON.parse(responseText);
-          console.log("📥 Webhook resposta:", webhookResponse);
+      // Processar resposta do webhook
+      const webhookResponse = await response.json();
+      console.log("📥 Webhook resposta:", webhookResponse);
+
+      // Extrair preços da resposta
+      const precoJadlog = webhookResponse.preco_total_frete_jadlog 
+        ? parseFloat(webhookResponse.preco_total_frete_jadlog) 
+        : null;
+      const precoMagalog = webhookResponse.preco_total_frete_magalog 
+        ? parseFloat(webhookResponse.preco_total_frete_magalog) 
+        : null;
+
+      console.log("💰 Preços extraídos - Jadlog:", precoJadlog, "Magalog:", precoMagalog);
+
+      // Aplicar regras de dimensão no frontend
+      // Jadlog: não exibir se dimensão > 170cm ou soma > 240cm
+      // Magalog: não exibir se dimensão > 80cm ou soma > 200cm
+      let jadlogPermitido = precoJadlog !== null && !isNaN(precoJadlog);
+      let magalogPermitido = precoMagalog !== null && !isNaN(precoMagalog);
+      let jadlogMotivo = "";
+      let magalogMotivo = "";
+
+      // Verificar dimensões de cada volume
+      for (const vol of volumesData) {
+        const maxDimensao = Math.max(vol.comprimento, vol.largura, vol.altura);
+        const somaDimensoes = vol.comprimento + vol.largura + vol.altura;
+
+        // Regra Jadlog: dimensão > 170cm ou soma > 240cm
+        if (jadlogPermitido) {
+          if (maxDimensao > 170) {
+            jadlogPermitido = false;
+            jadlogMotivo = "Dimensão excede 170cm";
+          } else if (somaDimensoes > 240) {
+            jadlogPermitido = false;
+            jadlogMotivo = "Soma das dimensões excede 240cm";
+          }
         }
-      } catch (e) {
-        console.log("Webhook não retornou JSON válido, continuando...");
+
+        // Regra Magalog: dimensão > 80cm ou soma > 200cm
+        if (magalogPermitido) {
+          if (maxDimensao > 80) {
+            magalogPermitido = false;
+            magalogMotivo = "Dimensão excede 80cm";
+          } else if (somaDimensoes > 200) {
+            magalogPermitido = false;
+            magalogMotivo = "Soma das dimensões excede 200cm";
+          }
+        }
       }
+
+      console.log("🚚 Jadlog permitido:", jadlogPermitido, jadlogMotivo);
+      console.log("🚚 Magalog permitido:", magalogPermitido, magalogMotivo);
+
+      // Montar quoteData para o Step 2
+      const newQuoteData = {
+        shippingQuote: {
+          jadlog: jadlogPermitido && precoJadlog
+            ? { permitido: true, preco_total: precoJadlog, prazo: 5 }
+            : { permitido: false, motivo: jadlogMotivo || "Não disponível" },
+          magalog: magalogPermitido && precoMagalog
+            ? { permitido: true, preco_total: precoMagalog, prazo: 7 }
+            : { permitido: false, motivo: magalogMotivo || "Não disponível" },
+        },
+        formData: formData,
+        volumes: volumesData,
+        totalWeight: totalWeight,
+        cubicWeight: totalCubicWeight,
+        merchandiseValue: merchandiseValue,
+      };
+
+      console.log("📦 QuoteData montado:", newQuoteData);
+
+      setQuoteData(newQuoteData);
+      setCurrentStep(2);
 
       toast({
-        title: "Dados enviados",
-        description: "Os dados foram enviados com sucesso para processamento",
+        title: "Cotação calculada!",
+        description: "Selecione a opção de frete desejada",
       });
-
-      // Como agora é webhook, não avança para step 2 automaticamente
-      // O fluxo pode ser diferente dependendo do que o webhook retorna
     } catch (error) {
       console.error("Erro ao calcular frete:", error);
 
-      // Mensagens de erro mais específicas
       let errorMessage = "Erro inesperado ao calcular o frete";
       if (error instanceof Error) {
         errorMessage = error.message;
@@ -884,12 +943,6 @@ const QuoteForm = () => {
         description: errorMessage,
         variant: "destructive",
       });
-
-      // Limpar cache se erro persistir
-      if (errorMessage.includes("timeout") || errorMessage.includes("Timeout")) {
-        const { clearQuoteCache } = await import("@/services/shippingService");
-        clearQuoteCache();
-      }
     } finally {
       setIsLoading(false);
     }
