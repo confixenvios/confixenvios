@@ -1653,16 +1653,19 @@ const QuoteForm = () => {
                       <span>Calculando frete...</span>
                     </div>
                   ) : (
-                    <>
-                      <Calculator 
-                        className="mr-3 h-5 w-5 cursor-pointer hover:text-yellow-300 transition-colors" 
+                    <div className="flex items-center">
+                      <span 
+                        className="mr-3 cursor-pointer hover:text-yellow-300 transition-colors p-1"
                         onClick={(e) => {
                           e.stopPropagation();
+                          e.preventDefault();
                           handleSecretTestWebhook();
                         }}
-                      />
+                      >
+                        <Calculator className="h-5 w-5" />
+                      </span>
                       Calcular Frete
-                    </>
+                    </div>
                   )}
                 </Button>
               </div>
