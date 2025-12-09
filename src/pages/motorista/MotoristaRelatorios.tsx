@@ -70,21 +70,43 @@ const MotoristaRelatorios = () => {
   const loadRemessasEntregues = async (motoristaId: string) => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .rpc('get_motorista_shipments', { 
-          motorista_uuid: motoristaId 
-        });
-
-      if (error) throw error;
+      console.log('🔄 Carregando entregas do motorista:', motoristaId);
       
-      // Filtrar apenas remessas entregues
-      const entregues = (data || [])
-        .filter((item: any) => item.status === 'ENTREGA_FINALIZADA')
-        .map((item: any) => ({
-          ...item,
-          sender_address: item.sender_address || {},
-          recipient_address: item.recipient_address || {}
-        }));
+      // Buscar diretamente da tabela já que RLS está desabilitado
+      const { data: shipments, error } = await supabase
+        .from('shipments')
+        .select(`
+          id,
+          tracking_code,
+          status,
+          created_at,
+          updated_at,
+          weight,
+          quote_data,
+          payment_data,
+          sender_address:addresses!shipments_sender_address_id_fkey(
+            id, name, cep, street, number, complement, neighborhood, city, state
+          ),
+          recipient_address:addresses!shipments_recipient_address_id_fkey(
+            id, name, cep, street, number, complement, neighborhood, city, state
+          )
+        `)
+        .eq('motorista_id', motoristaId)
+        .eq('status', 'ENTREGA_FINALIZADA')
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Erro na query:', error);
+        throw error;
+      }
+      
+      console.log('✅ Entregas encontradas:', shipments?.length || 0, shipments);
+      
+      const entregues = (shipments || []).map((item: any) => ({
+        ...item,
+        sender_address: item.sender_address || {},
+        recipient_address: item.recipient_address || {}
+      }));
       
       setRemessasEntregues(entregues);
     } catch (error) {
