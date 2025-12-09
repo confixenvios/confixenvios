@@ -350,55 +350,87 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
 };
 
 /**
- * Serviço para buscar remessas disponíveis para motoristas
+ * Serviço para buscar remessas disponíveis para motoristas (normais + B2B)
  */
 export const getAvailableShipments = async (): Promise<BaseShipment[]> => {
-  console.log('📋 Iniciando busca por remessas disponíveis...');
+  console.log('📋 Iniciando busca por remessas disponíveis (normais + B2B)...');
   
   try {
-    // Buscar remessas sem join primeiro para testar
+    // Buscar remessas NORMAIS disponíveis
     const { data: shipmentsData, error: shipmentsError } = await supabase
       .from('shipments')
       .select('*')
       .is('motorista_id', null)
-      .in('status', ['PAYMENT_CONFIRMED', 'PAID', 'PENDING_LABEL', 'LABEL_GENERATED'])
+      .in('status', ['PAYMENT_CONFIRMED', 'PAID', 'PENDING_LABEL', 'LABEL_GENERATED', 'PAGO_AGUARDANDO_ETIQUETA'])
       .order('created_at', { ascending: false });
     
     if (shipmentsError) {
-      console.error('❌ Erro ao buscar remessas:', shipmentsError);
-      throw shipmentsError;
+      console.error('❌ Erro ao buscar remessas normais:', shipmentsError);
     }
     
-    console.log('📦 Remessas encontradas:', shipmentsData?.length || 0, shipmentsData);
+    console.log('📦 Remessas normais encontradas:', shipmentsData?.length || 0);
     
-    if (!shipmentsData || shipmentsData.length === 0) {
-      console.log('⚠️ Nenhuma remessa disponível encontrada');
-      return [];
+    // Buscar remessas B2B disponíveis (PENDENTE = aguardando motorista)
+    const { data: b2bData, error: b2bError } = await supabase
+      .from('b2b_shipments')
+      .select(`
+        id,
+        tracking_code,
+        status,
+        created_at,
+        updated_at,
+        recipient_name,
+        recipient_phone,
+        recipient_cep,
+        recipient_street,
+        recipient_number,
+        recipient_complement,
+        recipient_neighborhood,
+        recipient_city,
+        recipient_state,
+        observations,
+        package_type,
+        volume_count,
+        delivery_type,
+        delivery_date,
+        b2b_client_id,
+        b2b_clients(
+          company_name, 
+          email, 
+          phone, 
+          cnpj,
+          default_pickup_cep,
+          default_pickup_street,
+          default_pickup_number,
+          default_pickup_complement,
+          default_pickup_neighborhood,
+          default_pickup_city,
+          default_pickup_state
+        )
+      `)
+      .eq('status', 'PENDENTE')
+      .order('created_at', { ascending: false });
+
+    if (b2bError) {
+      console.error('❌ Erro ao buscar remessas B2B:', b2bError);
     }
+
+    console.log('📦 Remessas B2B encontradas:', b2bData?.length || 0);
     
-    // Buscar endereços separadamente para cada remessa
-    const remessasComEnderecos = await Promise.all(
-      shipmentsData.map(async (shipment) => {
-        console.log(`🔍 Buscando endereços para remessa ${shipment.id}...`);
-        
-        // Buscar endereço do remetente
+    // Processar remessas normais com endereços
+    const remessasNormais = await Promise.all(
+      (shipmentsData || []).map(async (shipment) => {
         const { data: senderAddress } = await supabase
           .from('addresses')
           .select('*')
           .eq('id', shipment.sender_address_id)
           .maybeSingle();
         
-        // Buscar endereço do destinatário
         const { data: recipientAddress } = await supabase
           .from('addresses')
           .select('*')
           .eq('id', shipment.recipient_address_id)
           .maybeSingle();
-        
-        console.log(`📍 Endereços da remessa ${shipment.id}:`, {
-          sender: senderAddress,
-          recipient: recipientAddress
-        });
         
         return {
           ...normalizeShipmentData({
@@ -410,8 +442,74 @@ export const getAvailableShipments = async (): Promise<BaseShipment[]> => {
       })
     );
     
-    console.log('✅ Remessas processadas com sucesso:', remessasComEnderecos);
-    return remessasComEnderecos;
+    // Normalizar remessas B2B para o mesmo formato BaseShipment
+    const remessasB2B: BaseShipment[] = (b2bData || []).map((b2bShipment) => {
+      const b2bClient = Array.isArray(b2bShipment.b2b_clients) 
+        ? b2bShipment.b2b_clients[0] 
+        : b2bShipment.b2b_clients;
+
+      // Parsear observations para extrair dados adicionais
+      let parsedObs: any = {};
+      try {
+        if (b2bShipment.observations) {
+          parsedObs = JSON.parse(b2bShipment.observations);
+        }
+      } catch (e) {
+        console.log('⚠️ Não foi possível parsear observations do B2B:', b2bShipment.id);
+      }
+
+      return {
+        id: b2bShipment.id,
+        tracking_code: b2bShipment.tracking_code || '',
+        status: b2bShipment.status,
+        weight: parsedObs.total_weight || 0,
+        length: 0,
+        width: 0,
+        height: 0,
+        format: b2bShipment.package_type || 'caixa',
+        selected_option: b2bShipment.delivery_type || 'economico',
+        pickup_option: 'pickup',
+        quote_data: {
+          observations: b2bShipment.observations,
+          volume_count: b2bShipment.volume_count,
+          delivery_date: b2bShipment.delivery_date,
+          parsedObservations: parsedObs
+        },
+        payment_data: null,
+        created_at: b2bShipment.created_at,
+        label_pdf_url: null,
+        cte_key: null,
+        sender_address: {
+          name: b2bClient?.company_name || 'Cliente B2B',
+          street: b2bClient?.default_pickup_street || parsedObs.pickup_address?.street || '',
+          number: b2bClient?.default_pickup_number || parsedObs.pickup_address?.number || '',
+          neighborhood: b2bClient?.default_pickup_neighborhood || parsedObs.pickup_address?.neighborhood || '',
+          city: b2bClient?.default_pickup_city || parsedObs.pickup_address?.city || '',
+          state: b2bClient?.default_pickup_state || parsedObs.pickup_address?.state || '',
+          cep: b2bClient?.default_pickup_cep || parsedObs.pickup_address?.cep || '',
+          complement: b2bClient?.default_pickup_complement || parsedObs.pickup_address?.complement || '',
+          phone: b2bClient?.phone || parsedObs.pickup_address?.contact_phone || ''
+        },
+        recipient_address: {
+          name: b2bShipment.recipient_name || '',
+          street: b2bShipment.recipient_street || '',
+          number: b2bShipment.recipient_number || '',
+          neighborhood: b2bShipment.recipient_neighborhood || '',
+          city: b2bShipment.recipient_city || '',
+          state: b2bShipment.recipient_state || '',
+          cep: b2bShipment.recipient_cep || '',
+          complement: b2bShipment.recipient_complement || '',
+          phone: b2bShipment.recipient_phone || ''
+        }
+      };
+    });
+    
+    // Combinar todas as remessas e ordenar por data
+    const allShipments = [...remessasNormais, ...remessasB2B];
+    allShipments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    
+    console.log('✅ Total de remessas disponíveis:', allShipments.length, '(Normais:', remessasNormais.length, ', B2B:', remessasB2B.length, ')');
+    return allShipments;
     
   } catch (error) {
     console.error('❌ Erro completo ao buscar remessas disponíveis:', error);
