@@ -67,19 +67,26 @@ const MotoristaDashboard = () => {
           return;
         }
 
-        // Buscar dados do perfil
+        // Buscar dados do perfil e motorista
         const { data: profile } = await supabase
           .from('profiles')
           .select('first_name, phone, document')
           .eq('id', session.user.id)
           .single();
 
+        // Buscar dados do motorista (tipo_pedidos, status)
+        const { data: motorista } = await supabase
+          .from('motoristas')
+          .select('status, tipo_pedidos')
+          .eq('email', session.user.email)
+          .single();
+
         const motoristaData: MotoristaSession = {
           id: session.user.id,
           nome: profile?.first_name || session.user.email || 'Motorista',
           email: session.user.email || '',
-          status: 'ativo', // Motoristas via Supabase Auth são automaticamente ativos
-          tipo_pedidos: 'ambos'
+          status: motorista?.status || 'ativo',
+          tipo_pedidos: (motorista?.tipo_pedidos as 'normal' | 'b2b' | 'ambos') || 'ambos'
         };
         
         setMotoristaSession(motoristaData);
