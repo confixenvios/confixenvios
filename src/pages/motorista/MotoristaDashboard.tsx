@@ -13,6 +13,7 @@ import { RemessaVisualizacao } from '@/components/motorista/RemessaVisualizacao'
 import { OccurrenceSimpleModal } from '@/components/motorista/OccurrenceSimpleModal';
 import { FinalizarEntregaModal } from '@/components/motorista/FinalizarEntregaModal';
 import { getMotoristaShipments, getAvailableShipments, acceptShipment, type MotoristaShipment, type BaseShipment } from '@/services/shipmentsService';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MotoristaSession {
   id: string;
@@ -41,30 +42,67 @@ const MotoristaDashboard = () => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('motorista_session');
-    
-    if (!sessionData) {
-      navigate('/motorista/auth');
-      return;
-    }
+    const checkMotoristaAuth = async () => {
+      try {
+        // Verificar sessão via Supabase Auth
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          navigate('/motorista/auth');
+          return;
+        }
 
-    try {
-      const session = JSON.parse(sessionData);
-      
-      if (!session.id) {
-        localStorage.removeItem('motorista_session');
+        // Verificar se é motorista
+        const { data: roles, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .eq('role', 'motorista')
+          .single();
+
+        if (rolesError || !roles) {
+          toast.error('Você não tem permissão de motorista');
+          await supabase.auth.signOut();
+          navigate('/motorista/auth');
+          return;
+        }
+
+        // Buscar dados do perfil
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, phone, document')
+          .eq('id', session.user.id)
+          .single();
+
+        const motoristaData: MotoristaSession = {
+          id: session.user.id,
+          nome: profile?.first_name || session.user.email || 'Motorista',
+          email: session.user.email || '',
+          status: 'ativo', // Motoristas via Supabase Auth são automaticamente ativos
+          tipo_pedidos: 'ambos'
+        };
+        
+        setMotoristaSession(motoristaData);
+        loadMinhasRemessas(session.user.id);
+        loadRemessasDisponiveis('ambos');
+      } catch (error) {
+        console.error('❌ Erro ao verificar autenticação:', error);
         navigate('/motorista/auth');
-        return;
+      } finally {
+        setLoading(false);
       }
-      
-      setMotoristaSession(session);
-      loadMinhasRemessas(session.id);
-      loadRemessasDisponiveis(session.tipo_pedidos || 'ambos');
-    } catch (error) {
-      console.error('❌ Erro ao parsear sessão:', error);
-      localStorage.removeItem('motorista_session');
-      navigate('/motorista/auth');
-    }
+    };
+
+    checkMotoristaAuth();
+
+    // Escutar mudanças de auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        navigate('/motorista/auth');
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const getStatusBadge = (status: string) => {
@@ -156,12 +194,11 @@ const MotoristaDashboard = () => {
 
   const handleLogout = async () => {
     try {
-      localStorage.removeItem('motorista_session');
+      await supabase.auth.signOut();
       navigate('/motorista/auth');
       toast.success('Logout realizado com sucesso');
     } catch (error) {
       console.error('Erro no logout:', error);
-      localStorage.removeItem('motorista_session');
       navigate('/motorista/auth');
     }
   };
