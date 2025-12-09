@@ -14,7 +14,7 @@ interface Profile {
 }
 
 interface UserRole {
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'motorista';
 }
 
 interface AuthContextType {
@@ -68,10 +68,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (profileData) setProfile(profileData);
       if (roleData && roleData.length > 0) {
-        // Check if user has admin role
+        // Check if user has admin role, then motorista, then user
         const hasAdminRole = roleData.some(r => r.role === 'admin');
-        const primaryRole = hasAdminRole ? 'admin' : roleData[0]?.role || 'user';
-        console.log('🔐 [AUTH] Setting user role:', primaryRole, 'hasAdmin:', hasAdminRole);
+        const hasMotoristaRole = roleData.some(r => r.role === 'motorista');
+        let primaryRole: 'admin' | 'user' | 'motorista' = 'user';
+        if (hasAdminRole) {
+          primaryRole = 'admin';
+        } else if (hasMotoristaRole) {
+          primaryRole = 'motorista';
+        } else if (roleData[0]?.role) {
+          primaryRole = roleData[0].role as 'admin' | 'user' | 'motorista';
+        }
+        console.log('🔐 [AUTH] Setting user role:', primaryRole, 'hasAdmin:', hasAdminRole, 'hasMotorista:', hasMotoristaRole);
         setUserRole({ role: primaryRole });
       } else {
         // No role found, set default as 'user'

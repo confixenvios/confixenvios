@@ -66,45 +66,49 @@ const MotoristaRegistro = () => {
     setLoading(true);
 
     try {
-      console.log('🔄 Iniciando cadastro de motorista via função segura...', {
-        nome: formData.nome,
-        email: formData.email
-      });
+      console.log('🔄 Iniciando cadastro de motorista via Supabase Auth...');
 
-      // Usar função segura para cadastro público
-      const { data, error } = await supabase.rpc('register_motorista_public', {
-        p_nome: formData.nome,
-        p_cpf: formData.cpf,
-        p_telefone: formData.telefone,
-        p_email: formData.email,
-        p_senha: formData.senha
+      // Registrar via Supabase Auth com metadata de motorista
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.senha,
+        options: {
+          emailRedirectTo: `${window.location.origin}/motorista/auth`,
+          data: {
+            is_motorista: 'true',
+            nome: formData.nome,
+            cpf: formData.cpf,
+            telefone: formData.telefone
+          }
+        }
       });
-
-      console.log('📝 Resposta da função:', { data, error });
 
       if (error) {
-        console.error('❌ Erro da função RPC:', error);
-        toast.error(`Erro na função: ${error.message}`);
+        console.error('❌ Erro no signup:', error);
+        if (error.message.includes('already registered')) {
+          throw new Error('Este e-mail já está cadastrado. Faça login.');
+        }
+        throw error;
+      }
+
+      if (!data.user) {
+        throw new Error('Erro ao criar conta');
+      }
+
+      console.log('✅ Motorista cadastrado com sucesso via Supabase Auth');
+      
+      // Verificar se precisa confirmar email
+      if (data.user.identities?.length === 0) {
+        toast.error('Este e-mail já está cadastrado');
         return;
       }
 
-      // Converter resposta para tipo conhecido
-      const result = data as { success: boolean; error?: string; message?: string };
-
-      // Verificar resposta da função
-      if (result && result.success === false) {
-        console.error('❌ Erro retornado pela função:', result.error);
-        toast.error(result.error || 'Erro desconhecido');
-        return;
-      }
-
-      console.log('✅ Motorista cadastrado com sucesso via função segura');
-      toast.success(result?.message || 'Cadastro realizado com sucesso!');
+      toast.success('Cadastro realizado com sucesso! Verifique seu e-mail para confirmar a conta.');
       navigate('/motorista/auth');
 
     } catch (error: any) {
-      console.error('❌ Erro geral ao cadastrar motorista:', error);
-      toast.error('Erro ao realizar cadastro: ' + (error.message || 'Erro desconhecido'));
+      console.error('❌ Erro ao cadastrar motorista:', error);
+      toast.error(error.message || 'Erro ao realizar cadastro');
     } finally {
       setLoading(false);
     }
@@ -244,8 +248,7 @@ const MotoristaRegistro = () => {
 
           <div className="mt-4 p-3 bg-muted/50 rounded-lg">
             <p className="text-xs text-muted-foreground text-center">
-              Após o cadastro, seu acesso ficará pendente de aprovação pelo administrador.
-              Você será notificado quando for aprovado.
+              Após o cadastro, você receberá um e-mail para confirmar sua conta.
             </p>
           </div>
         </CardContent>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,42 +16,70 @@ const MotoristaAuth = () => {
     senha: ''
   });
 
+  // Verificar se já está logado como motorista
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Verificar se é motorista
+        const { data: roles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .eq('role', 'motorista')
+          .single();
+        
+        if (roles) {
+          navigate('/motorista/dashboard');
+        }
+      }
+    };
+    checkSession();
+  }, [navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Usar nossa função customizada de autenticação de motorista
-      const { data: motoristaResult, error: motoristaError } = await supabase
-        .rpc('authenticate_motorista', {
-          input_email: formData.email,
-          input_password: formData.senha
-        });
-
-      console.log('Resultado da autenticação:', motoristaResult);
-
-      if (motoristaError) {
-        console.error('Erro na RPC:', motoristaError);
-        throw new Error('Erro interno do servidor');
-      }
-
-      // Cast para o tipo correto
-      const result = motoristaResult as any;
-
-      if (!result?.success) {
-        throw new Error(result?.error || 'E-mail ou senha incorretos');
-      }
-
-      // Store motorista session in localStorage
-      localStorage.setItem('motorista_session', JSON.stringify({
-        id: result.motorista_id,
-        nome: result.nome,
+      // Login via Supabase Auth
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
-        status: result.status,
-        tipo_pedidos: result.tipo_pedidos || 'ambos'
-      }));
+        password: formData.senha
+      });
 
-      toast.success(`Bem-vindo, ${result.nome}!`);
+      if (error) {
+        throw new Error(error.message === 'Invalid login credentials' 
+          ? 'E-mail ou senha incorretos' 
+          : error.message);
+      }
+
+      if (!data.user) {
+        throw new Error('Erro ao fazer login');
+      }
+
+      // Verificar se o usuário tem role motorista
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', data.user.id)
+        .eq('role', 'motorista')
+        .single();
+
+      if (rolesError || !roles) {
+        // Não é motorista, fazer logout e mostrar erro
+        await supabase.auth.signOut();
+        throw new Error('Esta conta não tem permissão de motorista. Por favor, registre-se como motorista.');
+      }
+
+      // Buscar dados do perfil
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_name, phone, document')
+        .eq('id', data.user.id)
+        .single();
+
+      toast.success(`Bem-vindo, ${profile?.first_name || data.user.email}!`);
       navigate('/motorista/dashboard');
 
     } catch (error: any) {

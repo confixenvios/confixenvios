@@ -2086,6 +2086,7 @@ export type Database = {
         Returns: boolean
       }
       is_ip_blocked: { Args: { client_ip: string }; Returns: boolean }
+      is_motorista: { Args: { _user_id: string }; Returns: boolean }
       list_security_definer_functions: {
         Args: never
         Returns: {
