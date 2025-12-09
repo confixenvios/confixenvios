@@ -1235,13 +1235,16 @@ const AdminRemessas = () => {
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          {/* Badge de Pagamento Confirmado para B2B */}
-                          {isB2BExpresso && (
-                            <Badge className="bg-red-500 text-white hover:bg-red-600">
-                              Pagamento Confirmado
-                            </Badge>
+                          {/* Badge de status para B2B - mostra Entrega Finalizada verde quando ENTREGUE */}
+                          {isB2BExpresso ? (
+                            shipment.status === 'ENTREGUE' ? (
+                              <Badge variant="success">Entrega Finalizada</Badge>
+                            ) : (
+                              <Badge className="bg-red-500 text-white hover:bg-red-600">Pagamento Confirmado</Badge>
+                            )
+                          ) : (
+                            getStatusBadge(shipment.status)
                           )}
-                          {getStatusBadge(shipment.status)}
                           {/* Badge de CT-e Disponível */}
                           {shipment.cte_emission && shipment.cte_emission.status === 'aprovado' && (
                             <Badge variant="success" className="flex items-center gap-1">
