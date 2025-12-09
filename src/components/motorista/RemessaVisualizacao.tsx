@@ -102,6 +102,49 @@ export const RemessaVisualizacao = ({
             </CardContent>
           </Card>
 
+          {/* Volumes Individuais */}
+          {(() => {
+            const volumes = remessa.quote_data?.merchandiseDetails?.volumes || 
+                            remessa.quote_data?.technicalData?.volumes || 
+                            remessa.quote_data?.originalFormData?.volumes ||
+                            remessa.quote_data?.volumes ||
+                            remessa.quote_data?.quoteData?.volumes;
+            
+            if (Array.isArray(volumes) && volumes.length > 0) {
+              return (
+                <div className="space-y-2">
+                  {volumes.map((volume: any, index: number) => (
+                    <div key={index} className="p-3 border border-primary/20 rounded-lg bg-primary/5">
+                      <div className="flex items-center mb-2">
+                        <Package className="w-4 h-4 mr-2 text-primary" />
+                        <span className="font-medium text-sm">Volume {index + 1}</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-xs">
+                        <div>
+                          <p className="text-muted-foreground">Peso</p>
+                          <p className="font-medium">{volume.weight || volume.peso}kg</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Compr.</p>
+                          <p className="font-medium">{volume.length || volume.comprimento}cm</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Largura</p>
+                          <p className="font-medium">{volume.width || volume.largura}cm</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Altura</p>
+                          <p className="font-medium">{volume.height || volume.altura}cm</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            }
+            return null;
+          })()}
+
           <Separator />
 
           {/* Remetente */}
