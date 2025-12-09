@@ -21,6 +21,7 @@ interface Motorista {
   telefone: string;
   email: string;
   status: 'ativo' | 'inativo' | 'pendente';
+  tipo_pedidos: 'normal' | 'b2b' | 'ambos';
   created_at: string;
 }
 
@@ -52,7 +53,8 @@ const AdminMotoristas = () => {
     telefone: '',
     email: '',
     senha: '',
-    status: 'ativo' as 'ativo' | 'inativo' | 'pendente'
+    status: 'ativo' as 'ativo' | 'inativo' | 'pendente',
+    tipo_pedidos: 'ambos' as 'normal' | 'b2b' | 'ambos'
   });
 
   useEffect(() => {
@@ -68,7 +70,7 @@ const AdminMotoristas = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('motoristas')
-        .select('id, nome, cpf, telefone, email, status, created_at, updated_at')
+        .select('id, nome, cpf, telefone, email, status, tipo_pedidos, created_at, updated_at')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -170,7 +172,8 @@ const AdminMotoristas = () => {
           cpf: formData.cpf,
           telefone: formData.telefone,
           email: formData.email,
-          status: formData.status
+          status: formData.status,
+          tipo_pedidos: formData.tipo_pedidos
         };
 
         if (formData.senha) {
@@ -196,7 +199,8 @@ const AdminMotoristas = () => {
           telefone: formData.telefone,
           email: formData.email,
           senha: formData.senha,
-          status: formData.status
+          status: formData.status,
+          tipo_pedidos: formData.tipo_pedidos
         };
 
         console.log('Criando novo motorista:', { ...insertData, senha: '[HIDDEN]' });
@@ -216,7 +220,7 @@ const AdminMotoristas = () => {
 
       setIsDialogOpen(false);
       setEditingMotorista(null);
-      setFormData({ nome: '', cpf: '', telefone: '', email: '', senha: '', status: 'ativo' });
+      setFormData({ nome: '', cpf: '', telefone: '', email: '', senha: '', status: 'ativo', tipo_pedidos: 'ambos' });
       loadMotoristas();
     } catch (error: any) {
       console.error('Erro ao salvar motorista:', error);
@@ -232,7 +236,8 @@ const AdminMotoristas = () => {
       telefone: motorista.telefone,
       email: motorista.email,
       senha: '',
-      status: motorista.status
+      status: motorista.status,
+      tipo_pedidos: motorista.tipo_pedidos || 'ambos'
     });
     setIsDialogOpen(true);
   };
@@ -386,7 +391,7 @@ const AdminMotoristas = () => {
             <Button 
               onClick={() => {
                 setEditingMotorista(null);
-                setFormData({ nome: '', cpf: '', telefone: '', email: '', senha: '', status: 'ativo' });
+                setFormData({ nome: '', cpf: '', telefone: '', email: '', senha: '', status: 'ativo', tipo_pedidos: 'ambos' });
               }}
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -473,6 +478,23 @@ const AdminMotoristas = () => {
                  </Select>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="tipo_pedidos">Tipo de Pedidos</Label>
+                 <Select value={formData.tipo_pedidos} onValueChange={(value: 'normal' | 'b2b' | 'ambos') => setFormData({ ...formData, tipo_pedidos: value })}>
+                   <SelectTrigger>
+                     <SelectValue />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="ambos">Todos (Normal + B2B)</SelectItem>
+                     <SelectItem value="normal">Apenas Normais</SelectItem>
+                     <SelectItem value="b2b">Apenas B2B Express</SelectItem>
+                   </SelectContent>
+                 </Select>
+                 <p className="text-xs text-muted-foreground">
+                   Define quais tipos de remessas o motorista poderá visualizar
+                 </p>
+              </div>
+
               <div className="flex gap-2 pt-4">
                 <Button type="submit">
                   {editingMotorista ? 'Atualizar' : 'Cadastrar'}
@@ -544,6 +566,7 @@ const AdminMotoristas = () => {
                 <TableHead>Telefone</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Tipo Pedidos</TableHead>
                 <TableHead>Remessas</TableHead>
                 <TableHead>Taxa Sucesso</TableHead>
                 <TableHead>Ações</TableHead>
@@ -552,7 +575,7 @@ const AdminMotoristas = () => {
             <TableBody>
               {motoristas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                     Nenhum motorista cadastrado ainda.
                   </TableCell>
                 </TableRow>
@@ -566,6 +589,16 @@ const AdminMotoristas = () => {
                       <TableCell>{motorista.telefone}</TableCell>
                       <TableCell>{motorista.email}</TableCell>
                       <TableCell>{getStatusBadge(motorista.status)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={
+                          motorista.tipo_pedidos === 'b2b' ? 'bg-purple-50 text-purple-700 border-purple-300' :
+                          motorista.tipo_pedidos === 'normal' ? 'bg-blue-50 text-blue-700 border-blue-300' :
+                          'bg-gray-50 text-gray-700 border-gray-300'
+                        }>
+                          {motorista.tipo_pedidos === 'b2b' ? 'B2B Express' : 
+                           motorista.tipo_pedidos === 'normal' ? 'Normal' : 'Todos'}
+                        </Badge>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Package className="h-4 w-4 text-blue-500" />

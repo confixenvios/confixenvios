@@ -1014,6 +1014,7 @@ export type Database = {
           senha: string
           status: string
           telefone: string
+          tipo_pedidos: string
           updated_at: string
         }
         Insert: {
@@ -1025,6 +1026,7 @@ export type Database = {
           senha: string
           status?: string
           telefone: string
+          tipo_pedidos?: string
           updated_at?: string
         }
         Update: {
@@ -1036,6 +1038,7 @@ export type Database = {
           senha?: string
           status?: string
           telefone?: string
+          tipo_pedidos?: string
           updated_at?: string
         }
         Relationships: []
