@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { 
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
   Package, 
   MapPin, 
   Phone, 
@@ -66,6 +67,7 @@ export const RemessaVisualizacao = ({
           </p>
         </DialogHeader>
 
+        <ScrollArea className="max-h-[60vh] overflow-y-auto">
         <div className="px-4 pb-4 space-y-4">
           {/* Informações da Mercadoria */}
           <Card className="border-0 shadow-none bg-muted/30">
@@ -221,6 +223,7 @@ export const RemessaVisualizacao = ({
             </Button>
           </div>
         </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
