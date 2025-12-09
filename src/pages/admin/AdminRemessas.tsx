@@ -832,7 +832,7 @@ const AdminRemessas = () => {
       'COLETA_FINALIZADA': { label: 'Coleta Finalizada', variant: 'default' as const },
       'LABEL_AVAILABLE': { label: 'Etiqueta Disponível', variant: 'default' as const },
       'IN_TRANSIT': { label: 'Em Trânsito', variant: 'default' as const },
-      'ENTREGA_FINALIZADA': { label: 'Entrega Finalizada', variant: 'default' as const },
+      'ENTREGA_FINALIZADA': { label: 'Entrega Finalizada', variant: 'success' as const },
       'DELIVERED': { label: 'Entregue', variant: 'default' as const }
     };
 
