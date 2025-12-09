@@ -47,7 +47,8 @@ const MotoristaAuth = () => {
         id: result.motorista_id,
         nome: result.nome,
         email: formData.email,
-        status: result.status
+        status: result.status,
+        tipo_pedidos: result.tipo_pedidos || 'ambos'
       }));
 
       toast.success(`Bem-vindo, ${result.nome}!`);
