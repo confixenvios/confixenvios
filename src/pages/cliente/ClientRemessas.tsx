@@ -915,30 +915,6 @@ const ClientRemessas = () => {
                          selectedShipment.format}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-muted-foreground">Comprimento</p>
-                      <p className="font-medium">
-                        {selectedShipment.quote_data?.originalFormData?.length || 
-                         selectedShipment.quote_data?.length || 
-                         selectedShipment.length}cm
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Largura</p>
-                      <p className="font-medium">
-                        {selectedShipment.quote_data?.originalFormData?.width || 
-                         selectedShipment.quote_data?.width || 
-                         selectedShipment.width}cm
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Altura</p>
-                      <p className="font-medium">
-                        {selectedShipment.quote_data?.originalFormData?.height || 
-                         selectedShipment.quote_data?.height || 
-                         selectedShipment.height}cm
-                      </p>
-                    </div>
                     {/* Valor Unitário */}
                     {(selectedShipment.quote_data?.originalFormData?.unitValue || 
                       selectedShipment.quote_data?.unitValue ||
