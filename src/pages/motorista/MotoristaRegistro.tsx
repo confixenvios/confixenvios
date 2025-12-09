@@ -67,6 +67,7 @@ const MotoristaRegistro = () => {
 
     try {
       console.log('🔄 Iniciando cadastro de motorista via Supabase Auth...');
+      console.log('📧 Email:', formData.email);
 
       // Registrar via Supabase Auth com metadata de motorista
       const { data, error } = await supabase.auth.signUp({
@@ -83,6 +84,8 @@ const MotoristaRegistro = () => {
         }
       });
 
+      console.log('📋 Resposta signup:', { data, error });
+
       if (error) {
         console.error('❌ Erro no signup:', error);
         if (error.message.includes('already registered')) {
@@ -95,16 +98,23 @@ const MotoristaRegistro = () => {
         throw new Error('Erro ao criar conta');
       }
 
-      console.log('✅ Motorista cadastrado com sucesso via Supabase Auth');
+      console.log('✅ Motorista cadastrado:', data.user.id, data.user.email);
+      console.log('📌 User metadata:', data.user.user_metadata);
       
-      // Verificar se precisa confirmar email
+      // Verificar se o email já existe (identities vazio = email já registrado)
       if (data.user.identities?.length === 0) {
-        toast.error('Este e-mail já está cadastrado');
+        toast.error('Este e-mail já está cadastrado. Faça login.');
         return;
       }
 
-      toast.success('Cadastro realizado com sucesso! Verifique seu e-mail para confirmar a conta.');
-      navigate('/motorista/auth');
+      // Verificar se a sessão foi criada (sem confirmação de email)
+      if (data.session) {
+        toast.success('Cadastro realizado com sucesso! Redirecionando...');
+        navigate('/motorista');
+      } else {
+        toast.success('Cadastro realizado! Verifique seu e-mail para confirmar a conta.');
+        navigate('/motorista/auth');
+      }
 
     } catch (error: any) {
       console.error('❌ Erro ao cadastrar motorista:', error);
