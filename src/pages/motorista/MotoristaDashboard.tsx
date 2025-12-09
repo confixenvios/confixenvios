@@ -93,12 +93,15 @@ const MotoristaDashboard = () => {
   };
 
   const loadRemessasDisponiveis = async () => {
+    setRefreshing(true);
     try {
       const data = await getAvailableShipments();
       setRemessasDisponiveis(data);
     } catch (error) {
       console.error('❌ Erro ao carregar remessas disponíveis:', error);
       toast.error('Erro ao carregar remessas disponíveis');
+    } finally {
+      setRefreshing(false);
     }
   };
 
