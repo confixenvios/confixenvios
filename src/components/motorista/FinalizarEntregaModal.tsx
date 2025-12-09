@@ -78,11 +78,15 @@ export const FinalizarEntregaModal = ({
     setSaving(true);
     const supabase = createSecureSupabaseClient();
     
+    // Detectar se é B2B pelo tracking code
+    const isB2B = trackingCode?.startsWith('B2B-');
+    
     try {
       console.log('📸 [FINALIZAR] Iniciando finalização de entrega...');
       console.log('📦 Shipment ID:', shipmentId);
       console.log('🚛 Motorista ID:', motoristaId);
       console.log('📸 Fotos:', photos.length);
+      console.log('🏢 É B2B:', isB2B);
 
       // Upload cada foto e criar ocorrência
       for (const photo of photos) {
@@ -124,18 +128,35 @@ export const FinalizarEntregaModal = ({
         }
       }
 
-      // Atualizar status da remessa para ENTREGA_FINALIZADA
-      const { error: updateError } = await supabase
-        .from('shipments')
-        .update({ 
-          status: 'ENTREGA_FINALIZADA',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', shipmentId);
+      // Atualizar status da remessa baseado no tipo (B2B ou normal)
+      if (isB2B) {
+        // Atualizar tabela b2b_shipments
+        const { error: updateError } = await supabase
+          .from('b2b_shipments')
+          .update({ 
+            status: 'ENTREGUE',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', shipmentId);
 
-      if (updateError) {
-        console.error('❌ Erro ao atualizar status:', updateError);
-        throw new Error(`Erro ao atualizar status: ${updateError.message}`);
+        if (updateError) {
+          console.error('❌ Erro ao atualizar status B2B:', updateError);
+          throw new Error(`Erro ao atualizar status B2B: ${updateError.message}`);
+        }
+      } else {
+        // Atualizar tabela shipments (normal)
+        const { error: updateError } = await supabase
+          .from('shipments')
+          .update({ 
+            status: 'ENTREGA_FINALIZADA',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', shipmentId);
+
+        if (updateError) {
+          console.error('❌ Erro ao atualizar status:', updateError);
+          throw new Error(`Erro ao atualizar status: ${updateError.message}`);
+        }
       }
 
       // Registrar no histórico de status
@@ -144,7 +165,7 @@ export const FinalizarEntregaModal = ({
         .insert({
           shipment_id: shipmentId,
           motorista_id: motoristaId,
-          status: 'ENTREGA_FINALIZADA',
+          status: isB2B ? 'ENTREGUE' : 'ENTREGA_FINALIZADA',
           status_description: 'Entrega finalizada com sucesso',
           observacoes: `Entrega finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s).`
         });
