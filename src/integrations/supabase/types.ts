@@ -1774,7 +1774,7 @@ export type Database = {
     }
     Functions: {
       accept_shipment: {
-        Args: { motorista_uuid: string; shipment_id: string }
+        Args: { motorista_uuid?: string; shipment_id: string }
         Returns: Json
       }
       authenticate_motorista: {
@@ -1919,7 +1919,7 @@ export type Database = {
         }[]
       }
       get_motorista_shipments_public: {
-        Args: { motorista_uuid: string }
+        Args: { motorista_uuid?: string }
         Returns: {
           created_at: string
           cte_key: string
