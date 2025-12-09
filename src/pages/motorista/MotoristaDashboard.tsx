@@ -11,6 +11,7 @@ import { ptBR } from 'date-fns/locale';
 import { RemessaDetalhes } from '@/components/motorista/RemessaDetalhes';
 import { RemessaVisualizacao } from '@/components/motorista/RemessaVisualizacao';
 import { OccurrenceSimpleModal } from '@/components/motorista/OccurrenceSimpleModal';
+import { FinalizarEntregaModal } from '@/components/motorista/FinalizarEntregaModal';
 import { getMotoristaShipments, getAvailableShipments, acceptShipment, type MotoristaShipment, type BaseShipment } from '@/services/shipmentsService';
 
 interface MotoristaSession {
@@ -30,6 +31,7 @@ const MotoristaDashboard = () => {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [occurrenceModalOpen, setOccurrenceModalOpen] = useState(false);
+  const [finalizarEntregaModalOpen, setFinalizarEntregaModalOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
 
@@ -517,7 +519,19 @@ const MotoristaDashboard = () => {
                                     className="bg-blue-600 hover:bg-blue-700"
                                   >
                                     <Plus className="h-3 w-3 mr-1" />
-                                    Gerar Ocorrência
+                                    Ocorrência
+                                  </Button>
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedRemessa(remessa);
+                                      setFinalizarEntregaModalOpen(true);
+                                    }}
+                                    className="bg-green-600 hover:bg-green-700"
+                                  >
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Finalizar
                                   </Button>
                                 </>
                               )}
@@ -568,8 +582,24 @@ const MotoristaDashboard = () => {
             motoristaId={motoristaSession.id}
             onSuccess={() => {
               console.log('📊 Ocorrência criada com sucesso');
-              console.log('🔍 [SESSION DEBUG] Motorista session:', motoristaSession);
-              console.log('🔍 [SESSION DEBUG] Selected remessa:', selectedRemessa);
+              if (motoristaSession?.id) {
+                loadMinhasRemessas(motoristaSession.id);
+                loadRemessasDisponiveis();
+              }
+            }}
+          />
+        )}
+
+        {/* Finalizar Entrega Modal */}
+        {selectedRemessa && motoristaSession?.id && (
+          <FinalizarEntregaModal
+            isOpen={finalizarEntregaModalOpen}
+            onClose={() => setFinalizarEntregaModalOpen(false)}
+            shipmentId={selectedRemessa.id}
+            motoristaId={motoristaSession.id}
+            trackingCode={selectedRemessa.tracking_code || ''}
+            onSuccess={() => {
+              console.log('✅ Entrega finalizada com sucesso');
               if (motoristaSession?.id) {
                 loadMinhasRemessas(motoristaSession.id);
                 loadRemessasDisponiveis();
