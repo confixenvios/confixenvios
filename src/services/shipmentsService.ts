@@ -333,20 +333,149 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
  * Serviço para buscar remessas do portal do motorista
  */
 export const getMotoristaShipments = async (motoristaId: string): Promise<MotoristaShipment[]> => {
-  // Usar a função RPC para maior segurança
-  const { data, error } = await supabase
+  console.log('📋 Buscando remessas do motorista:', motoristaId);
+  
+  // Buscar remessas NORMAIS via RPC
+  const { data: normalData, error: normalError } = await supabase
     .rpc('get_motorista_shipments_public', { 
       motorista_uuid: motoristaId 
     });
 
-  if (error) throw error;
+  if (normalError) {
+    console.error('❌ Erro ao buscar remessas normais:', normalError);
+  }
   
-  return data?.map((item: any) => ({
+  console.log('📦 Remessas normais do motorista:', normalData?.length || 0);
+  
+  // Buscar remessas B2B atribuídas ao motorista
+  const { data: b2bData, error: b2bError } = await supabase
+    .from('b2b_shipments')
+    .select(`
+      id,
+      tracking_code,
+      status,
+      created_at,
+      updated_at,
+      recipient_name,
+      recipient_phone,
+      recipient_cep,
+      recipient_street,
+      recipient_number,
+      recipient_complement,
+      recipient_neighborhood,
+      recipient_city,
+      recipient_state,
+      observations,
+      package_type,
+      volume_count,
+      delivery_type,
+      delivery_date,
+      motorista_id,
+      b2b_client_id,
+      b2b_clients(
+        company_name, 
+        email, 
+        phone, 
+        cnpj,
+        default_pickup_cep,
+        default_pickup_street,
+        default_pickup_number,
+        default_pickup_complement,
+        default_pickup_neighborhood,
+        default_pickup_city,
+        default_pickup_state
+      )
+    `)
+    .eq('motorista_id', motoristaId)
+    .order('created_at', { ascending: false });
+
+  if (b2bError) {
+    console.error('❌ Erro ao buscar remessas B2B do motorista:', b2bError);
+  }
+
+  console.log('📦 Remessas B2B do motorista:', b2bData?.length || 0);
+
+  // Processar remessas normais
+  const normalShipments: MotoristaShipment[] = normalData?.map((item: any) => ({
     ...item,
     sender_address: item.sender_address || createEmptyAddress(),
     recipient_address: item.recipient_address || createEmptyAddress(),
     motorista_id: motoristaId
   })) || [];
+
+  // Processar remessas B2B
+  const b2bShipments: MotoristaShipment[] = (b2bData || []).map((b2b: any) => {
+    const client = b2b.b2b_clients;
+    let observationsData: any = {};
+    
+    try {
+      if (b2b.observations) {
+        observationsData = typeof b2b.observations === 'string' 
+          ? JSON.parse(b2b.observations) 
+          : b2b.observations;
+      }
+    } catch (e) {
+      console.warn('Erro ao parsear observations B2B:', e);
+    }
+
+    return {
+      id: b2b.id,
+      tracking_code: b2b.tracking_code,
+      status: b2b.status,
+      created_at: b2b.created_at,
+      weight: observationsData.total_weight || 0,
+      length: 0,
+      width: 0,
+      height: 0,
+      format: 'box',
+      selected_option: 'b2b_express',
+      pickup_option: 'pickup',
+      quote_data: {
+        merchandiseDetails: {
+          volumes: observationsData.volume_weights?.map((w: number, i: number) => ({
+            weight: w,
+            length: 0,
+            width: 0,
+            height: 0,
+            merchandise_type: 'Mercadoria'
+          })) || []
+        },
+        volumeAddresses: observationsData.volume_addresses || []
+      },
+      payment_data: null,
+      label_pdf_url: null,
+      cte_key: null,
+      motorista_id: b2b.motorista_id,
+      sender_address: {
+        name: client?.company_name || 'Cliente B2B',
+        street: client?.default_pickup_street || '',
+        number: client?.default_pickup_number || '',
+        neighborhood: client?.default_pickup_neighborhood || '',
+        city: client?.default_pickup_city || '',
+        state: client?.default_pickup_state || '',
+        cep: client?.default_pickup_cep || '',
+        complement: client?.default_pickup_complement || '',
+        reference: ''
+      },
+      recipient_address: {
+        name: b2b.recipient_name || 'Destinatário',
+        street: b2b.recipient_street || '',
+        number: b2b.recipient_number || '',
+        neighborhood: b2b.recipient_neighborhood || '',
+        city: b2b.recipient_city || '',
+        state: b2b.recipient_state || '',
+        cep: b2b.recipient_cep || '',
+        complement: b2b.recipient_complement || '',
+        reference: ''
+      }
+    };
+  });
+
+  // Combinar e retornar todas as remessas
+  const allShipments = [...normalShipments, ...b2bShipments];
+  console.log('📦 Total de remessas do motorista:', allShipments.length);
+  
+  return allShipments;
 };
 
 /**
