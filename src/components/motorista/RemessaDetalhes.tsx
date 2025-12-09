@@ -343,51 +343,68 @@ export const RemessaDetalhes = ({
 
                 {/* Detalhes dos Volumes */}
                 {(() => {
-                  const volumes = remessa.quote_data?.merchandiseDetails?.volumes || 
-                                  remessa.quote_data?.technicalData?.volumes || 
-                                  remessa.quote_data?.originalFormData?.volumes ||
-                                  remessa.quote_data?.volumes || [];
+                  // Tentar encontrar volumes em diferentes locais do quote_data
+                  let volumes = remessa.quote_data?.merchandiseDetails?.volumes || 
+                                remessa.quote_data?.technicalData?.volumes || 
+                                remessa.quote_data?.originalFormData?.volumes ||
+                                remessa.quote_data?.volumes || [];
                   
-                  if (volumes.length > 0) {
+                  // Log para debug
+                  console.log('Quote data completo:', remessa.quote_data);
+                  console.log('Volumes encontrados:', volumes);
+                  
+                  // Se não encontrou volumes, mostrar mensagem informativa
+                  if (!volumes || volumes.length === 0) {
                     return (
                       <div>
                         <h4 className="font-medium mb-2 flex items-center gap-2">
                           <Package className="h-4 w-4" />
                           Detalhes dos Volumes
                         </h4>
-                        <div className="space-y-3">
-                          {volumes.map((volume: any, index: number) => (
-                            <div key={index} className="bg-muted/50 rounded-lg p-3">
-                              <p className="font-medium text-sm mb-2">Volume {index + 1}</p>
-                              <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div>
-                                  <span className="text-muted-foreground">Peso:</span>
-                                  <p className="font-medium">{Number(volume.weight || volume.peso || 0).toFixed(2)}kg</p>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Dimensões:</span>
-                                  <p className="font-medium">
-                                    {volume.length || volume.comprimento || 0}x
-                                    {volume.width || volume.largura || 0}x
-                                    {volume.height || volume.altura || 0}cm
-                                  </p>
-                                </div>
-                                {(volume.merchandiseType || volume.tipoMercadoria || volume.tipo) && (
-                                  <div className="col-span-2">
-                                    <span className="text-muted-foreground">Tipo:</span>
-                                    <p className="font-medium capitalize">
-                                      {volume.merchandiseType || volume.tipoMercadoria || volume.tipo}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Dados detalhados dos volumes não disponíveis para esta remessa.
+                        </p>
                       </div>
                     );
                   }
-                  return null;
+                  
+                  return (
+                    <div>
+                      <h4 className="font-medium mb-2 flex items-center gap-2">
+                        <Package className="h-4 w-4" />
+                        Detalhes dos Volumes
+                      </h4>
+                      <div className="space-y-3">
+                        {volumes.map((volume: any, index: number) => (
+                          <div key={index} className="bg-muted/50 rounded-lg p-3">
+                            <p className="font-medium text-sm mb-2">Volume {index + 1}</p>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Peso:</span>
+                                <p className="font-medium">{Number(volume.weight || volume.peso || 0).toFixed(2)}kg</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Dimensões:</span>
+                                <p className="font-medium">
+                                  {volume.length || volume.comprimento || 0}x
+                                  {volume.width || volume.largura || 0}x
+                                  {volume.height || volume.altura || 0}cm
+                                </p>
+                              </div>
+                              {(volume.merchandiseType || volume.tipoMercadoria || volume.tipo) && (
+                                <div className="col-span-2">
+                                  <span className="text-muted-foreground">Tipo:</span>
+                                  <p className="font-medium capitalize">
+                                    {volume.merchandiseType || volume.tipoMercadoria || volume.tipo}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
                 })()}
 
                 <Separator />
