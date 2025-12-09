@@ -341,70 +341,53 @@ export const RemessaDetalhes = ({
 
                 <Separator />
 
-                {/* Detalhes dos Volumes */}
+                {/* Volumes Individuais */}
                 {(() => {
-                  // Tentar encontrar volumes em diferentes locais do quote_data
-                  let volumes = remessa.quote_data?.merchandiseDetails?.volumes || 
-                                remessa.quote_data?.technicalData?.volumes || 
-                                remessa.quote_data?.originalFormData?.volumes ||
-                                remessa.quote_data?.volumes || [];
+                  const volumes = remessa.quote_data?.merchandiseDetails?.volumes || 
+                                  remessa.quote_data?.technicalData?.volumes || 
+                                  remessa.quote_data?.originalFormData?.volumes ||
+                                  remessa.quote_data?.volumes ||
+                                  remessa.quote_data?.quoteData?.volumes;
                   
-                  // Log para debug
-                  console.log('Quote data completo:', remessa.quote_data);
-                  console.log('Volumes encontrados:', volumes);
-                  
-                  // Se não encontrou volumes, mostrar mensagem informativa
-                  if (!volumes || volumes.length === 0) {
+                  if (Array.isArray(volumes) && volumes.length > 0) {
                     return (
                       <div>
-                        <h4 className="font-medium mb-2 flex items-center gap-2">
+                        <h4 className="font-medium mb-3 flex items-center gap-2">
                           <Package className="h-4 w-4" />
-                          Detalhes dos Volumes
+                          Volumes Individuais
                         </h4>
-                        <p className="text-sm text-muted-foreground">
-                          Dados detalhados dos volumes não disponíveis para esta remessa.
-                        </p>
+                        <div className="space-y-2">
+                          {volumes.map((volume: any, index: number) => (
+                            <div key={index} className="p-3 border border-primary/20 rounded-lg bg-primary/5">
+                              <div className="flex items-center mb-2">
+                                <Package className="w-4 h-4 mr-2 text-primary" />
+                                <span className="font-medium text-sm">Volume {index + 1}</span>
+                              </div>
+                              <div className="grid grid-cols-4 gap-2 text-xs">
+                                <div>
+                                  <p className="text-muted-foreground">Peso</p>
+                                  <p className="font-medium">{volume.weight || volume.peso}kg</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Compr.</p>
+                                  <p className="font-medium">{volume.length || volume.comprimento}cm</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Largura</p>
+                                  <p className="font-medium">{volume.width || volume.largura}cm</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Altura</p>
+                                  <p className="font-medium">{volume.height || volume.altura}cm</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     );
                   }
-                  
-                  return (
-                    <div>
-                      <h4 className="font-medium mb-2 flex items-center gap-2">
-                        <Package className="h-4 w-4" />
-                        Detalhes dos Volumes
-                      </h4>
-                      <div className="space-y-3">
-                        {volumes.map((volume: any, index: number) => (
-                          <div key={index} className="bg-muted/50 rounded-lg p-3">
-                            <p className="font-medium text-sm mb-2">Volume {index + 1}</p>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div>
-                                <span className="text-muted-foreground">Peso:</span>
-                                <p className="font-medium">{Number(volume.weight || volume.peso || 0).toFixed(2)}kg</p>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Dimensões:</span>
-                                <p className="font-medium">
-                                  {volume.length || volume.comprimento || 0}x
-                                  {volume.width || volume.largura || 0}x
-                                  {volume.height || volume.altura || 0}cm
-                                </p>
-                              </div>
-                              {(volume.merchandiseType || volume.tipoMercadoria || volume.tipo) && (
-                                <div className="col-span-2">
-                                  <span className="text-muted-foreground">Tipo:</span>
-                                  <p className="font-medium capitalize">
-                                    {volume.merchandiseType || volume.tipoMercadoria || volume.tipo}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
+                  return null;
                 })()}
 
                 <Separator />
