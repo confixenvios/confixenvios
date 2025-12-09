@@ -205,10 +205,15 @@ const MotoristaDashboard = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {isB2B && (
+                {isB2B ? (
                   <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300">
                     <Zap className="h-3 w-3 mr-1" />
                     B2B
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
+                    <Package className="h-3 w-3 mr-1" />
+                    Convencional
                   </Badge>
                 )}
                 <div>
