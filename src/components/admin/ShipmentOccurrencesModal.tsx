@@ -6,19 +6,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   FileText, 
   Camera, 
-  PenTool, 
   Clock, 
   CheckCircle, 
   AlertTriangle, 
   Package,
   ArrowLeft,
-  Mic,
-  Download,
-  Volume2
+  AlertCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { AudioPlayer } from './AudioPlayer';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ShipmentOccurrencesModalProps {
@@ -46,6 +42,21 @@ interface ShipmentOccurrence {
   motorista_id: string | null;
 }
 
+const OCCURRENCE_LABELS: Record<string, string> = {
+  'entrega_realizada': 'Entrega realizada',
+  'destinatario_ausente': 'Destinatário ausente',
+  'local_fechado': 'Local fechado',
+  'endereco_nao_encontrado': 'Endereço não encontrado',
+  'endereco_incompleto': 'Endereço incompleto',
+  'recusa_destinatario': 'Recusa do destinatário',
+  'produto_avariado': 'Produto avariado',
+  'produto_divergente': 'Produto divergente',
+  'tentativa_frustrada': 'Tentativa frustrada — motivo não informado',
+  'entrega_finalizada': 'Foto de comprovação de entrega',
+  'foto': 'Foto registrada',
+  'audio': 'Áudio registrado'
+};
+
 export const ShipmentOccurrencesModal = ({ 
   isOpen, 
   onClose, 
@@ -72,12 +83,12 @@ export const ShipmentOccurrencesModal = ({
         .from('shipment_status_history')
         .select('*')
         .eq('shipment_id', shipment.id)
-        .not('motorista_id', 'is', null) // Apenas mudanças com motorista
+        .not('motorista_id', 'is', null)
         .order('created_at', { ascending: false });
 
       if (statusError) throw statusError;
 
-      // Carregar ocorrências (fotos e áudios)
+      // Carregar ocorrências
       const { data: occurrenceData, error: occurrenceError } = await supabase
         .from('shipment_occurrences')
         .select('*')
@@ -129,13 +140,20 @@ export const ShipmentOccurrencesModal = ({
     }
   };
 
-  const handleDownloadAudio = (audioUrl: string, trackingCode: string, statusHistory: StatusHistory) => {
-    const link = document.createElement('a');
-    link.href = audioUrl;
-    link.download = `audio_${trackingCode}_${statusHistory.status}_${format(new Date(statusHistory.created_at), 'ddMMyyyy_HHmm')}.webm`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const getOccurrenceIcon = (type: string) => {
+    if (type === 'entrega_finalizada') {
+      return <Camera className="h-5 w-5 text-green-600" />;
+    }
+    return <AlertCircle className="h-5 w-5 text-orange-500" />;
+  };
+
+  const getOccurrenceLabel = (occurrence: ShipmentOccurrence) => {
+    // Primeiro tenta usar a descrição salva
+    if (occurrence.description && occurrence.description !== 'Foto registrada pelo motorista' && occurrence.description !== 'Áudio registrado pelo motorista') {
+      return occurrence.description;
+    }
+    // Depois tenta mapear pelo tipo
+    return OCCURRENCE_LABELS[occurrence.occurrence_type] || occurrence.occurrence_type;
   };
 
   const formatDate = (dateString: string | null | undefined): string => {
@@ -147,13 +165,21 @@ export const ShipmentOccurrencesModal = ({
     return format(date, 'dd/MM/yyyy HH:mm', { locale: ptBR });
   };
 
+  // Separar ocorrências por tipo
+  const deliveryPhotos = occurrences.filter(o => o.occurrence_type === 'entrega_finalizada');
+  const statusOccurrences = occurrences.filter(o => 
+    o.occurrence_type !== 'entrega_finalizada' && 
+    o.occurrence_type !== 'foto' && 
+    o.occurrence_type !== 'audio'
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl w-full mx-4 max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             <FileText className="h-5 w-5" />
-            Ocorrências do Motorista - {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
+            Ocorrências - {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
           </DialogTitle>
         </DialogHeader>
 
@@ -166,91 +192,64 @@ export const ShipmentOccurrencesModal = ({
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Ocorrências (Fotos e Áudios) - PRIORIDADE */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg flex items-center gap-2 text-primary">
-                    <Camera className="h-5 w-5" />
-                    Ocorrências Registradas (Fotos e Áudios)
-                  </h3>
-                  
-                  {occurrences.length === 0 ? (
-                    <div className="text-center py-8 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/30">
-                      <div className="flex items-center justify-center gap-2 text-muted-foreground mb-2">
-                        <Camera className="h-8 w-8" />
-                        <Mic className="h-8 w-8" />
-                      </div>
-                      <p className="font-medium mb-1">Nenhuma ocorrência registrada</p>
-                      <p className="text-sm text-muted-foreground">
-                        O motorista ainda não enviou fotos ou áudios para esta remessa
-                      </p>
+                {/* Fotos de Comprovação de Entrega */}
+                {deliveryPhotos.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg flex items-center gap-2 text-green-600">
+                      <Camera className="h-5 w-5" />
+                      Fotos de Comprovação de Entrega
+                    </h3>
+                    
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {deliveryPhotos.map((photo, index) => (
+                        <div key={photo.id} className="space-y-2">
+                          <img
+                            src={photo.file_url}
+                            alt={`Foto ${index + 1}`}
+                            className="w-full aspect-square object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border-2 border-green-200 hover:border-green-500 shadow-md"
+                            onClick={() => window.open(photo.file_url, '_blank')}
+                          />
+                          <p className="text-xs text-muted-foreground text-center">
+                            {formatDate(photo.created_at)}
+                          </p>
+                        </div>
+                      ))}
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {occurrences.map((occurrence, index) => (
-                        <div key={occurrence.id} className="relative">
-                          {index < occurrences.length - 1 && (
-                            <div className="absolute left-6 top-16 w-px h-16 bg-border"></div>
-                          )}
-                          
-                          <div className="flex gap-4">
-                            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center">
-                              {occurrence.occurrence_type === 'foto' ? (
-                                <Camera className="h-5 w-5 text-primary" />
-                              ) : (
-                                <Mic className="h-5 w-5 text-primary" />
-                              )}
-                            </div>
-                            
-                            <div className="flex-1 min-w-0 space-y-3">
-                              <div className="flex items-center gap-3 flex-wrap">
-                                <Badge variant={occurrence.occurrence_type === 'foto' ? 'default' : 'secondary'} className="font-medium">
-                                  {occurrence.occurrence_type === 'foto' ? '📷 Foto' : '🎤 Áudio'}
-                                </Badge>
-                                <span className="text-sm text-muted-foreground font-medium">
-                                  {formatDate(occurrence.created_at)}
-                                </span>
-                              </div>
-                              
-                              {/* Descrição da ocorrência */}
-                              {occurrence.description && (
-                                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                                  <p className="text-sm font-medium mb-1 text-primary">Observação do Motorista:</p>
-                                  <p className="text-sm">
-                                    {occurrence.description}
-                                  </p>
-                                </div>
-                              )}
+                  </div>
+                )}
 
-                              {/* Conteúdo da ocorrência */}
-                              {occurrence.occurrence_type === 'foto' ? (
-                                <div className="space-y-2">
-                                  <img
-                                    src={occurrence.file_url}
-                                    alt="Foto da ocorrência"
-                                    className="w-40 h-40 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border-2 border-border hover:border-primary shadow-md"
-                                    onClick={() => window.open(occurrence.file_url, '_blank')}
-                                  />
-                                  <p className="text-xs text-muted-foreground">📷 Clique na foto para visualizar em tamanho completo</p>
-                                </div>
-                              ) : (
-                                <div className="space-y-2">
-                                  <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                                    <AudioPlayer 
-                                      audioUrl={occurrence.file_url}
-                                      fileName={`audio_${shipment.tracking_code || shipment.id.slice(0,8)}_${format(new Date(occurrence.created_at), 'ddMMyyyy_HHmm')}.webm`}
-                                    />
-                                  </div>
-                                </div>
-                              )}
+                {/* Ocorrências Registradas */}
+                {statusOccurrences.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg flex items-center gap-2 text-orange-600">
+                      <AlertCircle className="h-5 w-5" />
+                      Ocorrências Registradas
+                    </h3>
+                    
+                    <div className="space-y-3">
+                      {statusOccurrences.map((occurrence) => (
+                        <div key={occurrence.id} className="flex gap-4 p-4 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center">
+                            {getOccurrenceIcon(occurrence.occurrence_type)}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 flex-wrap mb-2">
+                              <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">
+                                {getOccurrenceLabel(occurrence)}
+                              </Badge>
+                              <span className="text-sm text-muted-foreground">
+                                {formatDate(occurrence.created_at)}
+                              </span>
                             </div>
                           </div>
                         </div>
                       ))}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
-                {/* Histórico de Status - SECUNDÁRIO */}
+                {/* Histórico de Status */}
                 {statusHistory.length > 0 && (
                   <div className="space-y-4 pt-6 border-t border-border">
                     <h3 className="font-semibold text-base flex items-center gap-2 text-muted-foreground">
@@ -277,7 +276,6 @@ export const ShipmentOccurrencesModal = ({
                                 </span>
                               </div>
                               
-                              {/* Observações */}
                               {history.observacoes && (
                                 <div className="bg-muted/50 rounded p-2">
                                   <p className="text-xs font-medium mb-1">Observações:</p>
