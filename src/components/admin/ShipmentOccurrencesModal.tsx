@@ -108,6 +108,12 @@ export const ShipmentOccurrencesModal = ({
 
   if (!shipment) return null;
 
+  // Encontrar a foto de entrega finalizada para exibir botão
+  const getDeliveryPhotoUrl = (): string | null => {
+    const deliveryPhoto = occurrences.find(o => o.occurrence_type === 'entrega_finalizada');
+    return deliveryPhoto?.file_url || null;
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       'COLETA_ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
@@ -308,6 +314,16 @@ export const ShipmentOccurrencesModal = ({
         </ScrollArea>
 
         <div className="flex gap-2 pt-4 border-t">
+          {getDeliveryPhotoUrl() && (
+            <Button
+              variant="default"
+              className="flex-1 bg-green-600 hover:bg-green-700"
+              onClick={() => window.open(getDeliveryPhotoUrl()!, '_blank')}
+            >
+              <Camera className="h-4 w-4 mr-2" />
+              Ver Foto de Entrega
+            </Button>
+          )}
           <Button variant="outline" className="flex-1" onClick={onClose}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Fechar
