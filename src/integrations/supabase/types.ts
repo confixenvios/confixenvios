@@ -1774,7 +1774,7 @@ export type Database = {
     }
     Functions: {
       accept_shipment: {
-        Args: { motorista_uuid?: string; shipment_id: string }
+        Args: { p_motorista_uuid?: string; p_shipment_id: string }
         Returns: Json
       }
       authenticate_motorista: {
