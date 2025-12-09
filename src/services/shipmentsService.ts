@@ -632,8 +632,8 @@ function createEmptyAddress(): ShipmentAddress {
  */
 export const acceptShipment = async (shipmentId: string, motoristaId: string) => {
   const { data, error } = await supabase.rpc('accept_shipment', {
-    shipment_id: shipmentId,
-    motorista_uuid: motoristaId
+    p_shipment_id: shipmentId,
+    p_motorista_uuid: motoristaId
   });
 
   if (error) throw error;
