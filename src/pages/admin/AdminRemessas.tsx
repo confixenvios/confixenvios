@@ -827,12 +827,15 @@ const AdminRemessas = () => {
       'PENDING_PAYMENT': { label: 'Aguardando Pagamento', variant: 'destructive' as const },
       'PAYMENT_CONFIRMED': { label: 'Pagamento Confirmado', variant: 'default' as const },
       'PAID': { label: 'Pago', variant: 'default' as const },
+      'PENDENTE': { label: 'Pendente', variant: 'secondary' as const },
       'PAGO_AGUARDANDO_ETIQUETA': { label: 'Aguardando Etiqueta', variant: 'secondary' as const },
       'COLETA_ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
+      'ACEITA': { label: 'Aceita', variant: 'default' as const },
       'COLETA_FINALIZADA': { label: 'Coleta Finalizada', variant: 'default' as const },
       'LABEL_AVAILABLE': { label: 'Etiqueta Disponível', variant: 'default' as const },
       'IN_TRANSIT': { label: 'Em Trânsito', variant: 'default' as const },
       'ENTREGA_FINALIZADA': { label: 'Entrega Finalizada', variant: 'success' as const },
+      'ENTREGUE': { label: 'Entregue', variant: 'success' as const },
       'DELIVERED': { label: 'Entregue', variant: 'default' as const }
     };
 
@@ -1263,6 +1266,15 @@ const AdminRemessas = () => {
                                 title="Ver detalhes"
                               >
                                 <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleViewOccurrences(shipment)}
+                                className="h-8 w-8 p-0 hover:bg-orange-100"
+                                title="Ver ocorrências do motorista"
+                              >
+                                <FileText className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="ghost"

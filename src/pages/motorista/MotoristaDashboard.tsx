@@ -118,12 +118,14 @@ const MotoristaDashboard = () => {
       'LABEL_GENERATED': { label: 'Etiqueta Gerada', variant: 'default' as const },
       'PAYMENT_CONFIRMED': { label: 'Disponível para Coleta', variant: 'default' as const },
       'PAID': { label: 'Disponível para Coleta', variant: 'default' as const },
+      'PENDENTE': { label: 'Disponível para Coleta', variant: 'default' as const },
       'COLETA_ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
       'ACEITA': { label: 'Aceita', variant: 'default' as const },
       'COLETA_FINALIZADA': { label: 'Coleta Realizada', variant: 'success' as const },
       'EM_TRANSITO': { label: 'Em Trânsito', variant: 'default' as const },
       'TENTATIVA_ENTREGA': { label: 'Insucesso na Entrega', variant: 'destructive' as const },
       'ENTREGA_FINALIZADA': { label: 'Entregue', variant: 'success' as const },
+      'ENTREGUE': { label: 'Entregue', variant: 'success' as const },
       'AGUARDANDO_DESTINATARIO': { label: 'Aguardando Destinatário', variant: 'secondary' as const },
       'ENDERECO_INCORRETO': { label: 'Endereço Incorreto', variant: 'destructive' as const }
     };
@@ -216,10 +218,10 @@ const MotoristaDashboard = () => {
     setMenuOpen(false);
   };
 
-  // Contadores - incluir status B2B "ACEITA" nas remessas ativas
+  // Contadores - incluir status B2B "ACEITA" e "ENTREGUE" nas remessas
   const remessasEmRota = remessas.filter(r => ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'ACEITA'].includes(r.status));
-  const remessasEntregues = remessas.filter(r => r.status === 'ENTREGA_FINALIZADA');
-  const minhasRemessasAtivas = remessas.filter(r => !['ENTREGA_FINALIZADA', 'CANCELLED', 'CANCELADO'].includes(r.status));
+  const remessasEntregues = remessas.filter(r => ['ENTREGA_FINALIZADA', 'ENTREGUE'].includes(r.status));
+  const minhasRemessasAtivas = remessas.filter(r => !['ENTREGA_FINALIZADA', 'ENTREGUE', 'CANCELLED', 'CANCELADO'].includes(r.status));
 
   const menuItems = [
     { id: 'disponiveis' as ViewType, label: 'Disponíveis', icon: Package, count: remessasDisponiveis.length, color: 'text-orange-500' },

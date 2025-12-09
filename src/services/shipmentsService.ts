@@ -192,7 +192,7 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
     throw error;
   }
 
-  // Buscar remessas B2B
+  // Buscar remessas B2B com motorista
   const { data: b2bData, error: b2bError } = await supabase
     .from('b2b_shipments')
     .select(`
@@ -215,6 +215,7 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
       volume_count,
       delivery_type,
       delivery_date,
+      motorista_id,
       b2b_client_id,
       b2b_clients(company_name, email, phone, cnpj)
     `)
@@ -254,11 +255,36 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
     })
   );
 
+  // Buscar dados dos motoristas para B2B
+  const motoristaIds = (b2bData || [])
+    .map((s: any) => s.motorista_id)
+    .filter((id: string | null) => id !== null);
+  
+  let motoristasMap: Record<string, { nome: string; telefone: string; email: string }> = {};
+  
+  if (motoristaIds.length > 0) {
+    const { data: motoristasData } = await supabase
+      .from('motoristas')
+      .select('id, nome, telefone, email')
+      .in('id', motoristaIds);
+    
+    if (motoristasData) {
+      motoristasMap = motoristasData.reduce((acc: any, m: any) => {
+        acc[m.id] = { nome: m.nome, telefone: m.telefone, email: m.email };
+        return acc;
+      }, {});
+    }
+  }
+
   // Normalizar remessas B2B para o mesmo formato
-  const b2bShipmentsWithDetails: AdminShipment[] = (b2bData || []).map((b2bShipment) => {
+  const b2bShipmentsWithDetails: AdminShipment[] = (b2bData || []).map((b2bShipment: any) => {
     const b2bClient = Array.isArray(b2bShipment.b2b_clients) 
       ? b2bShipment.b2b_clients[0] 
       : b2bShipment.b2b_clients;
+
+    const motoristaData = b2bShipment.motorista_id 
+      ? motoristasMap[b2bShipment.motorista_id] 
+      : undefined;
 
     return {
       id: b2bShipment.id,
@@ -281,7 +307,7 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
       label_pdf_url: null,
       cte_key: null,
       user_id: undefined,
-      motorista_id: undefined,
+      motorista_id: b2bShipment.motorista_id,
       pricing_table_id: undefined,
       pricing_table_name: undefined,
       document_type: 'declaracao_conteudo',
@@ -308,7 +334,7 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
         complement: b2bShipment.recipient_complement || null,
         reference: null
       },
-      motoristas: undefined
+      motoristas: motoristaData
     };
   });
 
