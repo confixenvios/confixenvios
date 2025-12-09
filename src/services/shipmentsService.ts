@@ -362,7 +362,7 @@ export const getAvailableShipments = async (): Promise<BaseShipment[]> => {
       .select('*')
       .is('motorista_id', null)
       .in('status', ['PAYMENT_CONFIRMED', 'PAID', 'PENDING_LABEL', 'LABEL_GENERATED'])
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false });
     
     if (shipmentsError) {
       console.error('❌ Erro ao buscar remessas:', shipmentsError);
