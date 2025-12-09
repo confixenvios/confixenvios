@@ -78,8 +78,8 @@ export const RemessaVisualizacao = ({
             <CardContent className="px-4 pb-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Peso:</span>
-                  <p className="font-medium">{remessa.weight}kg</p>
+                  <span className="text-muted-foreground">Peso Total:</span>
+                  <p className="font-medium">{Number(remessa.weight).toFixed(2)}kg</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Formato:</span>
@@ -92,8 +92,11 @@ export const RemessaVisualizacao = ({
                   </p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Dimensões:</span>
-                  <p className="font-medium">{remessa.length}x{remessa.width}x{remessa.height}cm</p>
+                  <span className="text-muted-foreground">Volumes:</span>
+                  <p className="font-medium">
+                    {remessa.quote_data?.merchandiseDetails?.volumes?.length || 
+                     remessa.quote_data?.technicalData?.volumes?.length || 1}
+                  </p>
                 </div>
               </div>
             </CardContent>
