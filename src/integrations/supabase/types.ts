@@ -598,6 +598,7 @@ export type Database = {
           delivery_date: string | null
           delivery_type: string | null
           id: string
+          motorista_id: string | null
           observations: string | null
           package_type: string | null
           pickup_requested_at: string | null
@@ -622,6 +623,7 @@ export type Database = {
           delivery_date?: string | null
           delivery_type?: string | null
           id?: string
+          motorista_id?: string | null
           observations?: string | null
           package_type?: string | null
           pickup_requested_at?: string | null
@@ -646,6 +648,7 @@ export type Database = {
           delivery_date?: string | null
           delivery_type?: string | null
           id?: string
+          motorista_id?: string | null
           observations?: string | null
           package_type?: string | null
           pickup_requested_at?: string | null
