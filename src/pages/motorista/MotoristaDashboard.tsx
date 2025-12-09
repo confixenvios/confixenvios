@@ -119,6 +119,7 @@ const MotoristaDashboard = () => {
       'PAYMENT_CONFIRMED': { label: 'Disponível para Coleta', variant: 'default' as const },
       'PAID': { label: 'Disponível para Coleta', variant: 'default' as const },
       'COLETA_ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
+      'ACEITA': { label: 'Aceita', variant: 'default' as const },
       'COLETA_FINALIZADA': { label: 'Coleta Realizada', variant: 'success' as const },
       'EM_TRANSITO': { label: 'Em Trânsito', variant: 'default' as const },
       'TENTATIVA_ENTREGA': { label: 'Insucesso na Entrega', variant: 'destructive' as const },
@@ -215,10 +216,10 @@ const MotoristaDashboard = () => {
     setMenuOpen(false);
   };
 
-  // Contadores
-  const remessasEmRota = remessas.filter(r => ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO'].includes(r.status));
+  // Contadores - incluir status B2B "ACEITA" nas remessas ativas
+  const remessasEmRota = remessas.filter(r => ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'ACEITA'].includes(r.status));
   const remessasEntregues = remessas.filter(r => r.status === 'ENTREGA_FINALIZADA');
-  const minhasRemessasAtivas = remessas.filter(r => r.status !== 'ENTREGA_FINALIZADA');
+  const minhasRemessasAtivas = remessas.filter(r => !['ENTREGA_FINALIZADA', 'CANCELLED', 'CANCELADO'].includes(r.status));
 
   const menuItems = [
     { id: 'disponiveis' as ViewType, label: 'Disponíveis', icon: Package, count: remessasDisponiveis.length, color: 'text-orange-500' },
@@ -323,7 +324,7 @@ const MotoristaDashboard = () => {
                 )}
                 {showActions && (currentView === 'minhas' || currentView === 'em_rota') && 
                   (remessa as MotoristaShipment).motorista_id && 
-                  ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'TENTATIVA_ENTREGA'].includes(remessa.status) && (
+                  ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'TENTATIVA_ENTREGA', 'ACEITA'].includes(remessa.status) && (
                   <>
                     <Button
                       variant="default"
