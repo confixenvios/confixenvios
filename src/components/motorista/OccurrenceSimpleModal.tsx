@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Camera, Mic } from 'lucide-react';
+import { Camera, Mic, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { AudioRecorder } from './AudioRecorder';
 import { PhotoUpload } from './PhotoUpload';
@@ -32,6 +32,7 @@ export const OccurrenceSimpleModal = ({
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [existingOccurrences, setExistingOccurrences] = useState<any[]>([]);
   const [loadingOccurrences, setLoadingOccurrences] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
   // Reset attachments when modal opens/closes
@@ -125,6 +126,12 @@ export const OccurrenceSimpleModal = ({
   };
 
   const handleSaveOccurrence = async () => {
+    // Prevent duplicate submissions
+    if (isSaving) {
+      console.log('⚠️ [OCCURRENCE DEBUG] Já está salvando, ignorando clique duplicado');
+      return;
+    }
+    
     console.log('🔍 [OCCURRENCE DEBUG] Iniciando processo de salvamento...');
     console.log('📸 Fotos:', photos.length);
     console.log('🎵 Audio URL:', audioUrl ? 'presente' : 'ausente');
@@ -142,6 +149,7 @@ export const OccurrenceSimpleModal = ({
       return;
     }
 
+    setIsSaving(true);
     const supabase = createSecureSupabaseClient();
     
     try {
@@ -291,6 +299,8 @@ export const OccurrenceSimpleModal = ({
         description: error.message || 'Erro desconhecido',
         variant: "destructive"
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -497,9 +507,16 @@ export const OccurrenceSimpleModal = ({
                   console.log('🔥 [BUTTON DEBUG] Botão desabilitado?', photos.length === 0 && !audioUrl);
                   handleSaveOccurrence();
                 }}
-                disabled={photos.length === 0 && !audioUrl}
+                disabled={(photos.length === 0 && !audioUrl) || isSaving}
               >
-                Salvar
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  'Salvar'
+                )}
               </Button>
             </div>
           </div>
