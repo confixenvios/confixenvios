@@ -1018,7 +1018,11 @@ const ClientRemessas = () => {
 
                   {/* Volumes Individuais */}
                   {(() => {
-                    const volumes = selectedShipment.quote_data?.volumes || selectedShipment.quote_data?.quoteData?.volumes;
+                    const volumes = selectedShipment.quote_data?.merchandiseDetails?.volumes || 
+                                    selectedShipment.quote_data?.technicalData?.volumes ||
+                                    selectedShipment.quote_data?.originalFormData?.volumes ||
+                                    selectedShipment.quote_data?.volumes || 
+                                    selectedShipment.quote_data?.quoteData?.volumes;
                     if (Array.isArray(volumes) && volumes.length > 0) {
                       return (
                         <div className="mt-6">

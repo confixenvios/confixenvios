@@ -1875,7 +1875,11 @@ const AdminRemessas = () => {
 
                     {/* Volumes Individuais */}
                     {(() => {
-                      const volumes = selectedShipmentDetails.quote_data?.volumes || selectedShipmentDetails.quote_data?.quoteData?.volumes;
+                      const volumes = selectedShipmentDetails.quote_data?.merchandiseDetails?.volumes || 
+                                      selectedShipmentDetails.quote_data?.technicalData?.volumes ||
+                                      selectedShipmentDetails.quote_data?.originalFormData?.volumes ||
+                                      selectedShipmentDetails.quote_data?.volumes || 
+                                      selectedShipmentDetails.quote_data?.quoteData?.volumes;
                       if (Array.isArray(volumes) && volumes.length > 0) {
                         return (
                           <div className="mt-4">
