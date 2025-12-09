@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Truck, Package, MapPin, Phone, LogOut, CheckCircle, Clock, Calendar, Eye, User, FileText, Plus } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Truck, Package, MapPin, Phone, LogOut, CheckCircle, Clock, Calendar, Eye, User, FileText, Plus, List, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -180,7 +181,7 @@ const MotoristaDashboard = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-4 space-y-6">
+      <main className="container mx-auto px-4 py-4 space-y-4">
         {/* Status Pendente Alert */}
         {motoristaSession?.status === 'pendente' && (
           <Card className="border-yellow-200 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900">
@@ -245,8 +246,24 @@ const MotoristaDashboard = () => {
           </div>
         )}
 
-        {/* Remessas Disponíveis - Only for active drivers */}
+        {/* Tabs Navigation - Only for active drivers */}
         {motoristaSession?.status === 'ativo' && (
+          <Tabs defaultValue="disponiveis" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-[73px] z-30 bg-background">
+              <TabsTrigger value="disponiveis" className="flex items-center gap-2">
+                <List className="h-4 w-4" />
+                <span className="hidden sm:inline">Disponíveis</span>
+                <Badge variant="secondary" className="ml-1">{remessasDisponiveis.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="minhas" className="flex items-center gap-2">
+                <ClipboardList className="h-4 w-4" />
+                <span className="hidden sm:inline">Minhas</span>
+                <Badge variant="secondary" className="ml-1">{remessas.filter(r => r.status !== 'ENTREGA_FINALIZADA').length}</Badge>
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Tab: Remessas Disponíveis */}
+            <TabsContent value="disponiveis" className="space-y-4 mt-0">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -358,10 +375,10 @@ const MotoristaDashboard = () => {
               </div>
             )}
           </div>
-        )}
+            </TabsContent>
 
-        {/* Minhas Remessas - Only for active drivers */}
-        {motoristaSession?.status === 'ativo' && (
+            {/* Tab: Minhas Remessas */}
+            <TabsContent value="minhas" className="space-y-4 mt-0">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -513,6 +530,8 @@ const MotoristaDashboard = () => {
               </div>
             )}
           </div>
+            </TabsContent>
+          </Tabs>
         )}
 
         {/* View Modal - Simple visualization */}
