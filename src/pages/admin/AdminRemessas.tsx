@@ -1807,32 +1807,6 @@ const AdminRemessas = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Comprimento</label>
-                        <p className="text-sm">
-                          {selectedShipmentDetails.quote_data?.originalFormData?.length || 
-                           selectedShipmentDetails.quote_data?.length || 
-                           selectedShipmentDetails.length} cm
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Largura</label>
-                        <p className="text-sm">
-                          {selectedShipmentDetails.quote_data?.originalFormData?.width || 
-                           selectedShipmentDetails.quote_data?.width || 
-                           selectedShipmentDetails.width} cm
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Altura</label>
-                        <p className="text-sm">
-                          {selectedShipmentDetails.quote_data?.originalFormData?.height || 
-                           selectedShipmentDetails.quote_data?.height || 
-                           selectedShipmentDetails.height} cm
-                        </p>
-                      </div>
-                    </div>
                     
                     {/* Valor da Nota (Valor Declarado) */}
                     {(() => {
