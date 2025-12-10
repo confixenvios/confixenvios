@@ -35,6 +35,7 @@ export interface BaseShipment {
   pricing_table_name?: string;
   pricing_table_id?: string;
   document_type?: string;
+  observations?: string | null;
 }
 
 export interface ClientShipment extends BaseShipment {
@@ -937,6 +938,7 @@ function normalizeB2BShipment(b2bShipment: any, phase: string): BaseShipment {
     format: b2bShipment.package_type || 'caixa',
     selected_option: b2bShipment.delivery_type || 'economico',
     pickup_option: 'pickup',
+    observations: b2bShipment.observations,
     quote_data: {
       observations: b2bShipment.observations,
       volume_count: b2bShipment.volume_count,
