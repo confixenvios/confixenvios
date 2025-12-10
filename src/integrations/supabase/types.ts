@@ -1019,6 +1019,9 @@ export type Database = {
           telefone: string
           tipo_pedidos: string
           updated_at: string
+          ve_b2b_coleta: boolean | null
+          ve_b2b_entrega: boolean | null
+          ve_convencional: boolean | null
         }
         Insert: {
           cpf: string
@@ -1031,6 +1034,9 @@ export type Database = {
           telefone: string
           tipo_pedidos?: string
           updated_at?: string
+          ve_b2b_coleta?: boolean | null
+          ve_b2b_entrega?: boolean | null
+          ve_convencional?: boolean | null
         }
         Update: {
           cpf?: string
@@ -1043,6 +1049,9 @@ export type Database = {
           telefone?: string
           tipo_pedidos?: string
           updated_at?: string
+          ve_b2b_coleta?: boolean | null
+          ve_b2b_entrega?: boolean | null
+          ve_convencional?: boolean | null
         }
         Relationships: []
       }
