@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Camera, CheckCircle, QrCode } from 'lucide-react';
+import { Camera, CheckCircle, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { PhotoUpload } from './PhotoUpload';
 import { QRCodeScanModal } from './QRCodeScanModal';
@@ -124,13 +124,25 @@ export const FinalizarEntregaModal = ({
     });
   };
 
-  const handleQRValidationComplete = () => {
+  const handleQRValidationComplete = (photoFile?: File) => {
     setQrValidated(true);
     setShowQRScan(false);
-    toast({
-      title: "Volumes validados!",
-      description: "Agora tire uma foto para finalizar."
-    });
+    
+    // For B2B-2, the photo comes from the validation modal
+    if (isB2BEntrega && photoFile) {
+      const previewUrl = URL.createObjectURL(photoFile);
+      setPhotos([photoFile]);
+      setPhotoPreviewUrls([previewUrl]);
+      toast({
+        title: "Volumes validados!",
+        description: "Foto de entrega anexada."
+      });
+    } else {
+      toast({
+        title: "Volumes validados!",
+        description: isB2BColeta ? "Coleta pronta para finalizar." : "Agora tire uma foto para finalizar."
+      });
+    }
   };
 
   const handleStartFinalization = () => {
@@ -140,7 +152,8 @@ export const FinalizarEntregaModal = ({
   };
 
   const handleFinalizarEntrega = async () => {
-    if (photos.length === 0) {
+    // Photo is only required for B2B-2 (delivery phase)
+    if (isB2BEntrega && photos.length === 0) {
       toast({
         title: "Foto obrigatória",
         description: "Adicione pelo menos uma foto da entrega para finalizar.",
@@ -149,11 +162,11 @@ export const FinalizarEntregaModal = ({
       return;
     }
 
-    // For B2B, require QR validation first
+    // For B2B, require volume validation first
     if (isB2B && !qrValidated) {
       toast({
         title: "Validação obrigatória",
-        description: "Escaneie os QR codes de todos os volumes primeiro.",
+        description: "Valide todos os volumes primeiro.",
         variant: "destructive"
       });
       setShowQRScan(true);
@@ -332,14 +345,14 @@ export const FinalizarEntregaModal = ({
           </DialogHeader>
 
           <div className="space-y-4 p-4">
-            {/* Alerta sobre QR code para B2B */}
+            {/* Alerta sobre validação de volumes para B2B */}
             {isB2B && !qrValidated && (
               <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <QrCode className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <Package className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
                   <p className="font-medium text-blue-800 dark:text-blue-200">Validação de volumes obrigatória</p>
                   <p className="text-blue-700 dark:text-blue-300 mt-1">
-                    Escaneie o QR code de cada volume ({volumeCount}) antes de finalizar.
+                    Digite o código de cada volume ({volumeCount}) antes de finalizar.
                   </p>
                 </div>
               </div>
@@ -357,16 +370,18 @@ export const FinalizarEntregaModal = ({
               </div>
             )}
 
-            {/* Alerta sobre foto obrigatória */}
-            <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-              <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-amber-800 dark:text-amber-200">Foto obrigatória</p>
-                <p className="text-amber-700 dark:text-amber-300 mt-1">
-                  Tire pelo menos uma foto comprovando a entrega antes de finalizar.
-                </p>
+            {/* Alerta sobre foto obrigatória - apenas para B2B-2 */}
+            {isB2BEntrega && (
+              <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-800 dark:text-amber-200">Foto obrigatória</p>
+                  <p className="text-amber-700 dark:text-amber-300 mt-1">
+                    Tire pelo menos uma foto comprovando a entrega antes de finalizar.
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Tracking code info */}
             {trackingCode && (
@@ -379,31 +394,33 @@ export const FinalizarEntregaModal = ({
               </div>
             )}
 
-            {/* Botão para validar QR codes (B2B) */}
+            {/* Botão para validar volumes (B2B) */}
             {isB2B && !qrValidated && (
               <Button
                 variant="outline"
                 onClick={() => setShowQRScan(true)}
-                className="w-full h-16 flex flex-col items-center gap-2 border-blue-300 text-blue-600 hover:bg-blue-50"
+                className="w-full h-14 flex flex-col items-center gap-1 border-blue-300 text-blue-600 hover:bg-blue-50"
                 disabled={loadingEtiCodes}
               >
-                <QrCode className="h-6 w-6" />
+                <Package className="h-5 w-5" />
                 <span className="text-sm">
-                  {loadingEtiCodes ? 'Carregando códigos...' : 'Validar QR Codes dos Volumes'}
+                  {loadingEtiCodes ? 'Carregando códigos...' : 'Validar Volumes'}
                 </span>
               </Button>
             )}
             
-            {/* Botão para tirar foto */}
-            <Button
-              variant="outline"
-              onClick={() => setShowPhotoUpload(true)}
-              className="w-full h-16 flex flex-col items-center gap-2"
-              disabled={isB2B && !qrValidated}
-            >
-              <Camera className="h-6 w-6" />
-              <span className="text-sm">Tirar Foto da Entrega</span>
-            </Button>
+            {/* Botão para tirar foto - apenas para B2B-2 ou normal, após validação */}
+            {(isB2BEntrega || !isB2B) && (
+              <Button
+                variant="outline"
+                onClick={() => setShowPhotoUpload(true)}
+                className="w-full h-14 flex flex-col items-center gap-1"
+                disabled={isB2B && !qrValidated}
+              >
+                <Camera className="h-5 w-5" />
+                <span className="text-sm">Tirar Foto da Entrega</span>
+              </Button>
+            )}
 
             {/* Pré-visualização das Fotos */}
             {photoPreviewUrls.length > 0 && (
