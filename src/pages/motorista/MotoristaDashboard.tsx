@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Truck, Package, MapPin, Phone, LogOut, CheckCircle, Clock, Calendar, Eye, User, FileText, Plus, List, ClipboardList, Menu, Route, History, Zap } from 'lucide-react';
+import { Truck, Package, MapPin, Phone, LogOut, CheckCircle, Clock, Calendar, Eye, User, FileText, Plus, List, ClipboardList, Menu, Route, History, Zap, Play, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -41,6 +41,26 @@ const MotoristaDashboard = () => {
   const [accepting, setAccepting] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<ViewType>('disponiveis');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [remessasEmRotaIds, setRemessasEmRotaIds] = useState<string[]>(() => {
+    // Carregar do localStorage
+    const saved = localStorage.getItem('remessas_em_rota');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Salvar no localStorage quando mudar
+  useEffect(() => {
+    localStorage.setItem('remessas_em_rota', JSON.stringify(remessasEmRotaIds));
+  }, [remessasEmRotaIds]);
+
+  const handleMoveToEmRota = (remessaId: string) => {
+    setRemessasEmRotaIds(prev => [...prev, remessaId]);
+    toast.success('Remessa movida para Em Rota');
+  };
+
+  const handleMoveToMinhas = (remessaId: string) => {
+    setRemessasEmRotaIds(prev => prev.filter(id => id !== remessaId));
+    toast.success('Remessa movida para Minhas Remessas');
+  };
 
   useEffect(() => {
     const checkMotoristaAuth = async () => {
@@ -215,9 +235,6 @@ const MotoristaDashboard = () => {
   };
 
   // Contadores - incluir status B2B nas remessas
-  // Remessas em rota: apenas as que estão atribuídas ao motorista e ainda não finalizadas
-  const remessasEmRota = remessas.filter(r => ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'ACEITA', 'B2B_ENTREGA_ACEITA'].includes(r.status));
-  
   // Remessas entregues: inclui finalizadas E remessas B2B que vieram do histórico (coletas B2B-1 finalizadas)
   const remessasEntregues = remessas.filter(r => {
     // Status de entrega final
@@ -228,11 +245,15 @@ const MotoristaDashboard = () => {
   });
   
   // Remessas ativas: exclui finalizadas e as que vieram do histórico
-  const minhasRemessasAtivas = remessas.filter(r => {
+  const todasRemessasAtivas = remessas.filter(r => {
     if (['ENTREGA_FINALIZADA', 'ENTREGUE', 'CANCELLED', 'CANCELADO'].includes(r.status)) return false;
     if (r.quote_data?.isFromHistory) return false;
     return true;
   });
+
+  // Separar entre "Minhas Remessas" e "Em Rota" baseado no estado local
+  const minhasRemessasAtivas = todasRemessasAtivas.filter(r => !remessasEmRotaIds.includes(r.id));
+  const remessasEmRota = todasRemessasAtivas.filter(r => remessasEmRotaIds.includes(r.id));
 
   const menuItems = [
     { id: 'disponiveis' as ViewType, label: 'Disponíveis', icon: Package, count: remessasDisponiveis.length, color: 'text-orange-500' },
@@ -345,6 +366,26 @@ const MotoristaDashboard = () => {
                       <CheckCircle className="h-3 w-3 mr-1" />
                     )}
                     Aceitar
+                  </Button>
+                )}
+                {showActions && currentView === 'minhas' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleMoveToEmRota(remessa.id)}
+                    className="border-purple-300 text-purple-600 hover:bg-purple-50"
+                  >
+                    <Play className="h-3 w-3" />
+                  </Button>
+                )}
+                {showActions && currentView === 'em_rota' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleMoveToMinhas(remessa.id)}
+                    className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                  >
+                    <Undo2 className="h-3 w-3" />
                   </Button>
                 )}
                 {showActions && (currentView === 'minhas' || currentView === 'em_rota') && 
