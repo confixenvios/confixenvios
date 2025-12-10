@@ -490,9 +490,9 @@ const MotoristaDashboard = () => {
               variant="outline"
               size="sm"
               onClick={() => {
-                if (motoristaSession?.id) {
+                if (motoristaSession?.id && motoristaSession.visibilidade) {
                   loadMinhasRemessas(motoristaSession.id);
-                  loadRemessasDisponiveis(motoristaSession.tipo_pedidos || 'ambos');
+                  loadRemessasDisponiveis(motoristaSession.visibilidade);
                 }
               }}
               disabled={refreshing}
@@ -569,9 +569,9 @@ const MotoristaDashboard = () => {
           onUpdateStatus={(newStatus: string) => {
             console.log('📊 Status atualizado para:', newStatus);
             toast.success('Status atualizado com sucesso!');
-            if (motoristaSession?.id) {
+            if (motoristaSession?.id && motoristaSession.visibilidade) {
               loadMinhasRemessas(motoristaSession.id);
-              loadRemessasDisponiveis(motoristaSession.tipo_pedidos || 'ambos');
+              loadRemessasDisponiveis(motoristaSession.visibilidade);
             }
             setDetailsModalOpen(false);
           }}
@@ -586,9 +586,9 @@ const MotoristaDashboard = () => {
             motoristaId={motoristaSession.id}
             onSuccess={() => {
               console.log('📊 Ocorrência criada com sucesso');
-              if (motoristaSession?.id) {
+              if (motoristaSession?.id && motoristaSession.visibilidade) {
                 loadMinhasRemessas(motoristaSession.id);
-                loadRemessasDisponiveis(motoristaSession.tipo_pedidos || 'ambos');
+                loadRemessasDisponiveis(motoristaSession.visibilidade);
               }
             }}
           />
@@ -604,9 +604,9 @@ const MotoristaDashboard = () => {
             trackingCode={selectedRemessa.tracking_code || ''}
             onSuccess={() => {
               console.log('✅ Entrega finalizada com sucesso');
-              if (motoristaSession?.id) {
+              if (motoristaSession?.id && motoristaSession.visibilidade) {
                 loadMinhasRemessas(motoristaSession.id);
-                loadRemessasDisponiveis(motoristaSession.tipo_pedidos || 'ambos');
+                loadRemessasDisponiveis(motoristaSession.visibilidade);
               }
             }}
           />
