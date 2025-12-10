@@ -17,7 +17,6 @@ interface OccurrenceSimpleModalProps {
 }
 
 const OCCURRENCE_OPTIONS = [
-  { value: 'entrega_realizada', label: 'Entrega realizada' },
   { value: 'destinatario_ausente', label: 'Destinatário ausente' },
   { value: 'local_fechado', label: 'Local fechado' },
   { value: 'endereco_nao_encontrado', label: 'Endereço não encontrado' },
