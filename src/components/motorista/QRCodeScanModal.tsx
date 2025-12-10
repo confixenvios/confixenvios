@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Camera, CheckCircle, X, QrCode, AlertTriangle } from 'lucide-react';
+import { CheckCircle, X, Package, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface QRCodeScanModalProps {
@@ -22,98 +22,77 @@ export const QRCodeScanModal: React.FC<QRCodeScanModalProps> = ({
   trackingCode,
   onAllScanned
 }) => {
-  const [scannedCodes, setScannedCodes] = useState<string[]>([]);
-  const [scanning, setScanning] = useState(false);
+  const [validatedVolumes, setValidatedVolumes] = useState<number[]>([]);
   const [manualInput, setManualInput] = useState('');
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+
+  // Extract the 4-digit numbers from ETI codes (e.g., "ETI-0001" -> "0001")
+  const getExpectedDigits = (): string[] => {
+    return requiredCodes.map(code => {
+      const match = code.match(/ETI-(\d{4})/i);
+      return match ? match[1] : code;
+    });
+  };
 
   // Reset when modal opens
   useEffect(() => {
     if (isOpen) {
-      setScannedCodes([]);
+      setValidatedVolumes([]);
       setManualInput('');
-    } else {
-      stopCamera();
     }
   }, [isOpen]);
 
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      setScanning(true);
-    } catch (error) {
-      console.error('Error accessing camera:', error);
-      toast.error('Erro ao acessar câmera. Use entrada manual.');
-    }
-  };
-
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    setScanning(false);
-  };
-
   const handleManualSubmit = () => {
-    const code = manualInput.trim().toUpperCase();
+    const digits = manualInput.trim();
     
-    if (!code) {
-      toast.error('Digite um código válido');
+    if (!digits || digits.length !== 4 || !/^\d{4}$/.test(digits)) {
+      toast.error('Digite os 4 dígitos numéricos (ex: 0001)');
       return;
     }
 
-    if (scannedCodes.includes(code)) {
-      toast.error('Este código já foi escaneado');
-      return;
-    }
-
-    // Check if code is valid for this shipment
-    const isValidCode = requiredCodes.some(rc => 
-      rc.toUpperCase() === code || 
-      code.includes(rc.toUpperCase()) ||
-      rc.toUpperCase().includes(code)
+    const expectedDigits = getExpectedDigits();
+    const matchIndex = expectedDigits.findIndex((expected, index) => 
+      expected === digits && !validatedVolumes.includes(index)
     );
 
-    if (!isValidCode) {
-      toast.error('Código não pertence a esta remessa');
+    if (matchIndex === -1) {
+      // Check if already validated
+      const alreadyValidated = expectedDigits.findIndex((expected, index) => 
+        expected === digits && validatedVolumes.includes(index)
+      );
+      
+      if (alreadyValidated !== -1) {
+        toast.error('Este volume já foi validado');
+      } else {
+        toast.error('Código não pertence a esta remessa');
+      }
       return;
     }
 
-    const newScannedCodes = [...scannedCodes, code];
-    setScannedCodes(newScannedCodes);
+    const newValidatedVolumes = [...validatedVolumes, matchIndex];
+    setValidatedVolumes(newValidatedVolumes);
     setManualInput('');
-    toast.success(`Código ${code} validado!`);
+    toast.success(`Volume ${matchIndex + 1} validado!`);
 
-    // Check if all codes scanned
-    if (newScannedCodes.length >= requiredCodes.length) {
+    // Check if all codes validated
+    if (newValidatedVolumes.length >= requiredCodes.length) {
       toast.success('Todos os volumes validados!');
       onAllScanned();
     }
   };
 
-  const handleRemoveCode = (code: string) => {
-    setScannedCodes(prev => prev.filter(c => c !== code));
+  const handleRemoveVolume = (volumeIndex: number) => {
+    setValidatedVolumes(prev => prev.filter(v => v !== volumeIndex));
   };
 
-  const remainingCount = requiredCodes.length - scannedCodes.length;
-  const allScanned = remainingCount <= 0;
+  const remainingCount = requiredCodes.length - validatedVolumes.length;
+  const allValidated = remainingCount <= 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[95vw] max-w-[450px] mx-auto max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold flex items-center gap-2">
-            <QrCode className="h-5 w-5 text-primary" />
+            <Package className="h-5 w-5 text-primary" />
             Validar Volumes - {shipmentType}
           </DialogTitle>
         </DialogHeader>
@@ -124,12 +103,12 @@ export const QRCodeScanModal: React.FC<QRCodeScanModalProps> = ({
             <AlertTriangle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm">
               <p className="font-medium text-blue-800 dark:text-blue-200">
-                Escaneie os QR codes de cada volume
+                Digite os 4 dígitos de cada etiqueta
               </p>
               <p className="text-blue-700 dark:text-blue-300 mt-1">
                 {shipmentType === 'B2B-1' 
-                  ? 'Escaneie cada etiqueta antes de realizar a coleta.'
-                  : 'Escaneie cada etiqueta antes de finalizar a entrega.'}
+                  ? 'Confirme cada volume antes de realizar a coleta.'
+                  : 'Confirme cada volume antes de finalizar a entrega.'}
               </p>
             </div>
           </div>
@@ -143,27 +122,27 @@ export const QRCodeScanModal: React.FC<QRCodeScanModalProps> = ({
           {/* Progress */}
           <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
             <span className="text-sm font-medium">Volumes validados:</span>
-            <Badge variant={allScanned ? "default" : "secondary"} className={allScanned ? "bg-green-600" : ""}>
-              {scannedCodes.length} / {requiredCodes.length}
+            <Badge variant={allValidated ? "default" : "secondary"} className={allValidated ? "bg-green-600" : ""}>
+              {validatedVolumes.length} / {requiredCodes.length}
             </Badge>
           </div>
 
-          {/* Scanned codes list - show only volume number, not the code */}
-          {scannedCodes.length > 0 && (
+          {/* Validated volumes list - show only volume number */}
+          {validatedVolumes.length > 0 && (
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground">Volumes validados:</p>
               <div className="space-y-1">
-                {scannedCodes.map((code, index) => (
-                  <div key={code} className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800">
+                {validatedVolumes.sort((a, b) => a - b).map((volumeIndex) => (
+                  <div key={volumeIndex} className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800">
                     <div className="flex items-center gap-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium">Volume {index + 1}</span>
+                      <span className="text-sm font-medium">Volume {volumeIndex + 1}</span>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6"
-                      onClick={() => handleRemoveCode(code)}
+                      onClick={() => handleRemoveVolume(volumeIndex)}
                     >
                       <X className="h-3 w-3" />
                     </Button>
@@ -173,8 +152,8 @@ export const QRCodeScanModal: React.FC<QRCodeScanModalProps> = ({
             </div>
           )}
 
-          {/* Remaining count - without showing expected codes */}
-          {!allScanned && (
+          {/* Remaining count */}
+          {!allValidated && (
             <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
               <p className="text-sm text-amber-800 dark:text-amber-200">
                 <span className="font-medium">{remainingCount}</span> volume(s) restante(s) para validar
@@ -182,52 +161,31 @@ export const QRCodeScanModal: React.FC<QRCodeScanModalProps> = ({
             </div>
           )}
 
-          {/* Camera view */}
-          {scanning && (
-            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-              <video 
-                ref={videoRef} 
-                className="w-full h-full object-cover"
-                playsInline
-                muted
-              />
-              <canvas ref={canvasRef} className="hidden" />
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-48 h-48 border-2 border-white/50 rounded-lg" />
-              </div>
-            </div>
-          )}
-
-          {/* Manual input */}
-          {!allScanned && (
+          {/* Manual input - only 4 digits */}
+          {!allValidated && (
             <div className="space-y-2">
-              <p className="text-sm font-medium">Entrada manual do código:</p>
+              <p className="text-sm font-medium">Digite os 4 dígitos da etiqueta:</p>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={manualInput}
-                  onChange={(e) => setManualInput(e.target.value.toUpperCase())}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    setManualInput(value);
+                  }}
                   onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
-                  placeholder="Digite o código ETI..."
-                  className="flex-1 px-3 py-2 border rounded-lg text-sm font-mono"
+                  placeholder="0001"
+                  maxLength={4}
+                  className="flex-1 px-4 py-3 border rounded-lg text-xl font-mono text-center tracking-widest"
                 />
-                <Button onClick={handleManualSubmit} size="sm">
+                <Button onClick={handleManualSubmit} size="lg">
                   Validar
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Ex: Para ETI-0001, digite apenas 0001
+              </p>
             </div>
-          )}
-
-          {/* Camera toggle - simplified for now */}
-          {!allScanned && (
-            <Button
-              variant="outline"
-              onClick={scanning ? stopCamera : startCamera}
-              className="w-full"
-            >
-              <Camera className="h-4 w-4 mr-2" />
-              {scanning ? 'Parar Câmera' : 'Usar Câmera (Beta)'}
-            </Button>
           )}
 
           {/* Action buttons */}
@@ -237,7 +195,7 @@ export const QRCodeScanModal: React.FC<QRCodeScanModalProps> = ({
             </Button>
             <Button 
               onClick={onAllScanned}
-              disabled={!allScanned}
+              disabled={!allValidated}
               className="bg-green-600 hover:bg-green-700"
             >
               <CheckCircle className="h-4 w-4 mr-1" />

@@ -1,6 +1,4 @@
 import React, { useRef, useState, useEffect } from 'react';
-import Barcode from 'react-barcode';
-import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
 import { FileDown, Loader2 } from 'lucide-react';
 import jsPDF from 'jspdf';
@@ -230,24 +228,11 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
                 <p className="text-sm">B2B Express</p>
               </div>
               
-              {/* ETI Code */}
-              <div className="text-center border-b border-gray-400 pb-3 mb-3">
-                <p className="text-2xl font-bold">{etiCode}</p>
-                <p className="text-sm text-gray-600">Remessa: {trackingCode}</p>
-                <p className="text-sm">Volume {index + 1} de {volumeCount}</p>
-              </div>
-              
-              {/* Barcodes with ETI code */}
-              <div className="flex justify-center items-center gap-4 py-3 border-b border-gray-400 mb-3">
-                <Barcode
-                  value={etiCode}
-                  width={1.5}
-                  height={50}
-                  fontSize={10}
-                  displayValue={true}
-                  margin={0}
-                />
-                <QRCodeSVG value={etiCode} size={60} level="M" />
+              {/* ETI Code - Large font, no barcode/QR */}
+              <div className="text-center border-b border-gray-400 pb-4 mb-3">
+                <p className="text-4xl font-black tracking-wider">{etiCode}</p>
+                <p className="text-sm text-gray-600 mt-2">Remessa: {trackingCode}</p>
+                <p className="text-base font-semibold">Volume {index + 1} de {volumeCount}</p>
               </div>
               
               {/* Sender */}
@@ -294,22 +279,10 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
             <p className="text-xs">B2B Express</p>
           </div>
           
-          <div className="text-center mb-2">
-            <p className="text-lg font-bold">{getEtiCodeForVolume(0)}</p>
-            <p className="text-xs text-muted-foreground">Remessa: {trackingCode}</p>
-            <p className="text-xs">Volume 1 de {volumeCount}</p>
-          </div>
-          
-          <div className="flex justify-center items-center gap-3 mb-3 py-2 border-y border-gray-300">
-            <Barcode
-              value={getEtiCodeForVolume(0)}
-              width={1}
-              height={35}
-              fontSize={8}
-              displayValue={true}
-              margin={0}
-            />
-            <QRCodeSVG value={getEtiCodeForVolume(0)} size={45} level="M" />
+          <div className="text-center mb-3">
+            <p className="text-2xl font-black tracking-wider">{getEtiCodeForVolume(0)}</p>
+            <p className="text-xs text-muted-foreground mt-1">Remessa: {trackingCode}</p>
+            <p className="text-sm font-medium">Volume 1 de {volumeCount}</p>
           </div>
           
           <div className="text-xs space-y-2">
