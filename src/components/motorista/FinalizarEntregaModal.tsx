@@ -298,8 +298,8 @@ export const FinalizarEntregaModal = ({
             status: statusForHistory,
             status_description: statusDescription,
             observacoes: isB2BColeta 
-              ? `Coleta finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s). Volumes validados via QR code. Remessa liberada para fase de entrega.`
-              : `Entrega finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s). Volumes validados via QR code.`
+              ? `Coleta finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s). Volumes validados via código. Remessa liberada para fase de entrega.`
+              : `Entrega finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s). Volumes validados via código.`
           }
         : {
             shipment_id: shipmentId,
