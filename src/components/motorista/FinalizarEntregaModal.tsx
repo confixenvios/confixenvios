@@ -65,19 +65,24 @@ export const FinalizarEntregaModal = ({
         if (error) {
           console.error('Error fetching ETI codes:', error);
           // Generate fallback codes
-          const fallbackCodes = Array.from({ length: volumeCount }, (_, i) => `${trackingCode}-V${i + 1}`);
+          const fallbackCodes = Array.from({ length: volumeCount }, (_, i) => `ETI-${String(i + 1).padStart(4, '0')}`);
           setEtiCodes(fallbackCodes);
+          console.log('🔄 Using fallback codes:', fallbackCodes);
         } else if (data && data.length > 0) {
-          setEtiCodes(data.map(d => d.eti_code));
+          const codes = data.map(d => d.eti_code);
+          setEtiCodes(codes);
+          console.log('✅ ETI codes loaded:', codes);
         } else {
           // No ETI codes yet, use fallback
-          const fallbackCodes = Array.from({ length: volumeCount }, (_, i) => `${trackingCode}-V${i + 1}`);
+          const fallbackCodes = Array.from({ length: volumeCount }, (_, i) => `ETI-${String(i + 1).padStart(4, '0')}`);
           setEtiCodes(fallbackCodes);
+          console.log('⚠️ No ETI codes found, using fallback:', fallbackCodes);
         }
       } catch (err) {
         console.error('Error in fetchEtiCodes:', err);
-        const fallbackCodes = Array.from({ length: volumeCount }, (_, i) => `${trackingCode}-V${i + 1}`);
+        const fallbackCodes = Array.from({ length: volumeCount }, (_, i) => `ETI-${String(i + 1).padStart(4, '0')}`);
         setEtiCodes(fallbackCodes);
+        console.log('❌ Error, using fallback codes:', fallbackCodes);
       } finally {
         setLoadingEtiCodes(false);
       }
@@ -152,8 +157,17 @@ export const FinalizarEntregaModal = ({
   };
 
   const handleFinalizarEntrega = async () => {
-    // Photo is only required for B2B-2 (delivery phase)
+    // Photo is only required for B2B-2 (delivery phase) and normal shipments
     if (isB2BEntrega && photos.length === 0) {
+      toast({
+        title: "Foto obrigatória",
+        description: "Adicione pelo menos uma foto da entrega para finalizar.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!isB2B && photos.length === 0) {
       toast({
         title: "Foto obrigatória",
         description: "Adicione pelo menos uma foto da entrega para finalizar.",
@@ -491,7 +505,12 @@ export const FinalizarEntregaModal = ({
               </Button>
               <Button 
                 onClick={handleFinalizarEntrega}
-                disabled={photos.length === 0 || saving || (isB2B && !qrValidated)}
+                disabled={
+                  saving || 
+                  (isB2B && !qrValidated) || 
+                  (isB2BEntrega && photos.length === 0) ||
+                  (!isB2B && photos.length === 0)
+                }
                 className="bg-green-600 hover:bg-green-700"
               >
                 {saving ? (
