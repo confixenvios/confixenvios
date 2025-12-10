@@ -1470,13 +1470,22 @@ const AdminRemessas = () => {
                               </div>
                             </div>
 
-                            {/* Informações da Carga */}
+                            {/* Informações da Carga + Veículo */}
                             <div className="space-y-2">
                               <div className="flex items-center space-x-2">
                                 <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Carga</span>
                               </div>
                               <div>
+                                {/* Veículo escolhido */}
+                                {shipment.vehicle_type && (
+                                  <div className="flex items-center mb-2">
+                                    <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                                      <Truck className="w-3 h-3 mr-1" />
+                                      {shipment.vehicle_type.charAt(0).toUpperCase() + shipment.vehicle_type.slice(1)}
+                                    </Badge>
+                                  </div>
+                                )}
                                 {shipment.quote_data?.delivery_date && (
                                   <div className="flex items-center mb-2 px-2 py-1 bg-orange-100 border border-orange-200 rounded-md">
                                     <Clock className="w-4 h-4 mr-2 text-orange-600" />
@@ -1497,21 +1506,37 @@ const AdminRemessas = () => {
                               </div>
                             </div>
 
-                            {/* Motorista */}
+                            {/* Motoristas (Coleta e Entrega) */}
                             <div className="space-y-2">
                               <div className="flex items-center space-x-2">
                                 <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Motorista</span>
+                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Motoristas</span>
                               </div>
-                              <div>
-                                {shipment.motoristas ? (
-                                  <div>
-                                    <p className="font-semibold text-sm">{shipment.motoristas.nome}</p>
-                                    <p className="text-xs text-muted-foreground">{shipment.motoristas.telefone}</p>
-                                  </div>
-                                ) : (
-                                  <Badge variant="outline" className="text-xs">Aguardando aceite</Badge>
-                                )}
+                              <div className="space-y-2">
+                                {/* Motorista de Coleta */}
+                                <div>
+                                  <span className="text-[10px] text-muted-foreground uppercase font-medium">Coleta:</span>
+                                  {shipment.motorista_coleta ? (
+                                    <div>
+                                      <p className="font-semibold text-sm">{shipment.motorista_coleta.nome}</p>
+                                      <p className="text-xs text-muted-foreground">{shipment.motorista_coleta.telefone}</p>
+                                    </div>
+                                  ) : (
+                                    <Badge variant="outline" className="text-xs ml-1">Aguardando</Badge>
+                                  )}
+                                </div>
+                                {/* Motorista de Entrega */}
+                                <div>
+                                  <span className="text-[10px] text-muted-foreground uppercase font-medium">Entrega:</span>
+                                  {shipment.motorista_entrega ? (
+                                    <div>
+                                      <p className="font-semibold text-sm">{shipment.motorista_entrega.nome}</p>
+                                      <p className="text-xs text-muted-foreground">{shipment.motorista_entrega.telefone}</p>
+                                    </div>
+                                  ) : (
+                                    <Badge variant="outline" className="text-xs ml-1">Aguardando</Badge>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
