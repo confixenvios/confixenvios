@@ -263,7 +263,9 @@ const MotoristaDashboard = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-              {isB2B ? (
+              {/* Não mostrar badge B2B-1/B2B-2 ou Convencional na aba entregues */}
+              {currentView !== 'entregues' && (
+                isB2B ? (
                   <Badge 
                     variant="outline" 
                     className={
@@ -282,7 +284,8 @@ const MotoristaDashboard = () => {
                     <Package className="h-3 w-3 mr-1" />
                     Convencional
                   </Badge>
-                )}
+                )
+              )}
                 <div>
                   <h3 className="font-medium text-sm">{remessa.tracking_code}</h3>
                   <p className="text-xs text-muted-foreground">
