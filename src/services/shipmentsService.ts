@@ -914,6 +914,8 @@ function normalizeShipmentData(shipment: any): BaseShipment {
 
 /**
  * Normaliza remessa B2B para o formato BaseShipment
+ * B2B-1 (coleta): sender = pickup_address (endereço de coleta)
+ * B2B-2 (entrega): sender = CD, destinatários = volume_addresses
  */
 function normalizeB2BShipment(b2bShipment: any, phase: string): BaseShipment {
   const b2bClient = Array.isArray(b2bShipment.b2b_clients) 
@@ -926,6 +928,38 @@ function normalizeB2BShipment(b2bShipment: any, phase: string): BaseShipment {
       parsedObs = JSON.parse(b2bShipment.observations);
     }
   } catch (e) {}
+
+  // Para B2B, SEMPRE priorizar pickup_address dos observations se existir
+  const pickupAddress = parsedObs.pickup_address || parsedObs.pickupAddress;
+  
+  // Construir sender_address priorizando pickup_address
+  let senderAddress;
+  if (pickupAddress) {
+    senderAddress = {
+      name: pickupAddress.name || pickupAddress.contact_name || b2bClient?.company_name || 'Cliente B2B',
+      street: pickupAddress.street || '',
+      number: pickupAddress.number || '',
+      neighborhood: pickupAddress.neighborhood || '',
+      city: pickupAddress.city || '',
+      state: pickupAddress.state || '',
+      cep: pickupAddress.cep || '',
+      complement: pickupAddress.complement || '',
+      phone: pickupAddress.contact_phone || pickupAddress.phone || b2bClient?.phone || ''
+    };
+  } else {
+    // Fallback para dados do cliente B2B
+    senderAddress = {
+      name: b2bClient?.company_name || 'Cliente B2B',
+      street: b2bClient?.default_pickup_street || '',
+      number: b2bClient?.default_pickup_number || '',
+      neighborhood: b2bClient?.default_pickup_neighborhood || '',
+      city: b2bClient?.default_pickup_city || '',
+      state: b2bClient?.default_pickup_state || '',
+      cep: b2bClient?.default_pickup_cep || '',
+      complement: b2bClient?.default_pickup_complement || '',
+      phone: b2bClient?.phone || ''
+    };
+  }
 
   return {
     id: b2bShipment.id,
@@ -950,17 +984,7 @@ function normalizeB2BShipment(b2bShipment: any, phase: string): BaseShipment {
     created_at: b2bShipment.created_at,
     label_pdf_url: null,
     cte_key: null,
-    sender_address: {
-      name: b2bClient?.company_name || 'Cliente B2B',
-      street: b2bClient?.default_pickup_street || parsedObs.pickup_address?.street || '',
-      number: b2bClient?.default_pickup_number || parsedObs.pickup_address?.number || '',
-      neighborhood: b2bClient?.default_pickup_neighborhood || parsedObs.pickup_address?.neighborhood || '',
-      city: b2bClient?.default_pickup_city || parsedObs.pickup_address?.city || '',
-      state: b2bClient?.default_pickup_state || parsedObs.pickup_address?.state || '',
-      cep: b2bClient?.default_pickup_cep || parsedObs.pickup_address?.cep || '',
-      complement: b2bClient?.default_pickup_complement || parsedObs.pickup_address?.complement || '',
-      phone: b2bClient?.phone || parsedObs.pickup_address?.contact_phone || ''
-    },
+    sender_address: senderAddress,
     recipient_address: {
       name: b2bShipment.recipient_name || '',
       street: b2bShipment.recipient_street || '',
