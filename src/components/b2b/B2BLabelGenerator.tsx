@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import Barcode from 'react-barcode';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import { FileDown, Loader2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface VolumeAddress {
   id?: string;
@@ -34,7 +35,14 @@ interface PickupAddress {
   state?: string;
 }
 
+interface EtiCode {
+  volume_number: number;
+  eti_code: string;
+  eti_sequence_number: number;
+}
+
 interface B2BLabelGeneratorProps {
+  shipmentId: string;
   trackingCode: string;
   volumeCount: number;
   volumeWeights: number[];
@@ -45,6 +53,7 @@ interface B2BLabelGeneratorProps {
 }
 
 const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
+  shipmentId,
   trackingCode,
   volumeCount,
   volumeWeights,
@@ -54,7 +63,42 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
   deliveryDate
 }) => {
   const [generating, setGenerating] = useState(false);
+  const [etiCodes, setEtiCodes] = useState<EtiCode[]>([]);
+  const [loadingEtiCodes, setLoadingEtiCodes] = useState(true);
   const labelsContainerRef = useRef<HTMLDivElement>(null);
+
+  // Fetch or generate ETI codes for this shipment
+  useEffect(() => {
+    const fetchEtiCodes = async () => {
+      if (!shipmentId || volumeCount <= 0) {
+        setLoadingEtiCodes(false);
+        return;
+      }
+
+      try {
+        // Call the database function to generate/fetch ETI codes
+        const { data, error } = await supabase.rpc('generate_eti_codes_for_shipment', {
+          p_b2b_shipment_id: shipmentId,
+          p_volume_count: volumeCount
+        });
+
+        if (error) {
+          console.error('Error fetching ETI codes:', error);
+          // Fallback to tracking code based labels
+          setEtiCodes([]);
+        } else {
+          setEtiCodes(data || []);
+        }
+      } catch (err) {
+        console.error('Error in fetchEtiCodes:', err);
+        setEtiCodes([]);
+      } finally {
+        setLoadingEtiCodes(false);
+      }
+    };
+
+    fetchEtiCodes();
+  }, [shipmentId, volumeCount]);
 
   const formatAddress = (addr: VolumeAddress | PickupAddress): string => {
     const parts = [
@@ -66,6 +110,11 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
       `CEP: ${addr.cep || ''}`
     ].filter(Boolean);
     return parts.join(', ');
+  };
+
+  const getEtiCodeForVolume = (volumeIndex: number): string => {
+    const etiCode = etiCodes.find(e => e.volume_number === volumeIndex + 1);
+    return etiCode?.eti_code || `${trackingCode}-V${volumeIndex + 1}`;
   };
 
   const generatePDF = async () => {
@@ -132,6 +181,15 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
     }
   };
 
+  if (loadingEtiCodes) {
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span>Carregando etiquetas...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <Button 
@@ -158,6 +216,7 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
           const volumeWeight = volumeWeights[index] || volumeWeights[0] || 0;
           const recipientName = volumeAddress.recipient_name || volumeAddress.name || 'N/A';
           const formattedDate = formatDeliveryDate(deliveryDate);
+          const etiCode = getEtiCodeForVolume(index);
           
           return (
             <div 
@@ -171,23 +230,24 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
                 <p className="text-sm">B2B Express</p>
               </div>
               
-              {/* Tracking Code */}
+              {/* ETI Code */}
               <div className="text-center border-b border-gray-400 pb-3 mb-3">
-                <p className="text-2xl font-bold">{trackingCode}</p>
+                <p className="text-2xl font-bold">{etiCode}</p>
+                <p className="text-sm text-gray-600">Remessa: {trackingCode}</p>
                 <p className="text-sm">Volume {index + 1} de {volumeCount}</p>
               </div>
               
-              {/* Barcodes */}
+              {/* Barcodes with ETI code */}
               <div className="flex justify-center items-center gap-4 py-3 border-b border-gray-400 mb-3">
                 <Barcode
-                  value={trackingCode}
+                  value={etiCode}
                   width={1.5}
                   height={50}
                   fontSize={10}
                   displayValue={true}
                   margin={0}
                 />
-                <QRCodeSVG value={trackingCode} size={60} level="M" />
+                <QRCodeSVG value={etiCode} size={60} level="M" />
               </div>
               
               {/* Sender */}
@@ -235,20 +295,21 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
           </div>
           
           <div className="text-center mb-2">
-            <p className="text-lg font-bold">{trackingCode}</p>
+            <p className="text-lg font-bold">{getEtiCodeForVolume(0)}</p>
+            <p className="text-xs text-muted-foreground">Remessa: {trackingCode}</p>
             <p className="text-xs">Volume 1 de {volumeCount}</p>
           </div>
           
           <div className="flex justify-center items-center gap-3 mb-3 py-2 border-y border-gray-300">
             <Barcode
-              value={trackingCode}
+              value={getEtiCodeForVolume(0)}
               width={1}
               height={35}
               fontSize={8}
               displayValue={true}
               margin={0}
             />
-            <QRCodeSVG value={trackingCode} size={45} level="M" />
+            <QRCodeSVG value={getEtiCodeForVolume(0)} size={45} level="M" />
           </div>
           
           <div className="text-xs space-y-2">
