@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Package, Plus, Clock, CheckCircle, Send, Eye, Loader2 } from 'lucide-react';
+import { Package, Plus, Clock, CheckCircle, Send, Eye, Loader2, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import B2BLabelGenerator from '@/components/b2b/B2BLabelGenerator';
 
 interface B2BClient {
   id: string;
@@ -380,12 +381,29 @@ const B2BDashboard = () => {
                               <p className="text-xs text-muted-foreground">CEP: {addr?.cep}</p>
                             </div>
                           ))}
-                        </div>
-                      </>
-                    )}
-                  </>
-                );
-              })()}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Gerador de Etiquetas */}
+                  {obs && obs.volume_addresses && obs.volume_addresses.length > 0 && obs.pickup_address && (
+                    <>
+                      <hr className="border-border" />
+                      <h4 className="font-semibold">Etiquetas</h4>
+                      <B2BLabelGenerator
+                        trackingCode={selectedShipment.tracking_code}
+                        volumeCount={selectedShipment.volume_count || 1}
+                        volumeWeights={obs.volume_weights || []}
+                        volumeAddresses={obs.volume_addresses || []}
+                        pickupAddress={obs.pickup_address || {}}
+                        companyName={client?.company_name || 'Remetente'}
+                        deliveryDate={selectedShipment.delivery_date || undefined}
+                      />
+                    </>
+                  )}
+                </>
+              );
+            })()}
 
               <hr className="border-border" />
               <h4 className="font-semibold">Dados do Cliente</h4>
