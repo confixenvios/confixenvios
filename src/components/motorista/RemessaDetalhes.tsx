@@ -492,11 +492,23 @@ export const RemessaDetalhes = ({
                       let volumeAddresses: any[] = [];
                       
                       try {
+                        // Tentar de remessa.observations primeiro
                         if (remessa.observations) {
                           const obs = typeof remessa.observations === 'string' 
                             ? JSON.parse(remessa.observations) 
                             : remessa.observations;
                           volumeAddresses = obs.volume_addresses || obs.volumeAddresses || [];
+                        }
+                        
+                        // Fallback para quote_data.observations ou quote_data.parsedObservations
+                        if (volumeAddresses.length === 0 && remessa.quote_data) {
+                          const quoteObs = remessa.quote_data.parsedObservations || 
+                            (typeof remessa.quote_data.observations === 'string' 
+                              ? JSON.parse(remessa.quote_data.observations) 
+                              : remessa.quote_data.observations);
+                          if (quoteObs) {
+                            volumeAddresses = quoteObs.volume_addresses || quoteObs.volumeAddresses || [];
+                          }
                         }
                       } catch (e) {
                         console.log('Erro ao parsear observations:', e);
