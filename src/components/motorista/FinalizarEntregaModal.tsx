@@ -14,6 +14,8 @@ interface FinalizarEntregaModalProps {
   shipmentId: string;
   motoristaId: string;
   trackingCode?: string;
+  shipmentType?: 'normal' | 'B2B-1' | 'B2B-2'; // Tipo da remessa para saber o status correto
+  currentStatus?: string; // Status atual da remessa
   onSuccess: () => void;
 }
 
@@ -23,6 +25,8 @@ export const FinalizarEntregaModal = ({
   shipmentId,
   motoristaId,
   trackingCode,
+  shipmentType,
+  currentStatus,
   onSuccess
 }: FinalizarEntregaModalProps) => {
   const [showPhotoUpload, setShowPhotoUpload] = useState(false);
@@ -78,15 +82,24 @@ export const FinalizarEntregaModal = ({
     setSaving(true);
     const supabase = createSecureSupabaseClient();
     
-    // Detectar se é B2B pelo tracking code
-    const isB2B = trackingCode?.startsWith('B2B-');
+    // Detectar se é B2B pelo tracking code ou pelo tipo
+    const isB2B = trackingCode?.startsWith('B2B-') || shipmentType?.startsWith('B2B');
+    
+    // Determinar o status correto baseado no tipo de remessa
+    // B2B-1 (coleta) -> B2B_COLETA_FINALIZADA (passa para fase de entrega B2B-2)
+    // B2B-2 (entrega) -> ENTREGUE (finaliza completamente)
+    const isB2BColeta = shipmentType === 'B2B-1' || (isB2B && currentStatus === 'ACEITA');
+    const isB2BEntrega = shipmentType === 'B2B-2' || (isB2B && currentStatus === 'B2B_COLETA_FINALIZADA');
     
     try {
-      console.log('📸 [FINALIZAR] Iniciando finalização de entrega...');
+      console.log('📸 [FINALIZAR] Iniciando finalização...');
       console.log('📦 Shipment ID:', shipmentId);
       console.log('🚛 Motorista ID:', motoristaId);
       console.log('📸 Fotos:', photos.length);
       console.log('🏢 É B2B:', isB2B);
+      console.log('🚚 Tipo:', shipmentType, 'Status atual:', currentStatus);
+      console.log('🔄 É B2B Coleta (B2B-1):', isB2BColeta);
+      console.log('📦 É B2B Entrega (B2B-2):', isB2BEntrega);
 
       // Upload cada foto e criar ocorrência
       for (const photo of photos) {
@@ -117,9 +130,9 @@ export const FinalizarEntregaModal = ({
           .insert({
             shipment_id: shipmentId,
             motorista_id: motoristaId,
-            occurrence_type: 'entrega_finalizada',
+            occurrence_type: isB2BColeta ? 'coleta_finalizada' : 'entrega_finalizada',
             file_url: publicUrl,
-            description: 'Foto de comprovação de entrega'
+            description: isB2BColeta ? 'Foto de comprovação de coleta' : 'Foto de comprovação de entrega'
           });
           
         if (occurrenceError) {
@@ -128,21 +141,40 @@ export const FinalizarEntregaModal = ({
         }
       }
 
-      // Atualizar status da remessa baseado no tipo (B2B ou normal)
+      // Atualizar status da remessa baseado no tipo (B2B-1, B2B-2 ou normal)
       if (isB2B) {
-        // Atualizar tabela b2b_shipments
+        // Determinar o novo status baseado no tipo
+        let newStatus: string;
+        if (isB2BColeta) {
+          // B2B-1: Finaliza coleta -> passa para fase B2B-2
+          newStatus = 'B2B_COLETA_FINALIZADA';
+        } else {
+          // B2B-2: Finaliza entrega -> ENTREGUE
+          newStatus = 'ENTREGUE';
+        }
+        
+        // Para B2B-1, limpar motorista_id para que outro motorista possa pegar na fase B2B-2
+        const updateData: any = { 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        };
+        
+        if (isB2BColeta) {
+          // Limpar motorista_id para liberar para motorista de entrega
+          updateData.motorista_id = null;
+        }
+        
         const { error: updateError } = await supabase
           .from('b2b_shipments')
-          .update({ 
-            status: 'ENTREGUE',
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', shipmentId);
 
         if (updateError) {
           console.error('❌ Erro ao atualizar status B2B:', updateError);
           throw new Error(`Erro ao atualizar status B2B: ${updateError.message}`);
         }
+        
+        console.log(`✅ B2B atualizado para: ${newStatus}`);
       } else {
         // Atualizar tabela shipments (normal)
         const { error: updateError } = await supabase
@@ -160,14 +192,21 @@ export const FinalizarEntregaModal = ({
       }
 
       // Registrar no histórico de status
+      const statusForHistory = isB2BColeta ? 'B2B_COLETA_FINALIZADA' : (isB2B ? 'ENTREGUE' : 'ENTREGA_FINALIZADA');
+      const statusDescription = isB2BColeta 
+        ? 'Coleta finalizada - Aguardando motorista de entrega' 
+        : 'Entrega finalizada com sucesso';
+      
       const { error: historyError } = await supabase
         .from('shipment_status_history')
         .insert({
           shipment_id: shipmentId,
           motorista_id: motoristaId,
-          status: isB2B ? 'ENTREGUE' : 'ENTREGA_FINALIZADA',
-          status_description: 'Entrega finalizada com sucesso',
-          observacoes: `Entrega finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s).`
+          status: statusForHistory,
+          status_description: statusDescription,
+          observacoes: isB2BColeta 
+            ? `Coleta finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s). Remessa liberada para fase de entrega.`
+            : `Entrega finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s).`
         });
 
       if (historyError) {
@@ -175,11 +214,13 @@ export const FinalizarEntregaModal = ({
         // Não falhar por isso
       }
       
-      console.log('✅ Entrega finalizada com sucesso');
+      console.log(`✅ ${isB2BColeta ? 'Coleta' : 'Entrega'} finalizada com sucesso`);
       
       toast({
-        title: "Entrega Finalizada!",
-        description: `A entrega ${trackingCode || ''} foi finalizada com sucesso.`
+        title: isB2BColeta ? "Coleta Finalizada!" : "Entrega Finalizada!",
+        description: isB2BColeta 
+          ? `A coleta ${trackingCode || ''} foi finalizada. Remessa aguardando motorista de entrega.`
+          : `A entrega ${trackingCode || ''} foi finalizada com sucesso.`
       });
 
       // Reset e fechar modal
@@ -210,7 +251,7 @@ export const FinalizarEntregaModal = ({
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
-              Finalizar Entrega
+              {shipmentType === 'B2B-1' ? 'Finalizar Coleta' : 'Finalizar Entrega'}
             </DialogTitle>
           </DialogHeader>
 

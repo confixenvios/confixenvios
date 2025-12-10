@@ -353,7 +353,8 @@ const MotoristaDashboard = () => {
                       className="bg-green-600 hover:bg-green-700"
                     >
                       <CheckCircle className="h-3 w-3 mr-1" />
-                      Finalizar
+                      {/* B2B-1 mostra "Finalizar Coleta", B2B-2 e normais mostram "Finalizar" */}
+                      {isB2B && remessa.status !== 'B2B_COLETA_FINALIZADA' ? 'Finalizar Coleta' : 'Finalizar'}
                     </Button>
                   </>
                 )}
@@ -611,8 +612,14 @@ const MotoristaDashboard = () => {
             shipmentId={selectedRemessa.id}
             motoristaId={motoristaSession.id}
             trackingCode={selectedRemessa.tracking_code || ''}
+            shipmentType={
+              selectedRemessa.tracking_code?.startsWith('B2B-') 
+                ? (selectedRemessa.status === 'B2B_COLETA_FINALIZADA' ? 'B2B-2' : 'B2B-1')
+                : 'normal'
+            }
+            currentStatus={selectedRemessa.status}
             onSuccess={() => {
-              console.log('✅ Entrega finalizada com sucesso');
+              console.log('✅ Entrega/Coleta finalizada com sucesso');
               if (motoristaSession?.id && motoristaSession.visibilidade) {
                 loadMinhasRemessas(motoristaSession.id);
                 loadRemessasDisponiveis(motoristaSession.visibilidade);

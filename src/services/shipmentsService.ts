@@ -840,8 +840,37 @@ function createEmptyAddress(): ShipmentAddress {
 
 /**
  * Aceitar uma remessa (apenas para motoristas)
+ * Suporta tanto remessas normais quanto B2B
  */
 export const acceptShipment = async (shipmentId: string, motoristaId: string) => {
+  // Primeiro, verificar se é uma remessa B2B pelo ID
+  const { data: b2bCheck } = await supabase
+    .from('b2b_shipments')
+    .select('id, tracking_code, status')
+    .eq('id', shipmentId)
+    .maybeSingle();
+  
+  if (b2bCheck) {
+    // É uma remessa B2B - atualizar diretamente
+    const { error: updateError } = await supabase
+      .from('b2b_shipments')
+      .update({ 
+        motorista_id: motoristaId,
+        status: 'ACEITA',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', shipmentId);
+    
+    if (updateError) {
+      console.error('❌ Erro ao aceitar B2B:', updateError);
+      return { success: false, error: updateError.message };
+    }
+    
+    console.log('✅ Remessa B2B aceita:', b2bCheck.tracking_code);
+    return { success: true, message: `Remessa B2B ${b2bCheck.tracking_code} aceita com sucesso!` };
+  }
+  
+  // Remessa normal - usar RPC
   const { data, error } = await supabase.rpc('accept_shipment', {
     p_shipment_id: shipmentId,
     p_motorista_uuid: motoristaId
