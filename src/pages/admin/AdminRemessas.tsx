@@ -2116,11 +2116,11 @@ const AdminRemessas = () => {
 
       {/* Modal de Detalhes B2B Express */}
       <Dialog open={b2bDetailsModalOpen} onOpenChange={setB2bDetailsModalOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0">
-          <DialogHeader className="px-6 pt-6 pb-4">
+        <DialogContent className="max-w-lg max-h-[85vh] p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <DialogTitle>Detalhes do Pedido B2B Express</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-1 px-6 pb-6">
+          <ScrollArea className="h-[calc(85vh-100px)] px-6 py-4">
           {selectedB2BShipment && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
