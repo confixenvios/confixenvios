@@ -373,7 +373,7 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
   
   console.log('📦 Remessas normais do motorista:', normalData?.length || 0);
   
-  // Buscar remessas B2B atribuídas ao motorista
+  // Buscar remessas B2B atribuídas atualmente ao motorista
   const { data: b2bData, error: b2bError } = await supabase
     .from('b2b_shipments')
     .select(`
@@ -419,7 +419,79 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
     console.error('❌ Erro ao buscar remessas B2B do motorista:', b2bError);
   }
 
-  console.log('📦 Remessas B2B do motorista:', b2bData?.length || 0);
+  console.log('📦 Remessas B2B atuais do motorista:', b2bData?.length || 0);
+
+  // Buscar IDs de remessas B2B que o motorista participou no histórico (B2B-1 coletas finalizadas)
+  const { data: historyData, error: historyError } = await supabase
+    .from('shipment_status_history')
+    .select('b2b_shipment_id')
+    .eq('motorista_id', motoristaId)
+    .not('b2b_shipment_id', 'is', null);
+
+  if (historyError) {
+    console.error('❌ Erro ao buscar histórico do motorista:', historyError);
+  }
+
+  // Obter IDs únicos de remessas B2B do histórico que não estão nas remessas atuais
+  const currentB2BIds = new Set((b2bData || []).map((b: any) => b.id));
+  const historyB2BIds = [...new Set((historyData || []).map((h: any) => h.b2b_shipment_id))]
+    .filter(id => id && !currentB2BIds.has(id));
+
+  console.log('📦 Remessas B2B do histórico (coletas B2B-1):', historyB2BIds.length);
+
+  // Buscar dados completos das remessas B2B do histórico
+  let historyB2BData: any[] = [];
+  if (historyB2BIds.length > 0) {
+    const { data: additionalB2B, error: additionalError } = await supabase
+      .from('b2b_shipments')
+      .select(`
+        id,
+        tracking_code,
+        status,
+        created_at,
+        updated_at,
+        recipient_name,
+        recipient_phone,
+        recipient_cep,
+        recipient_street,
+        recipient_number,
+        recipient_complement,
+        recipient_neighborhood,
+        recipient_city,
+        recipient_state,
+        observations,
+        package_type,
+        volume_count,
+        delivery_type,
+        delivery_date,
+        motorista_id,
+        b2b_client_id,
+        b2b_clients(
+          company_name, 
+          email, 
+          phone, 
+          cnpj,
+          default_pickup_cep,
+          default_pickup_street,
+          default_pickup_number,
+          default_pickup_complement,
+          default_pickup_neighborhood,
+          default_pickup_city,
+          default_pickup_state
+        )
+      `)
+      .in('id', historyB2BIds);
+
+    if (additionalError) {
+      console.error('❌ Erro ao buscar remessas B2B do histórico:', additionalError);
+    } else {
+      historyB2BData = additionalB2B || [];
+    }
+  }
+
+  // Combinar remessas B2B atuais e do histórico
+  const allB2BData = [...(b2bData || []), ...historyB2BData];
+  console.log('📦 Total remessas B2B (atuais + histórico):', allB2BData.length);
 
   // Processar remessas normais
   const normalShipments: MotoristaShipment[] = normalData?.map((item: any) => ({
@@ -430,7 +502,7 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
   })) || [];
 
   // Processar remessas B2B
-  const b2bShipments: MotoristaShipment[] = (b2bData || []).map((b2b: any) => {
+  const b2bShipments: MotoristaShipment[] = allB2BData.map((b2b: any) => {
     const client = b2b.b2b_clients;
     let observationsData: any = {};
     
@@ -443,6 +515,9 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
     } catch (e) {
       console.warn('Erro ao parsear observations B2B:', e);
     }
+
+    // Marcar se é remessa do histórico (motorista B2B-1 que finalizou coleta)
+    const isFromHistory = historyB2BIds.includes(b2b.id);
 
     return {
       id: b2b.id,
@@ -466,12 +541,13 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
             merchandise_type: 'Mercadoria'
           })) || []
         },
-        volumeAddresses: observationsData.volume_addresses || []
+        volumeAddresses: observationsData.volume_addresses || [],
+        isFromHistory // Flag para indicar que veio do histórico
       },
       payment_data: null,
       label_pdf_url: null,
       cte_key: null,
-      motorista_id: b2b.motorista_id,
+      motorista_id: isFromHistory ? motoristaId : b2b.motorista_id, // Manter o motoristaId original para remessas do histórico
       sender_address: {
         name: client?.company_name || 'Cliente B2B',
         street: client?.default_pickup_street || '',

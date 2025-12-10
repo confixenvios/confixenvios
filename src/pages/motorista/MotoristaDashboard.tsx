@@ -215,9 +215,24 @@ const MotoristaDashboard = () => {
   };
 
   // Contadores - incluir status B2B nas remessas
+  // Remessas em rota: apenas as que estão atribuídas ao motorista e ainda não finalizadas
   const remessasEmRota = remessas.filter(r => ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'ACEITA', 'B2B_ENTREGA_ACEITA'].includes(r.status));
-  const remessasEntregues = remessas.filter(r => ['ENTREGA_FINALIZADA', 'ENTREGUE'].includes(r.status));
-  const minhasRemessasAtivas = remessas.filter(r => !['ENTREGA_FINALIZADA', 'ENTREGUE', 'CANCELLED', 'CANCELADO'].includes(r.status));
+  
+  // Remessas entregues: inclui finalizadas E remessas B2B que vieram do histórico (coletas B2B-1 finalizadas)
+  const remessasEntregues = remessas.filter(r => {
+    // Status de entrega final
+    if (['ENTREGA_FINALIZADA', 'ENTREGUE'].includes(r.status)) return true;
+    // Remessas B2B do histórico (o motorista finalizou a coleta B2B-1, mesmo que agora esteja em outro status)
+    if (r.quote_data?.isFromHistory && r.tracking_code?.startsWith('B2B-')) return true;
+    return false;
+  });
+  
+  // Remessas ativas: exclui finalizadas e as que vieram do histórico
+  const minhasRemessasAtivas = remessas.filter(r => {
+    if (['ENTREGA_FINALIZADA', 'ENTREGUE', 'CANCELLED', 'CANCELADO'].includes(r.status)) return false;
+    if (r.quote_data?.isFromHistory) return false;
+    return true;
+  });
 
   const menuItems = [
     { id: 'disponiveis' as ViewType, label: 'Disponíveis', icon: Package, count: remessasDisponiveis.length, color: 'text-orange-500' },
