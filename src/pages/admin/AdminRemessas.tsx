@@ -20,6 +20,7 @@ import { SecureIntegrationsService } from '@/services/secureIntegrationsService'
 import { cn } from "@/lib/utils";
 
 import { ShipmentOccurrencesModal } from '@/components/admin/ShipmentOccurrencesModal';
+import B2BLabelGenerator from '@/components/b2b/B2BLabelGenerator';
 
 interface Shipment {
   id: string;
@@ -2258,6 +2259,23 @@ const AdminRemessas = () => {
                             )}
                           </div>
                         ))}
+                      </>
+                    )}
+
+                    {/* Gerador de Etiquetas B2B */}
+                    {obs.volume_addresses && obs.volume_addresses.length > 0 && obs.pickup_address && (
+                      <>
+                        <Separator />
+                        <h4 className="font-semibold">Etiquetas</h4>
+                        <B2BLabelGenerator
+                          trackingCode={selectedB2BShipment.tracking_code || ''}
+                          volumeCount={selectedB2BShipment.quote_data?.volume_count || obs.volume_addresses?.length || 1}
+                          volumeWeights={obs.volume_weights || []}
+                          volumeAddresses={obs.volume_addresses || []}
+                          pickupAddress={obs.pickup_address || {}}
+                          companyName={b2bClientData?.company_name || selectedB2BShipment.client_name?.replace(' (Expresso)', '') || 'Remetente'}
+                          deliveryDate={selectedB2BShipment.quote_data?.delivery_date || undefined}
+                        />
                       </>
                     )}
                   </>

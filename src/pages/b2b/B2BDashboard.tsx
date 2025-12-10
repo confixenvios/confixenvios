@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Package, Plus, Clock, CheckCircle, Send, Eye, Loader2, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -287,10 +288,11 @@ const B2BDashboard = () => {
 
       {/* Modal de Detalhes */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[85vh] p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <DialogTitle>Detalhes do Pedido</DialogTitle>
           </DialogHeader>
+          <ScrollArea className="h-[calc(85vh-100px)] px-6 py-4">
           {selectedShipment && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -429,6 +431,7 @@ const B2BDashboard = () => {
               </div>
             </div>
           )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>
