@@ -355,17 +355,41 @@ export const RemessaVisualizacao = ({
 
           <Separator />
 
-          {/* Destinatário(s) */}
+          {/* Destinatário(s) / Endereço do CD */}
           <div>
-            <h4 className="font-medium mb-2 flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Destinatário{isB2B ? 's' : ''}
-            </h4>
-            
-            {/* Para B2B, mostrar destinatários de cada volume */}
             {(() => {
-              if (isB2B) {
-                // Tentar extrair volumeAddresses do observations ou quote_data
+              const isB2B1 = isB2B && ['PENDENTE', 'ACEITA'].includes(remessa.status);
+              const isB2B2 = isB2B && ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(remessa.status);
+              
+              // Para B2B-1, mostrar endereço fixo do CD
+              if (isB2B1) {
+                return (
+                  <>
+                    <h4 className="font-medium mb-2 flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Endereço do CD
+                    </h4>
+                    <div className="text-sm space-y-1 ml-6">
+                      <p className="font-medium">Centro de Distribuição</p>
+                      <p className="text-muted-foreground">
+                        Av. Primeira Avenida
+                      </p>
+                      <p className="text-muted-foreground">
+                        Cidade Vera Cruz
+                      </p>
+                      <p className="text-muted-foreground">
+                        Aparecida de Goiânia - GO
+                      </p>
+                      <p className="text-muted-foreground">
+                        CEP: 74934-600
+                      </p>
+                    </div>
+                  </>
+                );
+              }
+              
+              // Para B2B-2, mostrar destinatários de cada volume
+              if (isB2B2) {
                 let volumeAddresses: any[] = [];
                 
                 try {
@@ -373,7 +397,7 @@ export const RemessaVisualizacao = ({
                     const obs = typeof remessa.observations === 'string' 
                       ? JSON.parse(remessa.observations) 
                       : remessa.observations;
-                    volumeAddresses = obs.volumeAddresses || [];
+                    volumeAddresses = obs.volume_addresses || obs.volumeAddresses || [];
                   }
                 } catch (e) {
                   console.log('Erro ao parsear observations:', e);
@@ -381,66 +405,78 @@ export const RemessaVisualizacao = ({
                 
                 if (volumeAddresses.length > 0) {
                   return (
-                    <div className="space-y-3 ml-6">
-                      {volumeAddresses.map((addr: any, index: number) => (
-                        <div key={index} className="p-3 border border-primary/20 rounded-lg bg-primary/5">
-                          <div className="flex items-center mb-2">
-                            <Package className="w-4 h-4 mr-2 text-primary" />
-                            <span className="font-medium text-sm">Volume {index + 1}</span>
-                          </div>
-                          <div className="text-sm space-y-1">
-                            <p className="font-medium">{addr.recipient_name || addr.recipientName || '-'}</p>
-                            {(addr.recipient_phone || addr.recipientPhone) && (
-                              <p className="text-muted-foreground flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
-                                {addr.recipient_phone || addr.recipientPhone}
+                    <>
+                      <h4 className="font-medium mb-2 flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        Destinatários ({volumeAddresses.length} volumes)
+                      </h4>
+                      <div className="space-y-3 ml-6">
+                        {volumeAddresses.map((addr: any, index: number) => (
+                          <div key={index} className="p-3 border border-primary/20 rounded-lg bg-primary/5">
+                            <div className="flex items-center mb-2">
+                              <Package className="w-4 h-4 mr-2 text-primary" />
+                              <span className="font-medium text-sm">Volume {index + 1}</span>
+                            </div>
+                            <div className="text-sm space-y-1">
+                              <p className="font-medium">{addr.recipient_name || addr.recipientName || '-'}</p>
+                              {(addr.recipient_phone || addr.recipientPhone) && (
+                                <p className="text-muted-foreground flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  {addr.recipient_phone || addr.recipientPhone}
+                                </p>
+                              )}
+                              <p className="text-muted-foreground">
+                                {addr.street}, {addr.number}
+                                {addr.complement && addr.complement !== '0' && `, ${addr.complement}`}
                               </p>
-                            )}
-                            <p className="text-muted-foreground">
-                              {addr.street}, {addr.number}
-                              {addr.complement && `, ${addr.complement}`}
-                            </p>
-                            <p className="text-muted-foreground">
-                              {addr.neighborhood}
-                            </p>
-                            <p className="text-muted-foreground">
-                              {addr.city} - {addr.state}
-                            </p>
-                            <p className="text-muted-foreground">
-                              CEP: {addr.cep}
-                            </p>
+                              <p className="text-muted-foreground">
+                                {addr.neighborhood}
+                              </p>
+                              <p className="text-muted-foreground">
+                                {addr.city} - {addr.state}
+                              </p>
+                              <p className="text-muted-foreground">
+                                CEP: {addr.cep}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    </>
                   );
                 }
               }
               
-              // Fallback para destinatário único (remessas convencionais ou B2B sem volumeAddresses)
+              // Fallback para destinatário único (remessas convencionais)
               return (
-                <div className="text-sm space-y-1 ml-6">
-                  <p className="font-medium">{remessa.recipient_address?.name || '-'}</p>
-                  {remessa.recipient_address?.phone && (
-                    <p className="text-muted-foreground flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      {remessa.recipient_address.phone}
+                <>
+                  <h4 className="font-medium mb-2 flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Destinatário
+                  </h4>
+                  <div className="text-sm space-y-1 ml-6">
+                    <p className="font-medium">{remessa.recipient_address?.name || '-'}</p>
+                    {remessa.recipient_address?.phone && (
+                      <p className="text-muted-foreground flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        {remessa.recipient_address.phone}
+                      </p>
+                    )}
+                    <p className="text-muted-foreground">
+                      {remessa.recipient_address?.street}, {remessa.recipient_address?.number}
+                      {remessa.recipient_address?.complement && `, ${remessa.recipient_address.complement}`}
                     </p>
-                  )}
-                  <p className="text-muted-foreground">
-                    {remessa.recipient_address?.street}, {remessa.recipient_address?.number}
-                    {remessa.recipient_address?.complement && `, ${remessa.recipient_address.complement}`}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {remessa.recipient_address?.neighborhood}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {remessa.recipient_address?.city} - {remessa.recipient_address?.state}
-                  </p>
-                  <p className="text-muted-foreground">
-                    CEP: {remessa.recipient_address?.cep}
-                  </p>
-                </div>
+                    <p className="text-muted-foreground">
+                      {remessa.recipient_address?.neighborhood}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {remessa.recipient_address?.city} - {remessa.recipient_address?.state}
+                    </p>
+                    <p className="text-muted-foreground">
+                      CEP: {remessa.recipient_address?.cep}
+                    </p>
+                  </div>
+                </>
               );
             })()}
           </div>
