@@ -875,7 +875,7 @@ export const acceptShipment = async (shipmentId: string, motoristaId: string) =>
     const phase = newStatus === 'B2B_ENTREGA_ACEITA' ? '(Entrega)' : '(Coleta)';
     const phaseLabel = newStatus === 'B2B_ENTREGA_ACEITA' ? 'B2B-2' : 'B2B-1';
     
-    // Registrar no histórico de status
+    // Registrar no histórico de status usando b2b_shipment_id
     const statusDescription = newStatus === 'B2B_ENTREGA_ACEITA' 
       ? 'Entrega aceita pelo motorista (B2B-2)'
       : 'Coleta aceita pelo motorista (B2B-1)';
@@ -883,7 +883,7 @@ export const acceptShipment = async (shipmentId: string, motoristaId: string) =>
     const { error: historyError } = await supabase
       .from('shipment_status_history')
       .insert({
-        shipment_id: shipmentId,
+        b2b_shipment_id: shipmentId,
         motorista_id: motoristaId,
         status: newStatus,
         status_description: statusDescription,

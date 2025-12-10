@@ -911,7 +911,7 @@ const AdminRemessas = () => {
             telefone
           )
         `)
-        .eq('shipment_id', b2bRealId)
+        .eq('b2b_shipment_id', b2bRealId)
         .order('created_at', { ascending: true });
       
       if (!historyError && historyData) {
