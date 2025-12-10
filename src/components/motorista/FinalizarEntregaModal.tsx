@@ -197,17 +197,28 @@ export const FinalizarEntregaModal = ({
         ? 'Coleta finalizada - Aguardando motorista de entrega' 
         : 'Entrega finalizada com sucesso';
       
+      // Para B2B usa b2b_shipment_id, para normal usa shipment_id
+      const historyData = isB2B 
+        ? {
+            b2b_shipment_id: shipmentId,
+            motorista_id: motoristaId,
+            status: statusForHistory,
+            status_description: statusDescription,
+            observacoes: isB2BColeta 
+              ? `Coleta finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s). Remessa liberada para fase de entrega.`
+              : `Entrega finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s).`
+          }
+        : {
+            shipment_id: shipmentId,
+            motorista_id: motoristaId,
+            status: statusForHistory,
+            status_description: statusDescription,
+            observacoes: `Entrega finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s).`
+          };
+      
       const { error: historyError } = await supabase
         .from('shipment_status_history')
-        .insert({
-          shipment_id: shipmentId,
-          motorista_id: motoristaId,
-          status: statusForHistory,
-          status_description: statusDescription,
-          observacoes: isB2BColeta 
-            ? `Coleta finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s). Remessa liberada para fase de entrega.`
-            : `Entrega finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s).`
-        });
+        .insert(historyData);
 
       if (historyError) {
         console.warn('⚠️ Erro ao registrar histórico:', historyError);

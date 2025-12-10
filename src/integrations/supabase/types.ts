@@ -1410,48 +1410,51 @@ export type Database = {
       }
       shipment_status_history: {
         Row: {
+          b2b_shipment_id: string | null
           created_at: string
           id: string
           motorista_id: string | null
           observacoes: string | null
           occurrence_data: Json | null
-          shipment_id: string
+          shipment_id: string | null
           status: string
           status_description: string | null
         }
         Insert: {
+          b2b_shipment_id?: string | null
           created_at?: string
           id?: string
           motorista_id?: string | null
           observacoes?: string | null
           occurrence_data?: Json | null
-          shipment_id: string
+          shipment_id?: string | null
           status: string
           status_description?: string | null
         }
         Update: {
+          b2b_shipment_id?: string | null
           created_at?: string
           id?: string
           motorista_id?: string | null
           observacoes?: string | null
           occurrence_data?: Json | null
-          shipment_id?: string
+          shipment_id?: string | null
           status?: string
           status_description?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "shipment_status_history_b2b_shipment_id_fkey"
+            columns: ["b2b_shipment_id"]
+            isOneToOne: false
+            referencedRelation: "b2b_shipments"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "shipment_status_history_motorista_id_fkey"
             columns: ["motorista_id"]
             isOneToOne: false
             referencedRelation: "motoristas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shipment_status_history_shipment_id_fkey"
-            columns: ["shipment_id"]
-            isOneToOne: false
-            referencedRelation: "shipments"
             referencedColumns: ["id"]
           },
         ]
