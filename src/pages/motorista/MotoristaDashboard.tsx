@@ -247,9 +247,18 @@ const MotoristaDashboard = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {isB2B ? (
-                  <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300">
+                  <Badge 
+                    variant="outline" 
+                    className={
+                      remessa.status === 'B2B_COLETA_FINALIZADA' || remessa.status === 'ENTREGUE'
+                        ? "bg-purple-100 text-purple-700 border-purple-300"
+                        : "bg-blue-100 text-blue-700 border-blue-300"
+                    }
+                  >
                     <Zap className="h-3 w-3 mr-1" />
-                    B2B
+                    {remessa.status === 'B2B_COLETA_FINALIZADA' || remessa.status === 'ENTREGUE' 
+                      ? "B2B-2" 
+                      : "B2B-1"}
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
