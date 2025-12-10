@@ -118,6 +118,7 @@ const AdminRemessas = () => {
   const [selectedB2BShipment, setSelectedB2BShipment] = useState<AdminShipment | null>(null);
   const [b2bClientData, setB2bClientData] = useState<any>(null);
   const [sendingB2BWhatsapp, setSendingB2BWhatsapp] = useState<Record<string, boolean>>({});
+  const [b2bStatusHistory, setB2bStatusHistory] = useState<any[]>([]);
 
   // Função para enviar dados B2B via WhatsApp webhook
   const handleSendB2BWhatsAppWebhook = async (shipment: AdminShipment) => {
@@ -861,6 +862,8 @@ const AdminRemessas = () => {
   const handleViewB2BShipment = async (shipment: AdminShipment) => {
     setSelectedB2BShipment(shipment);
     setB2bDetailsModalOpen(true);
+    setB2bStatusHistory([]);
+    setB2bClientData(null);
     
     // Buscar dados do cliente B2B se houver tracking_code com prefixo B2B
     if (shipment.tracking_code?.startsWith('B2B-')) {
@@ -881,6 +884,32 @@ const AdminRemessas = () => {
         console.log('Erro ao buscar dados B2B:', error);
         setB2bClientData(null);
       }
+    }
+
+    // Buscar histórico de status com dados do motorista
+    try {
+      const { data: historyData, error: historyError } = await supabase
+        .from('shipment_status_history')
+        .select(`
+          id,
+          status,
+          status_description,
+          observacoes,
+          created_at,
+          motorista_id,
+          motoristas (
+            nome,
+            telefone
+          )
+        `)
+        .eq('shipment_id', shipment.id)
+        .order('created_at', { ascending: true });
+      
+      if (!historyError && historyData) {
+        setB2bStatusHistory(historyData);
+      }
+    } catch (error) {
+      console.log('Erro ao buscar histórico de status:', error);
     }
   };
 
@@ -2087,10 +2116,11 @@ const AdminRemessas = () => {
 
       {/* Modal de Detalhes B2B Express */}
       <Dialog open={b2bDetailsModalOpen} onOpenChange={setB2bDetailsModalOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle>Detalhes do Pedido B2B Express</DialogTitle>
           </DialogHeader>
+          <ScrollArea className="flex-1 px-6 pb-6">
           {selectedB2BShipment && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -2132,7 +2162,7 @@ const AdminRemessas = () => {
                 
                 return (
                   <>
-                    <hr className="border-border" />
+                    <Separator />
                     <h4 className="font-semibold">Dados do Pagamento</h4>
                     
                     <div className="grid grid-cols-2 gap-4">
@@ -2163,7 +2193,7 @@ const AdminRemessas = () => {
 
                     {obs.volume_addresses && obs.volume_addresses.length > 0 && (
                       <>
-                        <hr className="border-border" />
+                        <Separator />
                         <h4 className="font-semibold">Endereços de Entrega</h4>
                         {obs.volume_addresses.map((addr: any, idx: number) => (
                           <div key={idx} className="bg-muted/50 p-3 rounded-lg space-y-2">
@@ -2203,7 +2233,7 @@ const AdminRemessas = () => {
                 );
               })()}
 
-              <hr className="border-border" />
+              <Separator />
               <h4 className="font-semibold">Dados do Cliente</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -2225,8 +2255,60 @@ const AdminRemessas = () => {
                   <p className="font-semibold">{b2bClientData?.phone || '-'}</p>
                 </div>
               </div>
+
+              {/* Histórico de Rastreio */}
+              <Separator />
+              <h4 className="font-semibold flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Histórico de Rastreio
+              </h4>
+              {b2bStatusHistory.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum histórico registrado.</p>
+              ) : (
+                <div className="space-y-2">
+                  {b2bStatusHistory.map((entry, idx) => {
+                    const isB2B1 = ['ACEITA', 'COLETA_ACEITA', 'B2B_COLETA_FINALIZADA'].includes(entry.status);
+                    const isB2B2 = ['B2B_ENTREGA_ACEITA', 'ENTREGUE', 'ENTREGA_FINALIZADA'].includes(entry.status);
+                    const phaseLabel = isB2B1 ? 'B2B-1' : isB2B2 ? 'B2B-2' : '';
+                    
+                    return (
+                      <div key={entry.id} className="bg-muted/50 p-3 rounded-lg space-y-1 text-sm">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {entry.status}
+                            </Badge>
+                            {phaseLabel && (
+                              <Badge variant={isB2B1 ? 'secondary' : 'default'} className="text-xs">
+                                {phaseLabel}
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(entry.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </span>
+                        </div>
+                        {entry.status_description && (
+                          <p className="text-muted-foreground">{entry.status_description}</p>
+                        )}
+                        {entry.motoristas && (
+                          <div className="flex items-center gap-1 text-xs">
+                            <Truck className="w-3 h-3" />
+                            <span className="font-medium">{entry.motoristas.nome}</span>
+                            <span className="text-muted-foreground">({entry.motoristas.telefone})</span>
+                          </div>
+                        )}
+                        {entry.observacoes && (
+                          <p className="text-xs text-muted-foreground italic">{entry.observacoes}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
