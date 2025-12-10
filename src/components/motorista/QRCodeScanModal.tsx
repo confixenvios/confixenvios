@@ -51,11 +51,6 @@ export const QRCodeScanModal: React.FC<QRCodeScanModalProps> = ({
   const handleManualSubmit = () => {
     const digits = manualInput.trim();
     
-    console.log('🔍 Validating input:', digits);
-    console.log('📋 Required codes:', requiredCodes);
-    console.log('📋 Expected digits:', getExpectedDigits());
-    console.log('✅ Already validated indexes:', validatedVolumes);
-    
     if (!digits || digits.length !== 4 || !/^\d{4}$/.test(digits)) {
       toast.error('Digite os 4 dígitos numéricos (ex: 0001)');
       return;
@@ -66,8 +61,6 @@ export const QRCodeScanModal: React.FC<QRCodeScanModalProps> = ({
       expected === digits && !validatedVolumes.includes(index)
     );
 
-    console.log('🎯 Match index found:', matchIndex);
-
     if (matchIndex === -1) {
       const alreadyValidated = expectedDigits.findIndex((expected, index) => 
         expected === digits && validatedVolumes.includes(index)
@@ -76,7 +69,7 @@ export const QRCodeScanModal: React.FC<QRCodeScanModalProps> = ({
       if (alreadyValidated !== -1) {
         toast.error('Este volume já foi validado');
       } else {
-        toast.error(`Código ${digits} não pertence a esta remessa. Esperados: ${expectedDigits.join(', ')}`);
+        toast.error('Código não pertence a esta remessa');
       }
       return;
     }
