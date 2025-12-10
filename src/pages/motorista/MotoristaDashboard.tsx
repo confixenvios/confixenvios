@@ -12,7 +12,7 @@ import { RemessaDetalhes } from '@/components/motorista/RemessaDetalhes';
 import { RemessaVisualizacao } from '@/components/motorista/RemessaVisualizacao';
 import { OccurrenceSimpleModal } from '@/components/motorista/OccurrenceSimpleModal';
 import { FinalizarEntregaModal } from '@/components/motorista/FinalizarEntregaModal';
-import { getMotoristaShipments, getAvailableShipments, acceptShipment, type MotoristaShipment, type BaseShipment } from '@/services/shipmentsService';
+import { getMotoristaShipments, getAvailableShipments, acceptShipment, getMotoristaVisibilidade, type MotoristaShipment, type BaseShipment, type MotoristaVisibilidade } from '@/services/shipmentsService';
 import { supabase } from '@/integrations/supabase/client';
 
 interface MotoristaSession {
@@ -21,6 +21,7 @@ interface MotoristaSession {
   email: string;
   status: string;
   tipo_pedidos?: 'normal' | 'b2b' | 'ambos';
+  visibilidade?: MotoristaVisibilidade;
 }
 
 type ViewType = 'disponiveis' | 'minhas' | 'em_rota' | 'entregues';
@@ -74,24 +75,31 @@ const MotoristaDashboard = () => {
           .eq('id', session.user.id)
           .single();
 
-        // Buscar dados do motorista (tipo_pedidos, status)
+        // Buscar dados do motorista (tipo_pedidos, status, visibilidade)
         const { data: motorista } = await supabase
           .from('motoristas')
-          .select('status, tipo_pedidos')
+          .select('status, tipo_pedidos, ve_convencional, ve_b2b_coleta, ve_b2b_entrega')
           .eq('email', session.user.email)
           .single();
+
+        const visibilidade: MotoristaVisibilidade = {
+          ve_convencional: motorista?.ve_convencional ?? true,
+          ve_b2b_coleta: motorista?.ve_b2b_coleta ?? false,
+          ve_b2b_entrega: motorista?.ve_b2b_entrega ?? false
+        };
 
         const motoristaData: MotoristaSession = {
           id: session.user.id,
           nome: profile?.first_name || session.user.email || 'Motorista',
           email: session.user.email || '',
           status: motorista?.status || 'ativo',
-          tipo_pedidos: (motorista?.tipo_pedidos as 'normal' | 'b2b' | 'ambos') || 'ambos'
+          tipo_pedidos: (motorista?.tipo_pedidos as 'normal' | 'b2b' | 'ambos') || 'ambos',
+          visibilidade
         };
         
         setMotoristaSession(motoristaData);
         loadMinhasRemessas(session.user.id);
-        loadRemessasDisponiveis('ambos');
+        loadRemessasDisponiveis(visibilidade);
       } catch (error) {
         console.error('❌ Erro ao verificar autenticação:', error);
         navigate('/motorista/auth');
@@ -148,25 +156,11 @@ const MotoristaDashboard = () => {
     }
   };
 
-  const loadRemessasDisponiveis = async (tipoPedidos: string = 'ambos') => {
+  const loadRemessasDisponiveis = async (visibilidade?: MotoristaVisibilidade) => {
     setRefreshing(true);
     try {
-      const data = await getAvailableShipments();
-      
-      // Filtrar baseado no tipo de pedidos do motorista
-      const filteredData = data.filter(remessa => {
-        const isB2B = remessa.tracking_code?.startsWith('B2B-');
-        
-        if (tipoPedidos === 'normal') {
-          return !isB2B;
-        } else if (tipoPedidos === 'b2b') {
-          return isB2B;
-        }
-        // 'ambos' retorna todos
-        return true;
-      });
-      
-      setRemessasDisponiveis(filteredData);
+      const data = await getAvailableShipments(visibilidade);
+      setRemessasDisponiveis(data);
     } catch (error) {
       console.error('❌ Erro ao carregar remessas disponíveis:', error);
       toast.error('Erro ao carregar remessas disponíveis');
@@ -187,7 +181,7 @@ const MotoristaDashboard = () => {
         if (response.success) {
           toast.success(response.message || 'Remessa aceita com sucesso!');
           loadMinhasRemessas(motoristaSession.id);
-          loadRemessasDisponiveis(motoristaSession.tipo_pedidos || 'ambos');
+          loadRemessasDisponiveis(motoristaSession.visibilidade);
         } else {
           toast.error(response.error || 'Erro ao aceitar remessa');
         }

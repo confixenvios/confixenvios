@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Pencil, UserX, UserCheck, Clock, Trash2, BarChart3, Calendar, Package, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Pencil, UserX, UserCheck, Clock, Trash2, BarChart3, Calendar, Package, CheckCircle, XCircle, Truck, Zap } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -22,6 +23,9 @@ interface Motorista {
   email: string;
   status: 'ativo' | 'inativo' | 'pendente';
   tipo_pedidos: 'normal' | 'b2b' | 'ambos';
+  ve_convencional: boolean;
+  ve_b2b_coleta: boolean;
+  ve_b2b_entrega: boolean;
   created_at: string;
 }
 
@@ -54,7 +58,10 @@ const AdminMotoristas = () => {
     email: '',
     senha: '',
     status: 'ativo' as 'ativo' | 'inativo' | 'pendente',
-    tipo_pedidos: 'ambos' as 'normal' | 'b2b' | 'ambos'
+    tipo_pedidos: 'ambos' as 'normal' | 'b2b' | 'ambos',
+    ve_convencional: true,
+    ve_b2b_coleta: false,
+    ve_b2b_entrega: false
   });
 
   useEffect(() => {
@@ -70,7 +77,7 @@ const AdminMotoristas = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('motoristas')
-        .select('id, nome, cpf, telefone, email, status, tipo_pedidos, created_at, updated_at')
+        .select('id, nome, cpf, telefone, email, status, tipo_pedidos, ve_convencional, ve_b2b_coleta, ve_b2b_entrega, created_at, updated_at')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -173,7 +180,10 @@ const AdminMotoristas = () => {
           telefone: formData.telefone,
           email: formData.email,
           status: formData.status,
-          tipo_pedidos: formData.tipo_pedidos
+          tipo_pedidos: formData.tipo_pedidos,
+          ve_convencional: formData.ve_convencional,
+          ve_b2b_coleta: formData.ve_b2b_coleta,
+          ve_b2b_entrega: formData.ve_b2b_entrega
         };
 
         if (formData.senha) {
@@ -200,7 +210,10 @@ const AdminMotoristas = () => {
           email: formData.email,
           senha: formData.senha,
           status: formData.status,
-          tipo_pedidos: formData.tipo_pedidos
+          tipo_pedidos: formData.tipo_pedidos,
+          ve_convencional: formData.ve_convencional,
+          ve_b2b_coleta: formData.ve_b2b_coleta,
+          ve_b2b_entrega: formData.ve_b2b_entrega
         };
 
         console.log('Criando novo motorista:', { ...insertData, senha: '[HIDDEN]' });
@@ -220,7 +233,7 @@ const AdminMotoristas = () => {
 
       setIsDialogOpen(false);
       setEditingMotorista(null);
-      setFormData({ nome: '', cpf: '', telefone: '', email: '', senha: '', status: 'ativo', tipo_pedidos: 'ambos' });
+      setFormData({ nome: '', cpf: '', telefone: '', email: '', senha: '', status: 'ativo', tipo_pedidos: 'ambos', ve_convencional: true, ve_b2b_coleta: false, ve_b2b_entrega: false });
       loadMotoristas();
     } catch (error: any) {
       console.error('Erro ao salvar motorista:', error);
@@ -237,7 +250,10 @@ const AdminMotoristas = () => {
       email: motorista.email,
       senha: '',
       status: motorista.status,
-      tipo_pedidos: motorista.tipo_pedidos || 'ambos'
+      tipo_pedidos: motorista.tipo_pedidos || 'ambos',
+      ve_convencional: motorista.ve_convencional ?? true,
+      ve_b2b_coleta: motorista.ve_b2b_coleta ?? false,
+      ve_b2b_entrega: motorista.ve_b2b_entrega ?? false
     });
     setIsDialogOpen(true);
   };
@@ -391,7 +407,7 @@ const AdminMotoristas = () => {
             <Button 
               onClick={() => {
                 setEditingMotorista(null);
-                setFormData({ nome: '', cpf: '', telefone: '', email: '', senha: '', status: 'ativo', tipo_pedidos: 'ambos' });
+                setFormData({ nome: '', cpf: '', telefone: '', email: '', senha: '', status: 'ativo', tipo_pedidos: 'ambos', ve_convencional: true, ve_b2b_coleta: false, ve_b2b_entrega: false });
               }}
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -479,7 +495,7 @@ const AdminMotoristas = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="tipo_pedidos">Tipo de Pedidos</Label>
+                <Label htmlFor="tipo_pedidos">Tipo de Pedidos (legado)</Label>
                  <Select value={formData.tipo_pedidos} onValueChange={(value: 'normal' | 'b2b' | 'ambos') => setFormData({ ...formData, tipo_pedidos: value })}>
                    <SelectTrigger>
                      <SelectValue />
@@ -490,9 +506,59 @@ const AdminMotoristas = () => {
                      <SelectItem value="b2b">Apenas B2B Express</SelectItem>
                    </SelectContent>
                  </Select>
-                 <p className="text-xs text-muted-foreground">
-                   Define quais tipos de remessas o motorista poderá visualizar
-                 </p>
+              </div>
+
+              {/* Novos controles de visibilidade por tipo de remessa */}
+              <div className="space-y-3 p-4 rounded-lg border bg-muted/30">
+                <Label className="text-sm font-medium">Visibilidade de Remessas</Label>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Selecione quais tipos de remessas o motorista pode visualizar e aceitar
+                </p>
+                
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="ve_convencional"
+                    checked={formData.ve_convencional}
+                    onCheckedChange={(checked) => setFormData({ ...formData, ve_convencional: !!checked })}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-blue-600" />
+                    <Label htmlFor="ve_convencional" className="text-sm font-normal cursor-pointer">
+                      Convencional
+                    </Label>
+                  </div>
+                  <span className="text-xs text-muted-foreground">- Coleta + Entrega (fluxo único)</span>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="ve_b2b_coleta"
+                    checked={formData.ve_b2b_coleta}
+                    onCheckedChange={(checked) => setFormData({ ...formData, ve_b2b_coleta: !!checked })}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-orange-500" />
+                    <Label htmlFor="ve_b2b_coleta" className="text-sm font-normal cursor-pointer">
+                      B2B-1 (Coleta)
+                    </Label>
+                  </div>
+                  <span className="text-xs text-muted-foreground">- Fase inicial após pagamento</span>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="ve_b2b_entrega"
+                    checked={formData.ve_b2b_entrega}
+                    onCheckedChange={(checked) => setFormData({ ...formData, ve_b2b_entrega: !!checked })}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-green-600" />
+                    <Label htmlFor="ve_b2b_entrega" className="text-sm font-normal cursor-pointer">
+                      B2B-2 (Entrega)
+                    </Label>
+                  </div>
+                  <span className="text-xs text-muted-foreground">- Após coleta finalizada</span>
+                </div>
               </div>
 
               <div className="flex gap-2 pt-4">
@@ -562,11 +628,9 @@ const AdminMotoristas = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>CPF</TableHead>
                 <TableHead>Telefone</TableHead>
-                <TableHead>E-mail</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Tipo Pedidos</TableHead>
+                <TableHead>Visibilidade</TableHead>
                 <TableHead>Remessas</TableHead>
                 <TableHead>Taxa Sucesso</TableHead>
                 <TableHead>Ações</TableHead>
@@ -575,7 +639,7 @@ const AdminMotoristas = () => {
             <TableBody>
               {motoristas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     Nenhum motorista cadastrado ainda.
                   </TableCell>
                 </TableRow>
@@ -584,20 +648,38 @@ const AdminMotoristas = () => {
                   const stats = getMotoristaStats(motorista.id);
                   return (
                     <TableRow key={motorista.id}>
-                      <TableCell className="font-medium">{motorista.nome}</TableCell>
-                      <TableCell>{motorista.cpf}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{motorista.nome}</p>
+                          <p className="text-xs text-muted-foreground">{motorista.email}</p>
+                        </div>
+                      </TableCell>
                       <TableCell>{motorista.telefone}</TableCell>
-                      <TableCell>{motorista.email}</TableCell>
                       <TableCell>{getStatusBadge(motorista.status)}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={
-                          motorista.tipo_pedidos === 'b2b' ? 'bg-purple-50 text-purple-700 border-purple-300' :
-                          motorista.tipo_pedidos === 'normal' ? 'bg-blue-50 text-blue-700 border-blue-300' :
-                          'bg-gray-50 text-gray-700 border-gray-300'
-                        }>
-                          {motorista.tipo_pedidos === 'b2b' ? 'B2B Express' : 
-                           motorista.tipo_pedidos === 'normal' ? 'Normal' : 'Todos'}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {motorista.ve_convencional && (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 text-xs">
+                              <Package className="h-3 w-3 mr-1" />
+                              Conv
+                            </Badge>
+                          )}
+                          {motorista.ve_b2b_coleta && (
+                            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300 text-xs">
+                              <Zap className="h-3 w-3 mr-1" />
+                              B2B-1
+                            </Badge>
+                          )}
+                          {motorista.ve_b2b_entrega && (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300 text-xs">
+                              <Truck className="h-3 w-3 mr-1" />
+                              B2B-2
+                            </Badge>
+                          )}
+                          {!motorista.ve_convencional && !motorista.ve_b2b_coleta && !motorista.ve_b2b_entrega && (
+                            <span className="text-xs text-muted-foreground">Nenhum</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">

@@ -504,166 +504,153 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
   return allShipments;
 };
 
+export interface MotoristaVisibilidade {
+  ve_convencional: boolean;
+  ve_b2b_coleta: boolean;
+  ve_b2b_entrega: boolean;
+}
+
+/**
+ * Buscar configurações de visibilidade do motorista
+ */
+export const getMotoristaVisibilidade = async (motoristaEmail: string): Promise<MotoristaVisibilidade> => {
+  const { data, error } = await supabase
+    .from('motoristas')
+    .select('ve_convencional, ve_b2b_coleta, ve_b2b_entrega')
+    .eq('email', motoristaEmail)
+    .single();
+
+  if (error || !data) {
+    console.warn('⚠️ Não foi possível buscar visibilidade do motorista, usando padrão');
+    return { ve_convencional: true, ve_b2b_coleta: false, ve_b2b_entrega: false };
+  }
+
+  return {
+    ve_convencional: data.ve_convencional ?? true,
+    ve_b2b_coleta: data.ve_b2b_coleta ?? false,
+    ve_b2b_entrega: data.ve_b2b_entrega ?? false
+  };
+};
+
 /**
  * Serviço para buscar remessas disponíveis para motoristas (normais + B2B)
+ * Agora filtra baseado nas flags de visibilidade do motorista
  */
-export const getAvailableShipments = async (): Promise<BaseShipment[]> => {
-  console.log('📋 Iniciando busca por remessas disponíveis (normais + B2B)...');
+export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade): Promise<BaseShipment[]> => {
+  console.log('📋 Iniciando busca por remessas disponíveis com filtros:', visibilidade);
   
   try {
-    // Buscar remessas NORMAIS disponíveis
-    const { data: shipmentsData, error: shipmentsError } = await supabase
-      .from('shipments')
-      .select('*')
-      .is('motorista_id', null)
-      .in('status', ['PAYMENT_CONFIRMED', 'PAID', 'PENDING_LABEL', 'LABEL_GENERATED', 'PAGO_AGUARDANDO_ETIQUETA'])
-      .order('created_at', { ascending: false });
-    
-    if (shipmentsError) {
-      console.error('❌ Erro ao buscar remessas normais:', shipmentsError);
-    }
-    
-    console.log('📦 Remessas normais encontradas:', shipmentsData?.length || 0);
-    
-    // Buscar remessas B2B disponíveis (PENDENTE = aguardando motorista)
-    const { data: b2bData, error: b2bError } = await supabase
-      .from('b2b_shipments')
-      .select(`
-        id,
-        tracking_code,
-        status,
-        created_at,
-        updated_at,
-        recipient_name,
-        recipient_phone,
-        recipient_cep,
-        recipient_street,
-        recipient_number,
-        recipient_complement,
-        recipient_neighborhood,
-        recipient_city,
-        recipient_state,
-        observations,
-        package_type,
-        volume_count,
-        delivery_type,
-        delivery_date,
-        b2b_client_id,
-        b2b_clients(
-          company_name, 
-          email, 
-          phone, 
-          cnpj,
-          default_pickup_cep,
-          default_pickup_street,
-          default_pickup_number,
-          default_pickup_complement,
-          default_pickup_neighborhood,
-          default_pickup_city,
-          default_pickup_state
-        )
-      `)
-      .eq('status', 'PENDENTE')
-      .order('created_at', { ascending: false });
+    let remessasNormais: BaseShipment[] = [];
+    let remessasB2BColeta: BaseShipment[] = [];
+    let remessasB2BEntrega: BaseShipment[] = [];
 
-    if (b2bError) {
-      console.error('❌ Erro ao buscar remessas B2B:', b2bError);
+    // Se não tiver visibilidade definida, carrega tudo (comportamento legado)
+    const loadConvencional = visibilidade?.ve_convencional ?? true;
+    const loadB2BColeta = visibilidade?.ve_b2b_coleta ?? false;
+    const loadB2BEntrega = visibilidade?.ve_b2b_entrega ?? false;
+
+    // Buscar remessas NORMAIS/CONVENCIONAIS (se permitido)
+    if (loadConvencional) {
+      const { data: shipmentsData, error: shipmentsError } = await supabase
+        .from('shipments')
+        .select('*')
+        .is('motorista_id', null)
+        .in('status', ['PAYMENT_CONFIRMED', 'PAID', 'PENDING_LABEL', 'LABEL_GENERATED', 'PAGO_AGUARDANDO_ETIQUETA'])
+        .order('created_at', { ascending: false });
+      
+      if (shipmentsError) {
+        console.error('❌ Erro ao buscar remessas normais:', shipmentsError);
+      }
+      
+      console.log('📦 Remessas convencionais encontradas:', shipmentsData?.length || 0);
+      
+      // Processar remessas normais com endereços
+      remessasNormais = await Promise.all(
+        (shipmentsData || []).map(async (shipment) => {
+          const { data: senderAddress } = await supabase
+            .from('addresses')
+            .select('*')
+            .eq('id', shipment.sender_address_id)
+            .maybeSingle();
+          
+          const { data: recipientAddress } = await supabase
+            .from('addresses')
+            .select('*')
+            .eq('id', shipment.recipient_address_id)
+            .maybeSingle();
+          
+          return {
+            ...normalizeShipmentData({
+              ...shipment,
+              sender_address: senderAddress || createEmptyAddress(),
+              recipient_address: recipientAddress || createEmptyAddress()
+            })
+          };
+        })
+      );
     }
 
-    console.log('📦 Remessas B2B encontradas:', b2bData?.length || 0);
-    
-    // Processar remessas normais com endereços
-    const remessasNormais = await Promise.all(
-      (shipmentsData || []).map(async (shipment) => {
-        const { data: senderAddress } = await supabase
-          .from('addresses')
-          .select('*')
-          .eq('id', shipment.sender_address_id)
-          .maybeSingle();
-        
-        const { data: recipientAddress } = await supabase
-          .from('addresses')
-          .select('*')
-          .eq('id', shipment.recipient_address_id)
-          .maybeSingle();
-        
-        return {
-          ...normalizeShipmentData({
-            ...shipment,
-            sender_address: senderAddress || createEmptyAddress(),
-            recipient_address: recipientAddress || createEmptyAddress()
-          })
-        };
-      })
-    );
-    
-    // Normalizar remessas B2B para o mesmo formato BaseShipment
-    const remessasB2B: BaseShipment[] = (b2bData || []).map((b2bShipment) => {
-      const b2bClient = Array.isArray(b2bShipment.b2b_clients) 
-        ? b2bShipment.b2b_clients[0] 
-        : b2bShipment.b2b_clients;
+    // Buscar remessas B2B - Fase 1 Coleta (PENDENTE - aguardando primeiro motorista)
+    if (loadB2BColeta) {
+      const { data: b2bColetaData, error: b2bColetaError } = await supabase
+        .from('b2b_shipments')
+        .select(`
+          id, tracking_code, status, created_at, updated_at,
+          recipient_name, recipient_phone, recipient_cep, recipient_street,
+          recipient_number, recipient_complement, recipient_neighborhood,
+          recipient_city, recipient_state, observations, package_type,
+          volume_count, delivery_type, delivery_date, b2b_client_id,
+          b2b_clients(company_name, email, phone, cnpj,
+            default_pickup_cep, default_pickup_street, default_pickup_number,
+            default_pickup_complement, default_pickup_neighborhood,
+            default_pickup_city, default_pickup_state)
+        `)
+        .eq('status', 'PENDENTE')
+        .is('motorista_id', null)
+        .order('created_at', { ascending: false });
 
-      // Parsear observations para extrair dados adicionais
-      let parsedObs: any = {};
-      try {
-        if (b2bShipment.observations) {
-          parsedObs = JSON.parse(b2bShipment.observations);
-        }
-      } catch (e) {
-        console.log('⚠️ Não foi possível parsear observations do B2B:', b2bShipment.id);
+      if (b2bColetaError) {
+        console.error('❌ Erro ao buscar B2B coleta:', b2bColetaError);
       }
 
-      return {
-        id: b2bShipment.id,
-        tracking_code: b2bShipment.tracking_code || '',
-        status: b2bShipment.status,
-        weight: parsedObs.total_weight || 0,
-        length: 0,
-        width: 0,
-        height: 0,
-        format: b2bShipment.package_type || 'caixa',
-        selected_option: b2bShipment.delivery_type || 'economico',
-        pickup_option: 'pickup',
-        quote_data: {
-          observations: b2bShipment.observations,
-          volume_count: b2bShipment.volume_count,
-          delivery_date: b2bShipment.delivery_date,
-          parsedObservations: parsedObs
-        },
-        payment_data: null,
-        created_at: b2bShipment.created_at,
-        label_pdf_url: null,
-        cte_key: null,
-        sender_address: {
-          name: b2bClient?.company_name || 'Cliente B2B',
-          street: b2bClient?.default_pickup_street || parsedObs.pickup_address?.street || '',
-          number: b2bClient?.default_pickup_number || parsedObs.pickup_address?.number || '',
-          neighborhood: b2bClient?.default_pickup_neighborhood || parsedObs.pickup_address?.neighborhood || '',
-          city: b2bClient?.default_pickup_city || parsedObs.pickup_address?.city || '',
-          state: b2bClient?.default_pickup_state || parsedObs.pickup_address?.state || '',
-          cep: b2bClient?.default_pickup_cep || parsedObs.pickup_address?.cep || '',
-          complement: b2bClient?.default_pickup_complement || parsedObs.pickup_address?.complement || '',
-          phone: b2bClient?.phone || parsedObs.pickup_address?.contact_phone || ''
-        },
-        recipient_address: {
-          name: b2bShipment.recipient_name || '',
-          street: b2bShipment.recipient_street || '',
-          number: b2bShipment.recipient_number || '',
-          neighborhood: b2bShipment.recipient_neighborhood || '',
-          city: b2bShipment.recipient_city || '',
-          state: b2bShipment.recipient_state || '',
-          cep: b2bShipment.recipient_cep || '',
-          complement: b2bShipment.recipient_complement || '',
-          phone: b2bShipment.recipient_phone || ''
-        }
-      };
-    });
+      console.log('📦 Remessas B2B-1 (coleta) encontradas:', b2bColetaData?.length || 0);
+      remessasB2BColeta = (b2bColetaData || []).map(b2b => normalizeB2BShipment(b2b, 'B2B-1'));
+    }
+
+    // Buscar remessas B2B - Fase 2 Entrega (COLETA_FINALIZADA - aguardando segundo motorista)
+    if (loadB2BEntrega) {
+      const { data: b2bEntregaData, error: b2bEntregaError } = await supabase
+        .from('b2b_shipments')
+        .select(`
+          id, tracking_code, status, created_at, updated_at,
+          recipient_name, recipient_phone, recipient_cep, recipient_street,
+          recipient_number, recipient_complement, recipient_neighborhood,
+          recipient_city, recipient_state, observations, package_type,
+          volume_count, delivery_type, delivery_date, b2b_client_id, motorista_id,
+          b2b_clients(company_name, email, phone, cnpj,
+            default_pickup_cep, default_pickup_street, default_pickup_number,
+            default_pickup_complement, default_pickup_neighborhood,
+            default_pickup_city, default_pickup_state)
+        `)
+        .eq('status', 'B2B_COLETA_FINALIZADA')
+        .order('created_at', { ascending: false });
+
+      if (b2bEntregaError) {
+        console.error('❌ Erro ao buscar B2B entrega:', b2bEntregaError);
+      }
+
+      console.log('📦 Remessas B2B-2 (entrega) encontradas:', b2bEntregaData?.length || 0);
+      remessasB2BEntrega = (b2bEntregaData || []).map(b2b => normalizeB2BShipment(b2b, 'B2B-2'));
+    }
     
     // Combinar todas as remessas e ordenar por data
-    const allShipments = [...remessasNormais, ...remessasB2B];
+    const allShipments = [...remessasNormais, ...remessasB2BColeta, ...remessasB2BEntrega];
     allShipments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     
-    console.log('✅ Total de remessas disponíveis:', allShipments.length, '(Normais:', remessasNormais.length, ', B2B:', remessasB2B.length, ')');
+    console.log('✅ Total de remessas disponíveis:', allShipments.length, 
+      '(Conv:', remessasNormais.length, 
+      ', B2B-1:', remessasB2BColeta.length, 
+      ', B2B-2:', remessasB2BEntrega.length, ')');
     return allShipments;
     
   } catch (error) {
@@ -762,6 +749,68 @@ function normalizeShipmentData(shipment: any): BaseShipment {
   }
   
   return result;
+}
+
+/**
+ * Normaliza remessa B2B para o formato BaseShipment
+ */
+function normalizeB2BShipment(b2bShipment: any, phase: string): BaseShipment {
+  const b2bClient = Array.isArray(b2bShipment.b2b_clients) 
+    ? b2bShipment.b2b_clients[0] 
+    : b2bShipment.b2b_clients;
+
+  let parsedObs: any = {};
+  try {
+    if (b2bShipment.observations) {
+      parsedObs = JSON.parse(b2bShipment.observations);
+    }
+  } catch (e) {}
+
+  return {
+    id: b2bShipment.id,
+    tracking_code: b2bShipment.tracking_code || '',
+    status: b2bShipment.status,
+    weight: parsedObs.total_weight || 0,
+    length: 0,
+    width: 0,
+    height: 0,
+    format: b2bShipment.package_type || 'caixa',
+    selected_option: b2bShipment.delivery_type || 'economico',
+    pickup_option: 'pickup',
+    quote_data: {
+      observations: b2bShipment.observations,
+      volume_count: b2bShipment.volume_count,
+      delivery_date: b2bShipment.delivery_date,
+      parsedObservations: parsedObs,
+      b2b_phase: phase
+    },
+    payment_data: null,
+    created_at: b2bShipment.created_at,
+    label_pdf_url: null,
+    cte_key: null,
+    sender_address: {
+      name: b2bClient?.company_name || 'Cliente B2B',
+      street: b2bClient?.default_pickup_street || parsedObs.pickup_address?.street || '',
+      number: b2bClient?.default_pickup_number || parsedObs.pickup_address?.number || '',
+      neighborhood: b2bClient?.default_pickup_neighborhood || parsedObs.pickup_address?.neighborhood || '',
+      city: b2bClient?.default_pickup_city || parsedObs.pickup_address?.city || '',
+      state: b2bClient?.default_pickup_state || parsedObs.pickup_address?.state || '',
+      cep: b2bClient?.default_pickup_cep || parsedObs.pickup_address?.cep || '',
+      complement: b2bClient?.default_pickup_complement || parsedObs.pickup_address?.complement || '',
+      phone: b2bClient?.phone || parsedObs.pickup_address?.contact_phone || ''
+    },
+    recipient_address: {
+      name: b2bShipment.recipient_name || '',
+      street: b2bShipment.recipient_street || '',
+      number: b2bShipment.recipient_number || '',
+      neighborhood: b2bShipment.recipient_neighborhood || '',
+      city: b2bShipment.recipient_city || '',
+      state: b2bShipment.recipient_state || '',
+      cep: b2bShipment.recipient_cep || '',
+      complement: b2bShipment.recipient_complement || '',
+      phone: b2bShipment.recipient_phone || ''
+    }
+  };
 }
 
 /**
