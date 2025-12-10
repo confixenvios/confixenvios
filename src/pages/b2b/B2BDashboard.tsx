@@ -6,11 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Package, Plus, Clock, CheckCircle, Send, Eye, Loader2, FileDown } from 'lucide-react';
+import { Package, Plus, Clock, CheckCircle, Send, Eye, Loader2, FileDown, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import B2BLabelGenerator from '@/components/b2b/B2BLabelGenerator';
+import B2BStatusHistory from '@/components/b2b/B2BStatusHistory';
+import B2BStatusBadge from '@/components/b2b/B2BStatusBadge';
 
 interface B2BClient {
   id: string;
@@ -235,40 +237,37 @@ const B2BDashboard = () => {
                 return (
                   <div
                     key={shipment.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                    className="p-4 border rounded-lg hover:bg-accent/50 transition-colors"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-mono text-sm font-semibold">{shipment.tracking_code}</p>
                         {shipment.volume_count && (
                           <Badge variant="outline" className="text-xs">
                             {shipment.volume_count} volume(s)
                           </Badge>
                         )}
-                        {getPackageTypeLabel(shipment.package_type) && (
-                          <Badge variant="secondary" className="text-xs">
-                            {getPackageTypeLabel(shipment.package_type)}
-                          </Badge>
-                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {shipment.recipient_name ? (
-                          <>
-                            <strong>{shipment.recipient_name}</strong> - {shipment.recipient_city}/{shipment.recipient_state}
-                          </>
-                        ) : (
-                          <>
-                            {shipment.volume_count && `${shipment.volume_count} volume(s)`}
-                            {shipment.delivery_date && ` - Entrega: ${format(new Date(shipment.delivery_date), 'dd/MM/yyyy')}`}
-                          </>
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(shipment.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                      </p>
+                      <B2BStatusBadge status={shipment.status} showIcon size="sm" />
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    <p className="text-sm text-muted-foreground">
+                      {shipment.recipient_name ? (
+                        <>
+                          <strong>{shipment.recipient_name}</strong> - {shipment.recipient_city}/{shipment.recipient_state}
+                        </>
+                      ) : (
+                        <>
+                          {shipment.volume_count && `${shipment.volume_count} volume(s)`}
+                          {shipment.delivery_date && ` - Entrega: ${format(new Date(shipment.delivery_date), 'dd/MM/yyyy')}`}
+                        </>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {format(new Date(shipment.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                    
+                    <div className="flex items-center gap-2 mt-3">
                       <Button
                         variant="outline"
                         size="sm"
@@ -407,6 +406,14 @@ const B2BDashboard = () => {
                 </>
               );
             })()}
+
+              {/* Histórico de Status */}
+              <hr className="border-border" />
+              <div className="flex items-center gap-2 mb-2">
+                <History className="h-4 w-4 text-muted-foreground" />
+                <h4 className="font-semibold">Histórico de Status</h4>
+              </div>
+              <B2BStatusHistory shipmentId={selectedShipment.id} />
 
               <hr className="border-border" />
               <h4 className="font-semibold">Dados do Cliente</h4>
