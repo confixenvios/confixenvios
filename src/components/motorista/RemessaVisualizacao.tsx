@@ -366,10 +366,32 @@ export const RemessaVisualizacao = ({
               Remetente
             </h4>
             {(() => {
+              const isB2B1 = isB2B && ['PENDENTE', 'ACEITA'].includes(remessa.status);
               const isB2B2 = isB2B && ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(remessa.status);
               
-              // Para B2B-2, mostrar pickup_address dos observations
+              // Para B2B-2, mostrar CD como remetente (origem é o CD)
               if (isB2B2) {
+                return (
+                  <div className="text-sm space-y-1 ml-6">
+                    <p className="font-medium">Centro de Distribuição</p>
+                    <p className="text-muted-foreground">
+                      Av. Primeira Avenida
+                    </p>
+                    <p className="text-muted-foreground">
+                      Cidade Vera Cruz
+                    </p>
+                    <p className="text-muted-foreground">
+                      Aparecida de Goiânia - GO
+                    </p>
+                    <p className="text-muted-foreground">
+                      CEP: 74934-600
+                    </p>
+                  </div>
+                );
+              }
+              
+              // Para B2B-1, mostrar pickup_address (endereço de coleta)
+              if (isB2B1) {
                 let pickupAddress: any = null;
                 try {
                   if (remessa.observations) {
@@ -408,9 +430,34 @@ export const RemessaVisualizacao = ({
                     </div>
                   );
                 }
+                // Fallback para sender_address se pickup_address não disponível
+                return (
+                  <div className="text-sm space-y-1 ml-6">
+                    <p className="font-medium">{remessa.sender_address?.name}</p>
+                    {remessa.sender_address?.phone && (
+                      <p className="text-muted-foreground flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        {remessa.sender_address.phone}
+                      </p>
+                    )}
+                    <p className="text-muted-foreground">
+                      {remessa.sender_address?.street}, {remessa.sender_address?.number}
+                      {remessa.sender_address?.complement && `, ${remessa.sender_address.complement}`}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {remessa.sender_address?.neighborhood}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {remessa.sender_address?.city} - {remessa.sender_address?.state}
+                    </p>
+                    <p className="text-muted-foreground">
+                      CEP: {remessa.sender_address?.cep}
+                    </p>
+                  </div>
+                );
               }
               
-              // Para remessas convencionais e B2B-1, mostrar sender_address
+              // Para remessas convencionais, mostrar sender_address
               return (
                 <div className="text-sm space-y-1 ml-6">
                   <p className="font-medium">{remessa.sender_address?.name}</p>
