@@ -49,6 +49,15 @@ export interface AdminShipment extends BaseShipment {
     telefone: string;
     email: string;
   };
+  motorista_coleta?: {
+    nome: string;
+    telefone: string;
+  };
+  motorista_entrega?: {
+    nome: string;
+    telefone: string;
+  };
+  vehicle_type?: string;
   cte_emission?: {
     id: string;
     chave_cte: string;
@@ -276,6 +285,53 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
     }
   }
 
+  // Buscar histórico de status B2B para identificar motoristas de coleta e entrega
+  const b2bIds = (b2bData || []).map((s: any) => s.id);
+  let b2bStatusHistory: Record<string, { motorista_coleta?: { nome: string; telefone: string }; motorista_entrega?: { nome: string; telefone: string } }> = {};
+  
+  if (b2bIds.length > 0) {
+    const { data: historyData } = await supabase
+      .from('shipment_status_history')
+      .select(`
+        b2b_shipment_id,
+        status,
+        motorista_id,
+        motoristas(nome, telefone)
+      `)
+      .in('b2b_shipment_id', b2bIds)
+      .in('status', ['ACEITA', 'B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE']);
+    
+    if (historyData) {
+      // Processar histórico para identificar motoristas de coleta e entrega
+      historyData.forEach((record: any) => {
+        const shipmentId = record.b2b_shipment_id;
+        if (!b2bStatusHistory[shipmentId]) {
+          b2bStatusHistory[shipmentId] = {};
+        }
+        
+        const motoristaInfo = record.motoristas;
+        if (motoristaInfo) {
+          // ACEITA ou B2B_COLETA_FINALIZADA = motorista de coleta
+          if (record.status === 'ACEITA' || record.status === 'B2B_COLETA_FINALIZADA') {
+            if (!b2bStatusHistory[shipmentId].motorista_coleta) {
+              b2bStatusHistory[shipmentId].motorista_coleta = {
+                nome: motoristaInfo.nome,
+                telefone: motoristaInfo.telefone
+              };
+            }
+          }
+          // B2B_ENTREGA_ACEITA ou ENTREGUE = motorista de entrega
+          if (record.status === 'B2B_ENTREGA_ACEITA' || record.status === 'ENTREGUE') {
+            b2bStatusHistory[shipmentId].motorista_entrega = {
+              nome: motoristaInfo.nome,
+              telefone: motoristaInfo.telefone
+            };
+          }
+        }
+      });
+    }
+  }
+
   // Normalizar remessas B2B para o mesmo formato
   const b2bShipmentsWithDetails: AdminShipment[] = (b2bData || []).map((b2bShipment: any) => {
     const b2bClient = Array.isArray(b2bShipment.b2b_clients) 
@@ -285,6 +341,23 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
     const motoristaData = b2bShipment.motorista_id 
       ? motoristasMap[b2bShipment.motorista_id] 
       : undefined;
+
+    // Extrair vehicle_type do observations
+    let vehicleType: string | undefined = undefined;
+    let observations: any = null;
+    if (b2bShipment.observations) {
+      try {
+        observations = typeof b2bShipment.observations === 'string' 
+          ? JSON.parse(b2bShipment.observations) 
+          : b2bShipment.observations;
+        vehicleType = observations.vehicle_type;
+      } catch (e) {
+        console.warn('Erro ao parsear observations:', e);
+      }
+    }
+
+    // Buscar motoristas de coleta/entrega do histórico
+    const historyMotoristas = b2bStatusHistory[b2bShipment.id] || {};
 
     return {
       id: b2bShipment.id,
@@ -334,7 +407,10 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
         complement: b2bShipment.recipient_complement || null,
         reference: null
       },
-      motoristas: motoristaData
+      motoristas: motoristaData,
+      motorista_coleta: historyMotoristas.motorista_coleta,
+      motorista_entrega: historyMotoristas.motorista_entrega,
+      vehicle_type: vehicleType
     };
   });
 
