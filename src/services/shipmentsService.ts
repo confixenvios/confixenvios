@@ -537,7 +537,8 @@ export const getMotoristaVisibilidade = async (motoristaEmail: string): Promise<
  * Agora filtra baseado nas flags de visibilidade do motorista
  */
 export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade): Promise<BaseShipment[]> => {
-  console.log('📋 Iniciando busca por remessas disponíveis com filtros:', visibilidade);
+  console.log('📋 Iniciando busca por remessas disponíveis');
+  console.log('📋 Visibilidade recebida:', JSON.stringify(visibilidade));
   
   try {
     let remessasNormais: BaseShipment[] = [];
@@ -548,6 +549,8 @@ export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade
     const loadConvencional = visibilidade?.ve_convencional ?? true;
     const loadB2BColeta = visibilidade?.ve_b2b_coleta ?? false;
     const loadB2BEntrega = visibilidade?.ve_b2b_entrega ?? false;
+    
+    console.log('📋 Flags de carregamento: Conv=', loadConvencional, ', B2B-1=', loadB2BColeta, ', B2B-2=', loadB2BEntrega);
 
     // Buscar remessas NORMAIS/CONVENCIONAIS (se permitido)
     if (loadConvencional) {
@@ -592,6 +595,8 @@ export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade
 
     // Buscar remessas B2B - Fase 1 Coleta (PENDENTE - aguardando primeiro motorista)
     if (loadB2BColeta) {
+      console.log('📦 Buscando B2B-1 (coleta) com status PENDENTE e motorista_id null...');
+      
       const { data: b2bColetaData, error: b2bColetaError } = await supabase
         .from('b2b_shipments')
         .select(`
@@ -611,9 +616,11 @@ export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade
 
       if (b2bColetaError) {
         console.error('❌ Erro ao buscar B2B coleta:', b2bColetaError);
+        console.error('❌ Detalhes do erro:', JSON.stringify(b2bColetaError));
       }
 
       console.log('📦 Remessas B2B-1 (coleta) encontradas:', b2bColetaData?.length || 0);
+      console.log('📦 Dados B2B-1 raw:', JSON.stringify(b2bColetaData?.slice(0, 2)));
       remessasB2BColeta = (b2bColetaData || []).map(b2b => normalizeB2BShipment(b2b, 'B2B-1'));
     }
 
