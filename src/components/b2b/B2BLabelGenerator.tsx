@@ -54,6 +54,7 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
   deliveryDate
 }) => {
   const [generating, setGenerating] = useState(false);
+  const labelsContainerRef = useRef<HTMLDivElement>(null);
 
   const formatAddress = (addr: VolumeAddress | PickupAddress): string => {
     const parts = [
@@ -62,101 +63,54 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
       addr.complement,
       addr.neighborhood,
       `${addr.city || ''}/${addr.state || ''}`,
-      addr.cep
+      `CEP: ${addr.cep || ''}`
     ].filter(Boolean);
     return parts.join(', ');
   };
 
   const generatePDF = async () => {
+    if (!labelsContainerRef.current) return;
+    
     setGenerating(true);
     try {
       const pdf = new jsPDF('p', 'mm', 'a4');
+      const labelElements = labelsContainerRef.current.querySelectorAll('.label-item');
       
-      for (let i = 0; i < volumeCount; i++) {
-        const volumeAddress = volumeAddresses[i] || volumeAddresses[0] || {};
-        const volumeWeight = volumeWeights[i] || volumeWeights[0] || 0;
+      for (let i = 0; i < labelElements.length; i++) {
+        const labelElement = labelElements[i] as HTMLElement;
         
         if (i > 0) {
           pdf.addPage();
         }
         
-        // Label dimensions and position
-        const labelWidth = 100;
-        const labelHeight = 140;
-        const x = (210 - labelWidth) / 2;
-        const y = 20;
+        // Capture the label as canvas
+        const canvas = await html2canvas(labelElement, {
+          scale: 3,
+          backgroundColor: '#ffffff',
+          useCORS: true,
+          logging: false
+        });
         
-        // Draw border
-        pdf.setDrawColor(0);
-        pdf.setLineWidth(0.5);
-        pdf.rect(x, y, labelWidth, labelHeight);
+        const imgData = canvas.toDataURL('image/png');
         
-        // Header
-        pdf.setFontSize(16);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('CONFIX ENVIOS', x + labelWidth / 2, y + 10, { align: 'center' });
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text('B2B Express', x + labelWidth / 2, y + 16, { align: 'center' });
+        // Calculate dimensions to fit A4 page with margins
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const margin = 20;
+        const maxWidth = pageWidth - (margin * 2);
+        const maxHeight = pageHeight - (margin * 2);
         
-        // Line separator
-        pdf.line(x, y + 20, x + labelWidth, y + 20);
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = Math.min(maxWidth / imgWidth * 3, maxHeight / imgHeight * 3);
         
-        // Tracking code
-        pdf.setFontSize(18);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(trackingCode, x + labelWidth / 2, y + 30, { align: 'center' });
-        pdf.setFontSize(12);
-        pdf.text(`Volume ${i + 1} de ${volumeCount}`, x + labelWidth / 2, y + 38, { align: 'center' });
+        const finalWidth = (imgWidth * ratio) / 3;
+        const finalHeight = (imgHeight * ratio) / 3;
         
-        // Sender section
-        pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('REMETENTE:', x + 3, y + 50);
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(8);
-        pdf.text(companyName, x + 3, y + 55);
-        if (pickupAddress.contact_name) {
-          pdf.text(`Contato: ${pickupAddress.contact_name}`, x + 3, y + 60);
-        }
-        const senderAddr = formatAddress(pickupAddress);
-        const senderLines = pdf.splitTextToSize(senderAddr, labelWidth - 6);
-        pdf.text(senderLines, x + 3, y + 65);
+        const x = (pageWidth - finalWidth) / 2;
+        const y = margin;
         
-        // Recipient section
-        pdf.setDrawColor(0);
-        pdf.setFillColor(240, 240, 240);
-        pdf.rect(x + 2, y + 78, labelWidth - 4, 35, 'FD');
-        
-        pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('DESTINATÁRIO:', x + 4, y + 85);
-        pdf.setFontSize(10);
-        const recipientName = volumeAddress.recipient_name || volumeAddress.name || 'N/A';
-        pdf.text(recipientName, x + 4, y + 92);
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(8);
-        const recipientAddr = formatAddress(volumeAddress);
-        const recipientLines = pdf.splitTextToSize(recipientAddr, labelWidth - 8);
-        pdf.text(recipientLines, x + 4, y + 98);
-        if (volumeAddress.recipient_phone) {
-          pdf.text(`Tel: ${volumeAddress.recipient_phone}`, x + 4, y + 108);
-        }
-        
-        // Weight and date
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(`PESO: ${volumeWeight} kg`, x + 4, y + 120);
-        
-        if (deliveryDate) {
-          const formattedDate = new Date(deliveryDate).toLocaleDateString('pt-BR');
-          pdf.text(`Previsão: ${formattedDate}`, x + labelWidth - 4, y + 120, { align: 'right' });
-        }
-        
-        // Note about barcode
-        pdf.setFontSize(7);
-        pdf.setFont('helvetica', 'italic');
-        pdf.text(`Código: ${trackingCode}`, x + labelWidth / 2, y + 135, { align: 'center' });
+        pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
       }
       
       pdf.save(`etiquetas_${trackingCode}.pdf`);
@@ -166,6 +120,15 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
       toast.error('Erro ao gerar PDF das etiquetas');
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const formatDeliveryDate = (date: string | undefined) => {
+    if (!date) return null;
+    try {
+      return new Date(date).toLocaleDateString('pt-BR');
+    } catch {
+      return null;
     }
   };
 
@@ -184,37 +147,129 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
         {generating ? 'Gerando...' : `Baixar Etiquetas PDF (${volumeCount})`}
       </Button>
 
-      {/* Preview */}
+      {/* Hidden container with all labels for PDF generation */}
+      <div 
+        ref={labelsContainerRef} 
+        className="absolute left-[-9999px] top-0"
+        style={{ width: '400px' }}
+      >
+        {Array.from({ length: volumeCount }).map((_, index) => {
+          const volumeAddress = volumeAddresses[index] || volumeAddresses[0] || {};
+          const volumeWeight = volumeWeights[index] || volumeWeights[0] || 0;
+          const recipientName = volumeAddress.recipient_name || volumeAddress.name || 'N/A';
+          const formattedDate = formatDeliveryDate(deliveryDate);
+          
+          return (
+            <div 
+              key={index} 
+              className="label-item bg-white p-6 border-2 border-black mb-4"
+              style={{ width: '400px', fontFamily: 'Arial, sans-serif' }}
+            >
+              {/* Header */}
+              <div className="text-center border-b-2 border-black pb-3 mb-3">
+                <h1 className="text-xl font-bold">CONFIX ENVIOS</h1>
+                <p className="text-sm">B2B Express</p>
+              </div>
+              
+              {/* Tracking Code */}
+              <div className="text-center border-b border-gray-400 pb-3 mb-3">
+                <p className="text-2xl font-bold">{trackingCode}</p>
+                <p className="text-sm">Volume {index + 1} de {volumeCount}</p>
+              </div>
+              
+              {/* Barcodes */}
+              <div className="flex justify-center items-center gap-4 py-3 border-b border-gray-400 mb-3">
+                <Barcode
+                  value={trackingCode}
+                  width={1.5}
+                  height={50}
+                  fontSize={10}
+                  displayValue={true}
+                  margin={0}
+                />
+                <QRCodeSVG value={trackingCode} size={60} level="M" />
+              </div>
+              
+              {/* Sender */}
+              <div className="mb-3 pb-3 border-b border-gray-300">
+                <p className="font-bold text-sm mb-1">REMETENTE:</p>
+                <p className="text-sm font-semibold">{companyName}</p>
+                {pickupAddress.contact_name && (
+                  <p className="text-xs">Contato: {pickupAddress.contact_name}</p>
+                )}
+                {pickupAddress.contact_phone && (
+                  <p className="text-xs">Tel: {pickupAddress.contact_phone}</p>
+                )}
+                <p className="text-xs mt-1">{formatAddress(pickupAddress)}</p>
+              </div>
+              
+              {/* Recipient */}
+              <div className="bg-gray-100 p-3 rounded mb-3">
+                <p className="font-bold text-sm mb-1">DESTINATÁRIO:</p>
+                <p className="text-base font-semibold">{recipientName}</p>
+                {volumeAddress.recipient_phone && (
+                  <p className="text-xs">Tel: {volumeAddress.recipient_phone}</p>
+                )}
+                <p className="text-xs mt-1">{formatAddress(volumeAddress)}</p>
+              </div>
+              
+              {/* Weight and Date */}
+              <div className="flex justify-between items-center pt-2 border-t border-gray-400">
+                <p className="font-bold text-base">PESO: {volumeWeight} kg</p>
+                {formattedDate && (
+                  <p className="text-sm">Previsão: {formattedDate}</p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Preview - only first label */}
       <div className="border rounded-lg p-4 bg-muted/50">
         <p className="text-sm text-muted-foreground mb-3">Pré-visualização:</p>
-        <div className="bg-white p-4 mx-auto border-2 border-black max-w-[280px]">
+        <div className="bg-white p-4 mx-auto border-2 border-black max-w-[300px]">
           <div className="text-center border-b border-black pb-2 mb-2">
             <h1 className="text-sm font-bold">CONFIX ENVIOS</h1>
             <p className="text-xs">B2B Express</p>
           </div>
           
-          <div className="text-center mb-3">
+          <div className="text-center mb-2">
             <p className="text-lg font-bold">{trackingCode}</p>
             <p className="text-xs">Volume 1 de {volumeCount}</p>
           </div>
           
-          <div className="flex justify-center gap-3 mb-3">
+          <div className="flex justify-center items-center gap-3 mb-3 py-2 border-y border-gray-300">
             <Barcode
               value={trackingCode}
               width={1}
-              height={30}
+              height={35}
               fontSize={8}
-              displayValue={false}
+              displayValue={true}
+              margin={0}
             />
-            <QRCodeSVG value={trackingCode} size={40} level="M" />
+            <QRCodeSVG value={trackingCode} size={45} level="M" />
           </div>
           
-          <div className="text-xs border-t pt-2 space-y-1">
-            <p><span className="font-bold">Rem:</span> {companyName}</p>
-            <p className="bg-gray-100 p-1 rounded">
-              <span className="font-bold">Dest:</span> {volumeAddresses[0]?.recipient_name || volumeAddresses[0]?.name || 'N/A'}
-            </p>
-            <p><span className="font-bold">Peso:</span> {volumeWeights[0] || 0} kg</p>
+          <div className="text-xs space-y-2">
+            <div className="pb-2 border-b border-gray-200">
+              <p className="font-bold">Rem: {companyName}</p>
+              {pickupAddress.contact_name && (
+                <p className="text-muted-foreground">Contato: {pickupAddress.contact_name}</p>
+              )}
+            </div>
+            <div className="bg-gray-100 p-2 rounded">
+              <p className="font-bold">Dest: {volumeAddresses[0]?.recipient_name || volumeAddresses[0]?.name || 'N/A'}</p>
+              {volumeAddresses[0]?.recipient_phone && (
+                <p className="text-muted-foreground">Tel: {volumeAddresses[0].recipient_phone}</p>
+              )}
+            </div>
+            <div className="flex justify-between pt-1">
+              <p className="font-bold">Peso: {volumeWeights[0] || 0} kg</p>
+              {deliveryDate && (
+                <p>Prev: {formatDeliveryDate(deliveryDate)}</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
