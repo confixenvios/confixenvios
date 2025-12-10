@@ -640,6 +640,7 @@ export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade
             default_pickup_city, default_pickup_state)
         `)
         .eq('status', 'B2B_COLETA_FINALIZADA')
+        .is('motorista_id', null)
         .order('created_at', { ascending: false });
 
       if (b2bEntregaError) {
@@ -851,12 +852,17 @@ export const acceptShipment = async (shipmentId: string, motoristaId: string) =>
     .maybeSingle();
   
   if (b2bCheck) {
-    // É uma remessa B2B - atualizar diretamente
+    // É uma remessa B2B - determinar o novo status baseado no status atual
+    // Se estava em B2B_COLETA_FINALIZADA, agora é fase 2 (entrega)
+    const newStatus = b2bCheck.status === 'B2B_COLETA_FINALIZADA' 
+      ? 'B2B_ENTREGA_ACEITA' 
+      : 'ACEITA';
+    
     const { error: updateError } = await supabase
       .from('b2b_shipments')
       .update({ 
         motorista_id: motoristaId,
-        status: 'ACEITA',
+        status: newStatus,
         updated_at: new Date().toISOString()
       })
       .eq('id', shipmentId);
@@ -866,8 +872,9 @@ export const acceptShipment = async (shipmentId: string, motoristaId: string) =>
       return { success: false, error: updateError.message };
     }
     
-    console.log('✅ Remessa B2B aceita:', b2bCheck.tracking_code);
-    return { success: true, message: `Remessa B2B ${b2bCheck.tracking_code} aceita com sucesso!` };
+    const phase = newStatus === 'B2B_ENTREGA_ACEITA' ? '(Entrega)' : '(Coleta)';
+    console.log(`✅ Remessa B2B aceita ${phase}:`, b2bCheck.tracking_code);
+    return { success: true, message: `Remessa B2B ${b2bCheck.tracking_code} ${phase} aceita com sucesso!` };
   }
   
   // Remessa normal - usar RPC

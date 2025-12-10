@@ -89,7 +89,7 @@ export const FinalizarEntregaModal = ({
     // B2B-1 (coleta) -> B2B_COLETA_FINALIZADA (passa para fase de entrega B2B-2)
     // B2B-2 (entrega) -> ENTREGUE (finaliza completamente)
     const isB2BColeta = shipmentType === 'B2B-1' || (isB2B && currentStatus === 'ACEITA');
-    const isB2BEntrega = shipmentType === 'B2B-2' || (isB2B && currentStatus === 'B2B_COLETA_FINALIZADA');
+    const isB2BEntrega = shipmentType === 'B2B-2' || (isB2B && (currentStatus === 'B2B_COLETA_FINALIZADA' || currentStatus === 'B2B_ENTREGA_ACEITA'));
     
     try {
       console.log('📸 [FINALIZAR] Iniciando finalização...');

@@ -128,8 +128,10 @@ const MotoristaDashboard = () => {
       'PAID': { label: 'Disponível para Coleta', variant: 'default' as const },
       'PENDENTE': { label: 'Disponível para Coleta', variant: 'default' as const },
       'COLETA_ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
-      'ACEITA': { label: 'Aceita', variant: 'default' as const },
+      'ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
+      'B2B_ENTREGA_ACEITA': { label: 'Entrega Aceita', variant: 'default' as const },
       'COLETA_FINALIZADA': { label: 'Coleta Realizada', variant: 'success' as const },
+      'B2B_COLETA_FINALIZADA': { label: 'Coleta Realizada', variant: 'success' as const },
       'EM_TRANSITO': { label: 'Em Trânsito', variant: 'default' as const },
       'TENTATIVA_ENTREGA': { label: 'Insucesso na Entrega', variant: 'destructive' as const },
       'ENTREGA_FINALIZADA': { label: 'Entregue', variant: 'success' as const },
@@ -212,8 +214,8 @@ const MotoristaDashboard = () => {
     setMenuOpen(false);
   };
 
-  // Contadores - incluir status B2B "ACEITA" e "ENTREGUE" nas remessas
-  const remessasEmRota = remessas.filter(r => ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'ACEITA'].includes(r.status));
+  // Contadores - incluir status B2B nas remessas
+  const remessasEmRota = remessas.filter(r => ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'ACEITA', 'B2B_ENTREGA_ACEITA'].includes(r.status));
   const remessasEntregues = remessas.filter(r => ['ENTREGA_FINALIZADA', 'ENTREGUE'].includes(r.status));
   const minhasRemessasAtivas = remessas.filter(r => !['ENTREGA_FINALIZADA', 'ENTREGUE', 'CANCELLED', 'CANCELADO'].includes(r.status));
 
@@ -246,17 +248,17 @@ const MotoristaDashboard = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {isB2B ? (
+              {isB2B ? (
                   <Badge 
                     variant="outline" 
                     className={
-                      remessa.status === 'B2B_COLETA_FINALIZADA' || remessa.status === 'ENTREGUE'
+                      ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(remessa.status)
                         ? "bg-purple-100 text-purple-700 border-purple-300"
                         : "bg-blue-100 text-blue-700 border-blue-300"
                     }
                   >
                     <Zap className="h-3 w-3 mr-1" />
-                    {remessa.status === 'B2B_COLETA_FINALIZADA' || remessa.status === 'ENTREGUE' 
+                    {['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(remessa.status)
                       ? "B2B-2" 
                       : "B2B-1"}
                   </Badge>
@@ -329,7 +331,7 @@ const MotoristaDashboard = () => {
                 )}
                 {showActions && (currentView === 'minhas' || currentView === 'em_rota') && 
                   (remessa as MotoristaShipment).motorista_id && 
-                  ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'TENTATIVA_ENTREGA', 'ACEITA'].includes(remessa.status) && (
+                  ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'TENTATIVA_ENTREGA', 'ACEITA', 'B2B_ENTREGA_ACEITA'].includes(remessa.status) && (
                   <>
                     <Button
                       variant="default"
@@ -354,7 +356,7 @@ const MotoristaDashboard = () => {
                     >
                       <CheckCircle className="h-3 w-3 mr-1" />
                       {/* B2B-1 mostra "Finalizar Coleta", B2B-2 e normais mostram "Finalizar" */}
-                      {isB2B && remessa.status !== 'B2B_COLETA_FINALIZADA' ? 'Finalizar Coleta' : 'Finalizar'}
+                      {isB2B && !['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA'].includes(remessa.status) ? 'Finalizar Coleta' : 'Finalizar'}
                     </Button>
                   </>
                 )}
@@ -614,7 +616,7 @@ const MotoristaDashboard = () => {
             trackingCode={selectedRemessa.tracking_code || ''}
             shipmentType={
               selectedRemessa.tracking_code?.startsWith('B2B-') 
-                ? (selectedRemessa.status === 'B2B_COLETA_FINALIZADA' ? 'B2B-2' : 'B2B-1')
+                ? (['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA'].includes(selectedRemessa.status) ? 'B2B-2' : 'B2B-1')
                 : 'normal'
             }
             currentStatus={selectedRemessa.status}
