@@ -35,6 +35,7 @@ serve(async (req) => {
     // Extrair shipmentId do query parameter se não estiver no body
     const url = new URL(req.url);
     const shipmentIdParam = url.searchParams.get('shipmentId');
+    const trackingCodeParam = url.searchParams.get('trackingCode') || url.searchParams.get('tracking_code');
     
     // Se recebeu um array, pegar o primeiro item
     if (Array.isArray(webhookData)) {
@@ -44,7 +45,7 @@ serve(async (req) => {
 
     // Mapear campos da API do CT-e para o formato esperado pela edge function
     const normalizedData = {
-      remessa_id: webhookData.remessa_id || webhookData.tracking_code || null,
+      remessa_id: webhookData.remessa_id || webhookData.tracking_code || trackingCodeParam || null,
       chave_cte: webhookData.chave_cte || webhookData.chave || null,
       uuid_cte: webhookData.uuid_cte || webhookData.uuid || null,
       serie: webhookData.serie ? String(webhookData.serie) : null,
@@ -111,8 +112,9 @@ serve(async (req) => {
     let shipmentId = webhookData.shipment_id || null;
     let trackingCode = webhookData.remessa_id || null;
     
-    // Se temos shipment_id, buscar dados completos do shipment
+    // ESTRATÉGIA 1: Se temos shipment_id, buscar dados completos do shipment
     if (shipmentId) {
+      console.log('CTE Webhook - Strategy 1: Looking up by shipment_id:', shipmentId);
       const { data: shipment, error: shipmentError } = await supabase
         .from('shipments')
         .select('id, tracking_code')
@@ -121,37 +123,18 @@ serve(async (req) => {
 
       if (shipmentError) {
         console.error('CTE Webhook - Error finding shipment by ID:', shipmentError);
-        return new Response(
-          JSON.stringify({ 
-            error: 'Shipment not found',
-            details: shipmentError.message,
-            shipment_id: shipmentId
-          }),
-          { 
-            status: 404, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
-      }
-      
-      if (shipment) {
+      } else if (shipment) {
         trackingCode = shipment.tracking_code;
-        console.log('CTE Webhook - Found shipment:', { id: shipmentId, tracking_code: trackingCode });
+        console.log('CTE Webhook - Found shipment by ID:', { id: shipmentId, tracking_code: trackingCode });
       } else {
-        console.error('CTE Webhook - Shipment not found with ID:', shipmentId);
-        return new Response(
-          JSON.stringify({ 
-            error: 'Shipment not found with provided ID',
-            shipment_id: shipmentId
-          }),
-          { 
-            status: 404, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
+        console.warn('CTE Webhook - Shipment not found with ID:', shipmentId);
+        shipmentId = null; // Reset para tentar outras estratégias
       }
-    } else if (trackingCode) {
-      // Se só temos tracking code, buscar o shipment
+    }
+    
+    // ESTRATÉGIA 2: Se temos tracking code mas não shipment_id, buscar o shipment
+    if (!shipmentId && trackingCode) {
+      console.log('CTE Webhook - Strategy 2: Looking up by tracking_code:', trackingCode);
       const { data: shipment, error: shipmentError } = await supabase
         .from('shipments')
         .select('id, tracking_code')
@@ -162,32 +145,72 @@ serve(async (req) => {
         console.error('CTE Webhook - Error finding shipment by tracking code:', shipmentError);
       } else if (shipment) {
         shipmentId = shipment.id;
+        trackingCode = shipment.tracking_code;
         console.log('CTE Webhook - Found shipment via tracking code:', { id: shipmentId, tracking_code: trackingCode });
       } else {
         console.warn('CTE Webhook - No shipment found for tracking code:', trackingCode);
       }
     }
     
-    // Validar que temos pelo menos o tracking_code (obrigatório para remessa_id)
-    if (!trackingCode) {
-      console.error('CTE Webhook - No tracking code available');
-      return new Response(
-        JSON.stringify({ 
-          error: 'Missing tracking code (remessa_id is required)',
-          shipment_id: shipmentId,
-          received_data: normalizedData
-        }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    // ESTRATÉGIA 3: Buscar a remessa mais recente com status PAID/PAYMENT_CONFIRMED que ainda não tem CT-e
+    // Esta é a estratégia de fallback quando o n8n não passa o shipmentId corretamente
+    if (!shipmentId && !trackingCode) {
+      console.log('CTE Webhook - Strategy 3: Looking for most recent paid shipment without CTE');
+      
+      // Buscar remessas pagas recentes (últimas 24 horas) que ainda não têm CT-e registrado
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      
+      const { data: recentShipments, error: recentError } = await supabase
+        .from('shipments')
+        .select('id, tracking_code, created_at, status')
+        .in('status', ['PAID', 'PAYMENT_CONFIRMED', 'PROCESSING', 'LABEL_GENERATED'])
+        .gte('created_at', twentyFourHoursAgo)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (recentError) {
+        console.error('CTE Webhook - Error finding recent shipments:', recentError);
+      } else if (recentShipments && recentShipments.length > 0) {
+        console.log('CTE Webhook - Found', recentShipments.length, 'recent paid shipments');
+        
+        // Verificar quais já têm CT-e registrado
+        for (const shipment of recentShipments) {
+          const { data: existingCte } = await supabase
+            .from('cte_emissoes')
+            .select('id')
+            .eq('shipment_id', shipment.id)
+            .maybeSingle();
+          
+          if (!existingCte) {
+            // Esta remessa ainda não tem CT-e, usar ela
+            shipmentId = shipment.id;
+            trackingCode = shipment.tracking_code;
+            console.log('CTE Webhook - Using recent shipment without CTE:', { id: shipmentId, tracking_code: trackingCode });
+            break;
+          }
         }
-      );
+        
+        if (!shipmentId) {
+          console.warn('CTE Webhook - All recent shipments already have CTE');
+        }
+      } else {
+        console.warn('CTE Webhook - No recent paid shipments found');
+      }
+    }
+    
+    // ESTRATÉGIA 4: Se ainda não encontrou, salvar o CT-e sem associação (para não perder os dados)
+    // Usar a chave_cte como identificador temporário
+    if (!shipmentId && !trackingCode) {
+      console.warn('CTE Webhook - No shipment found, saving CTE with chave_cte as remessa_id for later association');
+      // Usar os últimos 8 caracteres da chave como identificador temporário
+      trackingCode = `CTE-${webhookData.chave_cte.slice(-8)}`;
+      console.log('CTE Webhook - Using temporary tracking code:', trackingCode);
     }
 
     // Preparar dados para inserção/atualização com tracking_code garantido
     const cteData = {
       shipment_id: shipmentId,
-      remessa_id: trackingCode, // Usar tracking_code buscado do shipment
+      remessa_id: trackingCode,
       chave_cte: webhookData.chave_cte,
       uuid_cte: webhookData.uuid_cte,
       serie: webhookData.serie,
@@ -285,7 +308,9 @@ serve(async (req) => {
         cte_id: result.data.id,
         action: result.action,
         status: result.data.status,
-        chave_cte: result.data.chave_cte
+        chave_cte: result.data.chave_cte,
+        shipment_id: shipmentId,
+        tracking_code: trackingCode
       }),
       { 
         status: 200, 
