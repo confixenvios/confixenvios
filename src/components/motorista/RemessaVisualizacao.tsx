@@ -355,34 +355,94 @@ export const RemessaVisualizacao = ({
 
           <Separator />
 
-          {/* Destinatário */}
+          {/* Destinatário(s) */}
           <div>
             <h4 className="font-medium mb-2 flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              Destinatário
+              Destinatário{isB2B ? 's' : ''}
             </h4>
-            <div className="text-sm space-y-1 ml-6">
-              <p className="font-medium">{remessa.recipient_address?.name}</p>
-              {remessa.recipient_address?.phone && (
-                <p className="text-muted-foreground flex items-center gap-1">
-                  <Phone className="h-3 w-3" />
-                  {remessa.recipient_address.phone}
-                </p>
-              )}
-              <p className="text-muted-foreground">
-                {remessa.recipient_address?.street}, {remessa.recipient_address?.number}
-                {remessa.recipient_address?.complement && `, ${remessa.recipient_address.complement}`}
-              </p>
-              <p className="text-muted-foreground">
-                {remessa.recipient_address?.neighborhood}
-              </p>
-              <p className="text-muted-foreground">
-                {remessa.recipient_address?.city} - {remessa.recipient_address?.state}
-              </p>
-              <p className="text-muted-foreground">
-                CEP: {remessa.recipient_address?.cep}
-              </p>
-            </div>
+            
+            {/* Para B2B, mostrar destinatários de cada volume */}
+            {(() => {
+              if (isB2B) {
+                // Tentar extrair volumeAddresses do observations ou quote_data
+                let volumeAddresses: any[] = [];
+                
+                try {
+                  if (remessa.observations) {
+                    const obs = typeof remessa.observations === 'string' 
+                      ? JSON.parse(remessa.observations) 
+                      : remessa.observations;
+                    volumeAddresses = obs.volumeAddresses || [];
+                  }
+                } catch (e) {
+                  console.log('Erro ao parsear observations:', e);
+                }
+                
+                if (volumeAddresses.length > 0) {
+                  return (
+                    <div className="space-y-3 ml-6">
+                      {volumeAddresses.map((addr: any, index: number) => (
+                        <div key={index} className="p-3 border border-primary/20 rounded-lg bg-primary/5">
+                          <div className="flex items-center mb-2">
+                            <Package className="w-4 h-4 mr-2 text-primary" />
+                            <span className="font-medium text-sm">Volume {index + 1}</span>
+                          </div>
+                          <div className="text-sm space-y-1">
+                            <p className="font-medium">{addr.recipient_name || addr.recipientName || '-'}</p>
+                            {(addr.recipient_phone || addr.recipientPhone) && (
+                              <p className="text-muted-foreground flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {addr.recipient_phone || addr.recipientPhone}
+                              </p>
+                            )}
+                            <p className="text-muted-foreground">
+                              {addr.street}, {addr.number}
+                              {addr.complement && `, ${addr.complement}`}
+                            </p>
+                            <p className="text-muted-foreground">
+                              {addr.neighborhood}
+                            </p>
+                            <p className="text-muted-foreground">
+                              {addr.city} - {addr.state}
+                            </p>
+                            <p className="text-muted-foreground">
+                              CEP: {addr.cep}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+              }
+              
+              // Fallback para destinatário único (remessas convencionais ou B2B sem volumeAddresses)
+              return (
+                <div className="text-sm space-y-1 ml-6">
+                  <p className="font-medium">{remessa.recipient_address?.name || '-'}</p>
+                  {remessa.recipient_address?.phone && (
+                    <p className="text-muted-foreground flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {remessa.recipient_address.phone}
+                    </p>
+                  )}
+                  <p className="text-muted-foreground">
+                    {remessa.recipient_address?.street}, {remessa.recipient_address?.number}
+                    {remessa.recipient_address?.complement && `, ${remessa.recipient_address.complement}`}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {remessa.recipient_address?.neighborhood}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {remessa.recipient_address?.city} - {remessa.recipient_address?.state}
+                  </p>
+                  <p className="text-muted-foreground">
+                    CEP: {remessa.recipient_address?.cep}
+                  </p>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Botão Voltar */}
