@@ -897,25 +897,47 @@ const AdminRemessas = () => {
       
       const b2bRealId = b2bShipmentIdData?.id || shipment.id;
       
-      const { data: historyData, error: historyError } = await supabase
-        .from('shipment_status_history')
-        .select(`
-          id,
-          status,
-          status_description,
-          observacoes,
-          created_at,
-          motorista_id,
-          motoristas (
-            nome,
-            telefone
-          )
-        `)
-        .eq('b2b_shipment_id', b2bRealId)
-        .order('created_at', { ascending: true });
+      // Buscar histórico de status e ocorrências com fotos em paralelo
+      const [historyResult, occurrencesResult] = await Promise.all([
+        supabase
+          .from('shipment_status_history')
+          .select(`
+            id,
+            status,
+            status_description,
+            observacoes,
+            created_at,
+            motorista_id,
+            motoristas (
+              nome,
+              telefone
+            )
+          `)
+          .eq('b2b_shipment_id', b2bRealId)
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('shipment_occurrences')
+          .select('*')
+          .eq('shipment_id', b2bRealId)
+          .order('created_at', { ascending: true })
+      ]);
       
-      if (!historyError && historyData) {
-        setB2bStatusHistory(historyData);
+      // Combinar histórico com fotos baseado no timestamp (tolerância de 5 segundos)
+      if (!historyResult.error && historyResult.data) {
+        const historyWithPhotos = historyResult.data.map((entry: any) => {
+          const entryTime = new Date(entry.created_at).getTime();
+          // Encontrar ocorrência com timestamp próximo (dentro de 5 segundos)
+          const matchingOccurrence = occurrencesResult.data?.find((occ: any) => {
+            const occTime = new Date(occ.created_at).getTime();
+            return Math.abs(occTime - entryTime) < 5000; // 5 segundos de tolerância
+          });
+          return {
+            ...entry,
+            photo_url: matchingOccurrence?.file_url || null,
+            occurrence_type: matchingOccurrence?.occurrence_type || null
+          };
+        });
+        setB2bStatusHistory(historyWithPhotos);
       }
     } catch (error) {
       console.log('Erro ao buscar histórico de status:', error);
@@ -2309,6 +2331,19 @@ const AdminRemessas = () => {
                         )}
                         {entry.observacoes && (
                           <p className="text-xs text-muted-foreground italic">{entry.observacoes}</p>
+                        )}
+                        {entry.photo_url && (
+                          <div className="mt-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => window.open(entry.photo_url, '_blank')}
+                            >
+                              <Eye className="w-3 h-3 mr-1" />
+                              Ver Foto de Comprovação
+                            </Button>
+                          </div>
                         )}
                       </div>
                     );
