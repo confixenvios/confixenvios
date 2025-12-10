@@ -409,13 +409,24 @@ export const FinalizarEntregaModal = ({
               </Button>
             )}
             
-            {/* Botão para tirar foto - apenas para B2B-2 ou normal, após validação */}
-            {(isB2BEntrega || !isB2B) && (
+            {/* Botão para tirar foto - apenas para B2B-2 (após validação) ou remessas normais (não B2B) */}
+            {isB2BEntrega && qrValidated && (
               <Button
                 variant="outline"
                 onClick={() => setShowPhotoUpload(true)}
                 className="w-full h-14 flex flex-col items-center gap-1"
-                disabled={isB2B && !qrValidated}
+              >
+                <Camera className="h-5 w-5" />
+                <span className="text-sm">Tirar Foto da Entrega</span>
+              </Button>
+            )}
+            
+            {/* Botão para tirar foto - remessas normais (não B2B) */}
+            {!isB2B && (
+              <Button
+                variant="outline"
+                onClick={() => setShowPhotoUpload(true)}
+                className="w-full h-14 flex flex-col items-center gap-1"
               >
                 <Camera className="h-5 w-5" />
                 <span className="text-sm">Tirar Foto da Entrega</span>
