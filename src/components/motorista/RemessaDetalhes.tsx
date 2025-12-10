@@ -457,84 +457,26 @@ export const RemessaDetalhes = ({
                       );
                     }
                     
-                    // Para B2B-1, mostrar pickup_address (endereço de coleta)
-                    if (isB2B1) {
-                      let pickupAddress: any = null;
-                      try {
-                        if (remessa.observations) {
-                          const obs = typeof remessa.observations === 'string' 
-                            ? JSON.parse(remessa.observations) 
-                            : remessa.observations;
-                          pickupAddress = obs.pickup_address || obs.pickupAddress;
-                        }
-                      } catch (e) {
-                        console.log('Erro ao parsear pickup_address:', e);
-                      }
-                      
-                      if (pickupAddress) {
-                        return (
-                          <div className="text-sm space-y-1">
-                            <p className="font-medium">{pickupAddress.name || pickupAddress.contact_name}</p>
-                            {(pickupAddress.contact_phone || pickupAddress.phone) && (
-                              <p className="text-muted-foreground">
-                                <Phone className="h-3 w-3 inline mr-1" />
-                                {pickupAddress.contact_phone || pickupAddress.phone}
-                              </p>
-                            )}
-                            <p className="text-muted-foreground">
-                              {pickupAddress.street}, {pickupAddress.number}
-                              {pickupAddress.complement && pickupAddress.complement !== '0' && `, ${pickupAddress.complement}`}
-                              <br />
-                              {pickupAddress.neighborhood}
-                              <br />
-                              {pickupAddress.city} - {pickupAddress.state}
-                              <br />
-                              CEP: {pickupAddress.cep}
-                            </p>
-                          </div>
-                        );
-                      }
-                      // Fallback para sender_address
-                      return (
-                        <div className="text-sm space-y-1">
-                          <p className="font-medium">{remessa.sender_address?.name}</p>
-                          {remessa.sender_address?.phone && (
-                            <p className="text-muted-foreground">
-                              <Phone className="h-3 w-3 inline mr-1" />
-                              {remessa.sender_address.phone}
-                            </p>
-                          )}
-                          <p className="text-muted-foreground">
-                            {remessa.sender_address?.street}, {remessa.sender_address?.number}
-                            <br />
-                            {remessa.sender_address?.neighborhood}
-                            <br />
-                            {remessa.sender_address?.city} - {remessa.sender_address?.state}
-                            <br />
-                            CEP: {remessa.sender_address?.cep}
-                          </p>
-                        </div>
-                      );
-                    }
-                    
-                    // Para remessas convencionais, mostrar sender_address
+                    // Para B2B-1 e convencionais, mostrar sender_address (que já contém pickup_address para B2B)
+                    const addr = remessa.sender_address;
                     return (
                       <div className="text-sm space-y-1">
-                        <p className="font-medium">{remessa.sender_address?.name}</p>
-                        {remessa.sender_address?.phone && (
+                        <p className="font-medium">{addr?.name || '-'}</p>
+                        {addr?.phone && (
                           <p className="text-muted-foreground">
                             <Phone className="h-3 w-3 inline mr-1" />
-                            {remessa.sender_address.phone}
+                            {addr.phone}
                           </p>
                         )}
                         <p className="text-muted-foreground">
-                          {remessa.sender_address?.street}, {remessa.sender_address?.number}
+                          {addr?.street}, {addr?.number}
+                          {addr?.complement && addr.complement !== '0' && `, ${addr.complement}`}
                           <br />
-                          {remessa.sender_address?.neighborhood}
+                          {addr?.neighborhood}
                           <br />
-                          {remessa.sender_address?.city} - {remessa.sender_address?.state}
+                          {addr?.city} - {addr?.state}
                           <br />
-                          CEP: {remessa.sender_address?.cep}
+                          CEP: {addr?.cep}
                         </p>
                       </div>
                     );
@@ -545,7 +487,7 @@ export const RemessaDetalhes = ({
 
                 {/* Destinatário(s) / Endereço do CD */}
                 <div>
-                  {(() => {
+                {(() => {
                     const isB2B = remessa.tracking_code?.startsWith('B2B-');
                     const isB2B1 = isB2B && ['PENDENTE', 'ACEITA'].includes(remessa.status);
                     const isB2B2 = isB2B && ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(remessa.status);
@@ -576,30 +518,33 @@ export const RemessaDetalhes = ({
                     
                     // Para B2B-2, mostrar destinatários de cada volume
                     if (isB2B2) {
+                      // Buscar volume_addresses do quote_data.parsedObservations ou quote_data.volumeAddresses
                       let volumeAddresses: any[] = [];
                       
-                      try {
-                        // Tentar de remessa.observations primeiro
-                        if (remessa.observations) {
+                      if (remessa.quote_data) {
+                        volumeAddresses = remessa.quote_data.volumeAddresses || 
+                          remessa.quote_data.parsedObservations?.volume_addresses ||
+                          remessa.quote_data.parsedObservations?.volumeAddresses || [];
+                      }
+                      
+                      // Fallback: tentar parsear observations diretamente
+                      if (volumeAddresses.length === 0 && remessa.observations) {
+                        try {
                           const obs = typeof remessa.observations === 'string' 
                             ? JSON.parse(remessa.observations) 
                             : remessa.observations;
                           volumeAddresses = obs.volume_addresses || obs.volumeAddresses || [];
+                        } catch (e) {
+                          console.log('Erro ao parsear observations:', e);
                         }
-                        
-                        // Fallback para quote_data.observations ou quote_data.parsedObservations
-                        if (volumeAddresses.length === 0 && remessa.quote_data) {
-                          const quoteObs = remessa.quote_data.parsedObservations || 
-                            (typeof remessa.quote_data.observations === 'string' 
-                              ? JSON.parse(remessa.quote_data.observations) 
-                              : remessa.quote_data.observations);
-                          if (quoteObs) {
-                            volumeAddresses = quoteObs.volume_addresses || quoteObs.volumeAddresses || [];
-                          }
-                        }
-                      } catch (e) {
-                        console.log('Erro ao parsear observations:', e);
                       }
+                      
+                      console.log('📍 [RemessaDetalhes] Volume addresses B2B-2:', {
+                        count: volumeAddresses.length,
+                        source: remessa.quote_data?.volumeAddresses ? 'quote_data.volumeAddresses' : 
+                                remessa.quote_data?.parsedObservations?.volume_addresses ? 'parsedObservations' : 'observations',
+                        volumeAddresses
+                      });
                       
                       if (volumeAddresses.length > 0) {
                         return (

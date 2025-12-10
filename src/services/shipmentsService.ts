@@ -596,6 +596,33 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
     // Marcar se é remessa do histórico (motorista B2B-1 que finalizou coleta)
     const isFromHistory = historyB2BIds.includes(b2b.id);
 
+    // Construir pickup_address para B2B
+    const pickupAddress = observationsData.pickup_address || observationsData.pickupAddress;
+    
+    // Para B2B, sender_address deve ser o pickup_address
+    const senderAddress = pickupAddress ? {
+      name: pickupAddress.name || pickupAddress.contact_name || client?.company_name || 'Cliente B2B',
+      street: pickupAddress.street || '',
+      number: pickupAddress.number || '',
+      neighborhood: pickupAddress.neighborhood || '',
+      city: pickupAddress.city || '',
+      state: pickupAddress.state || '',
+      cep: pickupAddress.cep || '',
+      complement: pickupAddress.complement || '',
+      reference: pickupAddress.reference || '',
+      phone: pickupAddress.contact_phone || pickupAddress.phone || ''
+    } : {
+      name: client?.company_name || 'Cliente B2B',
+      street: client?.default_pickup_street || '',
+      number: client?.default_pickup_number || '',
+      neighborhood: client?.default_pickup_neighborhood || '',
+      city: client?.default_pickup_city || '',
+      state: client?.default_pickup_state || '',
+      cep: client?.default_pickup_cep || '',
+      complement: client?.default_pickup_complement || '',
+      reference: ''
+    };
+    
     return {
       id: b2b.id,
       tracking_code: b2b.tracking_code,
@@ -608,7 +635,10 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
       format: 'box',
       selected_option: 'b2b_express',
       pickup_option: 'pickup',
+      observations: b2b.observations, // IMPORTANTE: incluir observations original
       quote_data: {
+        observations: b2b.observations,
+        parsedObservations: observationsData,
         merchandiseDetails: {
           volumes: observationsData.volume_weights?.map((w: number, i: number) => ({
             weight: w,
@@ -618,24 +648,14 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
             merchandise_type: 'Mercadoria'
           })) || []
         },
-        volumeAddresses: observationsData.volume_addresses || [],
+        volumeAddresses: observationsData.volume_addresses || observationsData.volumeAddresses || [],
         isFromHistory // Flag para indicar que veio do histórico
       },
       payment_data: null,
       label_pdf_url: null,
       cte_key: null,
       motorista_id: isFromHistory ? motoristaId : b2b.motorista_id, // Manter o motoristaId original para remessas do histórico
-      sender_address: {
-        name: client?.company_name || 'Cliente B2B',
-        street: client?.default_pickup_street || '',
-        number: client?.default_pickup_number || '',
-        neighborhood: client?.default_pickup_neighborhood || '',
-        city: client?.default_pickup_city || '',
-        state: client?.default_pickup_state || '',
-        cep: client?.default_pickup_cep || '',
-        complement: client?.default_pickup_complement || '',
-        reference: ''
-      },
+      sender_address: senderAddress,
       recipient_address: {
         name: b2b.recipient_name || 'Destinatário',
         street: b2b.recipient_street || '',
