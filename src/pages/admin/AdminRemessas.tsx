@@ -886,8 +886,17 @@ const AdminRemessas = () => {
       }
     }
 
-    // Buscar histórico de status com dados do motorista
+    // Buscar o ID real do b2b_shipments e histórico de status
     try {
+      // Primeiro buscar o ID real da remessa B2B pelo tracking_code
+      const { data: b2bShipmentIdData } = await supabase
+        .from('b2b_shipments')
+        .select('id')
+        .eq('tracking_code', shipment.tracking_code)
+        .single();
+      
+      const b2bRealId = b2bShipmentIdData?.id || shipment.id;
+      
       const { data: historyData, error: historyError } = await supabase
         .from('shipment_status_history')
         .select(`
@@ -902,7 +911,7 @@ const AdminRemessas = () => {
             telefone
           )
         `)
-        .eq('shipment_id', shipment.id)
+        .eq('shipment_id', b2bRealId)
         .order('created_at', { ascending: true });
       
       if (!historyError && historyData) {

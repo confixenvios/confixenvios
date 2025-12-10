@@ -873,6 +873,28 @@ export const acceptShipment = async (shipmentId: string, motoristaId: string) =>
     }
     
     const phase = newStatus === 'B2B_ENTREGA_ACEITA' ? '(Entrega)' : '(Coleta)';
+    const phaseLabel = newStatus === 'B2B_ENTREGA_ACEITA' ? 'B2B-2' : 'B2B-1';
+    
+    // Registrar no histórico de status
+    const statusDescription = newStatus === 'B2B_ENTREGA_ACEITA' 
+      ? 'Entrega aceita pelo motorista (B2B-2)'
+      : 'Coleta aceita pelo motorista (B2B-1)';
+    
+    const { error: historyError } = await supabase
+      .from('shipment_status_history')
+      .insert({
+        shipment_id: shipmentId,
+        motorista_id: motoristaId,
+        status: newStatus,
+        status_description: statusDescription,
+        observacoes: `Remessa ${b2bCheck.tracking_code} ${phase} aceita pelo motorista.`
+      });
+    
+    if (historyError) {
+      console.warn('⚠️ Erro ao registrar histórico B2B:', historyError);
+      // Não falhar por isso
+    }
+    
     console.log(`✅ Remessa B2B aceita ${phase}:`, b2bCheck.tracking_code);
     return { success: true, message: `Remessa B2B ${b2bCheck.tracking_code} ${phase} aceita com sucesso!` };
   }
