@@ -434,24 +434,71 @@ export const RemessaDetalhes = ({
                     <User className="h-4 w-4" />
                     Remetente
                   </h4>
-                  <div className="text-sm space-y-1">
-                    <p className="font-medium">{remessa.sender_address?.name}</p>
-                    {remessa.sender_address?.phone && (
-                      <p className="text-muted-foreground">
-                        <Phone className="h-3 w-3 inline mr-1" />
-                        {remessa.sender_address.phone}
-                      </p>
-                    )}
-                    <p className="text-muted-foreground">
-                      {remessa.sender_address?.street}, {remessa.sender_address?.number}
-                      <br />
-                      {remessa.sender_address?.neighborhood}
-                      <br />
-                      {remessa.sender_address?.city} - {remessa.sender_address?.state}
-                      <br />
-                      CEP: {remessa.sender_address?.cep}
-                    </p>
-                  </div>
+                  {(() => {
+                    const isB2B = remessa.tracking_code?.startsWith('B2B-');
+                    const isB2B2 = isB2B && ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(remessa.status);
+                    
+                    // Para B2B-2, mostrar pickup_address dos observations
+                    if (isB2B2) {
+                      let pickupAddress: any = null;
+                      try {
+                        if (remessa.observations) {
+                          const obs = typeof remessa.observations === 'string' 
+                            ? JSON.parse(remessa.observations) 
+                            : remessa.observations;
+                          pickupAddress = obs.pickup_address || obs.pickupAddress;
+                        }
+                      } catch (e) {
+                        console.log('Erro ao parsear pickup_address:', e);
+                      }
+                      
+                      if (pickupAddress) {
+                        return (
+                          <div className="text-sm space-y-1">
+                            <p className="font-medium">{pickupAddress.name || pickupAddress.contact_name}</p>
+                            {(pickupAddress.contact_phone || pickupAddress.phone) && (
+                              <p className="text-muted-foreground">
+                                <Phone className="h-3 w-3 inline mr-1" />
+                                {pickupAddress.contact_phone || pickupAddress.phone}
+                              </p>
+                            )}
+                            <p className="text-muted-foreground">
+                              {pickupAddress.street}, {pickupAddress.number}
+                              {pickupAddress.complement && pickupAddress.complement !== '0' && `, ${pickupAddress.complement}`}
+                              <br />
+                              {pickupAddress.neighborhood}
+                              <br />
+                              {pickupAddress.city} - {pickupAddress.state}
+                              <br />
+                              CEP: {pickupAddress.cep}
+                            </p>
+                          </div>
+                        );
+                      }
+                    }
+                    
+                    // Para remessas convencionais e B2B-1, mostrar sender_address
+                    return (
+                      <div className="text-sm space-y-1">
+                        <p className="font-medium">{remessa.sender_address?.name}</p>
+                        {remessa.sender_address?.phone && (
+                          <p className="text-muted-foreground">
+                            <Phone className="h-3 w-3 inline mr-1" />
+                            {remessa.sender_address.phone}
+                          </p>
+                        )}
+                        <p className="text-muted-foreground">
+                          {remessa.sender_address?.street}, {remessa.sender_address?.number}
+                          <br />
+                          {remessa.sender_address?.neighborhood}
+                          <br />
+                          {remessa.sender_address?.city} - {remessa.sender_address?.state}
+                          <br />
+                          CEP: {remessa.sender_address?.cep}
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <Separator />
