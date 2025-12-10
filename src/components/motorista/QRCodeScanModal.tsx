@@ -148,16 +148,16 @@ export const QRCodeScanModal: React.FC<QRCodeScanModalProps> = ({
             </Badge>
           </div>
 
-          {/* Scanned codes list */}
+          {/* Scanned codes list - show only volume number, not the code */}
           {scannedCodes.length > 0 && (
             <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Códigos validados:</p>
+              <p className="text-sm font-medium text-muted-foreground">Volumes validados:</p>
               <div className="space-y-1">
                 {scannedCodes.map((code, index) => (
                   <div key={code} className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800">
                     <div className="flex items-center gap-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-mono">{code}</span>
+                      <span className="text-sm font-medium">Volume {index + 1}</span>
                     </div>
                     <Button
                       variant="ghost"
@@ -173,28 +173,12 @@ export const QRCodeScanModal: React.FC<QRCodeScanModalProps> = ({
             </div>
           )}
 
-          {/* Remaining codes hint */}
+          {/* Remaining count - without showing expected codes */}
           {!allScanned && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">
-                Códigos esperados ({remainingCount} restantes):
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                <span className="font-medium">{remainingCount}</span> volume(s) restante(s) para validar
               </p>
-              <div className="flex flex-wrap gap-1">
-                {requiredCodes.map((code) => {
-                  const isScanned = scannedCodes.some(sc => 
-                    sc === code || sc.includes(code) || code.includes(sc)
-                  );
-                  return (
-                    <Badge 
-                      key={code} 
-                      variant={isScanned ? "default" : "outline"}
-                      className={isScanned ? "bg-green-600" : ""}
-                    >
-                      {code}
-                    </Badge>
-                  );
-                })}
-              </div>
             </div>
           )}
 
