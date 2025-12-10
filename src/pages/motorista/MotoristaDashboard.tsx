@@ -679,6 +679,12 @@ const MotoristaDashboard = () => {
                 : 'normal'
             }
             currentStatus={selectedRemessa.status}
+            volumeCount={
+              selectedRemessa.quote_data?.merchandiseDetails?.volumes?.length || 
+              selectedRemessa.quote_data?.technicalData?.volumes?.length || 
+              selectedRemessa.quote_data?.volume_count || 
+              1
+            }
             onSuccess={() => {
               console.log('✅ Entrega/Coleta finalizada com sucesso');
               if (motoristaSession?.id && motoristaSession.visibilidade) {

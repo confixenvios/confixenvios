@@ -393,6 +393,7 @@ const B2BDashboard = () => {
                       <hr className="border-border" />
                       <h4 className="font-semibold">Etiquetas</h4>
                       <B2BLabelGenerator
+                        shipmentId={selectedShipment.id}
                         trackingCode={selectedShipment.tracking_code}
                         volumeCount={selectedShipment.volume_count || 1}
                         volumeWeights={obs.volume_weights || []}

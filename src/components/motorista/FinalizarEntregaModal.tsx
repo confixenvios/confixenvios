@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Camera, CheckCircle } from 'lucide-react';
+import { Camera, CheckCircle, QrCode } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { PhotoUpload } from './PhotoUpload';
+import { QRCodeScanModal } from './QRCodeScanModal';
 import { X, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import { createSecureSupabaseClient } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -14,8 +15,9 @@ interface FinalizarEntregaModalProps {
   shipmentId: string;
   motoristaId: string;
   trackingCode?: string;
-  shipmentType?: 'normal' | 'B2B-1' | 'B2B-2'; // Tipo da remessa para saber o status correto
-  currentStatus?: string; // Status atual da remessa
+  shipmentType?: 'normal' | 'B2B-1' | 'B2B-2';
+  currentStatus?: string;
+  volumeCount?: number;
   onSuccess: () => void;
 }
 
@@ -27,13 +29,64 @@ export const FinalizarEntregaModal = ({
   trackingCode,
   shipmentType,
   currentStatus,
+  volumeCount = 1,
   onSuccess
 }: FinalizarEntregaModalProps) => {
   const [showPhotoUpload, setShowPhotoUpload] = useState(false);
+  const [showQRScan, setShowQRScan] = useState(false);
+  const [qrValidated, setQrValidated] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [etiCodes, setEtiCodes] = useState<string[]>([]);
+  const [loadingEtiCodes, setLoadingEtiCodes] = useState(false);
   const { toast } = useToast();
+
+  const isB2B = trackingCode?.startsWith('B2B-') || shipmentType?.startsWith('B2B');
+  const isB2BColeta = shipmentType === 'B2B-1' || (isB2B && currentStatus === 'ACEITA');
+  const isB2BEntrega = shipmentType === 'B2B-2' || (isB2B && (currentStatus === 'B2B_COLETA_FINALIZADA' || currentStatus === 'B2B_ENTREGA_ACEITA'));
+
+  // Fetch ETI codes for B2B shipments
+  useEffect(() => {
+    const fetchEtiCodes = async () => {
+      if (!isB2B || !shipmentId || volumeCount <= 0) {
+        return;
+      }
+
+      setLoadingEtiCodes(true);
+      try {
+        const supabase = createSecureSupabaseClient();
+        const { data, error } = await supabase
+          .from('b2b_volume_labels')
+          .select('eti_code')
+          .eq('b2b_shipment_id', shipmentId)
+          .order('volume_number');
+
+        if (error) {
+          console.error('Error fetching ETI codes:', error);
+          // Generate fallback codes
+          const fallbackCodes = Array.from({ length: volumeCount }, (_, i) => `${trackingCode}-V${i + 1}`);
+          setEtiCodes(fallbackCodes);
+        } else if (data && data.length > 0) {
+          setEtiCodes(data.map(d => d.eti_code));
+        } else {
+          // No ETI codes yet, use fallback
+          const fallbackCodes = Array.from({ length: volumeCount }, (_, i) => `${trackingCode}-V${i + 1}`);
+          setEtiCodes(fallbackCodes);
+        }
+      } catch (err) {
+        console.error('Error in fetchEtiCodes:', err);
+        const fallbackCodes = Array.from({ length: volumeCount }, (_, i) => `${trackingCode}-V${i + 1}`);
+        setEtiCodes(fallbackCodes);
+      } finally {
+        setLoadingEtiCodes(false);
+      }
+    };
+
+    if (isOpen && isB2B) {
+      fetchEtiCodes();
+    }
+  }, [isOpen, isB2B, shipmentId, volumeCount, trackingCode]);
 
   // Reset when modal opens/closes
   useEffect(() => {
@@ -43,6 +96,8 @@ export const FinalizarEntregaModal = ({
         prev.forEach(url => URL.revokeObjectURL(url));
         return [];
       });
+      setQrValidated(false);
+      setShowQRScan(false);
     }
   }, [isOpen]);
 
@@ -69,6 +124,21 @@ export const FinalizarEntregaModal = ({
     });
   };
 
+  const handleQRValidationComplete = () => {
+    setQrValidated(true);
+    setShowQRScan(false);
+    toast({
+      title: "Volumes validados!",
+      description: "Agora tire uma foto para finalizar."
+    });
+  };
+
+  const handleStartFinalization = () => {
+    if (isB2B && !qrValidated) {
+      setShowQRScan(true);
+    }
+  };
+
   const handleFinalizarEntrega = async () => {
     if (photos.length === 0) {
       toast({
@@ -79,17 +149,19 @@ export const FinalizarEntregaModal = ({
       return;
     }
 
+    // For B2B, require QR validation first
+    if (isB2B && !qrValidated) {
+      toast({
+        title: "Validação obrigatória",
+        description: "Escaneie os QR codes de todos os volumes primeiro.",
+        variant: "destructive"
+      });
+      setShowQRScan(true);
+      return;
+    }
+
     setSaving(true);
     const supabase = createSecureSupabaseClient();
-    
-    // Detectar se é B2B pelo tracking code ou pelo tipo
-    const isB2B = trackingCode?.startsWith('B2B-') || shipmentType?.startsWith('B2B');
-    
-    // Determinar o status correto baseado no tipo de remessa
-    // B2B-1 (coleta) -> B2B_COLETA_FINALIZADA (passa para fase de entrega B2B-2)
-    // B2B-2 (entrega) -> ENTREGUE (finaliza completamente)
-    const isB2BColeta = shipmentType === 'B2B-1' || (isB2B && currentStatus === 'ACEITA');
-    const isB2BEntrega = shipmentType === 'B2B-2' || (isB2B && (currentStatus === 'B2B_COLETA_FINALIZADA' || currentStatus === 'B2B_ENTREGA_ACEITA'));
     
     try {
       console.log('📸 [FINALIZAR] Iniciando finalização...');
@@ -100,6 +172,7 @@ export const FinalizarEntregaModal = ({
       console.log('🚚 Tipo:', shipmentType, 'Status atual:', currentStatus);
       console.log('🔄 É B2B Coleta (B2B-1):', isB2BColeta);
       console.log('📦 É B2B Entrega (B2B-2):', isB2BEntrega);
+      console.log('✅ QR Validado:', qrValidated);
 
       // Upload cada foto e criar ocorrência
       for (const photo of photos) {
@@ -143,24 +216,19 @@ export const FinalizarEntregaModal = ({
 
       // Atualizar status da remessa baseado no tipo (B2B-1, B2B-2 ou normal)
       if (isB2B) {
-        // Determinar o novo status baseado no tipo
         let newStatus: string;
         if (isB2BColeta) {
-          // B2B-1: Finaliza coleta -> passa para fase B2B-2
           newStatus = 'B2B_COLETA_FINALIZADA';
         } else {
-          // B2B-2: Finaliza entrega -> ENTREGUE
           newStatus = 'ENTREGUE';
         }
         
-        // Para B2B-1, limpar motorista_id para que outro motorista possa pegar na fase B2B-2
         const updateData: any = { 
           status: newStatus,
           updated_at: new Date().toISOString()
         };
         
         if (isB2BColeta) {
-          // Limpar motorista_id para liberar para motorista de entrega
           updateData.motorista_id = null;
         }
         
@@ -176,7 +244,6 @@ export const FinalizarEntregaModal = ({
         
         console.log(`✅ B2B atualizado para: ${newStatus}`);
       } else {
-        // Atualizar tabela shipments (normal)
         const { error: updateError } = await supabase
           .from('shipments')
           .update({ 
@@ -197,7 +264,6 @@ export const FinalizarEntregaModal = ({
         ? 'Coleta finalizada - Aguardando motorista de entrega' 
         : 'Entrega finalizada com sucesso';
       
-      // Para B2B usa b2b_shipment_id, para normal usa shipment_id
       const historyData = isB2B 
         ? {
             b2b_shipment_id: shipmentId,
@@ -205,8 +271,8 @@ export const FinalizarEntregaModal = ({
             status: statusForHistory,
             status_description: statusDescription,
             observacoes: isB2BColeta 
-              ? `Coleta finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s). Remessa liberada para fase de entrega.`
-              : `Entrega finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s).`
+              ? `Coleta finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s). Volumes validados via QR code. Remessa liberada para fase de entrega.`
+              : `Entrega finalizada pelo motorista. ${photos.length} foto(s) de comprovação anexada(s). Volumes validados via QR code.`
           }
         : {
             shipment_id: shipmentId,
@@ -222,7 +288,6 @@ export const FinalizarEntregaModal = ({
 
       if (historyError) {
         console.warn('⚠️ Erro ao registrar histórico:', historyError);
-        // Não falhar por isso
       }
       
       console.log(`✅ ${isB2BColeta ? 'Coleta' : 'Entrega'} finalizada com sucesso`);
@@ -234,12 +299,12 @@ export const FinalizarEntregaModal = ({
           : `A entrega ${trackingCode || ''} foi finalizada com sucesso.`
       });
 
-      // Reset e fechar modal
       setPhotos([]);
       setPhotoPreviewUrls(prev => {
         prev.forEach(url => URL.revokeObjectURL(url));
         return [];
       });
+      setQrValidated(false);
       onSuccess();
       onClose();
       
@@ -258,7 +323,7 @@ export const FinalizarEntregaModal = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="w-[90vw] max-w-[400px] mx-auto">
+        <DialogContent className="w-[90vw] max-w-[400px] mx-auto max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
@@ -267,6 +332,31 @@ export const FinalizarEntregaModal = ({
           </DialogHeader>
 
           <div className="space-y-4 p-4">
+            {/* Alerta sobre QR code para B2B */}
+            {isB2B && !qrValidated && (
+              <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <QrCode className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-blue-800 dark:text-blue-200">Validação de volumes obrigatória</p>
+                  <p className="text-blue-700 dark:text-blue-300 mt-1">
+                    Escaneie o QR code de cada volume ({volumeCount}) antes de finalizar.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {isB2B && qrValidated && (
+              <div className="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-green-800 dark:text-green-200">Volumes validados!</p>
+                  <p className="text-green-700 dark:text-green-300 mt-1">
+                    Todos os {volumeCount} volume(s) foram validados.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Alerta sobre foto obrigatória */}
             <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
               <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -283,7 +373,25 @@ export const FinalizarEntregaModal = ({
               <div className="p-3 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground">Remessa</p>
                 <p className="font-medium">{trackingCode}</p>
+                {isB2B && (
+                  <p className="text-xs text-muted-foreground mt-1">{volumeCount} volume(s)</p>
+                )}
               </div>
+            )}
+
+            {/* Botão para validar QR codes (B2B) */}
+            {isB2B && !qrValidated && (
+              <Button
+                variant="outline"
+                onClick={() => setShowQRScan(true)}
+                className="w-full h-16 flex flex-col items-center gap-2 border-blue-300 text-blue-600 hover:bg-blue-50"
+                disabled={loadingEtiCodes}
+              >
+                <QrCode className="h-6 w-6" />
+                <span className="text-sm">
+                  {loadingEtiCodes ? 'Carregando códigos...' : 'Validar QR Codes dos Volumes'}
+                </span>
+              </Button>
             )}
             
             {/* Botão para tirar foto */}
@@ -291,6 +399,7 @@ export const FinalizarEntregaModal = ({
               variant="outline"
               onClick={() => setShowPhotoUpload(true)}
               className="w-full h-16 flex flex-col items-center gap-2"
+              disabled={isB2B && !qrValidated}
             >
               <Camera className="h-6 w-6" />
               <span className="text-sm">Tirar Foto da Entrega</span>
@@ -354,7 +463,7 @@ export const FinalizarEntregaModal = ({
               </Button>
               <Button 
                 onClick={handleFinalizarEntrega}
-                disabled={photos.length === 0 || saving}
+                disabled={photos.length === 0 || saving || (isB2B && !qrValidated)}
                 className="bg-green-600 hover:bg-green-700"
               >
                 {saving ? (
@@ -381,6 +490,18 @@ export const FinalizarEntregaModal = ({
         onSave={handlePhotoSave}
         title="Foto da Entrega"
       />
+
+      {/* QR Code Scan Modal */}
+      {isB2B && (
+        <QRCodeScanModal
+          isOpen={showQRScan}
+          onClose={() => setShowQRScan(false)}
+          requiredCodes={etiCodes}
+          shipmentType={isB2BColeta ? 'B2B-1' : 'B2B-2'}
+          trackingCode={trackingCode || ''}
+          onAllScanned={handleQRValidationComplete}
+        />
+      )}
     </>
   );
 };

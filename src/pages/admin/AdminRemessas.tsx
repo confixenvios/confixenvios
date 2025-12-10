@@ -2268,6 +2268,7 @@ const AdminRemessas = () => {
                         <Separator />
                         <h4 className="font-semibold">Etiquetas</h4>
                         <B2BLabelGenerator
+                          shipmentId={selectedB2BShipment.id}
                           trackingCode={selectedB2BShipment.tracking_code || ''}
                           volumeCount={selectedB2BShipment.quote_data?.volume_count || obs.volume_addresses?.length || 1}
                           volumeWeights={obs.volume_weights || []}

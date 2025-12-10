@@ -684,6 +684,41 @@ export type Database = {
           },
         ]
       }
+      b2b_volume_labels: {
+        Row: {
+          b2b_shipment_id: string
+          created_at: string
+          eti_code: string
+          eti_sequence_number: number
+          id: string
+          volume_number: number
+        }
+        Insert: {
+          b2b_shipment_id: string
+          created_at?: string
+          eti_code: string
+          eti_sequence_number: number
+          id?: string
+          volume_number: number
+        }
+        Update: {
+          b2b_shipment_id?: string
+          created_at?: string
+          eti_code?: string
+          eti_sequence_number?: number
+          id?: string
+          volume_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "b2b_volume_labels_b2b_shipment_id_fkey"
+            columns: ["b2b_shipment_id"]
+            isOneToOne: false
+            referencedRelation: "b2b_shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_branches: {
         Row: {
           active: boolean | null
@@ -1869,6 +1904,14 @@ export type Database = {
       }
       generate_api_key: { Args: never; Returns: string }
       generate_b2b_tracking_code: { Args: never; Returns: string }
+      generate_eti_codes_for_shipment: {
+        Args: { p_b2b_shipment_id: string; p_volume_count: number }
+        Returns: {
+          eti_code: string
+          eti_sequence_number: number
+          volume_number: number
+        }[]
+      }
       generate_tracking_code: { Args: never; Returns: string }
       get_available_shipments: {
         Args: never
