@@ -252,34 +252,63 @@ export const RemessaVisualizacao = ({
               </CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Peso Total:</span>
-                  <p className="font-medium">{Number(remessa.weight).toFixed(2)}kg</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Formato:</span>
-                  <p className="font-medium capitalize">{remessa.format}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Serviço:</span>
-                  <p className="font-medium">
-                    {remessa.selected_option === 'express' ? 'Expresso' : 'Econômico'}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Volumes:</span>
-                  <p className="font-medium">
-                    {remessa.quote_data?.merchandiseDetails?.volumes?.length || 
-                     remessa.quote_data?.technicalData?.volumes?.length || 1}
-                  </p>
-                </div>
-              </div>
+              {(() => {
+                const isB2BShipment = remessa.tracking_code?.startsWith('B2B-');
+                let vehicleType = '';
+                
+                if (isB2BShipment) {
+                  try {
+                    if (remessa.observations) {
+                      const obs = typeof remessa.observations === 'string' 
+                        ? JSON.parse(remessa.observations) 
+                        : remessa.observations;
+                      vehicleType = obs.vehicle_type || obs.vehicleType || '';
+                    }
+                  } catch (e) {
+                    console.log('Erro ao parsear observations:', e);
+                  }
+                }
+                
+                return (
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Peso Total:</span>
+                      <p className="font-medium">{Number(remessa.weight).toFixed(2)}kg</p>
+                    </div>
+                    {isB2BShipment && vehicleType && (
+                      <div>
+                        <span className="text-muted-foreground">Veículo:</span>
+                        <p className="font-medium capitalize">{vehicleType}</p>
+                      </div>
+                    )}
+                    {!isB2BShipment && (
+                      <div>
+                        <span className="text-muted-foreground">Formato:</span>
+                        <p className="font-medium capitalize">{remessa.format}</p>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-muted-foreground">Serviço:</span>
+                      <p className="font-medium">
+                        {remessa.selected_option === 'express' ? 'Expresso' : 'Econômico'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Volumes:</span>
+                      <p className="font-medium">
+                        {remessa.quote_data?.merchandiseDetails?.volumes?.length || 
+                         remessa.quote_data?.technicalData?.volumes?.length || 1}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
 
           {/* Volumes Individuais */}
           {(() => {
+            const isB2BShipment = remessa.tracking_code?.startsWith('B2B-');
             const volumes = remessa.quote_data?.merchandiseDetails?.volumes || 
                             remessa.quote_data?.technicalData?.volumes || 
                             remessa.quote_data?.originalFormData?.volumes ||
@@ -295,24 +324,31 @@ export const RemessaVisualizacao = ({
                         <Package className="w-4 h-4 mr-2 text-primary" />
                         <span className="font-medium text-sm">Volume {index + 1}</span>
                       </div>
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        <div>
+                      {isB2BShipment ? (
+                        <div className="text-xs">
                           <p className="text-muted-foreground">Peso</p>
                           <p className="font-medium">{volume.weight || volume.peso}kg</p>
                         </div>
-                        <div>
-                          <p className="text-muted-foreground">Compr.</p>
-                          <p className="font-medium">{volume.length || volume.comprimento}cm</p>
+                      ) : (
+                        <div className="grid grid-cols-4 gap-2 text-xs">
+                          <div>
+                            <p className="text-muted-foreground">Peso</p>
+                            <p className="font-medium">{volume.weight || volume.peso}kg</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Compr.</p>
+                            <p className="font-medium">{volume.length || volume.comprimento}cm</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Largura</p>
+                            <p className="font-medium">{volume.width || volume.largura}cm</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Altura</p>
+                            <p className="font-medium">{volume.height || volume.altura}cm</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-muted-foreground">Largura</p>
-                          <p className="font-medium">{volume.width || volume.largura}cm</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Altura</p>
-                          <p className="font-medium">{volume.height || volume.altura}cm</p>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
