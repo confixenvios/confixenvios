@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,10 +11,14 @@ import {
   Phone, 
   User, 
   Calendar, 
-  ArrowLeft
+  ArrowLeft,
+  History,
+  Eye,
+  Image as ImageIcon
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RemessaVisualizacaoProps {
   isOpen: boolean;
@@ -22,11 +26,104 @@ interface RemessaVisualizacaoProps {
   remessa: any;
 }
 
+interface StatusHistoryEntry {
+  id: string;
+  status: string;
+  status_description: string | null;
+  observacoes: string | null;
+  created_at: string;
+  motorista_id: string | null;
+  motoristas?: { nome: string; telefone: string } | null;
+  photo_url?: string | null;
+}
+
 export const RemessaVisualizacao = ({ 
   isOpen, 
   onClose, 
   remessa
 }: RemessaVisualizacaoProps) => {
+  const [statusHistory, setStatusHistory] = useState<StatusHistoryEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && remessa) {
+      loadStatusHistory();
+    }
+  }, [isOpen, remessa]);
+
+  const loadStatusHistory = async () => {
+    if (!remessa) return;
+    
+    setLoadingHistory(true);
+    try {
+      const isB2B = remessa.tracking_code?.startsWith('B2B-');
+      
+      // Para B2B, buscar o ID real da tabela b2b_shipments
+      let shipmentIdForHistory = remessa.id;
+      
+      if (isB2B) {
+        // Buscar o ID real do b2b_shipments pelo tracking_code
+        const { data: b2bData } = await supabase
+          .from('b2b_shipments')
+          .select('id')
+          .eq('tracking_code', remessa.tracking_code)
+          .single();
+        
+        if (b2bData) {
+          shipmentIdForHistory = b2bData.id;
+        }
+      }
+
+      // Buscar histórico e ocorrências em paralelo
+      const [historyResult, occurrencesResult] = await Promise.all([
+        supabase
+          .from('shipment_status_history')
+          .select(`
+            id,
+            status,
+            status_description,
+            observacoes,
+            created_at,
+            motorista_id,
+            motoristas (
+              nome,
+              telefone
+            )
+          `)
+          .or(isB2B 
+            ? `b2b_shipment_id.eq.${shipmentIdForHistory}` 
+            : `shipment_id.eq.${shipmentIdForHistory}`)
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('shipment_occurrences')
+          .select('*')
+          .eq('shipment_id', shipmentIdForHistory)
+          .order('created_at', { ascending: true })
+      ]);
+
+      if (!historyResult.error && historyResult.data) {
+        // Combinar histórico com fotos baseado no timestamp
+        const historyWithPhotos = historyResult.data.map((entry: any) => {
+          const entryTime = new Date(entry.created_at).getTime();
+          // Encontrar ocorrência com timestamp próximo (dentro de 10 segundos)
+          const matchingOccurrence = occurrencesResult.data?.find((occ: any) => {
+            const occTime = new Date(occ.created_at).getTime();
+            return Math.abs(occTime - entryTime) < 10000;
+          });
+          return {
+            ...entry,
+            photo_url: matchingOccurrence?.file_url || null
+          };
+        });
+        setStatusHistory(historyWithPhotos);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar histórico:', error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   if (!remessa) return null;
 
   const getStatusBadge = (status: string) => {
@@ -35,11 +132,16 @@ export const RemessaVisualizacao = ({
       'LABEL_GENERATED': { label: 'Etiqueta Gerada', variant: 'default' as const },
       'PAYMENT_CONFIRMED': { label: 'Disponível para Coleta', variant: 'default' as const },
       'PAID': { label: 'Disponível para Coleta', variant: 'default' as const },
+      'PENDENTE': { label: 'Pendente', variant: 'secondary' as const },
+      'ACEITA': { label: 'Aceita', variant: 'default' as const },
       'COLETA_ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
+      'B2B_COLETA_FINALIZADA': { label: 'Coleta Finalizada', variant: 'success' as const },
+      'B2B_ENTREGA_ACEITA': { label: 'Entrega Aceita', variant: 'default' as const },
       'COLETA_FINALIZADA': { label: 'Coleta Realizada', variant: 'success' as const },
       'EM_TRANSITO': { label: 'Em Trânsito', variant: 'default' as const },
       'TENTATIVA_ENTREGA': { label: 'Insucesso na Entrega', variant: 'destructive' as const },
       'ENTREGA_FINALIZADA': { label: 'Entregue', variant: 'success' as const },
+      'ENTREGUE': { label: 'Entregue', variant: 'success' as const },
       'AGUARDANDO_DESTINATARIO': { label: 'Aguardando Destinatário', variant: 'secondary' as const },
       'ENDERECO_INCORRETO': { label: 'Endereço Incorreto', variant: 'destructive' as const }
     };
@@ -49,6 +151,18 @@ export const RemessaVisualizacao = ({
     
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
+
+  const getStatusPhase = (status: string): string => {
+    if (['PENDENTE', 'ACEITA', 'B2B_COLETA_FINALIZADA'].includes(status)) {
+      return 'B2B-1 (Coleta)';
+    }
+    if (['B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(status)) {
+      return 'B2B-2 (Entrega)';
+    }
+    return 'Convencional';
+  };
+
+  const isB2B = remessa.tracking_code?.startsWith('B2B-');
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -69,6 +183,66 @@ export const RemessaVisualizacao = ({
 
         <ScrollArea className="max-h-[60vh] overflow-y-auto">
         <div className="px-4 pb-4 space-y-4">
+          {/* Histórico de Status */}
+          {statusHistory.length > 0 && (
+            <Card className="border-0 shadow-none bg-primary/5">
+              <CardHeader className="pb-2 px-4 pt-4">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Histórico de Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <div className="space-y-3">
+                  {statusHistory.map((entry, index) => (
+                    <div key={entry.id} className="relative pl-4 border-l-2 border-primary/30">
+                      <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-primary"></div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {getStatusBadge(entry.status)}
+                          {isB2B && (
+                            <Badge variant="outline" className="text-xs">
+                              {getStatusPhase(entry.status)}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(entry.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        </p>
+                        {entry.motoristas?.nome && (
+                          <p className="text-xs text-muted-foreground">
+                            Motorista: {entry.motoristas.nome}
+                          </p>
+                        )}
+                        {entry.observacoes && (
+                          <p className="text-xs text-muted-foreground italic">{entry.observacoes}</p>
+                        )}
+                        {entry.photo_url && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs mt-1"
+                            onClick={() => window.open(entry.photo_url!, '_blank')}
+                          >
+                            <ImageIcon className="w-3 h-3 mr-1" />
+                            Ver Foto
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {loadingHistory && (
+            <div className="text-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent mx-auto"></div>
+              <p className="text-xs text-muted-foreground mt-2">Carregando histórico...</p>
+            </div>
+          )}
+
           {/* Informações da Mercadoria */}
           <Card className="border-0 shadow-none bg-muted/30">
             <CardHeader className="pb-2 px-4 pt-4">
