@@ -206,6 +206,21 @@ serve(async (req) => {
                 } else {
                   console.log('✅ Remessa B2B criada com sucesso:', newB2BShipment.id);
                   
+                  // Generate ETI codes for this shipment (once, at payment confirmation)
+                  const volumeCount = b2bShipmentData.volume_count || 1;
+                  console.log(`🏷️ Gerando ${volumeCount} códigos ETI para remessa ${newB2BShipment.id}`);
+                  
+                  const { data: etiCodes, error: etiError } = await supabase.rpc('create_eti_codes_for_shipment', {
+                    p_b2b_shipment_id: newB2BShipment.id,
+                    p_volume_count: volumeCount
+                  });
+                  
+                  if (etiError) {
+                    console.error('❌ Erro ao gerar códigos ETI:', etiError);
+                  } else {
+                    console.log('✅ Códigos ETI gerados:', etiCodes);
+                  }
+                  
                   // Marcar temp_quote como processada
                   const { error: updateError } = await supabase
                     .from('temp_quotes')
@@ -231,7 +246,8 @@ serve(async (req) => {
                         b2b_shipment: newB2BShipment,
                         payment_id: paymentId,
                         external_id: b2bQuote.external_id,
-                        created_via: 'check-pix-status-fallback'
+                        created_via: 'check-pix-status-fallback',
+                        eti_codes: etiCodes
                       },
                       response_status: 200,
                       response_body: { success: true }

@@ -1873,6 +1873,14 @@ export type Database = {
           session_token: string
         }[]
       }
+      create_eti_codes_for_shipment: {
+        Args: { p_b2b_shipment_id: string; p_volume_count: number }
+        Returns: {
+          eti_code: string
+          eti_sequence_number: number
+          volume_number: number
+        }[]
+      }
       decrypt_integration_secret: {
         Args: { encrypted_value: string; integration_id: string }
         Returns: string
