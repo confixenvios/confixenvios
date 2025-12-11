@@ -228,13 +228,27 @@ const CdDashboard = () => {
     setShowDetails(true);
   };
 
+  const getCardColor = (status: string) => {
+    if (status === 'B2B_COLETA_FINALIZADA') return 'border-red-500/50 bg-red-50/30';
+    if (status === 'B2B_ENTREGA_ACEITA') return 'border-purple-500/50 bg-purple-50/30';
+    if (status === 'ENTREGUE') return 'border-green-500/50 bg-green-50/30';
+    return 'border-border/50';
+  };
+
+  const getMotoristaColor = (status: string) => {
+    if (status === 'B2B_COLETA_FINALIZADA') return 'text-red-600';
+    if (status === 'B2B_ENTREGA_ACEITA') return 'text-purple-600';
+    if (status === 'ENTREGUE') return 'text-green-600';
+    return 'text-primary';
+  };
+
   const renderShipmentCard = (shipment: B2BShipment) => (
-    <Card key={shipment.id} className="border-border/50">
+    <Card key={shipment.id} className={getCardColor(shipment.status)}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="space-y-2 flex-1">
             <div className="flex items-center gap-2">
-              <span className="font-mono text-sm font-medium text-primary">
+              <span className={`font-mono text-sm font-medium ${getMotoristaColor(shipment.status)}`}>
                 {shipment.tracking_code || 'Sem código'}
               </span>
               {getStatusBadge(shipment.status)}
@@ -265,9 +279,9 @@ const CdDashboard = () => {
             </div>
 
             {shipment.motorista_nome && (
-              <div className="flex items-center gap-1 text-sm">
-                <Truck className="h-3 w-3 text-primary" />
-                <span className="text-primary font-medium">Motorista: {shipment.motorista_nome}</span>
+              <div className={`flex items-center gap-1 text-sm ${getMotoristaColor(shipment.status)}`}>
+                <Truck className="h-3 w-3" />
+                <span className="font-medium">Motorista: {shipment.motorista_nome}</span>
               </div>
             )}
           </div>
@@ -345,20 +359,29 @@ const CdDashboard = () => {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'disponiveis' | 'emrota' | 'entregues')}>
           <TabsList className="grid w-full grid-cols-3 max-w-lg">
-            <TabsTrigger value="disponiveis" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="disponiveis" 
+              className="flex items-center gap-2 data-[state=active]:bg-red-500 data-[state=active]:text-white"
+            >
               <Package className="h-4 w-4" />
               <span>Disponíveis</span>
-              <Badge variant="secondary">{filterShipments(availableShipments).length}</Badge>
+              <Badge variant="secondary" className="bg-red-100 text-red-700">{filterShipments(availableShipments).length}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="emrota" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="emrota" 
+              className="flex items-center gap-2 data-[state=active]:bg-purple-500 data-[state=active]:text-white"
+            >
               <Truck className="h-4 w-4" />
               <span>Em Rota</span>
-              <Badge variant="secondary">{filterShipments(inRouteShipments).length}</Badge>
+              <Badge variant="secondary" className="bg-purple-100 text-purple-700">{filterShipments(inRouteShipments).length}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="entregues" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="entregues" 
+              className="flex items-center gap-2 data-[state=active]:bg-green-500 data-[state=active]:text-white"
+            >
               <CheckCircle className="h-4 w-4" />
               <span>Entregues</span>
-              <Badge variant="secondary">{filterShipments(deliveredShipments).length}</Badge>
+              <Badge variant="secondary" className="bg-green-100 text-green-700">{filterShipments(deliveredShipments).length}</Badge>
             </TabsTrigger>
           </TabsList>
 
