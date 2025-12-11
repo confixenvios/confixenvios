@@ -12,6 +12,7 @@ import { RemessaDetalhes } from '@/components/motorista/RemessaDetalhes';
 import { RemessaVisualizacao } from '@/components/motorista/RemessaVisualizacao';
 import { OccurrenceSimpleModal } from '@/components/motorista/OccurrenceSimpleModal';
 import { FinalizarEntregaModal } from '@/components/motorista/FinalizarEntregaModal';
+import { EtiAcceptModal } from '@/components/motorista/EtiAcceptModal';
 import { getMotoristaShipments, getAvailableShipments, acceptShipment, getMotoristaVisibilidade, type MotoristaShipment, type BaseShipment, type MotoristaVisibilidade } from '@/services/shipmentsService';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -37,6 +38,8 @@ const MotoristaDashboard = () => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [occurrenceModalOpen, setOccurrenceModalOpen] = useState(false);
   const [finalizarEntregaModalOpen, setFinalizarEntregaModalOpen] = useState(false);
+  const [etiAcceptModalOpen, setEtiAcceptModalOpen] = useState(false);
+  const [selectedB2B1ForAccept, setSelectedB2B1ForAccept] = useState<BaseShipment | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<ViewType>('disponiveis');
@@ -356,7 +359,16 @@ const MotoristaDashboard = () => {
                   <Button
                     variant="default"
                     size="sm"
-                    onClick={() => handleAcceptShipment(remessa.id)}
+                    onClick={() => {
+                      // B2B-1 requer validação ETI antes de aceitar
+                      const isB2B1 = isB2B && !['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(remessa.status);
+                      if (isB2B1) {
+                        setSelectedB2B1ForAccept(remessa);
+                        setEtiAcceptModalOpen(true);
+                      } else {
+                        handleAcceptShipment(remessa.id);
+                      }
+                    }}
                     disabled={accepting === remessa.id}
                     className="bg-green-600 hover:bg-green-700"
                   >
@@ -404,19 +416,22 @@ const MotoristaDashboard = () => {
                       <Plus className="h-3 w-3 mr-1" />
                       Ocorrência
                     </Button>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedRemessa(remessa as MotoristaShipment);
-                        setFinalizarEntregaModalOpen(true);
-                      }}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      {/* B2B-1 mostra "Finalizar Coleta", B2B-2 e normais mostram "Finalizar" */}
-                      {isB2B && !['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA'].includes(remessa.status) ? 'Finalizar Coleta' : 'Finalizar'}
-                    </Button>
+                    {/* B2B-1 não mostra "Finalizar Coleta" - agora é responsabilidade do CD */}
+                    {/* B2B-2 e normais mostram "Finalizar" */}
+                    {!(isB2B && ['PENDENTE', 'ACEITA'].includes(remessa.status)) && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedRemessa(remessa as MotoristaShipment);
+                          setFinalizarEntregaModalOpen(true);
+                        }}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Finalizar
+                      </Button>
+                    )}
                   </>
                 )}
               </div>
@@ -690,6 +705,25 @@ const MotoristaDashboard = () => {
               if (motoristaSession?.id && motoristaSession.visibilidade) {
                 loadMinhasRemessas(motoristaSession.id);
                 loadRemessasDisponiveis(motoristaSession.visibilidade);
+              }
+            }}
+          />
+        )}
+
+        {/* Modal de validação ETI para aceitar B2B-1 */}
+        {selectedB2B1ForAccept && (
+          <EtiAcceptModal
+            open={etiAcceptModalOpen}
+            onClose={() => {
+              setEtiAcceptModalOpen(false);
+              setSelectedB2B1ForAccept(null);
+            }}
+            shipmentId={selectedB2B1ForAccept.id}
+            onAccept={async () => {
+              if (motoristaSession?.id) {
+                setEtiAcceptModalOpen(false);
+                await handleAcceptShipment(selectedB2B1ForAccept.id);
+                setSelectedB2B1ForAccept(null);
               }
             }}
           />
