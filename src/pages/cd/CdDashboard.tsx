@@ -165,23 +165,49 @@ const CdDashboard = () => {
   };
 
   const handleViewDetails = (shipment: B2BShipment) => {
+    // Parsear observations para obter dados completos
+    let parsedObservations: any = null;
+    try {
+      if (shipment.observations) {
+        parsedObservations = typeof shipment.observations === 'string' 
+          ? JSON.parse(shipment.observations) 
+          : shipment.observations;
+      }
+    } catch (e) {
+      console.log('Erro ao parsear observations:', e);
+    }
+
+    // Calcular peso total a partir dos volume_weights
+    const volumeWeights = parsedObservations?.volume_weights || [];
+    const totalWeight = volumeWeights.reduce((acc: number, w: number) => acc + (w || 0), 0);
+
+    // Construir volumes com pesos reais
+    const volumes = volumeWeights.length > 0
+      ? volumeWeights.map((weight: number, index: number) => ({
+          volumeNumber: index + 1,
+          weight: weight,
+          peso: weight
+        }))
+      : Array.from({ length: shipment.volume_count || 1 }, (_, i) => ({
+          volumeNumber: i + 1,
+          weight: 0,
+          peso: 0
+        }));
+
     // Converter para formato esperado pelo RemessaVisualizacao
     const mappedRemessa = {
       id: shipment.id,
       tracking_code: shipment.tracking_code,
       status: shipment.status,
       created_at: shipment.created_at,
-      weight: 0,
+      weight: totalWeight,
       format: 'box',
       selected_option: 'standard',
       motorista_id: shipment.motorista_id,
       observations: shipment.observations,
       quote_data: {
         merchandiseDetails: {
-          volumes: Array.from({ length: shipment.volume_count || 1 }, (_, i) => ({
-            volumeNumber: i + 1,
-            weight: 0
-          }))
+          volumes: volumes
         }
       },
       recipient_address: {
