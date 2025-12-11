@@ -27,7 +27,7 @@ import ClientLayout from "./pages/cliente/ClientLayout";
 import ClientDashboard from "./pages/cliente/ClientDashboard";
 import ClientCotacoes from "./pages/cliente/ClientCotacoes";
 import ClientRemessas from "./pages/cliente/ClientRemessas";
-import ClientEtiquetas from "./pages/cliente/ClientEtiquetas";
+// ClientEtiquetas removido - etiquetas são exclusivas do admin e B2B
 import ClientRastreio from "./pages/cliente/ClientRastreio";
 import ClientHistorico from "./pages/cliente/ClientHistorico";
 import ClientConta from "./pages/cliente/ClientConta";
@@ -105,7 +105,7 @@ const App = () => (
                       <Route path="dashboard" element={<ClientDashboard />} />
                       <Route path="cotacoes" element={<ClientCotacoes />} />
                       <Route path="remessas" element={<ClientRemessas />} />
-                      <Route path="etiquetas" element={<ClientEtiquetas />} />
+                      {/* Etiquetas removidas do cliente - exclusivas do admin e B2B */}
                       <Route path="rastreamento" element={<ClientRastreio />} />
                       <Route path="relatorio" element={<ClientHistorico />} />
                       <Route path="minha-conta" element={<ClientConta />} />
