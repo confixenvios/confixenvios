@@ -24,6 +24,7 @@ interface B2BStatusHistoryProps {
 const B2BStatusHistory = ({ shipmentId }: B2BStatusHistoryProps) => {
   const [history, setHistory] = useState<StatusHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [occurrencePhotos, setOccurrencePhotos] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadHistory();
@@ -61,6 +62,24 @@ const B2BStatusHistory = ({ shipmentId }: B2BStatusHistoryProps) => {
         } else {
           setHistory(historyData);
         }
+
+        // Buscar fotos de ocorrências para este shipment (para status finalizados)
+        const { data: occurrences } = await supabase
+          .from('shipment_occurrences')
+          .select('file_url, occurrence_type, motorista_id')
+          .eq('shipment_id', shipmentId)
+          .in('occurrence_type', ['entrega_finalizada', 'coleta_finalizada']);
+
+        if (occurrences && occurrences.length > 0) {
+          // Criar mapa de motorista_id -> foto para status finalizados
+          const photoMap: Record<string, string> = {};
+          occurrences.forEach(occ => {
+            if (occ.motorista_id && occ.file_url) {
+              photoMap[occ.motorista_id] = occ.file_url;
+            }
+          });
+          setOccurrencePhotos(photoMap);
+        }
       } else {
         setHistory([]);
       }
@@ -84,12 +103,21 @@ const B2BStatusHistory = ({ shipmentId }: B2BStatusHistoryProps) => {
   };
 
   const getPhotoUrl = (item: StatusHistoryItem): string | null => {
+    // First check occurrence_data
     if (item.occurrence_data) {
       const occData = typeof item.occurrence_data === 'string' 
         ? JSON.parse(item.occurrence_data) 
         : item.occurrence_data;
-      return occData?.photo_url || occData?.file_url || null;
+      const url = occData?.photo_url || occData?.file_url;
+      if (url) return url;
     }
+    
+    // Fallback: check shipment_occurrences photos for finalized statuses
+    const isFinalized = ['B2B_COLETA_FINALIZADA', 'ENTREGUE', 'ENTREGA_FINALIZADA'].includes(item.status);
+    if (isFinalized && item.motorista_id && occurrencePhotos[item.motorista_id]) {
+      return occurrencePhotos[item.motorista_id];
+    }
+    
     return null;
   };
 
@@ -100,6 +128,13 @@ const B2BStatusHistory = ({ shipmentId }: B2BStatusHistoryProps) => {
         : item.occurrence_data;
       return occData?.photo_count || (occData?.photo_url ? 1 : 0);
     }
+    
+    // Check occurrencePhotos fallback
+    const isFinalized = ['B2B_COLETA_FINALIZADA', 'ENTREGUE', 'ENTREGA_FINALIZADA'].includes(item.status);
+    if (isFinalized && item.motorista_id && occurrencePhotos[item.motorista_id]) {
+      return 1;
+    }
+    
     return 0;
   };
 
