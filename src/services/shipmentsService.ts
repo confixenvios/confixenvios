@@ -84,11 +84,11 @@ export interface MotoristaShipment extends BaseShipment {
   motorista_id: string;
 }
 
-// ===== NOVO: Interface de Visibilidade atualizada para 3 fases =====
+// ===== Interface de Visibilidade para 3 fases =====
 export interface MotoristaVisibilidade {
   ve_convencional: boolean;
-  ve_b2b_0: boolean;  // B2B-0: Coleta externa
-  ve_b2b_2: boolean;  // B2B-2: Entrega final (volumes)
+  ve_b2b_1: boolean;  // B2B-1: Coleta (fase inicial após pagamento)
+  ve_b2b_2: boolean;  // B2B-2: Entrega final (volumes destrinchados)
 }
 
 /**
@@ -717,11 +717,11 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
 };
 
 /**
- * Buscar configurações de visibilidade do motorista (ATUALIZADO para 3 fases)
- * Suporta tanto colunas antigas (ve_b2b_coleta, ve_b2b_entrega) quanto novas (ve_b2b_0, ve_b2b_2)
+ * Buscar configurações de visibilidade do motorista
+ * B2B-1: Coleta (ve_b2b_coleta no banco)
+ * B2B-2: Entrega (ve_b2b_entrega no banco)
  */
 export const getMotoristaVisibilidade = async (motoristaEmail: string): Promise<MotoristaVisibilidade> => {
-  // Tenta buscar com colunas antigas primeiro (compatibilidade)
   const { data, error } = await supabase
     .from('motoristas')
     .select('ve_convencional, ve_b2b_coleta, ve_b2b_entrega')
@@ -730,24 +730,21 @@ export const getMotoristaVisibilidade = async (motoristaEmail: string): Promise<
 
   if (error || !data) {
     console.warn('⚠️ Não foi possível buscar visibilidade do motorista, usando padrão');
-    return { ve_convencional: true, ve_b2b_0: false, ve_b2b_2: false };
+    return { ve_convencional: true, ve_b2b_1: false, ve_b2b_2: false };
   }
 
-  // Mapeia colunas antigas para novo formato
   return {
     ve_convencional: (data as any).ve_convencional ?? true,
-    ve_b2b_0: (data as any).ve_b2b_coleta ?? (data as any).ve_b2b_0 ?? false,
-    ve_b2b_2: (data as any).ve_b2b_entrega ?? (data as any).ve_b2b_2 ?? false
+    ve_b2b_1: (data as any).ve_b2b_coleta ?? false,  // B2B-1: Coleta
+    ve_b2b_2: (data as any).ve_b2b_entrega ?? false  // B2B-2: Entrega
   };
 };
 
 /**
  * Serviço para buscar remessas disponíveis para motoristas (normais + B2B)
- * ATUALIZADO: Novo fluxo de 3 fases (B2B-0, B2B-1, B2B-2)
  * 
- * B2B-0: Coleta externa - motoristas com ve_b2b_0 veem remessas B2B_COLETA_PENDENTE
- * B2B-1: Processamento interno - NÃO aparece para motoristas
- * B2B-2: Entrega final - motoristas com ve_b2b_2 buscam volumes por código ETI
+ * B2B-1: Coleta - motoristas com ve_b2b_1 veem remessas B2B_COLETA_PENDENTE
+ * B2B-2: Entrega - motoristas com ve_b2b_2 buscam volumes por código ETI
  */
 export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade): Promise<BaseShipment[]> => {
   console.log('📋 Iniciando busca por remessas disponíveis');
@@ -755,15 +752,15 @@ export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade
   
   try {
     let remessasNormais: BaseShipment[] = [];
-    let remessasB2B0: BaseShipment[] = [];
+    let remessasB2B1: BaseShipment[] = [];
     // B2B-2 não lista automaticamente - motorista precisa buscar por ETI
 
     // Se não tiver visibilidade definida, carrega convencionais apenas
     const loadConvencional = visibilidade?.ve_convencional ?? true;
-    const loadB2B0 = visibilidade?.ve_b2b_0 ?? false;
+    const loadB2B1 = visibilidade?.ve_b2b_1 ?? false;
     // B2B-2 não carrega listagem - é busca ativa por ETI
     
-    console.log('📋 Flags de carregamento: Conv=', loadConvencional, ', B2B-0=', loadB2B0);
+    console.log('📋 Flags de carregamento: Conv=', loadConvencional, ', B2B-1=', loadB2B1);
 
     // Buscar remessas NORMAIS/CONVENCIONAIS (se permitido)
     if (loadConvencional) {
@@ -806,11 +803,11 @@ export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade
       );
     }
 
-    // Buscar remessas B2B-0 (Fase de Coleta - status B2B_COLETA_PENDENTE)
-    if (loadB2B0) {
-      console.log('📦 Buscando B2B-0 (coleta) com status B2B_COLETA_PENDENTE...');
+    // Buscar remessas B2B-1 (Fase de Coleta - status B2B_COLETA_PENDENTE)
+    if (loadB2B1) {
+      console.log('📦 Buscando B2B-1 (coleta) com status B2B_COLETA_PENDENTE...');
       
-      const { data: b2b0Data, error: b2b0Error } = await supabase
+      const { data: b2b1Data, error: b2b1Error } = await supabase
         .from('b2b_shipments')
         .select(`
           id, tracking_code, status, created_at, updated_at,
@@ -829,21 +826,21 @@ export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade
         .eq('is_volume', false)  // Apenas remessas pai, não volumes
         .order('created_at', { ascending: false });
 
-      if (b2b0Error) {
-        console.error('❌ Erro ao buscar B2B-0:', b2b0Error);
+      if (b2b1Error) {
+        console.error('❌ Erro ao buscar B2B-1:', b2b1Error);
       }
 
-      console.log('📦 Remessas B2B-0 (coleta) encontradas:', b2b0Data?.length || 0);
-      remessasB2B0 = (b2b0Data || []).map(b2b => normalizeB2BShipment(b2b, 'B2B-0'));
+      console.log('📦 Remessas B2B-1 (coleta) encontradas:', b2b1Data?.length || 0);
+      remessasB2B1 = (b2b1Data || []).map(b2b => normalizeB2BShipment(b2b, 'B2B-1'));
     }
     
     // Combinar todas as remessas e ordenar por data
-    const allShipments = [...remessasNormais, ...remessasB2B0];
+    const allShipments = [...remessasNormais, ...remessasB2B1];
     allShipments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     
     console.log('✅ Total de remessas disponíveis:', allShipments.length, 
       '(Conv:', remessasNormais.length, 
-      ', B2B-0:', remessasB2B0.length, ')');
+      ', B2B-1:', remessasB2B1.length, ')');
     return allShipments;
     
   } catch (error) {
@@ -1004,7 +1001,7 @@ function createEmptyAddress(): ShipmentAddress {
 /**
  * Normaliza remessa B2B para formato padrão
  */
-function normalizeB2BShipment(b2b: any, phase: 'B2B-0' | 'B2B-2'): BaseShipment {
+function normalizeB2BShipment(b2b: any, phase: 'B2B-1' | 'B2B-2'): BaseShipment {
   const client = b2b.b2b_clients;
   let observationsData: any = {};
   
