@@ -62,8 +62,8 @@ type TabType = 'remessas' | 'disponiveis' | 'volumes' | 'entregues';
 const CdDashboard = () => {
   const navigate = useNavigate();
   const [cdUser, setCdUser] = useState<CdUser | null>(null);
-  const [b2b0Shipments, setB2b0Shipments] = useState<B2BShipment[]>([]); // B2B-0: Remessas (coleta)
-  const [b2b1Shipments, setB2b1Shipments] = useState<B2BShipment[]>([]); // B2B-1: Disponíveis (no CD)
+  const [b2b1Shipments, setB2b1Shipments] = useState<B2BShipment[]>([]); // B2B-1: Remessas em coleta ou chegando
+  const [cdShipments, setCdShipments] = useState<B2BShipment[]>([]); // Remessas no CD (prontas p/ destrinchar)
   const [volumes, setVolumes] = useState<B2BShipment[]>([]); // B2B-2: Volumes desmembrados
   const [deliveredShipments, setDeliveredShipments] = useState<B2BShipment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,13 +72,13 @@ const CdDashboard = () => {
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
   
-  // Modal de conferência de chegada (B2B-0 → B2B-1)
+  // Modal de conferência de chegada (B2B_COLETA_FINALIZADA → B2B_NO_CD)
   const [etiModalOpen, setEtiModalOpen] = useState(false);
-  const [selectedB2B0Shipment, setSelectedB2B0Shipment] = useState<B2BShipment | null>(null);
-  
-  // Modal de desmembramento (B2B-1 → B2B-2)
-  const [destrincharModalOpen, setDestrincharModalOpen] = useState(false);
   const [selectedB2B1Shipment, setSelectedB2B1Shipment] = useState<B2BShipment | null>(null);
+  
+  // Modal de desmembramento (B2B_NO_CD → B2B_VOLUME_DISPONIVEL)
+  const [destrincharModalOpen, setDestrincharModalOpen] = useState(false);
+  const [selectedCdShipment, setSelectedCdShipment] = useState<B2BShipment | null>(null);
 
   useEffect(() => {
     const userData = localStorage.getItem('cd_user');
@@ -189,8 +189,8 @@ const CdDashboard = () => {
         b2b_client: s.b2b_clients as any
       });
 
-      setB2b0Shipments((b2b0Data || []).map(mapShipment));
-      setB2b1Shipments((b2b1Data || []).map(mapShipment));
+      setB2b1Shipments((b2b0Data || []).map(mapShipment));
+      setCdShipments((b2b1Data || []).map(mapShipment));
       setVolumes((volumesData || []).map(mapShipment));
       setDeliveredShipments((deliveredData || []).map(mapShipment));
     } catch (error) {
@@ -201,14 +201,14 @@ const CdDashboard = () => {
     }
   };
 
-  // Conferir chegada no CD (B2B-0 → B2B-1)
+  // Conferir chegada no CD (B2B_COLETA_FINALIZADA → B2B_NO_CD)
   const handleOpenConferirChegada = (shipment: B2BShipment) => {
-    setSelectedB2B0Shipment(shipment);
+    setSelectedB2B1Shipment(shipment);
     setEtiModalOpen(true);
   };
 
   const handleConfirmarChegada = async () => {
-    if (!selectedB2B0Shipment) return;
+    if (!selectedB2B1Shipment) return;
     
     try {
       // Atualizar status para B2B_NO_CD (interno)
@@ -216,22 +216,22 @@ const CdDashboard = () => {
         .from('b2b_shipments')
         .update({ 
           status: 'B2B_NO_CD',
-          motorista_id: null // Libera o motorista B2B-0
+          motorista_id: null // Libera o motorista B2B-1
         })
-        .eq('id', selectedB2B0Shipment.id);
+        .eq('id', selectedB2B1Shipment.id);
 
       if (error) throw error;
 
       // Registrar no histórico
       await supabase.from('shipment_status_history').insert({
-        b2b_shipment_id: selectedB2B0Shipment.id,
+        b2b_shipment_id: selectedB2B1Shipment.id,
         status: 'B2B_NO_CD',
         observacoes: `Conferência de chegada realizada pelo CD - ${cdUser?.nome}`
       });
 
       toast.success('Chegada confirmada! Remessa movida para Disponíveis.');
       setEtiModalOpen(false);
-      setSelectedB2B0Shipment(null);
+      setSelectedB2B1Shipment(null);
       loadShipments();
     } catch (error) {
       console.error('Erro ao confirmar chegada:', error);
@@ -239,15 +239,15 @@ const CdDashboard = () => {
     }
   };
 
-  // Desmembrar remessa (B2B-1 → B2B-2)
+  // Desmembrar remessa (B2B_NO_CD → B2B_VOLUME_DISPONIVEL)
   const handleOpenDestrinchar = (shipment: B2BShipment) => {
-    setSelectedB2B1Shipment(shipment);
+    setSelectedCdShipment(shipment);
     setDestrincharModalOpen(true);
   };
 
   const handleDestrincharComplete = () => {
     setDestrincharModalOpen(false);
-    setSelectedB2B1Shipment(null);
+    setSelectedCdShipment(null);
     loadShipments();
   };
 
@@ -500,7 +500,7 @@ const CdDashboard = () => {
             >
               <ClipboardCheck className="h-4 w-4" />
               <span className="hidden sm:inline">Remessas</span>
-              <Badge variant="secondary" className="bg-amber-100 text-amber-700">{filterShipments(b2b0Shipments).length}</Badge>
+              <Badge variant="secondary" className="bg-amber-100 text-amber-700">{filterShipments(b2b1Shipments).length}</Badge>
             </TabsTrigger>
             <TabsTrigger 
               value="disponiveis" 
@@ -508,7 +508,7 @@ const CdDashboard = () => {
             >
               <Package className="h-4 w-4" />
               <span className="hidden sm:inline">Disponíveis</span>
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700">{filterShipments(b2b1Shipments).length}</Badge>
+              <Badge variant="secondary" className="bg-orange-100 text-orange-700">{filterShipments(cdShipments).length}</Badge>
             </TabsTrigger>
             <TabsTrigger 
               value="volumes" 
@@ -528,9 +528,9 @@ const CdDashboard = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* B2B-0: Remessas (em coleta) */}
+          {/* B2B-1: Remessas (em coleta, a caminho do CD) */}
           <TabsContent value="remessas" className="mt-6 space-y-4">
-            {filterShipments(b2b0Shipments).length === 0 ? (
+            {filterShipments(b2b1Shipments).length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="p-8 text-center text-muted-foreground">
                   <ClipboardCheck className="h-12 w-12 mx-auto mb-4 opacity-30" />
@@ -538,7 +538,7 @@ const CdDashboard = () => {
                 </CardContent>
               </Card>
             ) : (
-              filterShipments(b2b0Shipments).map((shipment) => 
+              filterShipments(b2b1Shipments).map((shipment) =>
                 renderShipmentCard(shipment, 
                   shipment.status === 'B2B_COLETA_ACEITA' && (
                     <Button
@@ -556,9 +556,9 @@ const CdDashboard = () => {
             )}
           </TabsContent>
 
-          {/* B2B-1: Disponíveis (no CD, prontas para desmembrar) */}
+          {/* Disponíveis (no CD, prontas para desmembrar) */}
           <TabsContent value="disponiveis" className="mt-6 space-y-4">
-            {filterShipments(b2b1Shipments).length === 0 ? (
+            {filterShipments(cdShipments).length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="p-8 text-center text-muted-foreground">
                   <Package className="h-12 w-12 mx-auto mb-4 opacity-30" />
@@ -566,7 +566,7 @@ const CdDashboard = () => {
                 </CardContent>
               </Card>
             ) : (
-              filterShipments(b2b1Shipments).map((shipment) => 
+              filterShipments(cdShipments).map((shipment) =>
                 renderShipmentCard(shipment,
                   <Button
                     variant="default"
@@ -622,28 +622,28 @@ const CdDashboard = () => {
       )}
 
       {/* Modal de conferência de chegada (ETI validation) */}
-      {selectedB2B0Shipment && (
+      {selectedB2B1Shipment && (
         <EtiValidationModal
           open={etiModalOpen}
           onClose={() => {
             setEtiModalOpen(false);
-            setSelectedB2B0Shipment(null);
+            setSelectedB2B1Shipment(null);
           }}
-          shipmentId={selectedB2B0Shipment.id}
-          volumeCount={selectedB2B0Shipment.volume_count || 1}
+          shipmentId={selectedB2B1Shipment.id}
+          volumeCount={selectedB2B1Shipment.volume_count || 1}
           onFinalize={handleConfirmarChegada}
         />
       )}
 
       {/* Modal de desmembramento */}
-      {selectedB2B1Shipment && (
+      {selectedCdShipment && (
         <DestrincharModal
           open={destrincharModalOpen}
           onClose={() => {
             setDestrincharModalOpen(false);
-            setSelectedB2B1Shipment(null);
+            setSelectedCdShipment(null);
           }}
-          shipment={selectedB2B1Shipment}
+          shipment={selectedCdShipment}
           onComplete={handleDestrincharComplete}
         />
       )}
