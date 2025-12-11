@@ -44,6 +44,7 @@ import AdminFaturamento from "./pages/admin/AdminFaturamento";
 import AdminClientesB2B from "./pages/admin/AdminClientesB2B";
 import AdminCadastroClienteB2B from "./pages/admin/AdminCadastroClienteB2B";
 import AdminGestaoCd from "./pages/admin/AdminGestaoCd";
+import AdminCdUsers from "./pages/admin/AdminCdUsers";
 
 import AdminIntegracoes from "./pages/admin/AdminIntegracoes";
 import AdminWebhooks from "./pages/admin/AdminWebhooks";
@@ -57,6 +58,9 @@ import MotoristaAuth from "./pages/motorista/MotoristaAuth";
 import MotoristaRegistro from "./pages/motorista/MotoristaRegistro";
 import MotoristaDashboard from "./pages/motorista/MotoristaDashboard";
 import MotoristaRelatorios from "./pages/motorista/MotoristaRelatorios";
+import CdAuth from "./pages/cd/CdAuth";
+import CdRegistro from "./pages/cd/CdRegistro";
+import CdDashboard from "./pages/cd/CdDashboard";
 import B2BAuth from "./pages/b2b/B2BAuth";
 import B2BLayout from "./pages/b2b/B2BLayout";
 import B2BDashboard from "./pages/b2b/B2BDashboard";
@@ -131,6 +135,7 @@ const App = () => (
                       <Route path="clientes-b2b/novo" element={<AdminCadastroClienteB2B />} />
                       <Route path="motoristas" element={<AdminMotoristas />} />
                       <Route path="gestaocd" element={<AdminGestaoCd />} />
+                      <Route path="cd-users" element={<AdminCdUsers />} />
                       <Route path="filiais" element={<AdminFiliais />} />
                       <Route path="faturamento" element={<AdminFaturamento />} />
                       <Route path="remessas" element={<AdminRemessas />} />
@@ -154,6 +159,13 @@ const App = () => (
             <Route path="/motorista/auth" element={<MotoristaAuth />} />
             <Route path="/motorista/registro" element={<MotoristaRegistro />} />
             <Route path="/motorista" element={<MotoristaDashboard />} />
+            <Route path="/motorista/dashboard" element={<MotoristaDashboard />} />
+            <Route path="/motorista/relatorios" element={<MotoristaRelatorios />} />
+
+            {/* CD Routes */}
+            <Route path="/cd" element={<CdAuth />} />
+            <Route path="/cd/registro" element={<CdRegistro />} />
+            <Route path="/cd/dashboard" element={<CdDashboard />} />
             <Route path="/motorista/dashboard" element={<MotoristaDashboard />} />
             <Route path="/motorista/relatorios" element={<MotoristaRelatorios />} />
 

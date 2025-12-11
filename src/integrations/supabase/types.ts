@@ -719,6 +719,42 @@ export type Database = {
           },
         ]
       }
+      cd_users: {
+        Row: {
+          cpf: string
+          created_at: string
+          email: string
+          id: string
+          nome: string
+          senha: string
+          status: string
+          telefone: string
+          updated_at: string
+        }
+        Insert: {
+          cpf: string
+          created_at?: string
+          email: string
+          id?: string
+          nome: string
+          senha: string
+          status?: string
+          telefone: string
+          updated_at?: string
+        }
+        Update: {
+          cpf?: string
+          created_at?: string
+          email?: string
+          id?: string
+          nome?: string
+          senha?: string
+          status?: string
+          telefone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       company_branches: {
         Row: {
           active: boolean | null
@@ -1827,6 +1863,16 @@ export type Database = {
         Args: { p_motorista_uuid?: string; p_shipment_id: string }
         Returns: Json
       }
+      authenticate_cd_user: {
+        Args: { p_email: string; p_password: string }
+        Returns: {
+          email: string
+          id: string
+          nome: string
+          status: string
+          telefone: string
+        }[]
+      }
       authenticate_motorista: {
         Args: { input_email: string; input_password: string }
         Returns: Json
@@ -2193,6 +2239,16 @@ export type Database = {
         }[]
       }
       promote_to_admin: { Args: { user_email: string }; Returns: undefined }
+      register_cd_user: {
+        Args: {
+          p_cpf: string
+          p_email: string
+          p_nome: string
+          p_senha: string
+          p_telefone: string
+        }
+        Returns: Json
+      }
       register_motorista_public: {
         Args: {
           p_cpf: string
