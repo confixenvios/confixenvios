@@ -289,13 +289,13 @@ const CdDashboard = () => {
                   <span>{shipment.volume_count || 1} volume(s)</span>
                 </div>
                 
-                <div className="flex items-center gap-2 text-foreground font-medium">
+                <div className="flex items-center gap-2 text-foreground font-medium whitespace-nowrap">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     <span>{format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
                   </div>
                   {vehicleType && (
-                    <span className="text-muted-foreground">| Veículo: {vehicleType}</span>
+                    <span className="text-muted-foreground whitespace-nowrap">| Veículo: {vehicleType}</span>
                   )}
                 </div>
               </div>
