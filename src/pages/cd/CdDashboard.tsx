@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,12 +12,14 @@ import {
   MapPin,
   Calendar,
   User,
-  LogOut
+  LogOut,
+  Eye
 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { RemessaVisualizacao } from '@/components/motorista/RemessaVisualizacao';
 
 interface B2BShipment {
   id: string;
@@ -30,6 +32,7 @@ interface B2BShipment {
   volume_count: number | null;
   motorista_id: string | null;
   motorista_nome?: string;
+  observations?: string | null;
   b2b_client?: {
     company_name: string;
   };
@@ -49,7 +52,9 @@ const CdDashboard = () => {
   const [shipments, setShipments] = useState<B2BShipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'b2b1' | 'b2b2'>('b2b1');
+  const [activeTab, setActiveTab] = useState<'disponiveis' | 'emrota'>('disponiveis');
+  const [selectedShipment, setSelectedShipment] = useState<any>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem('cd_user');
@@ -71,6 +76,7 @@ const CdDashboard = () => {
     try {
       setLoading(true);
 
+      // Carregar apenas remessas B2B-2 (fase de entrega)
       const { data: b2bData, error: b2bError } = await supabase
         .from('b2b_shipments')
         .select(`
@@ -83,8 +89,10 @@ const CdDashboard = () => {
           recipient_state,
           volume_count,
           motorista_id,
+          observations,
           b2b_clients(company_name)
         `)
+        .in('status', ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'])
         .order('created_at', { ascending: false });
 
       if (b2bError) throw b2bError;
@@ -123,26 +131,25 @@ const CdDashboard = () => {
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-      'PENDENTE': { label: 'Pendente', variant: 'secondary' },
-      'ACEITA': { label: 'Aceita', variant: 'default' },
-      'B2B_COLETA_FINALIZADA': { label: 'Coleta Finalizada', variant: 'default' },
-      'B2B_ENTREGA_ACEITA': { label: 'Entrega Aceita', variant: 'default' },
-      'ENTREGUE': { label: 'Entregue', variant: 'default' },
-      'CANCELADO': { label: 'Cancelado', variant: 'destructive' }
+      'B2B_COLETA_FINALIZADA': { label: 'Aguardando Entrega', variant: 'secondary' },
+      'B2B_ENTREGA_ACEITA': { label: 'Em Rota', variant: 'default' },
+      'ENTREGUE': { label: 'Entregue', variant: 'default' }
     };
 
     const config = statusConfig[status] || { label: status, variant: 'outline' as const };
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  // B2B-1 (Coleta)
-  const b2b1Shipments = shipments.filter(s => 
-    ['PENDENTE', 'ACEITA', 'B2B_COLETA_FINALIZADA'].includes(s.status)
+  // Remessas disponíveis para entrega (sem motorista atribuído)
+  const availableShipments = shipments.filter(s => 
+    s.status === 'B2B_COLETA_FINALIZADA' && !s.motorista_id
   );
 
-  // B2B-2 (Entrega)
-  const b2b2Shipments = shipments.filter(s => 
-    ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(s.status)
+  // Remessas em rota de entrega (com motorista atribuído ou já finalizadas)
+  const inRouteShipments = shipments.filter(s => 
+    s.status === 'B2B_ENTREGA_ACEITA' || 
+    s.status === 'ENTREGUE' ||
+    (s.status === 'B2B_COLETA_FINALIZADA' && s.motorista_id)
   );
 
   const filterShipments = (list: B2BShipment[]) => {
@@ -155,6 +162,39 @@ const CdDashboard = () => {
       s.b2b_client?.company_name?.toLowerCase().includes(term) ||
       s.motorista_nome?.toLowerCase().includes(term)
     );
+  };
+
+  const handleViewDetails = (shipment: B2BShipment) => {
+    // Converter para formato esperado pelo RemessaVisualizacao
+    const mappedRemessa = {
+      id: shipment.id,
+      tracking_code: shipment.tracking_code,
+      status: shipment.status,
+      created_at: shipment.created_at,
+      weight: 0,
+      format: 'box',
+      selected_option: 'standard',
+      motorista_id: shipment.motorista_id,
+      observations: shipment.observations,
+      quote_data: {
+        merchandiseDetails: {
+          volumes: Array.from({ length: shipment.volume_count || 1 }, (_, i) => ({
+            volumeNumber: i + 1,
+            weight: 0
+          }))
+        }
+      },
+      recipient_address: {
+        name: shipment.recipient_name,
+        city: shipment.recipient_city,
+        state: shipment.recipient_state
+      },
+      sender_address: {
+        name: shipment.b2b_client?.company_name
+      }
+    };
+    setSelectedShipment(mappedRemessa);
+    setShowDetails(true);
   };
 
   const renderShipmentCard = (shipment: B2BShipment) => (
@@ -203,6 +243,16 @@ const CdDashboard = () => {
               </div>
             )}
           </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleViewDetails(shipment)}
+            className="ml-2"
+          >
+            <Eye className="h-4 w-4 mr-1" />
+            Detalhes
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -249,22 +299,6 @@ const CdDashboard = () => {
       </header>
 
       <main className="max-w-6xl mx-auto p-4 space-y-6">
-        {/* Info Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 text-blue-600 rounded-lg">
-              <span className="font-medium">B2B-1</span>
-              <span>=</span>
-              <span>Coleta</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 text-green-600 rounded-lg">
-              <span className="font-medium">B2B-2</span>
-              <span>=</span>
-              <span>Entrega</span>
-            </div>
-          </div>
-        </div>
-
         {/* Search */}
         <Card className="border-border/50">
           <CardContent className="p-4">
@@ -281,43 +315,55 @@ const CdDashboard = () => {
         </Card>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'b2b1' | 'b2b2')}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'disponiveis' | 'emrota')}>
           <TabsList className="grid w-full grid-cols-2 max-w-md">
-            <TabsTrigger value="b2b1" className="flex items-center gap-2">
-              <span>B2B-1 (Coleta)</span>
-              <Badge variant="secondary">{filterShipments(b2b1Shipments).length}</Badge>
+            <TabsTrigger value="disponiveis" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              <span>Disponíveis</span>
+              <Badge variant="secondary">{filterShipments(availableShipments).length}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="b2b2" className="flex items-center gap-2">
-              <span>B2B-2 (Entrega)</span>
-              <Badge variant="secondary">{filterShipments(b2b2Shipments).length}</Badge>
+            <TabsTrigger value="emrota" className="flex items-center gap-2">
+              <Truck className="h-4 w-4" />
+              <span>Em Rota</span>
+              <Badge variant="secondary">{filterShipments(inRouteShipments).length}</Badge>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="b2b1" className="mt-4 space-y-4">
-            {filterShipments(b2b1Shipments).length === 0 ? (
+          <TabsContent value="disponiveis" className="mt-4 space-y-4">
+            {filterShipments(availableShipments).length === 0 ? (
               <Card className="border-border/50">
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  Nenhuma remessa B2B-1 (Coleta) encontrada
+                  Nenhuma remessa disponível para entrega
                 </CardContent>
               </Card>
             ) : (
-              filterShipments(b2b1Shipments).map(renderShipmentCard)
+              filterShipments(availableShipments).map(renderShipmentCard)
             )}
           </TabsContent>
 
-          <TabsContent value="b2b2" className="mt-4 space-y-4">
-            {filterShipments(b2b2Shipments).length === 0 ? (
+          <TabsContent value="emrota" className="mt-4 space-y-4">
+            {filterShipments(inRouteShipments).length === 0 ? (
               <Card className="border-border/50">
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  Nenhuma remessa B2B-2 (Entrega) encontrada
+                  Nenhuma remessa em rota de entrega
                 </CardContent>
               </Card>
             ) : (
-              filterShipments(b2b2Shipments).map(renderShipmentCard)
+              filterShipments(inRouteShipments).map(renderShipmentCard)
             )}
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Modal de Detalhes (modo visualização apenas) */}
+      <RemessaVisualizacao
+        isOpen={showDetails}
+        onClose={() => {
+          setShowDetails(false);
+          setSelectedShipment(null);
+        }}
+        remessa={selectedShipment}
+      />
     </div>
   );
 };
