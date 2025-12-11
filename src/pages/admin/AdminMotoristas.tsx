@@ -99,23 +99,31 @@ const AdminMotoristas = () => {
     if (motoristas.length === 0) return;
     
     try {
-      const { data, error } = await supabase
+      // Buscar remessas convencionais
+      const { data: shipments, error: shipmentsError } = await supabase
         .from('shipments')
-        .select(`
-          motorista_id,
-          status,
-          created_at
-        `)
+        .select('motorista_id, status, created_at')
         .not('motorista_id', 'is', null)
         .gte('created_at', dateRange.from + 'T00:00:00')
         .lte('created_at', dateRange.to + 'T23:59:59');
 
-      if (error) throw error;
+      if (shipmentsError) throw shipmentsError;
+
+      // Buscar remessas B2B
+      const { data: b2bShipments, error: b2bError } = await supabase
+        .from('b2b_shipments')
+        .select('motorista_id, status, created_at')
+        .not('motorista_id', 'is', null)
+        .gte('created_at', dateRange.from + 'T00:00:00')
+        .lte('created_at', dateRange.to + 'T23:59:59');
+
+      if (b2bError) throw b2bError;
 
       // Calcular estatísticas por motorista
       const statsMap = new Map<string, MotoristaStats>();
       
-      data?.forEach(shipment => {
+      // Processar remessas convencionais
+      shipments?.forEach(shipment => {
         if (!shipment.motorista_id) return;
         
         const existing = statsMap.get(shipment.motorista_id) || {
@@ -129,16 +137,42 @@ const AdminMotoristas = () => {
 
         existing.total_remessas++;
         
-        switch (shipment.status) {
-          case 'DELIVERED':
-            existing.remessas_entregues++;
-            break;
-          case 'CANCELLED':
-            existing.remessas_canceladas++;
-            break;
-          default:
-            existing.remessas_pendentes++;
-            break;
+        if (shipment.status === 'DELIVERED' || shipment.status === 'ENTREGA_FINALIZADA') {
+          existing.remessas_entregues++;
+        } else if (shipment.status === 'CANCELLED') {
+          existing.remessas_canceladas++;
+        } else {
+          existing.remessas_pendentes++;
+        }
+
+        existing.taxa_sucesso = existing.total_remessas > 0 
+          ? (existing.remessas_entregues / existing.total_remessas) * 100 
+          : 0;
+
+        statsMap.set(shipment.motorista_id, existing);
+      });
+
+      // Processar remessas B2B
+      b2bShipments?.forEach(shipment => {
+        if (!shipment.motorista_id) return;
+        
+        const existing = statsMap.get(shipment.motorista_id) || {
+          motorista_id: shipment.motorista_id,
+          total_remessas: 0,
+          remessas_entregues: 0,
+          remessas_pendentes: 0,
+          remessas_canceladas: 0,
+          taxa_sucesso: 0
+        };
+
+        existing.total_remessas++;
+        
+        if (shipment.status === 'ENTREGUE') {
+          existing.remessas_entregues++;
+        } else if (shipment.status === 'CANCELADO') {
+          existing.remessas_canceladas++;
+        } else {
+          existing.remessas_pendentes++;
         }
 
         existing.taxa_sucesso = existing.total_remessas > 0 
@@ -289,86 +323,19 @@ const AdminMotoristas = () => {
     }
   };
 
-  const handleViewStats = async (motorista: Motorista) => {
+  const handleViewStats = (motorista: Motorista) => {
+    // Usar as estatísticas já carregadas baseadas no dateRange
+    const stats = motoristaStats.find(s => s.motorista_id === motorista.id);
     setSelectedMotorista(motorista);
+    setSelectedMotoristaStats(stats || {
+      motorista_id: motorista.id,
+      total_remessas: 0,
+      remessas_entregues: 0,
+      remessas_pendentes: 0,
+      remessas_canceladas: 0,
+      taxa_sucesso: 0
+    });
     setIsStatsDialogOpen(true);
-    
-    // Buscar estatísticas desde a criação do motorista até 01/01/2027
-    try {
-      const startDate = motorista.created_at.split('T')[0];
-      const endDate = '2027-01-01';
-      
-      // Buscar remessas convencionais
-      const { data: shipments, error: shipmentsError } = await supabase
-        .from('shipments')
-        .select('status, created_at')
-        .eq('motorista_id', motorista.id)
-        .gte('created_at', startDate + 'T00:00:00')
-        .lte('created_at', endDate + 'T23:59:59');
-
-      if (shipmentsError) throw shipmentsError;
-
-      // Buscar remessas B2B
-      const { data: b2bShipments, error: b2bError } = await supabase
-        .from('b2b_shipments')
-        .select('status, created_at')
-        .eq('motorista_id', motorista.id)
-        .gte('created_at', startDate + 'T00:00:00')
-        .lte('created_at', endDate + 'T23:59:59');
-
-      if (b2bError) throw b2bError;
-
-      // Calcular estatísticas combinadas
-      let total = 0;
-      let entregues = 0;
-      let pendentes = 0;
-      let canceladas = 0;
-
-      // Processar remessas convencionais
-      shipments?.forEach(s => {
-        total++;
-        if (s.status === 'DELIVERED' || s.status === 'ENTREGA_FINALIZADA') {
-          entregues++;
-        } else if (s.status === 'CANCELLED') {
-          canceladas++;
-        } else {
-          pendentes++;
-        }
-      });
-
-      // Processar remessas B2B
-      b2bShipments?.forEach(s => {
-        total++;
-        if (s.status === 'ENTREGUE') {
-          entregues++;
-        } else if (s.status === 'CANCELADO') {
-          canceladas++;
-        } else {
-          pendentes++;
-        }
-      });
-
-      const taxaSucesso = total > 0 ? (entregues / total) * 100 : 0;
-
-      setSelectedMotoristaStats({
-        motorista_id: motorista.id,
-        total_remessas: total,
-        remessas_entregues: entregues,
-        remessas_pendentes: pendentes,
-        remessas_canceladas: canceladas,
-        taxa_sucesso: taxaSucesso
-      });
-    } catch (error) {
-      console.error('Erro ao carregar estatísticas do motorista:', error);
-      setSelectedMotoristaStats({
-        motorista_id: motorista.id,
-        total_remessas: 0,
-        remessas_entregues: 0,
-        remessas_pendentes: 0,
-        remessas_canceladas: 0,
-        taxa_sucesso: 0
-      });
-    }
   };
 
   const approveMotorista = async (motorista: Motorista) => {
@@ -851,7 +818,7 @@ const AdminMotoristas = () => {
           {selectedMotoristaStats && selectedMotorista && (
             <div className="space-y-6">
               <div className="text-sm text-muted-foreground">
-                Período: {format(new Date(selectedMotorista.created_at), 'dd/MM/yyyy', { locale: ptBR })} até 01/01/2027
+                Período: {format(new Date(dateRange.from), 'dd/MM/yyyy', { locale: ptBR })} até {format(new Date(dateRange.to), 'dd/MM/yyyy', { locale: ptBR })}
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
