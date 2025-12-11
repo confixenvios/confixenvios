@@ -131,14 +131,14 @@ const CdDashboard = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-      'B2B_COLETA_FINALIZADA': { label: 'Aguardando Entrega', variant: 'secondary' },
-      'B2B_ENTREGA_ACEITA': { label: 'Em Rota', variant: 'default' },
-      'ENTREGUE': { label: 'Entregue', variant: 'default' }
+    const statusConfig: Record<string, { label: string; className: string }> = {
+      'B2B_COLETA_FINALIZADA': { label: 'Disponível', className: 'bg-red-500 text-white hover:bg-red-600' },
+      'B2B_ENTREGA_ACEITA': { label: 'Em Rota', className: 'bg-purple-500 text-white hover:bg-purple-600' },
+      'ENTREGUE': { label: 'Entregue', className: 'bg-green-500 text-white hover:bg-green-600' }
     };
 
-    const config = statusConfig[status] || { label: status, variant: 'outline' as const };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    const config = statusConfig[status] || { label: status, className: '' };
+    return <Badge className={config.className}>{config.label}</Badge>;
   };
 
   // Remessas disponíveis para entrega (sem motorista atribuído)
@@ -246,15 +246,12 @@ const CdDashboard = () => {
                 <span>{shipment.b2b_client?.company_name || 'Cliente não identificado'}</span>
               </div>
               
-              <div className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                <span>
-                  {shipment.recipient_city && shipment.recipient_state 
-                    ? `${shipment.recipient_city}/${shipment.recipient_state}`
-                    : 'Destino não informado'
-                  }
-                </span>
-              </div>
+              {shipment.recipient_city && shipment.recipient_state && (
+                <div className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  <span>{shipment.recipient_city}/{shipment.recipient_state}</span>
+                </div>
+              )}
               
               <div className="flex items-center gap-1">
                 <Package className="h-3 w-3" />
