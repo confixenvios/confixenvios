@@ -682,13 +682,6 @@ const B2BNovaRemessa = () => {
                       <p className="text-4xl font-bold text-primary">
                         R$ {totalPrice.toFixed(2)}
                       </p>
-                      <div className="text-xs text-muted-foreground space-y-1 mt-4">
-                        <p>• Valor base: R$ 15,00 (até 5kg)</p>
-                        {totalWeight > 5 && (
-                          <p>• Adicional: R$ {(totalPrice - 15).toFixed(2)} ({Math.ceil(totalWeight - 5)}kg extras)</p>
-                        )}
-                        <p>• Peso total: {totalWeight.toFixed(2)} kg</p>
-                      </div>
                     </div>
                   </div>
                 </div>
