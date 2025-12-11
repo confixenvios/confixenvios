@@ -105,10 +105,11 @@ const MotoristaDashboard = () => {
           .eq('email', session.user.email)
           .single();
 
+        // Mapeia colunas antigas para novo formato de 3 fases
         const visibilidade: MotoristaVisibilidade = {
           ve_convencional: motorista?.ve_convencional ?? true,
-          ve_b2b_coleta: motorista?.ve_b2b_coleta ?? false,
-          ve_b2b_entrega: motorista?.ve_b2b_entrega ?? false
+          ve_b2b_0: motorista?.ve_b2b_coleta ?? false,  // B2B-0: coleta externa
+          ve_b2b_2: motorista?.ve_b2b_entrega ?? false  // B2B-2: entrega final
         };
 
         const motoristaData: MotoristaSession = {
