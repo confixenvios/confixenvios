@@ -416,18 +416,7 @@ const ClientRemessas = () => {
                             Ver Detalhes
                           </Button>
                           
-                          {/* Botão Ver Etiqueta */}
-                          {shipment.label_pdf_url && (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => window.open(shipment.label_pdf_url!, '_blank')}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <Download className="w-4 h-4 mr-2" />
-                              Ver Etiqueta
-                            </Button>
-                          )}
+                          {/* Etiquetas são exclusivas do painel admin e B2B */}
                         </div>
                       </div>
 
@@ -596,24 +585,7 @@ const ClientRemessas = () => {
                     )}
                     {/* CT-e info removido - disponível apenas no admin */}
                     
-                    {/* Etiqueta de Envio */}
-                    {selectedShipment.label_pdf_url && (
-                      <div className="col-span-2 mt-4 p-4 border border-primary/30 rounded-lg bg-primary/5">
-                        <h4 className="font-semibold text-primary mb-3 flex items-center gap-2">
-                          <Download className="w-4 h-4" />
-                          Etiqueta de Envio
-                        </h4>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => window.open(selectedShipment.label_pdf_url!, '_blank')}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Baixar Etiqueta (PDF)
-                        </Button>
-                      </div>
-                    )}
+                    {/* Etiquetas são exclusivas do painel admin e B2B */}
                   </div>
                 </div>
 
