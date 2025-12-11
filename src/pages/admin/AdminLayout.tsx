@@ -64,7 +64,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'Clientes', href: '/admin/clientes', icon: Users },
     { name: 'Clientes Expresso', href: '/admin/clientes-b2b', icon: Building2 },
     { name: 'Motoristas', href: '/admin/motoristas', icon: Truck },
-    { name: 'Gestão CD', href: '/admin/gestaocd', icon: Package },
+    
     { name: 'CD - Usuários', href: '/admin/cd-users', icon: Users },
     { name: 'Filiais', href: '/admin/filiais', icon: Building2 },
     { name: 'Faturamento', href: '/admin/faturamento', icon: DollarSign },
