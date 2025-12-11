@@ -168,7 +168,7 @@ const B2BPixPayment = () => {
           b2b_client_id: shipmentData.clientId,
           volume_count: shipmentData.volumeCount,
           delivery_date: shipmentData.deliveryDate,
-          status: 'PENDENTE',
+          status: 'B2B_COLETA_PENDENTE',
           observations: JSON.stringify({
             vehicle_type: shipmentData.vehicleType,
             volume_addresses: shipmentData.volumeAddresses,
