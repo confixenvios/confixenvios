@@ -169,13 +169,13 @@ const B2BStatusHistory = ({ shipmentId }: B2BStatusHistoryProps) => {
 
               {photoUrl && (
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="mt-1 h-7 text-xs"
+                  className="mt-2 h-7 text-xs border-muted-foreground/30"
                   onClick={() => window.open(photoUrl, '_blank')}
                 >
                   <Image className="h-3 w-3 mr-1" />
-                  Ver Foto{photoCount > 1 ? `s (${photoCount})` : ''}
+                  Ver Foto de Comprovação{photoCount > 1 ? ` (${photoCount})` : ''}
                 </Button>
               )}
             </div>
