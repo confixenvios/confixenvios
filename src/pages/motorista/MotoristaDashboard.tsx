@@ -12,7 +12,7 @@ import { RemessaDetalhes } from '@/components/motorista/RemessaDetalhes';
 import { RemessaVisualizacao } from '@/components/motorista/RemessaVisualizacao';
 import { OccurrenceSimpleModal } from '@/components/motorista/OccurrenceSimpleModal';
 import { FinalizarEntregaModal } from '@/components/motorista/FinalizarEntregaModal';
-import { EtiAcceptModal } from '@/components/motorista/EtiAcceptModal';
+import { VolumeSearchModal } from '@/components/motorista/VolumeSearchModal';
 import { getMotoristaShipments, getAvailableShipments, acceptShipment, getMotoristaVisibilidade, type MotoristaShipment, type BaseShipment, type MotoristaVisibilidade } from '@/services/shipmentsService';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -38,8 +38,7 @@ const MotoristaDashboard = () => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [occurrenceModalOpen, setOccurrenceModalOpen] = useState(false);
   const [finalizarEntregaModalOpen, setFinalizarEntregaModalOpen] = useState(false);
-  const [etiAcceptModalOpen, setEtiAcceptModalOpen] = useState(false);
-  const [selectedB2B1ForAccept, setSelectedB2B1ForAccept] = useState<BaseShipment | null>(null);
+  const [volumeSearchModalOpen, setVolumeSearchModalOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<ViewType>('disponiveis');
@@ -360,16 +359,7 @@ const MotoristaDashboard = () => {
                   <Button
                     variant="default"
                     size="sm"
-                    onClick={() => {
-                      // B2B-1 requer validação ETI antes de aceitar
-                      const isB2B1 = isB2B && !['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(remessa.status);
-                      if (isB2B1) {
-                        setSelectedB2B1ForAccept(remessa);
-                        setEtiAcceptModalOpen(true);
-                      } else {
-                        handleAcceptShipment(remessa.id);
-                      }
-                    }}
+                    onClick={() => handleAcceptShipment(remessa.id)}
                     disabled={accepting === remessa.id}
                     className="bg-green-600 hover:bg-green-700"
                   >
@@ -573,23 +563,38 @@ const MotoristaDashboard = () => {
               </div>
             </div>
             
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (motoristaSession?.id && motoristaSession.visibilidade) {
-                  loadMinhasRemessas(motoristaSession.id);
-                  loadRemessasDisponiveis(motoristaSession.visibilidade);
-                }
-              }}
-              disabled={refreshing}
-            >
-              {refreshing ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
-              ) : (
-                'Atualizar'
+            <div className="flex items-center gap-2">
+              {/* Botão Inserir Volume - apenas para drivers B2B-2 */}
+              {motoristaSession?.visibilidade?.ve_b2b_2 && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setVolumeSearchModalOpen(true)}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Inserir Volume</span>
+                </Button>
               )}
-            </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (motoristaSession?.id && motoristaSession.visibilidade) {
+                    loadMinhasRemessas(motoristaSession.id);
+                    loadRemessasDisponiveis(motoristaSession.visibilidade);
+                  }
+                }}
+                disabled={refreshing}
+              >
+                {refreshing ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+                ) : (
+                  'Atualizar'
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -711,20 +716,16 @@ const MotoristaDashboard = () => {
           />
         )}
 
-        {/* Modal de validação ETI para aceitar B2B-1 */}
-        {selectedB2B1ForAccept && (
-          <EtiAcceptModal
-            open={etiAcceptModalOpen}
-            onClose={() => {
-              setEtiAcceptModalOpen(false);
-              setSelectedB2B1ForAccept(null);
-            }}
-            shipmentId={selectedB2B1ForAccept.id}
-            onAccept={async () => {
-              if (motoristaSession?.id) {
-                setEtiAcceptModalOpen(false);
-                await handleAcceptShipment(selectedB2B1ForAccept.id);
-                setSelectedB2B1ForAccept(null);
+        {/* Modal de busca de volume B2B-2 */}
+        {motoristaSession?.id && (
+          <VolumeSearchModal
+            open={volumeSearchModalOpen}
+            onClose={() => setVolumeSearchModalOpen(false)}
+            motoristaId={motoristaSession.id}
+            onVolumeAccepted={() => {
+              if (motoristaSession?.id && motoristaSession.visibilidade) {
+                loadMinhasRemessas(motoristaSession.id);
+                loadRemessasDisponiveis(motoristaSession.visibilidade);
               }
             }}
           />
