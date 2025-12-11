@@ -598,9 +598,11 @@ export type Database = {
           delivery_date: string | null
           delivery_type: string | null
           id: string
+          is_volume: boolean | null
           motorista_id: string | null
           observations: string | null
           package_type: string | null
+          parent_shipment_id: string | null
           pickup_requested_at: string | null
           recipient_cep: string | null
           recipient_city: string | null
@@ -616,6 +618,9 @@ export type Database = {
           tracking_code: string | null
           updated_at: string | null
           volume_count: number | null
+          volume_eti_code: string | null
+          volume_number: number | null
+          volume_weight: number | null
         }
         Insert: {
           b2b_client_id: string
@@ -623,9 +628,11 @@ export type Database = {
           delivery_date?: string | null
           delivery_type?: string | null
           id?: string
+          is_volume?: boolean | null
           motorista_id?: string | null
           observations?: string | null
           package_type?: string | null
+          parent_shipment_id?: string | null
           pickup_requested_at?: string | null
           recipient_cep?: string | null
           recipient_city?: string | null
@@ -641,6 +648,9 @@ export type Database = {
           tracking_code?: string | null
           updated_at?: string | null
           volume_count?: number | null
+          volume_eti_code?: string | null
+          volume_number?: number | null
+          volume_weight?: number | null
         }
         Update: {
           b2b_client_id?: string
@@ -648,9 +658,11 @@ export type Database = {
           delivery_date?: string | null
           delivery_type?: string | null
           id?: string
+          is_volume?: boolean | null
           motorista_id?: string | null
           observations?: string | null
           package_type?: string | null
+          parent_shipment_id?: string | null
           pickup_requested_at?: string | null
           recipient_cep?: string | null
           recipient_city?: string | null
@@ -666,6 +678,9 @@ export type Database = {
           tracking_code?: string | null
           updated_at?: string | null
           volume_count?: number | null
+          volume_eti_code?: string | null
+          volume_number?: number | null
+          volume_weight?: number | null
         }
         Relationships: [
           {
@@ -673,6 +688,13 @@ export type Database = {
             columns: ["b2b_client_id"]
             isOneToOne: false
             referencedRelation: "b2b_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "b2b_shipments_parent_shipment_id_fkey"
+            columns: ["parent_shipment_id"]
+            isOneToOne: false
+            referencedRelation: "b2b_shipments"
             referencedColumns: ["id"]
           },
           {

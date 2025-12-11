@@ -15,7 +15,9 @@ import {
   LogOut,
   Eye,
   CheckCircle,
-  ClipboardCheck
+  ClipboardCheck,
+  Boxes,
+  SplitSquareVertical
 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -23,6 +25,7 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { RemessaVisualizacao } from '@/components/motorista/RemessaVisualizacao';
 import { EtiValidationModal } from '@/components/cd/EtiValidationModal';
+import { DestrincharModal } from '@/components/cd/DestrincharModal';
 
 interface B2BShipment {
   id: string;
@@ -36,6 +39,11 @@ interface B2BShipment {
   motorista_id: string | null;
   motorista_nome?: string;
   observations?: string | null;
+  is_volume?: boolean;
+  parent_shipment_id?: string | null;
+  volume_eti_code?: string | null;
+  volume_number?: number | null;
+  volume_weight?: number | null;
   b2b_client?: {
     company_name: string;
   };
@@ -49,17 +57,27 @@ interface CdUser {
   telefone: string;
 }
 
+type TabType = 'remessas' | 'disponiveis' | 'volumes' | 'entregues';
+
 const CdDashboard = () => {
   const navigate = useNavigate();
   const [cdUser, setCdUser] = useState<CdUser | null>(null);
-  const [shipments, setShipments] = useState<B2BShipment[]>([]);
-  const [b2b1Shipments, setB2b1Shipments] = useState<B2BShipment[]>([]);
+  const [b2b0Shipments, setB2b0Shipments] = useState<B2BShipment[]>([]); // B2B-0: Remessas (coleta)
+  const [b2b1Shipments, setB2b1Shipments] = useState<B2BShipment[]>([]); // B2B-1: Disponíveis (no CD)
+  const [volumes, setVolumes] = useState<B2BShipment[]>([]); // B2B-2: Volumes desmembrados
+  const [deliveredShipments, setDeliveredShipments] = useState<B2BShipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'remessas' | 'disponiveis' | 'emrota' | 'entregues'>('remessas');
+  const [activeTab, setActiveTab] = useState<TabType>('remessas');
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
+  
+  // Modal de conferência de chegada (B2B-0 → B2B-1)
   const [etiModalOpen, setEtiModalOpen] = useState(false);
+  const [selectedB2B0Shipment, setSelectedB2B0Shipment] = useState<B2BShipment | null>(null);
+  
+  // Modal de desmembramento (B2B-1 → B2B-2)
+  const [destrincharModalOpen, setDestrincharModalOpen] = useState(false);
   const [selectedB2B1Shipment, setSelectedB2B1Shipment] = useState<B2BShipment | null>(null);
 
   useEffect(() => {
@@ -82,49 +100,72 @@ const CdDashboard = () => {
     try {
       setLoading(true);
 
-      // Carregar remessas B2B-1 (fase de coleta - PENDENTE e ACEITA)
+      // B2B-0: Remessas em coleta (motorista aceitou, a caminho do CD)
+      const { data: b2b0Data, error: b2b0Error } = await supabase
+        .from('b2b_shipments')
+        .select(`
+          id, tracking_code, status, created_at,
+          recipient_name, recipient_city, recipient_state,
+          volume_count, motorista_id, observations,
+          is_volume, parent_shipment_id, volume_eti_code, volume_number, volume_weight,
+          b2b_clients(company_name)
+        `)
+        .in('status', ['B2B_COLETA_PENDENTE', 'B2B_COLETA_ACEITA'])
+        .eq('is_volume', false)
+        .order('created_at', { ascending: false });
+
+      if (b2b0Error) throw b2b0Error;
+
+      // B2B-1: Remessas no CD (prontas para desmembrar)
       const { data: b2b1Data, error: b2b1Error } = await supabase
         .from('b2b_shipments')
         .select(`
-          id,
-          tracking_code,
-          status,
-          created_at,
-          recipient_name,
-          recipient_city,
-          recipient_state,
-          volume_count,
-          motorista_id,
-          observations,
+          id, tracking_code, status, created_at,
+          recipient_name, recipient_city, recipient_state,
+          volume_count, motorista_id, observations,
+          is_volume, parent_shipment_id, volume_eti_code, volume_number, volume_weight,
           b2b_clients(company_name)
         `)
-        .in('status', ['PENDENTE', 'ACEITA'])
+        .eq('status', 'B2B_NO_CD')
+        .eq('is_volume', false)
         .order('created_at', { ascending: false });
 
       if (b2b1Error) throw b2b1Error;
 
-      // Carregar remessas B2B-2 (fase de entrega)
-      const { data: b2bData, error: b2bError } = await supabase
+      // B2B-2: Volumes desmembrados (prontos para entrega)
+      const { data: volumesData, error: volumesError } = await supabase
         .from('b2b_shipments')
         .select(`
-          id,
-          tracking_code,
-          status,
-          created_at,
-          recipient_name,
-          recipient_city,
-          recipient_state,
-          volume_count,
-          motorista_id,
-          observations,
+          id, tracking_code, status, created_at,
+          recipient_name, recipient_city, recipient_state,
+          volume_count, motorista_id, observations,
+          is_volume, parent_shipment_id, volume_eti_code, volume_number, volume_weight,
           b2b_clients(company_name)
         `)
-        .in('status', ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'])
+        .eq('is_volume', true)
+        .in('status', ['B2B_VOLUME_DISPONIVEL', 'B2B_VOLUME_ACEITO'])
         .order('created_at', { ascending: false });
 
-      if (b2bError) throw b2bError;
+      if (volumesError) throw volumesError;
 
-      const allShipments = [...(b2b1Data || []), ...(b2bData || [])];
+      // Entregues
+      const { data: deliveredData, error: deliveredError } = await supabase
+        .from('b2b_shipments')
+        .select(`
+          id, tracking_code, status, created_at,
+          recipient_name, recipient_city, recipient_state,
+          volume_count, motorista_id, observations,
+          is_volume, parent_shipment_id, volume_eti_code, volume_number, volume_weight,
+          b2b_clients(company_name)
+        `)
+        .eq('status', 'ENTREGUE')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (deliveredError) throw deliveredError;
+
+      // Buscar nomes dos motoristas
+      const allShipments = [...(b2b0Data || []), ...(b2b1Data || []), ...(volumesData || []), ...(deliveredData || [])];
       const motoristaIds = [...new Set(allShipments.filter(s => s.motorista_id).map(s => s.motorista_id))];
       
       let motoristasMap: Record<string, string> = {};
@@ -142,20 +183,16 @@ const CdDashboard = () => {
         }
       }
 
-      const mappedB2b1 = (b2b1Data || []).map(s => ({
+      const mapShipment = (s: any) => ({
         ...s,
         motorista_nome: s.motorista_id ? motoristasMap[s.motorista_id] : undefined,
         b2b_client: s.b2b_clients as any
-      }));
+      });
 
-      const mappedB2b2 = (b2bData || []).map(s => ({
-        ...s,
-        motorista_nome: s.motorista_id ? motoristasMap[s.motorista_id] : undefined,
-        b2b_client: s.b2b_clients as any
-      }));
-
-      setB2b1Shipments(mappedB2b1);
-      setShipments(mappedB2b2);
+      setB2b0Shipments((b2b0Data || []).map(mapShipment));
+      setB2b1Shipments((b2b1Data || []).map(mapShipment));
+      setVolumes((volumesData || []).map(mapShipment));
+      setDeliveredShipments((deliveredData || []).map(mapShipment));
     } catch (error) {
       console.error('Erro ao carregar remessas:', error);
       toast.error('Erro ao carregar remessas');
@@ -164,68 +201,69 @@ const CdDashboard = () => {
     }
   };
 
-  const handleOpenEtiModal = (shipment: B2BShipment) => {
-    setSelectedB2B1Shipment(shipment);
+  // Conferir chegada no CD (B2B-0 → B2B-1)
+  const handleOpenConferirChegada = (shipment: B2BShipment) => {
+    setSelectedB2B0Shipment(shipment);
     setEtiModalOpen(true);
   };
 
-  const handleFinalizeB2B1 = async () => {
-    if (!selectedB2B1Shipment) return;
+  const handleConfirmarChegada = async () => {
+    if (!selectedB2B0Shipment) return;
     
     try {
-      // Atualizar status para B2B_COLETA_FINALIZADA
+      // Atualizar status para B2B_NO_CD (interno)
       const { error } = await supabase
         .from('b2b_shipments')
-        .update({ status: 'B2B_COLETA_FINALIZADA' })
-        .eq('id', selectedB2B1Shipment.id);
+        .update({ 
+          status: 'B2B_NO_CD',
+          motorista_id: null // Libera o motorista B2B-0
+        })
+        .eq('id', selectedB2B0Shipment.id);
 
       if (error) throw error;
 
       // Registrar no histórico
       await supabase.from('shipment_status_history').insert({
-        b2b_shipment_id: selectedB2B1Shipment.id,
-        status: 'B2B_COLETA_FINALIZADA',
-        observacoes: `Coleta finalizada pelo CD - ${cdUser?.nome}`
+        b2b_shipment_id: selectedB2B0Shipment.id,
+        status: 'B2B_NO_CD',
+        observacoes: `Conferência de chegada realizada pelo CD - ${cdUser?.nome}`
       });
 
-      toast.success('Coleta finalizada com sucesso!');
+      toast.success('Chegada confirmada! Remessa movida para Disponíveis.');
       setEtiModalOpen(false);
-      setSelectedB2B1Shipment(null);
+      setSelectedB2B0Shipment(null);
       loadShipments();
     } catch (error) {
-      console.error('Erro ao finalizar coleta:', error);
-      toast.error('Erro ao finalizar coleta');
+      console.error('Erro ao confirmar chegada:', error);
+      toast.error('Erro ao confirmar chegada');
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  // Desmembrar remessa (B2B-1 → B2B-2)
+  const handleOpenDestrinchar = (shipment: B2BShipment) => {
+    setSelectedB2B1Shipment(shipment);
+    setDestrincharModalOpen(true);
+  };
+
+  const handleDestrincharComplete = () => {
+    setDestrincharModalOpen(false);
+    setSelectedB2B1Shipment(null);
+    loadShipments();
+  };
+
+  const getStatusBadge = (status: string, isVolume?: boolean) => {
     const statusConfig: Record<string, { label: string; className: string }> = {
-      'PENDENTE': { label: 'Aguardando', className: 'bg-amber-500 text-white hover:bg-amber-600' },
-      'ACEITA': { label: 'Aceita', className: 'bg-blue-500 text-white hover:bg-blue-600' },
-      'B2B_COLETA_FINALIZADA': { label: 'Disponível', className: 'bg-red-500 text-white hover:bg-red-600' },
-      'B2B_ENTREGA_ACEITA': { label: 'Em Rota', className: 'bg-purple-500 text-white hover:bg-purple-600' },
+      'B2B_COLETA_PENDENTE': { label: 'Aguardando Coleta', className: 'bg-amber-500 text-white hover:bg-amber-600' },
+      'B2B_COLETA_ACEITA': { label: 'Em Trânsito', className: 'bg-blue-500 text-white hover:bg-blue-600' },
+      'B2B_NO_CD': { label: 'No CD', className: 'bg-orange-500 text-white hover:bg-orange-600' },
+      'B2B_VOLUME_DISPONIVEL': { label: 'Disponível', className: 'bg-purple-500 text-white hover:bg-purple-600' },
+      'B2B_VOLUME_ACEITO': { label: 'Em Rota', className: 'bg-indigo-500 text-white hover:bg-indigo-600' },
       'ENTREGUE': { label: 'Entregue', className: 'bg-green-500 text-white hover:bg-green-600' }
     };
 
-    const config = statusConfig[status] || { label: status, className: '' };
+    const config = statusConfig[status] || { label: status, className: 'bg-gray-500 text-white' };
     return <Badge className={config.className}>{config.label}</Badge>;
   };
-
-  // Remessas disponíveis para entrega (sem motorista atribuído)
-  const availableShipments = shipments.filter(s => 
-    s.status === 'B2B_COLETA_FINALIZADA' && !s.motorista_id
-  );
-
-  // Remessas em rota de entrega (com motorista atribuído, mas não entregues)
-  const inRouteShipments = shipments.filter(s => 
-    s.status === 'B2B_ENTREGA_ACEITA' ||
-    (s.status === 'B2B_COLETA_FINALIZADA' && s.motorista_id)
-  );
-
-  // Remessas entregues (finalizadas completamente)
-  const deliveredShipments = shipments.filter(s => 
-    s.status === 'ENTREGUE'
-  );
 
   const filterShipments = (list: B2BShipment[]) => {
     if (!searchTerm) return list;
@@ -235,12 +273,12 @@ const CdDashboard = () => {
       s.recipient_name?.toLowerCase().includes(term) ||
       s.recipient_city?.toLowerCase().includes(term) ||
       s.b2b_client?.company_name?.toLowerCase().includes(term) ||
-      s.motorista_nome?.toLowerCase().includes(term)
+      s.motorista_nome?.toLowerCase().includes(term) ||
+      s.volume_eti_code?.toLowerCase().includes(term)
     );
   };
 
   const handleViewDetails = (shipment: B2BShipment) => {
-    // Parsear observations para obter dados completos
     let parsedObservations: any = null;
     try {
       if (shipment.observations) {
@@ -252,11 +290,11 @@ const CdDashboard = () => {
       console.log('Erro ao parsear observations:', e);
     }
 
-    // Calcular peso total a partir dos volume_weights
     const volumeWeights = parsedObservations?.volume_weights || [];
-    const totalWeight = volumeWeights.reduce((acc: number, w: number) => acc + (w || 0), 0);
+    const totalWeight = shipment.is_volume 
+      ? (shipment.volume_weight || 0)
+      : volumeWeights.reduce((acc: number, w: number) => acc + (w || 0), 0);
 
-    // Construir volumes com pesos reais
     const volumes = volumeWeights.length > 0
       ? volumeWeights.map((weight: number, index: number) => ({
           volumeNumber: index + 1,
@@ -269,7 +307,6 @@ const CdDashboard = () => {
           peso: 0
         }));
 
-    // Converter para formato esperado pelo RemessaVisualizacao
     const mappedRemessa = {
       id: shipment.id,
       tracking_code: shipment.tracking_code,
@@ -280,10 +317,11 @@ const CdDashboard = () => {
       selected_option: 'standard',
       motorista_id: shipment.motorista_id,
       observations: shipment.observations,
+      is_volume: shipment.is_volume,
+      volume_eti_code: shipment.volume_eti_code,
+      volume_number: shipment.volume_number,
       quote_data: {
-        merchandiseDetails: {
-          volumes: volumes
-        }
+        merchandiseDetails: { volumes }
       },
       recipient_address: {
         name: shipment.recipient_name,
@@ -299,19 +337,15 @@ const CdDashboard = () => {
   };
 
   const getCardColor = (status: string) => {
-    if (status === 'PENDENTE' || status === 'ACEITA') return 'border-amber-500/50 bg-amber-50/30';
-    if (status === 'B2B_COLETA_FINALIZADA') return 'border-red-500/50 bg-red-50/30';
-    if (status === 'B2B_ENTREGA_ACEITA') return 'border-purple-500/50 bg-purple-50/30';
-    if (status === 'ENTREGUE') return 'border-green-500/50 bg-green-50/30';
-    return 'border-border/50';
-  };
-
-  const getMotoristaColor = (status: string) => {
-    if (status === 'PENDENTE' || status === 'ACEITA') return 'text-amber-600';
-    if (status === 'B2B_COLETA_FINALIZADA') return 'text-red-600';
-    if (status === 'B2B_ENTREGA_ACEITA') return 'text-purple-600';
-    if (status === 'ENTREGUE') return 'text-green-600';
-    return 'text-primary';
+    const colors: Record<string, string> = {
+      'B2B_COLETA_PENDENTE': 'border-amber-500/50 bg-amber-50/30',
+      'B2B_COLETA_ACEITA': 'border-blue-500/50 bg-blue-50/30',
+      'B2B_NO_CD': 'border-orange-500/50 bg-orange-50/30',
+      'B2B_VOLUME_DISPONIVEL': 'border-purple-500/50 bg-purple-50/30',
+      'B2B_VOLUME_ACEITO': 'border-indigo-500/50 bg-indigo-50/30',
+      'ENTREGUE': 'border-green-500/50 bg-green-50/30'
+    };
+    return colors[status] || 'border-border/50';
   };
 
   const getVehicleType = (shipment: B2BShipment) => {
@@ -322,26 +356,28 @@ const CdDashboard = () => {
           : shipment.observations;
         return parsed?.vehicle_type || null;
       }
-    } catch (e) {
-      console.log('Erro ao parsear vehicle_type:', e);
-    }
+    } catch (e) {}
     return null;
   };
 
-  const renderShipmentCard = (shipment: B2BShipment, showFinalizeButton = false) => {
+  const renderShipmentCard = (shipment: B2BShipment, actions?: React.ReactNode) => {
     const vehicleType = getVehicleType(shipment);
-    const isB2B1 = shipment.status === 'PENDENTE' || shipment.status === 'ACEITA';
     
     return (
       <Card key={shipment.id} className={getCardColor(shipment.status)}>
         <CardContent className="p-4">
           <div className="flex items-start justify-between">
             <div className="space-y-2 flex-1">
-              <div className="flex items-center gap-2">
-                <span className={`font-mono text-sm font-medium ${getMotoristaColor(shipment.status)}`}>
-                  {shipment.tracking_code || 'Sem código'}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono text-sm font-medium text-foreground">
+                  {shipment.is_volume ? shipment.volume_eti_code : shipment.tracking_code || 'Sem código'}
                 </span>
-                {getStatusBadge(shipment.status)}
+                {getStatusBadge(shipment.status, shipment.is_volume)}
+                {shipment.is_volume && (
+                  <Badge variant="outline" className="text-xs">
+                    Volume {shipment.volume_number}
+                  </Badge>
+                )}
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
@@ -359,7 +395,12 @@ const CdDashboard = () => {
                 
                 <div className="flex items-center gap-1 text-foreground font-medium">
                   <Package className="h-3 w-3" />
-                  <span>{shipment.volume_count || 1} volume(s)</span>
+                  <span>
+                    {shipment.is_volume 
+                      ? `${shipment.volume_weight?.toFixed(1) || 0}kg`
+                      : `${shipment.volume_count || 1} volume(s)`
+                    }
+                  </span>
                 </div>
                 
                 <div className="flex items-center gap-2 text-foreground font-medium whitespace-nowrap">
@@ -368,13 +409,13 @@ const CdDashboard = () => {
                     <span>{format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
                   </div>
                   {vehicleType && (
-                    <span className="text-muted-foreground whitespace-nowrap">| Veículo: {vehicleType}</span>
+                    <span className="text-muted-foreground whitespace-nowrap">| {vehicleType}</span>
                   )}
                 </div>
               </div>
 
               {shipment.motorista_nome && (
-                <div className={`flex items-center gap-1 text-sm ${getMotoristaColor(shipment.status)}`}>
+                <div className="flex items-center gap-1 text-sm text-primary">
                   <Truck className="h-3 w-3" />
                   <span className="font-medium">Motorista: {shipment.motorista_nome}</span>
                 </div>
@@ -382,26 +423,11 @@ const CdDashboard = () => {
             </div>
 
             <div className="flex gap-2 ml-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleViewDetails(shipment)}
-              >
+              <Button variant="outline" size="sm" onClick={() => handleViewDetails(shipment)}>
                 <Eye className="h-4 w-4 mr-1" />
                 Detalhes
               </Button>
-              
-              {showFinalizeButton && isB2B1 && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => handleOpenEtiModal(shipment)}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <ClipboardCheck className="h-4 w-4 mr-1" />
-                  Finalizar Coleta
-                </Button>
-              )}
+              {actions}
             </div>
           </div>
         </CardContent>
@@ -456,7 +482,7 @@ const CdDashboard = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por código, cliente, destino ou motorista..."
+                placeholder="Buscar por código, cliente, destino, ETI ou motorista..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -466,113 +492,159 @@ const CdDashboard = () => {
         </Card>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'remessas' | 'disponiveis' | 'emrota' | 'entregues')}>
-          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
+          <TabsList className="grid w-full grid-cols-4 max-w-3xl">
             <TabsTrigger 
               value="remessas" 
               className="flex items-center gap-2 data-[state=active]:bg-amber-500 data-[state=active]:text-white"
             >
               <ClipboardCheck className="h-4 w-4" />
-              <span>Remessas</span>
-              <Badge variant="secondary" className="bg-amber-100 text-amber-700">{filterShipments(b2b1Shipments).length}</Badge>
+              <span className="hidden sm:inline">Remessas</span>
+              <Badge variant="secondary" className="bg-amber-100 text-amber-700">{filterShipments(b2b0Shipments).length}</Badge>
             </TabsTrigger>
             <TabsTrigger 
               value="disponiveis" 
-              className="flex items-center gap-2 data-[state=active]:bg-red-500 data-[state=active]:text-white"
+              className="flex items-center gap-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white"
             >
               <Package className="h-4 w-4" />
-              <span>Disponíveis</span>
-              <Badge variant="secondary" className="bg-red-100 text-red-700">{filterShipments(availableShipments).length}</Badge>
+              <span className="hidden sm:inline">Disponíveis</span>
+              <Badge variant="secondary" className="bg-orange-100 text-orange-700">{filterShipments(b2b1Shipments).length}</Badge>
             </TabsTrigger>
             <TabsTrigger 
-              value="emrota" 
+              value="volumes" 
               className="flex items-center gap-2 data-[state=active]:bg-purple-500 data-[state=active]:text-white"
             >
-              <Truck className="h-4 w-4" />
-              <span>Em Rota</span>
-              <Badge variant="secondary" className="bg-purple-100 text-purple-700">{filterShipments(inRouteShipments).length}</Badge>
+              <Boxes className="h-4 w-4" />
+              <span className="hidden sm:inline">Volumes</span>
+              <Badge variant="secondary" className="bg-purple-100 text-purple-700">{filterShipments(volumes).length}</Badge>
             </TabsTrigger>
             <TabsTrigger 
               value="entregues" 
               className="flex items-center gap-2 data-[state=active]:bg-green-500 data-[state=active]:text-white"
             >
               <CheckCircle className="h-4 w-4" />
-              <span>Entregues</span>
+              <span className="hidden sm:inline">Entregues</span>
               <Badge variant="secondary" className="bg-green-100 text-green-700">{filterShipments(deliveredShipments).length}</Badge>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="remessas" className="mt-4 space-y-4">
+          {/* B2B-0: Remessas (em coleta) */}
+          <TabsContent value="remessas" className="mt-6 space-y-4">
+            {filterShipments(b2b0Shipments).length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  <ClipboardCheck className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p>Nenhuma remessa em trânsito para o CD</p>
+                </CardContent>
+              </Card>
+            ) : (
+              filterShipments(b2b0Shipments).map((shipment) => 
+                renderShipmentCard(shipment, 
+                  shipment.status === 'B2B_COLETA_ACEITA' && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => handleOpenConferirChegada(shipment)}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Conferir Chegada
+                    </Button>
+                  )
+                )
+              )
+            )}
+          </TabsContent>
+
+          {/* B2B-1: Disponíveis (no CD, prontas para desmembrar) */}
+          <TabsContent value="disponiveis" className="mt-6 space-y-4">
             {filterShipments(b2b1Shipments).length === 0 ? (
-              <Card className="border-border/50">
+              <Card className="border-dashed">
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  Nenhuma remessa B2B-1 pendente de coleta
+                  <Package className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p>Nenhuma remessa disponível para desmembramento</p>
                 </CardContent>
               </Card>
             ) : (
-              filterShipments(b2b1Shipments).map(s => renderShipmentCard(s, true))
+              filterShipments(b2b1Shipments).map((shipment) => 
+                renderShipmentCard(shipment,
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => handleOpenDestrinchar(shipment)}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    <SplitSquareVertical className="h-4 w-4 mr-1" />
+                    Destrinchar
+                  </Button>
+                )
+              )
             )}
           </TabsContent>
 
-          <TabsContent value="disponiveis" className="mt-4 space-y-4">
-            {filterShipments(availableShipments).length === 0 ? (
-              <Card className="border-border/50">
+          {/* B2B-2: Volumes desmembrados */}
+          <TabsContent value="volumes" className="mt-6 space-y-4">
+            {filterShipments(volumes).length === 0 ? (
+              <Card className="border-dashed">
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  Nenhuma remessa disponível para entrega
+                  <Boxes className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p>Nenhum volume desmembrado aguardando entrega</p>
                 </CardContent>
               </Card>
             ) : (
-              filterShipments(availableShipments).map(s => renderShipmentCard(s))
+              filterShipments(volumes).map((volume) => renderShipmentCard(volume))
             )}
           </TabsContent>
 
-          <TabsContent value="emrota" className="mt-4 space-y-4">
-            {filterShipments(inRouteShipments).length === 0 ? (
-              <Card className="border-border/50">
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  Nenhuma remessa em rota de entrega
-                </CardContent>
-              </Card>
-            ) : (
-              filterShipments(inRouteShipments).map(s => renderShipmentCard(s))
-            )}
-          </TabsContent>
-
-          <TabsContent value="entregues" className="mt-4 space-y-4">
+          {/* Entregues */}
+          <TabsContent value="entregues" className="mt-6 space-y-4">
             {filterShipments(deliveredShipments).length === 0 ? (
-              <Card className="border-border/50">
+              <Card className="border-dashed">
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  Nenhuma remessa entregue
+                  <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p>Nenhuma entrega finalizada</p>
                 </CardContent>
               </Card>
             ) : (
-              filterShipments(deliveredShipments).map(s => renderShipmentCard(s))
+              filterShipments(deliveredShipments).map((shipment) => renderShipmentCard(shipment))
             )}
           </TabsContent>
         </Tabs>
       </main>
 
-      {/* Modal de Detalhes (modo visualização apenas) */}
-      <RemessaVisualizacao
-        isOpen={showDetails}
-        onClose={() => {
-          setShowDetails(false);
-          setSelectedShipment(null);
-        }}
-        remessa={selectedShipment}
-      />
+      {/* Modal de visualização de detalhes */}
+      {selectedShipment && (
+        <RemessaVisualizacao
+          isOpen={showDetails}
+          onClose={() => setShowDetails(false)}
+          remessa={selectedShipment}
+        />
+      )}
 
-      {/* Modal de Validação ETI */}
-      {selectedB2B1Shipment && (
+      {/* Modal de conferência de chegada (ETI validation) */}
+      {selectedB2B0Shipment && (
         <EtiValidationModal
           open={etiModalOpen}
           onClose={() => {
             setEtiModalOpen(false);
+            setSelectedB2B0Shipment(null);
+          }}
+          shipmentId={selectedB2B0Shipment.id}
+          volumeCount={selectedB2B0Shipment.volume_count || 1}
+          onFinalize={handleConfirmarChegada}
+        />
+      )}
+
+      {/* Modal de desmembramento */}
+      {selectedB2B1Shipment && (
+        <DestrincharModal
+          open={destrincharModalOpen}
+          onClose={() => {
+            setDestrincharModalOpen(false);
             setSelectedB2B1Shipment(null);
           }}
-          shipmentId={selectedB2B1Shipment.id}
-          volumeCount={selectedB2B1Shipment.volume_count || 1}
-          onFinalize={handleFinalizeB2B1}
+          shipment={selectedB2B1Shipment}
+          onComplete={handleDestrincharComplete}
         />
       )}
     </div>
