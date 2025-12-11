@@ -107,8 +107,8 @@ const MotoristaDashboard = () => {
         // Mapeia colunas do banco para visibilidade
         const visibilidade: MotoristaVisibilidade = {
           ve_convencional: motorista?.ve_convencional ?? true,
-          ve_b2b_1: motorista?.ve_b2b_coleta ?? false,  // B2B-1: coleta
-          ve_b2b_2: motorista?.ve_b2b_entrega ?? false  // B2B-2: entrega
+          ve_b2b_coleta: motorista?.ve_b2b_coleta ?? false,  // B2B-0: coleta
+          ve_b2b_entrega: motorista?.ve_b2b_entrega ?? false  // B2B-2: entrega
         };
 
         const motoristaData: MotoristaSession = {
@@ -564,8 +564,8 @@ const MotoristaDashboard = () => {
             </div>
             
             <div className="flex items-center gap-2">
-              {/* Botão Inserir Volume - apenas para drivers B2B-2 */}
-              {motoristaSession?.visibilidade?.ve_b2b_2 && (
+              {/* Botão Inserir Volume - apenas para drivers B2B-2 (entrega) */}
+              {motoristaSession?.visibilidade?.ve_b2b_entrega && (
                 <Button
                   variant="default"
                   size="sm"
