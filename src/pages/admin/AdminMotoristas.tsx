@@ -403,21 +403,10 @@ const AdminMotoristas = () => {
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button 
-              onClick={() => {
-                setEditingMotorista(null);
-                setFormData({ nome: '', cpf: '', telefone: '', email: '', senha: '', status: 'ativo', tipo_pedidos: 'ambos', ve_convencional: true, ve_b2b_coleta: false, ve_b2b_entrega: false });
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Motorista
-            </Button>
-          </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {editingMotorista ? 'Editar Motorista' : 'Novo Motorista'}
+                Editar Motorista
               </DialogTitle>
             </DialogHeader>
             
