@@ -336,11 +336,11 @@ const MotoristaDashboard = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t">
+            <div className="flex flex-col gap-2 pt-2 border-t">
               <div className="text-xs text-muted-foreground">
                 {Number(remessa.weight).toFixed(2)}kg | {remessa.quote_data?.merchandiseDetails?.volumes?.length || remessa.quote_data?.technicalData?.volumes?.length || 1} volume(s)
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline" 
                   size="sm"
