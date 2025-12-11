@@ -13,7 +13,8 @@ import {
   Calendar,
   User,
   LogOut,
-  Eye
+  Eye,
+  CheckCircle
 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -52,7 +53,7 @@ const CdDashboard = () => {
   const [shipments, setShipments] = useState<B2BShipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'disponiveis' | 'emrota'>('disponiveis');
+  const [activeTab, setActiveTab] = useState<'disponiveis' | 'emrota' | 'entregues'>('disponiveis');
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -145,11 +146,15 @@ const CdDashboard = () => {
     s.status === 'B2B_COLETA_FINALIZADA' && !s.motorista_id
   );
 
-  // Remessas em rota de entrega (com motorista atribuído ou já finalizadas)
+  // Remessas em rota de entrega (com motorista atribuído, mas não entregues)
   const inRouteShipments = shipments.filter(s => 
-    s.status === 'B2B_ENTREGA_ACEITA' || 
-    s.status === 'ENTREGUE' ||
+    s.status === 'B2B_ENTREGA_ACEITA' ||
     (s.status === 'B2B_COLETA_FINALIZADA' && s.motorista_id)
+  );
+
+  // Remessas entregues (finalizadas completamente)
+  const deliveredShipments = shipments.filter(s => 
+    s.status === 'ENTREGUE'
   );
 
   const filterShipments = (list: B2BShipment[]) => {
@@ -341,8 +346,8 @@ const CdDashboard = () => {
         </Card>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'disponiveis' | 'emrota')}>
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'disponiveis' | 'emrota' | 'entregues')}>
+          <TabsList className="grid w-full grid-cols-3 max-w-lg">
             <TabsTrigger value="disponiveis" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
               <span>Disponíveis</span>
@@ -352,6 +357,11 @@ const CdDashboard = () => {
               <Truck className="h-4 w-4" />
               <span>Em Rota</span>
               <Badge variant="secondary">{filterShipments(inRouteShipments).length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="entregues" className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4" />
+              <span>Entregues</span>
+              <Badge variant="secondary">{filterShipments(deliveredShipments).length}</Badge>
             </TabsTrigger>
           </TabsList>
 
@@ -376,6 +386,18 @@ const CdDashboard = () => {
               </Card>
             ) : (
               filterShipments(inRouteShipments).map(renderShipmentCard)
+            )}
+          </TabsContent>
+
+          <TabsContent value="entregues" className="mt-4 space-y-4">
+            {filterShipments(deliveredShipments).length === 0 ? (
+              <Card className="border-border/50">
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  Nenhuma remessa entregue
+                </CardContent>
+              </Card>
+            ) : (
+              filterShipments(deliveredShipments).map(renderShipmentCard)
             )}
           </TabsContent>
         </Tabs>
