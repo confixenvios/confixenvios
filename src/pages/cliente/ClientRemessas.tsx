@@ -145,25 +145,13 @@ const ClientRemessas = () => {
 
       if (error) throw error;
       
-      // Buscar CT-es para cada remessa (aprovado ou reprovado)
-      const shipmentsWithCte = await Promise.all(
-        (data || []).map(async (shipment) => {
-          const { data: cteData, error: cteError } = await supabase
-            .from('cte_emissoes')
-            .select('*')
-            .eq('shipment_id', shipment.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          
-          return {
-            ...shipment,
-            cte_emission: cteData
-          };
-        })
-      );
+      // Mapear remessas sem buscar CT-e (dados de CT-e são exclusivos do admin)
+      const shipmentsWithoutCte = (data || []).map((shipment) => ({
+        ...shipment,
+        cte_emission: null
+      }));
       
-      setShipments(shipmentsWithCte);
+      setShipments(shipmentsWithoutCte);
     } catch (error) {
       console.error('Error loading shipments:', error);
       toast({
@@ -440,14 +428,6 @@ const ClientRemessas = () => {
                               Ver Etiqueta
                             </Button>
                           )}
-                          
-                          {/* Badge de CT-e Reprovado */}
-                          {shipment.cte_emission && shipment.cte_emission.status === 'reprovado' && (
-                            <Badge variant="destructive" className="flex items-center gap-1">
-                              <XCircle className="w-3 h-3" />
-                              CT-e Reprovado
-                            </Badge>
-                          )}
                         </div>
                       </div>
 
@@ -614,86 +594,7 @@ const ClientRemessas = () => {
                         <p className="font-medium">R$ 10,00</p>
                       </div>
                     )}
-                    {selectedShipment.cte_key && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">Chave CTE</p>
-                        <p className="font-medium font-mono text-xs break-all">{selectedShipment.cte_key}</p>
-                      </div>
-                    )}
-                    
-                    {/* CT-e Aprovado - Mostrar informações detalhadas */}
-                    {selectedShipment.cte_emission && (
-                      <div className="col-span-2 mt-4 p-4 border border-success/30 rounded-lg bg-success/5">
-                        <h4 className="font-semibold text-success mb-3 flex items-center gap-2">
-                          <FileText className="w-4 h-4" />
-                          CT-e Emitido com Sucesso
-                        </h4>
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <p className="text-muted-foreground">Número CT-e</p>
-                            <p className="font-medium">{selectedShipment.cte_emission.numero_cte}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Série</p>
-                            <p className="font-medium">{selectedShipment.cte_emission.serie}</p>
-                          </div>
-                          <div className="col-span-2">
-                            <p className="text-muted-foreground">Chave de Acesso</p>
-                            <p className="font-medium font-mono text-xs break-all">{selectedShipment.cte_emission.chave_cte}</p>
-                          </div>
-                          <div className="col-span-2">
-                            <p className="text-muted-foreground">Status</p>
-                            <Badge variant="success" className="w-fit">{selectedShipment.cte_emission.status}</Badge>
-                          </div>
-                          {selectedShipment.cte_emission.motivo && (
-                            <div className="col-span-2">
-                              <p className="text-muted-foreground">Motivo</p>
-                              <p className="font-medium">{selectedShipment.cte_emission.motivo}</p>
-                            </div>
-                          )}
-                          
-                          {/* Botões para XML e DACTE */}
-                          <div className="col-span-2 flex gap-3 mt-3">
-                            {selectedShipment.cte_emission.xml_url && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(selectedShipment.cte_emission!.xml_url!, '_blank')}
-                                className="flex-1"
-                              >
-                                <FileText className="w-4 h-4 mr-2" />
-                                Visualizar XML
-                              </Button>
-                            )}
-                            {selectedShipment.cte_emission.dacte_url && (
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => window.open(selectedShipment.cte_emission!.dacte_url!, '_blank')}
-                                className="flex-1"
-                              >
-                                <Receipt className="w-4 h-4 mr-2" />
-                                Visualizar DACTE (PDF)
-                              </Button>
-                            )}
-                          </div>
-                          
-                          {/* Log detalhado em JSON (collapsible) */}
-                          {selectedShipment.cte_emission.payload_bruto && (
-                            <div className="col-span-2 mt-3">
-                              <details className="cursor-pointer">
-                                <summary className="text-sm font-medium text-muted-foreground hover:text-foreground">
-                                  Ver Log Completo da API
-                                </summary>
-                                <pre className="mt-2 p-3 bg-muted rounded text-xs overflow-x-auto max-h-60">
-                                  {JSON.stringify(selectedShipment.cte_emission.payload_bruto, null, 2)}
-                                </pre>
-                              </details>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                    {/* CT-e info removido - disponível apenas no admin */}
                     
                     {/* Etiqueta de Envio */}
                     {selectedShipment.label_pdf_url && (
