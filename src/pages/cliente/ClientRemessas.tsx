@@ -585,7 +585,20 @@ const ClientRemessas = () => {
                     )}
                     {/* CT-e info removido - disponível apenas no admin */}
                     
-                    {/* Etiquetas são exclusivas do painel admin e B2B */}
+                    {/* Exibir etiqueta se disponível */}
+                    {selectedShipment.label_pdf_url && (
+                      <div className="col-span-2 mt-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(selectedShipment.label_pdf_url!, '_blank')}
+                          className="flex items-center gap-2"
+                        >
+                          <FileText className="w-4 h-4" />
+                          Ver Etiqueta
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1043,82 +1056,7 @@ const ClientRemessas = () => {
                   </>
                 )}
 
-                {/* Dados da Cotação Completos */}
-                {selectedShipment.quote_data && (
-                  <>
-                    <Separator />
-                    <div>
-                      <h3 className="text-lg font-semibold mb-3">Dados da Cotação</h3>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        {/* CEPs */}
-                        {selectedShipment.quote_data.originalFormData && (
-                          <>
-                            <div>
-                              <p className="text-muted-foreground">CEP de Origem</p>
-                              <p className="font-medium">{selectedShipment.quote_data.originalFormData.originCep}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">CEP de Destino</p>
-                              <p className="font-medium">{selectedShipment.quote_data.originalFormData.destinyCep}</p>
-                            </div>
-                          </>
-                        )}
-                        
-                        {/* Zona e Prazos */}
-                        {selectedShipment.quote_data.shippingQuote && (
-                          <>
-                            <div>
-                              <p className="text-muted-foreground">Zona de Entrega</p>
-                              <p className="font-medium">{selectedShipment.quote_data.shippingQuote.zoneName} ({selectedShipment.quote_data.shippingQuote.zone})</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Prazo Econômico</p>
-                              <p className="font-medium">{selectedShipment.quote_data.shippingQuote.economicDays} dias</p>
-                            </div>
-                          </>
-                        )}
-                        
-                        {/* Dados da Encomenda */}
-                        {selectedShipment.quote_data.originalFormData && (
-                          <>
-                            <div>
-                              <p className="text-muted-foreground">Peso Informado</p>
-                              <p className="font-medium">{selectedShipment.quote_data.originalFormData.weight}kg</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Quantidade</p>
-                              <p className="font-medium">{selectedShipment.quote_data.originalFormData.quantity} volumes</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Dimensões (CxLxA)</p>
-                              <p className="font-medium">
-                                {selectedShipment.quote_data.originalFormData.length} x{' '}
-                                {selectedShipment.quote_data.originalFormData.width} x{' '}
-                                {selectedShipment.quote_data.originalFormData.height} cm
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Formato</p>
-                              <p className="font-medium capitalize">{selectedShipment.quote_data.originalFormData.format}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Valor Unitário</p>
-                              <p className="font-medium">
-                                R$ {parseFloat(selectedShipment.quote_data.originalFormData.unitValue).toFixed(2).replace('.', ',')}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Valor Total da Mercadoria</p>
-                              <p className="font-medium">
-                                R$ {selectedShipment.quote_data.originalFormData.totalMerchandiseValue.toFixed(2).replace('.', ',')}
-                              </p>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
+                {/* Dados da Cotação removidos - exclusivo do admin */}
               </div>
             )}
           </ScrollArea>
