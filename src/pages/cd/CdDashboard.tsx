@@ -22,6 +22,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { RemessaVisualizacao } from '@/components/motorista/RemessaVisualizacao';
+import { EtiValidationModal } from '@/components/cd/EtiValidationModal';
 
 interface B2BShipment {
   id: string;
@@ -56,9 +57,10 @@ const CdDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'remessas' | 'disponiveis' | 'emrota' | 'entregues'>('remessas');
-  const [finalizingId, setFinalizingId] = useState<string | null>(null);
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [etiModalOpen, setEtiModalOpen] = useState(false);
+  const [selectedB2B1Shipment, setSelectedB2B1Shipment] = useState<B2BShipment | null>(null);
 
   useEffect(() => {
     const userData = localStorage.getItem('cd_user');
@@ -162,33 +164,37 @@ const CdDashboard = () => {
     }
   };
 
-  const handleFinalizeB2B1 = async (shipmentId: string) => {
-    try {
-      setFinalizingId(shipmentId);
+  const handleOpenEtiModal = (shipment: B2BShipment) => {
+    setSelectedB2B1Shipment(shipment);
+    setEtiModalOpen(true);
+  };
 
+  const handleFinalizeB2B1 = async () => {
+    if (!selectedB2B1Shipment) return;
+    
+    try {
       // Atualizar status para B2B_COLETA_FINALIZADA
       const { error } = await supabase
         .from('b2b_shipments')
         .update({ status: 'B2B_COLETA_FINALIZADA' })
-        .eq('id', shipmentId);
+        .eq('id', selectedB2B1Shipment.id);
 
       if (error) throw error;
 
       // Registrar no histórico
       await supabase.from('shipment_status_history').insert({
-        b2b_shipment_id: shipmentId,
+        b2b_shipment_id: selectedB2B1Shipment.id,
         status: 'B2B_COLETA_FINALIZADA',
-        action_type: 'coleta',
-        notes: `Coleta finalizada pelo CD - ${cdUser?.nome}`
+        observacoes: `Coleta finalizada pelo CD - ${cdUser?.nome}`
       });
 
       toast.success('Coleta finalizada com sucesso!');
+      setEtiModalOpen(false);
+      setSelectedB2B1Shipment(null);
       loadShipments();
     } catch (error) {
       console.error('Erro ao finalizar coleta:', error);
       toast.error('Erro ao finalizar coleta');
-    } finally {
-      setFinalizingId(null);
     }
   };
 
@@ -389,15 +395,10 @@ const CdDashboard = () => {
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={() => handleFinalizeB2B1(shipment.id)}
-                  disabled={finalizingId === shipment.id}
+                  onClick={() => handleOpenEtiModal(shipment)}
                   className="bg-green-600 hover:bg-green-700"
                 >
-                  {finalizingId === shipment.id ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
-                  ) : (
-                    <ClipboardCheck className="h-4 w-4 mr-1" />
-                  )}
+                  <ClipboardCheck className="h-4 w-4 mr-1" />
                   Finalizar Coleta
                 </Button>
               )}
@@ -560,6 +561,20 @@ const CdDashboard = () => {
         }}
         remessa={selectedShipment}
       />
+
+      {/* Modal de Validação ETI */}
+      {selectedB2B1Shipment && (
+        <EtiValidationModal
+          open={etiModalOpen}
+          onClose={() => {
+            setEtiModalOpen(false);
+            setSelectedB2B1Shipment(null);
+          }}
+          shipmentId={selectedB2B1Shipment.id}
+          volumeCount={selectedB2B1Shipment.volume_count || 1}
+          onFinalize={handleFinalizeB2B1}
+        />
+      )}
     </div>
   );
 };
