@@ -109,15 +109,17 @@ const AdminMotoristas = () => {
 
       if (shipmentsError) throw shipmentsError;
 
-      // Buscar remessas B2B
-      const { data: b2bShipments, error: b2bError } = await supabase
-        .from('b2b_shipments')
-        .select('motorista_id, status, created_at')
+      // Buscar histórico de status B2B para contabilizar ações de cada motorista
+      // Isso é importante porque o motorista_id na b2b_shipments muda quando outro motorista aceita
+      const { data: b2bHistory, error: b2bHistoryError } = await supabase
+        .from('shipment_status_history')
+        .select('motorista_id, status, created_at, b2b_shipment_id')
+        .not('b2b_shipment_id', 'is', null)
         .not('motorista_id', 'is', null)
         .gte('created_at', dateRange.from + 'T00:00:00')
         .lte('created_at', dateRange.to + 'T23:59:59');
 
-      if (b2bError) throw b2bError;
+      if (b2bHistoryError) throw b2bHistoryError;
 
       // Calcular estatísticas por motorista
       const statsMap = new Map<string, MotoristaStats>();
@@ -152,12 +154,21 @@ const AdminMotoristas = () => {
         statsMap.set(shipment.motorista_id, existing);
       });
 
-      // Processar remessas B2B
-      b2bShipments?.forEach(shipment => {
-        if (!shipment.motorista_id) return;
+      // Processar histórico B2B - contabilizar ações finalizadas de cada motorista
+      // Para B2B-1: B2B_COLETA_FINALIZADA significa sucesso
+      // Para B2B-2: ENTREGUE significa sucesso
+      const processedB2BActions = new Set<string>(); // Para evitar duplicatas
+      
+      b2bHistory?.forEach(history => {
+        if (!history.motorista_id) return;
         
-        const existing = statsMap.get(shipment.motorista_id) || {
-          motorista_id: shipment.motorista_id,
+        // Criar chave única para evitar contar a mesma ação múltiplas vezes
+        const actionKey = `${history.motorista_id}-${history.b2b_shipment_id}-${history.status}`;
+        if (processedB2BActions.has(actionKey)) return;
+        processedB2BActions.add(actionKey);
+        
+        const existing = statsMap.get(history.motorista_id) || {
+          motorista_id: history.motorista_id,
           total_remessas: 0,
           remessas_entregues: 0,
           remessas_pendentes: 0,
@@ -165,21 +176,34 @@ const AdminMotoristas = () => {
           taxa_sucesso: 0
         };
 
-        existing.total_remessas++;
-        
-        if (shipment.status === 'ENTREGUE') {
+        // Contabilizar apenas ações de finalização (coleta ou entrega)
+        if (history.status === 'B2B_COLETA_FINALIZADA') {
+          // Motorista B2B-1 finalizou coleta = sucesso para ele
+          existing.total_remessas++;
           existing.remessas_entregues++;
-        } else if (shipment.status === 'CANCELADO') {
-          existing.remessas_canceladas++;
-        } else {
-          existing.remessas_pendentes++;
+        } else if (history.status === 'ENTREGUE') {
+          // Motorista B2B-2 finalizou entrega = sucesso para ele
+          existing.total_remessas++;
+          existing.remessas_entregues++;
+        } else if (history.status === 'ACEITA' || history.status === 'B2B_ENTREGA_ACEITA') {
+          // Remessas aceitas mas ainda pendentes - verificar se não foi finalizada
+          const wasFinalized = b2bHistory?.some(h => 
+            h.b2b_shipment_id === history.b2b_shipment_id && 
+            h.motorista_id === history.motorista_id &&
+            (h.status === 'B2B_COLETA_FINALIZADA' || h.status === 'ENTREGUE')
+          );
+          
+          if (!wasFinalized) {
+            existing.total_remessas++;
+            existing.remessas_pendentes++;
+          }
         }
 
         existing.taxa_sucesso = existing.total_remessas > 0 
           ? (existing.remessas_entregues / existing.total_remessas) * 100 
           : 0;
 
-        statsMap.set(shipment.motorista_id, existing);
+        statsMap.set(history.motorista_id, existing);
       });
 
       // Incluir motoristas sem remessas
