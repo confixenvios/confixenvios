@@ -14,7 +14,8 @@ import {
   User,
   LogOut,
   Eye,
-  CheckCircle
+  CheckCircle,
+  ClipboardCheck
 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -51,9 +52,11 @@ const CdDashboard = () => {
   const navigate = useNavigate();
   const [cdUser, setCdUser] = useState<CdUser | null>(null);
   const [shipments, setShipments] = useState<B2BShipment[]>([]);
+  const [b2b1Shipments, setB2b1Shipments] = useState<B2BShipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'disponiveis' | 'emrota' | 'entregues'>('disponiveis');
+  const [activeTab, setActiveTab] = useState<'remessas' | 'disponiveis' | 'emrota' | 'entregues'>('remessas');
+  const [finalizingId, setFinalizingId] = useState<string | null>(null);
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -77,7 +80,28 @@ const CdDashboard = () => {
     try {
       setLoading(true);
 
-      // Carregar apenas remessas B2B-2 (fase de entrega)
+      // Carregar remessas B2B-1 (fase de coleta - PENDENTE e ACEITA)
+      const { data: b2b1Data, error: b2b1Error } = await supabase
+        .from('b2b_shipments')
+        .select(`
+          id,
+          tracking_code,
+          status,
+          created_at,
+          recipient_name,
+          recipient_city,
+          recipient_state,
+          volume_count,
+          motorista_id,
+          observations,
+          b2b_clients(company_name)
+        `)
+        .in('status', ['PENDENTE', 'ACEITA'])
+        .order('created_at', { ascending: false });
+
+      if (b2b1Error) throw b2b1Error;
+
+      // Carregar remessas B2B-2 (fase de entrega)
       const { data: b2bData, error: b2bError } = await supabase
         .from('b2b_shipments')
         .select(`
@@ -98,7 +122,8 @@ const CdDashboard = () => {
 
       if (b2bError) throw b2bError;
 
-      const motoristaIds = [...new Set((b2bData || []).filter(s => s.motorista_id).map(s => s.motorista_id))];
+      const allShipments = [...(b2b1Data || []), ...(b2bData || [])];
+      const motoristaIds = [...new Set(allShipments.filter(s => s.motorista_id).map(s => s.motorista_id))];
       
       let motoristasMap: Record<string, string> = {};
       if (motoristaIds.length > 0) {
@@ -115,13 +140,20 @@ const CdDashboard = () => {
         }
       }
 
-      const mappedShipments = (b2bData || []).map(s => ({
+      const mappedB2b1 = (b2b1Data || []).map(s => ({
         ...s,
         motorista_nome: s.motorista_id ? motoristasMap[s.motorista_id] : undefined,
         b2b_client: s.b2b_clients as any
       }));
 
-      setShipments(mappedShipments);
+      const mappedB2b2 = (b2bData || []).map(s => ({
+        ...s,
+        motorista_nome: s.motorista_id ? motoristasMap[s.motorista_id] : undefined,
+        b2b_client: s.b2b_clients as any
+      }));
+
+      setB2b1Shipments(mappedB2b1);
+      setShipments(mappedB2b2);
     } catch (error) {
       console.error('Erro ao carregar remessas:', error);
       toast.error('Erro ao carregar remessas');
@@ -130,8 +162,40 @@ const CdDashboard = () => {
     }
   };
 
+  const handleFinalizeB2B1 = async (shipmentId: string) => {
+    try {
+      setFinalizingId(shipmentId);
+
+      // Atualizar status para B2B_COLETA_FINALIZADA
+      const { error } = await supabase
+        .from('b2b_shipments')
+        .update({ status: 'B2B_COLETA_FINALIZADA' })
+        .eq('id', shipmentId);
+
+      if (error) throw error;
+
+      // Registrar no histórico
+      await supabase.from('shipment_status_history').insert({
+        b2b_shipment_id: shipmentId,
+        status: 'B2B_COLETA_FINALIZADA',
+        action_type: 'coleta',
+        notes: `Coleta finalizada pelo CD - ${cdUser?.nome}`
+      });
+
+      toast.success('Coleta finalizada com sucesso!');
+      loadShipments();
+    } catch (error) {
+      console.error('Erro ao finalizar coleta:', error);
+      toast.error('Erro ao finalizar coleta');
+    } finally {
+      setFinalizingId(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; className: string }> = {
+      'PENDENTE': { label: 'Aguardando', className: 'bg-amber-500 text-white hover:bg-amber-600' },
+      'ACEITA': { label: 'Aceita', className: 'bg-blue-500 text-white hover:bg-blue-600' },
       'B2B_COLETA_FINALIZADA': { label: 'Disponível', className: 'bg-red-500 text-white hover:bg-red-600' },
       'B2B_ENTREGA_ACEITA': { label: 'Em Rota', className: 'bg-purple-500 text-white hover:bg-purple-600' },
       'ENTREGUE': { label: 'Entregue', className: 'bg-green-500 text-white hover:bg-green-600' }
@@ -229,6 +293,7 @@ const CdDashboard = () => {
   };
 
   const getCardColor = (status: string) => {
+    if (status === 'PENDENTE' || status === 'ACEITA') return 'border-amber-500/50 bg-amber-50/30';
     if (status === 'B2B_COLETA_FINALIZADA') return 'border-red-500/50 bg-red-50/30';
     if (status === 'B2B_ENTREGA_ACEITA') return 'border-purple-500/50 bg-purple-50/30';
     if (status === 'ENTREGUE') return 'border-green-500/50 bg-green-50/30';
@@ -236,6 +301,7 @@ const CdDashboard = () => {
   };
 
   const getMotoristaColor = (status: string) => {
+    if (status === 'PENDENTE' || status === 'ACEITA') return 'text-amber-600';
     if (status === 'B2B_COLETA_FINALIZADA') return 'text-red-600';
     if (status === 'B2B_ENTREGA_ACEITA') return 'text-purple-600';
     if (status === 'ENTREGUE') return 'text-green-600';
@@ -256,8 +322,9 @@ const CdDashboard = () => {
     return null;
   };
 
-  const renderShipmentCard = (shipment: B2BShipment) => {
+  const renderShipmentCard = (shipment: B2BShipment, showFinalizeButton = false) => {
     const vehicleType = getVehicleType(shipment);
+    const isB2B1 = shipment.status === 'PENDENTE' || shipment.status === 'ACEITA';
     
     return (
       <Card key={shipment.id} className={getCardColor(shipment.status)}>
@@ -308,15 +375,33 @@ const CdDashboard = () => {
               )}
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleViewDetails(shipment)}
-              className="ml-2"
-            >
-              <Eye className="h-4 w-4 mr-1" />
-              Detalhes
-            </Button>
+            <div className="flex gap-2 ml-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleViewDetails(shipment)}
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                Detalhes
+              </Button>
+              
+              {showFinalizeButton && isB2B1 && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => handleFinalizeB2B1(shipment.id)}
+                  disabled={finalizingId === shipment.id}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {finalizingId === shipment.id ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                  ) : (
+                    <ClipboardCheck className="h-4 w-4 mr-1" />
+                  )}
+                  Finalizar Coleta
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -380,8 +465,16 @@ const CdDashboard = () => {
         </Card>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'disponiveis' | 'emrota' | 'entregues')}>
-          <TabsList className="grid w-full grid-cols-3 max-w-lg">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'remessas' | 'disponiveis' | 'emrota' | 'entregues')}>
+          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
+            <TabsTrigger 
+              value="remessas" 
+              className="flex items-center gap-2 data-[state=active]:bg-amber-500 data-[state=active]:text-white"
+            >
+              <ClipboardCheck className="h-4 w-4" />
+              <span>Remessas</span>
+              <Badge variant="secondary" className="bg-amber-100 text-amber-700">{filterShipments(b2b1Shipments).length}</Badge>
+            </TabsTrigger>
             <TabsTrigger 
               value="disponiveis" 
               className="flex items-center gap-2 data-[state=active]:bg-red-500 data-[state=active]:text-white"
@@ -408,6 +501,18 @@ const CdDashboard = () => {
             </TabsTrigger>
           </TabsList>
 
+          <TabsContent value="remessas" className="mt-4 space-y-4">
+            {filterShipments(b2b1Shipments).length === 0 ? (
+              <Card className="border-border/50">
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  Nenhuma remessa B2B-1 pendente de coleta
+                </CardContent>
+              </Card>
+            ) : (
+              filterShipments(b2b1Shipments).map(s => renderShipmentCard(s, true))
+            )}
+          </TabsContent>
+
           <TabsContent value="disponiveis" className="mt-4 space-y-4">
             {filterShipments(availableShipments).length === 0 ? (
               <Card className="border-border/50">
@@ -416,7 +521,7 @@ const CdDashboard = () => {
                 </CardContent>
               </Card>
             ) : (
-              filterShipments(availableShipments).map(renderShipmentCard)
+              filterShipments(availableShipments).map(s => renderShipmentCard(s))
             )}
           </TabsContent>
 
@@ -428,7 +533,7 @@ const CdDashboard = () => {
                 </CardContent>
               </Card>
             ) : (
-              filterShipments(inRouteShipments).map(renderShipmentCard)
+              filterShipments(inRouteShipments).map(s => renderShipmentCard(s))
             )}
           </TabsContent>
 
@@ -440,7 +545,7 @@ const CdDashboard = () => {
                 </CardContent>
               </Card>
             ) : (
-              filterShipments(deliveredShipments).map(renderShipmentCard)
+              filterShipments(deliveredShipments).map(s => renderShipmentCard(s))
             )}
           </TabsContent>
         </Tabs>
