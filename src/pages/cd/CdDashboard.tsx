@@ -242,63 +242,86 @@ const CdDashboard = () => {
     return 'text-primary';
   };
 
-  const renderShipmentCard = (shipment: B2BShipment) => (
-    <Card key={shipment.id} className={getCardColor(shipment.status)}>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2 flex-1">
-            <div className="flex items-center gap-2">
-              <span className={`font-mono text-sm font-medium ${getMotoristaColor(shipment.status)}`}>
-                {shipment.tracking_code || 'Sem código'}
-              </span>
-              {getStatusBadge(shipment.status)}
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <User className="h-3 w-3" />
-                <span>{shipment.b2b_client?.company_name || 'Cliente não identificado'}</span>
+  const getVehicleType = (shipment: B2BShipment) => {
+    try {
+      if (shipment.observations) {
+        const parsed = typeof shipment.observations === 'string' 
+          ? JSON.parse(shipment.observations) 
+          : shipment.observations;
+        return parsed?.vehicle_type || null;
+      }
+    } catch (e) {
+      console.log('Erro ao parsear vehicle_type:', e);
+    }
+    return null;
+  };
+
+  const renderShipmentCard = (shipment: B2BShipment) => {
+    const vehicleType = getVehicleType(shipment);
+    
+    return (
+      <Card key={shipment.id} className={getCardColor(shipment.status)}>
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="space-y-2 flex-1">
+              <div className="flex items-center gap-2">
+                <span className={`font-mono text-sm font-medium ${getMotoristaColor(shipment.status)}`}>
+                  {shipment.tracking_code || 'Sem código'}
+                </span>
+                {getStatusBadge(shipment.status)}
               </div>
               
-              {shipment.recipient_city && shipment.recipient_state && (
-                <div className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  <span>{shipment.recipient_city}/{shipment.recipient_state}</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                <div className="flex items-center gap-1 text-foreground font-medium">
+                  <User className="h-3 w-3" />
+                  <span>{shipment.b2b_client?.company_name || 'Cliente não identificado'}</span>
+                </div>
+                
+                {shipment.recipient_city && shipment.recipient_state && (
+                  <div className="flex items-center gap-1 text-foreground font-medium">
+                    <MapPin className="h-3 w-3" />
+                    <span>{shipment.recipient_city}/{shipment.recipient_state}</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-1 text-foreground font-medium">
+                  <Package className="h-3 w-3" />
+                  <span>{shipment.volume_count || 1} volume(s)</span>
+                </div>
+                
+                <div className="flex items-center gap-2 text-foreground font-medium">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    <span>{format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
+                  </div>
+                  {vehicleType && (
+                    <span className="text-muted-foreground">| Veículo: {vehicleType}</span>
+                  )}
+                </div>
+              </div>
+
+              {shipment.motorista_nome && (
+                <div className={`flex items-center gap-1 text-sm ${getMotoristaColor(shipment.status)}`}>
+                  <Truck className="h-3 w-3" />
+                  <span className="font-medium">Motorista: {shipment.motorista_nome}</span>
                 </div>
               )}
-              
-              <div className="flex items-center gap-1">
-                <Package className="h-3 w-3" />
-                <span>{shipment.volume_count || 1} volume(s)</span>
-              </div>
-              
-              <div className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                <span>{format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
-              </div>
             </div>
 
-            {shipment.motorista_nome && (
-              <div className={`flex items-center gap-1 text-sm ${getMotoristaColor(shipment.status)}`}>
-                <Truck className="h-3 w-3" />
-                <span className="font-medium">Motorista: {shipment.motorista_nome}</span>
-              </div>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleViewDetails(shipment)}
+              className="ml-2"
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              Detalhes
+            </Button>
           </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleViewDetails(shipment)}
-            className="ml-2"
-          >
-            <Eye className="h-4 w-4 mr-1" />
-            Detalhes
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (!cdUser) return null;
 
