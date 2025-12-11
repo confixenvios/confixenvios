@@ -1290,7 +1290,7 @@ const AdminRemessas = () => {
                               <h3 className="font-semibold text-base">
                                 {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
                               </h3>
-                              {/* Badge B2B-1 ou B2B-2 */}
+                              {/* Badge B2B-0 ou B2B-2 */}
                               {isB2BExpresso && (
                                 <Badge 
                                   variant="outline" 
@@ -1302,7 +1302,7 @@ const AdminRemessas = () => {
                                 >
                                   {shipment.status === 'B2B_COLETA_FINALIZADA' || shipment.status === 'ENTREGUE' 
                                     ? "B2B-2" 
-                                    : "B2B-1"}
+                                    : "B2B-0"}
                                 </Badge>
                               )}
                             </div>
@@ -2342,9 +2342,9 @@ const AdminRemessas = () => {
               ) : (
                 <div className="space-y-2">
                   {b2bStatusHistory.map((entry, idx) => {
-                    const isB2B1 = ['ACEITA', 'COLETA_ACEITA', 'B2B_COLETA_FINALIZADA'].includes(entry.status);
+                    const isB2B0 = ['ACEITA', 'COLETA_ACEITA', 'B2B_COLETA_FINALIZADA'].includes(entry.status);
                     const isB2B2 = ['B2B_ENTREGA_ACEITA', 'ENTREGUE', 'ENTREGA_FINALIZADA'].includes(entry.status);
-                    const phaseLabel = isB2B1 ? 'B2B-1' : isB2B2 ? 'B2B-2' : '';
+                    const phaseLabel = isB2B0 ? 'B2B-0' : isB2B2 ? 'B2B-2' : '';
                     
                     return (
                       <div key={entry.id} className="bg-muted/50 p-3 rounded-lg space-y-1 text-sm">
@@ -2354,7 +2354,7 @@ const AdminRemessas = () => {
                               {entry.status}
                             </Badge>
                             {phaseLabel && (
-                              <Badge variant={isB2B1 ? 'secondary' : 'default'} className="text-xs">
+                              <Badge variant={isB2B0 ? 'secondary' : 'default'} className="text-xs">
                                 {phaseLabel}
                               </Badge>
                             )}

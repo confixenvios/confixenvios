@@ -587,10 +587,10 @@ const AdminMotoristas = () => {
                   <div className="flex items-center gap-2">
                     <Zap className="h-4 w-4 text-orange-500" />
                     <Label htmlFor="ve_b2b_coleta" className="text-sm font-normal cursor-pointer">
-                      B2B-1 (Coleta)
+                      B2B-0 (Coleta)
                     </Label>
                   </div>
-                  <span className="text-xs text-muted-foreground">- Fase inicial após pagamento</span>
+                  <span className="text-xs text-muted-foreground">- Coleta inicial após pagamento</span>
                 </div>
 
                 <div className="flex items-center space-x-3">
@@ -715,7 +715,7 @@ const AdminMotoristas = () => {
                           {motorista.ve_b2b_coleta && (
                             <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300 text-xs">
                               <Zap className="h-3 w-3 mr-1" />
-                              B2B-1
+                              B2B-0
                             </Badge>
                           )}
                           {motorista.ve_b2b_entrega && (
