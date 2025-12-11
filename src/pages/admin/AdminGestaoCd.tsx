@@ -35,7 +35,7 @@ const AdminGestaoCd = () => {
   const [shipments, setShipments] = useState<B2BShipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'b2b1' | 'b2b2'>('b2b1');
+  const [activeTab, setActiveTab] = useState<'b2b0' | 'b2b2'>('b2b0');
 
   useEffect(() => {
     loadShipments();
@@ -111,8 +111,8 @@ const AdminGestaoCd = () => {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  // Filtrar remessas B2B-1 (Coleta) - status antes de B2B_COLETA_FINALIZADA
-  const b2b1Shipments = shipments.filter(s => 
+  // Filtrar remessas B2B-0 (Coleta) - status antes de B2B_COLETA_FINALIZADA
+  const b2b0Shipments = shipments.filter(s => 
     ['PENDENTE', 'ACEITA'].includes(s.status) ||
     (s.status === 'B2B_COLETA_FINALIZADA')
   );
@@ -211,7 +211,7 @@ const AdminGestaoCd = () => {
         
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 text-blue-600 rounded-lg">
-            <span className="font-medium">B2B-1</span>
+            <span className="font-medium">B2B-0</span>
             <span>=</span>
             <span>Coleta</span>
           </div>
@@ -239,11 +239,11 @@ const AdminGestaoCd = () => {
       </Card>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'b2b1' | 'b2b2')}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'b2b0' | 'b2b2')}>
         <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="b2b1" className="flex items-center gap-2">
-            <span>B2B-1 (Coleta)</span>
-            <Badge variant="secondary">{filterShipments(b2b1Shipments).length}</Badge>
+          <TabsTrigger value="b2b0" className="flex items-center gap-2">
+            <span>B2B-0 (Coleta)</span>
+            <Badge variant="secondary">{filterShipments(b2b0Shipments).length}</Badge>
           </TabsTrigger>
           <TabsTrigger value="b2b2" className="flex items-center gap-2">
             <span>B2B-2 (Entrega)</span>
@@ -251,15 +251,15 @@ const AdminGestaoCd = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="b2b1" className="mt-4 space-y-4">
-          {filterShipments(b2b1Shipments).length === 0 ? (
+        <TabsContent value="b2b0" className="mt-4 space-y-4">
+          {filterShipments(b2b0Shipments).length === 0 ? (
             <Card className="border-border/50">
               <CardContent className="p-8 text-center text-muted-foreground">
-                Nenhuma remessa B2B-1 (Coleta) encontrada
+                Nenhuma remessa B2B-0 (Coleta) encontrada
               </CardContent>
             </Card>
           ) : (
-            filterShipments(b2b1Shipments).map(renderShipmentCard)
+            filterShipments(b2b0Shipments).map(renderShipmentCard)
           )}
         </TabsContent>
 
