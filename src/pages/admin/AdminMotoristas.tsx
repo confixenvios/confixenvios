@@ -289,18 +289,86 @@ const AdminMotoristas = () => {
     }
   };
 
-  const handleViewStats = (motorista: Motorista) => {
-    const stats = motoristaStats.find(s => s.motorista_id === motorista.id);
+  const handleViewStats = async (motorista: Motorista) => {
     setSelectedMotorista(motorista);
-    setSelectedMotoristaStats(stats || {
-      motorista_id: motorista.id,
-      total_remessas: 0,
-      remessas_entregues: 0,
-      remessas_pendentes: 0,
-      remessas_canceladas: 0,
-      taxa_sucesso: 0
-    });
     setIsStatsDialogOpen(true);
+    
+    // Buscar estatísticas desde a criação do motorista até 01/01/2027
+    try {
+      const startDate = motorista.created_at.split('T')[0];
+      const endDate = '2027-01-01';
+      
+      // Buscar remessas convencionais
+      const { data: shipments, error: shipmentsError } = await supabase
+        .from('shipments')
+        .select('status, created_at')
+        .eq('motorista_id', motorista.id)
+        .gte('created_at', startDate + 'T00:00:00')
+        .lte('created_at', endDate + 'T23:59:59');
+
+      if (shipmentsError) throw shipmentsError;
+
+      // Buscar remessas B2B
+      const { data: b2bShipments, error: b2bError } = await supabase
+        .from('b2b_shipments')
+        .select('status, created_at')
+        .eq('motorista_id', motorista.id)
+        .gte('created_at', startDate + 'T00:00:00')
+        .lte('created_at', endDate + 'T23:59:59');
+
+      if (b2bError) throw b2bError;
+
+      // Calcular estatísticas combinadas
+      let total = 0;
+      let entregues = 0;
+      let pendentes = 0;
+      let canceladas = 0;
+
+      // Processar remessas convencionais
+      shipments?.forEach(s => {
+        total++;
+        if (s.status === 'DELIVERED' || s.status === 'ENTREGA_FINALIZADA') {
+          entregues++;
+        } else if (s.status === 'CANCELLED') {
+          canceladas++;
+        } else {
+          pendentes++;
+        }
+      });
+
+      // Processar remessas B2B
+      b2bShipments?.forEach(s => {
+        total++;
+        if (s.status === 'ENTREGUE') {
+          entregues++;
+        } else if (s.status === 'CANCELADO') {
+          canceladas++;
+        } else {
+          pendentes++;
+        }
+      });
+
+      const taxaSucesso = total > 0 ? (entregues / total) * 100 : 0;
+
+      setSelectedMotoristaStats({
+        motorista_id: motorista.id,
+        total_remessas: total,
+        remessas_entregues: entregues,
+        remessas_pendentes: pendentes,
+        remessas_canceladas: canceladas,
+        taxa_sucesso: taxaSucesso
+      });
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas do motorista:', error);
+      setSelectedMotoristaStats({
+        motorista_id: motorista.id,
+        total_remessas: 0,
+        remessas_entregues: 0,
+        remessas_pendentes: 0,
+        remessas_canceladas: 0,
+        taxa_sucesso: 0
+      });
+    }
   };
 
   const approveMotorista = async (motorista: Motorista) => {
@@ -780,10 +848,10 @@ const AdminMotoristas = () => {
             </DialogTitle>
           </DialogHeader>
           
-          {selectedMotoristaStats && (
+          {selectedMotoristaStats && selectedMotorista && (
             <div className="space-y-6">
               <div className="text-sm text-muted-foreground">
-                Período: {format(new Date(dateRange.from), 'dd/MM/yyyy', { locale: ptBR })} até {format(new Date(dateRange.to), 'dd/MM/yyyy', { locale: ptBR })}
+                Período: {format(new Date(selectedMotorista.created_at), 'dd/MM/yyyy', { locale: ptBR })} até 01/01/2027
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
