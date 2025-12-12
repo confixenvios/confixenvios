@@ -92,12 +92,21 @@ const B2BStatusHistory = ({ shipmentId }: B2BStatusHistoryProps) => {
 
   const getStatusConfig = (status: string): { label: string; phase: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; color: string } => {
     const configs: Record<string, { label: string; phase: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; color: string }> = {
-      'ACEITA': { label: 'Aceita', phase: 'B2B-1 (Coleta)', variant: 'secondary', color: 'bg-orange-500' },
-      'COLETA_ACEITA': { label: 'Aceita', phase: 'B2B-1 (Coleta)', variant: 'secondary', color: 'bg-orange-500' },
-      'B2B_COLETA_FINALIZADA': { label: 'Coleta Finalizada', phase: 'B2B-1 (Coleta)', variant: 'destructive', color: 'bg-red-500' },
+      // B2B-0 (Coleta)
+      'B2B_COLETA_PENDENTE': { label: 'Aguardando Coleta', phase: 'B2B-0 (Coleta)', variant: 'secondary', color: 'bg-amber-500' },
+      'B2B_COLETA_ACEITA': { label: 'Coleta Aceita', phase: 'B2B-0 (Coleta)', variant: 'secondary', color: 'bg-blue-500' },
+      'ACEITA': { label: 'Aceita', phase: 'B2B-0 (Coleta)', variant: 'secondary', color: 'bg-orange-500' },
+      'COLETA_ACEITA': { label: 'Aceita', phase: 'B2B-0 (Coleta)', variant: 'secondary', color: 'bg-orange-500' },
+      // B2B-1 (CD - Interno)
+      'B2B_COLETA_FINALIZADA': { label: 'Coleta Finalizada', phase: 'B2B-1 (No CD)', variant: 'destructive', color: 'bg-red-500' },
+      'B2B_NO_CD': { label: 'Recebido no CD', phase: 'B2B-1 (No CD)', variant: 'secondary', color: 'bg-orange-500' },
+      'B2B_DESMEMBRADA': { label: 'Desmembrada', phase: 'B2B-1 (No CD)', variant: 'secondary', color: 'bg-purple-500' },
+      // B2B-2 (Entrega)
+      'B2B_VOLUME_DISPONIVEL': { label: 'Volume Disponível', phase: 'B2B-2 (Entrega)', variant: 'secondary', color: 'bg-purple-500' },
+      'B2B_VOLUME_ACEITO': { label: 'Volume Em Rota', phase: 'B2B-2 (Entrega)', variant: 'secondary', color: 'bg-indigo-500' },
       'B2B_ENTREGA_ACEITA': { label: 'Entrega Aceita', phase: 'B2B-2 (Entrega)', variant: 'secondary', color: 'bg-orange-500' },
-      'ENTREGUE': { label: 'Entregue', phase: 'B2B-2 (Entrega)', variant: 'default', color: 'bg-green-500' },
-      'ENTREGA_FINALIZADA': { label: 'Entregue', phase: 'B2B-2 (Entrega)', variant: 'default', color: 'bg-green-500' },
+      'ENTREGUE': { label: 'Entregue', phase: 'Finalizado', variant: 'default', color: 'bg-green-500' },
+      'ENTREGA_FINALIZADA': { label: 'Entregue', phase: 'Finalizado', variant: 'default', color: 'bg-green-500' },
     };
     return configs[status] || { label: status, phase: '', variant: 'outline', color: 'bg-gray-500' };
   };
