@@ -229,16 +229,13 @@ const CdDashboard = () => {
   // Entregues: volumes finalizados
   const entregues = shipments.filter(s => s.status === 'ENTREGUE');
 
-  // Renderiza card com informação do motorista de coleta
-  const renderCard = (s: B2BShipment, showEti = true) => (
+  // Renderiza card SEM ETI visível
+  const renderCard = (s: B2BShipment) => (
     <Card key={s.id} className="mb-3">
       <CardContent className="p-4">
         <div className="flex justify-between mb-2">
           <div>
             <h3 className="font-mono font-medium">{s.tracking_code}</h3>
-            {showEti && s.volume_eti_code && (
-              <Badge variant="outline" className="bg-purple-50 mt-1">{s.volume_eti_code}</Badge>
-            )}
           </div>
           <Badge className={
             s.status === 'ENTREGUE' ? 'bg-green-500' : 
@@ -360,14 +357,14 @@ const CdDashboard = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* Em Trânsito - mostra ETI e motorista se coletado */}
+          {/* Em Trânsito */}
           <TabsContent value="em_transito">
             {emTransito.length ? (
               <>
                 <p className="text-sm text-muted-foreground mb-3">
                   Volumes aguardando coleta ou sendo transportados
                 </p>
-                {emTransito.map(s => renderCard(s, true))}
+                {emTransito.map(s => renderCard(s))}
               </>
             ) : (
               <Card>
@@ -385,7 +382,7 @@ const CdDashboard = () => {
                 <p className="text-sm text-muted-foreground mb-3">
                   Volumes aguardando motorista de entrega aceitar
                 </p>
-                {noCd.map(s => renderCard(s, true))}
+                {noCd.map(s => renderCard(s))}
               </>
             ) : (
               <Card>
@@ -403,7 +400,7 @@ const CdDashboard = () => {
                 <p className="text-sm text-muted-foreground mb-3">
                   Volumes em rota com motoristas de entrega
                 </p>
-                {emRota.map(s => renderCard(s, true))}
+                {emRota.map(s => renderCard(s))}
               </>
             ) : (
               <Card>
@@ -417,7 +414,7 @@ const CdDashboard = () => {
           {/* Entregues */}
           <TabsContent value="entregues">
             {entregues.length ? (
-              entregues.map(s => renderCard(s, true))
+              entregues.map(s => renderCard(s))
             ) : (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
