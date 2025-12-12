@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Truck, Package, LogOut, CheckCircle, Clock, Eye, FileText, Menu, Zap, Plus } from 'lucide-react';
+import { Truck, Package, LogOut, CheckCircle, Clock, Eye, FileText, Menu, Zap, Plus, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { RemessaVisualizacao } from '@/components/motorista/RemessaVisualizacao';
 import { VolumeSearchModal } from '@/components/motorista/VolumeSearchModal';
 import { FinalizarEntregaModal } from '@/components/motorista/FinalizarEntregaModal';
+import { B2BOccurrenceModal } from '@/components/motorista/B2BOccurrenceModal';
 import { getMotoristaShipments, getAvailableShipments, acceptShipment, type MotoristaShipment, type BaseShipment, type MotoristaVisibilidade } from '@/services/shipmentsService';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -37,6 +38,8 @@ const MotoristaDashboard = () => {
   const [volumeSearchOpen, setVolumeSearchOpen] = useState(false);
   const [finalizarEntregaOpen, setFinalizarEntregaOpen] = useState(false);
   const [selectedShipmentForFinalize, setSelectedShipmentForFinalize] = useState<MotoristaShipment | null>(null);
+  const [occurrenceModalOpen, setOccurrenceModalOpen] = useState(false);
+  const [selectedShipmentForOccurrence, setSelectedShipmentForOccurrence] = useState<MotoristaShipment | null>(null);
 
   useEffect(() => {
     const checkMotoristaAuth = async () => {
@@ -321,6 +324,21 @@ const MotoristaDashboard = () => {
                     Finalizar Entrega
                   </Button>
                 )}
+                {/* Botão Registrar Ocorrência para remessas B2B em "Minhas Remessas" */}
+                {currentView === 'minhas' && isB2B && !['ENTREGUE', 'NO_CD', 'ENTREGA_FINALIZADA'].includes(remessa.status) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedShipmentForOccurrence(remessa as MotoristaShipment);
+                      setOccurrenceModalOpen(true);
+                    }}
+                    className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                  >
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    Ocorrência
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -558,6 +576,22 @@ const MotoristaDashboard = () => {
             onSuccess={() => {
               loadMinhasRemessas(motoristaSession.id);
               setCurrentView('entregues');
+            }}
+          />
+        )}
+
+        {/* Modal Registrar Ocorrência para motoristas B2B */}
+        {selectedShipmentForOccurrence && motoristaSession?.id && (
+          <B2BOccurrenceModal
+            isOpen={occurrenceModalOpen}
+            onClose={() => {
+              setOccurrenceModalOpen(false);
+              setSelectedShipmentForOccurrence(null);
+            }}
+            b2bShipmentId={selectedShipmentForOccurrence.id}
+            motoristaId={motoristaSession.id}
+            onSuccess={() => {
+              loadMinhasRemessas(motoristaSession.id);
             }}
           />
         )}

@@ -6,10 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, Download, Route, User, Eye } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, Download, Route, User, Eye, ChevronDown, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import CdShipmentDetailsModal from '@/components/cd/CdShipmentDetailsModal';
+import B2BStatusHistory from '@/components/b2b/B2BStatusHistory';
 
 interface CdUser {
   id: string;
@@ -242,7 +244,7 @@ const CdDashboard = () => {
     setShowDetailsModal(true);
   };
 
-  // Renderiza card SEM ETI visível
+  // Renderiza card COM histórico de status
   const renderCard = (s: B2BShipment) => (
     <Card key={s.id} className="mb-3">
       <CardContent className="p-4">
@@ -283,6 +285,22 @@ const CdDashboard = () => {
             <span className="text-blue-600 font-medium">Coletado por: {s.motorista_nome}</span>
           </div>
         )}
+
+        {/* Histórico de Status - Collapsible */}
+        <Collapsible className="mt-3">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full justify-between p-2 h-8 text-xs">
+              <span className="flex items-center gap-1">
+                <History className="h-3 w-3" />
+                Histórico de Status
+              </span>
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2 border-t mt-2">
+            <B2BStatusHistory shipmentId={s.id} />
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Botão Ver Detalhes */}
         <Button
