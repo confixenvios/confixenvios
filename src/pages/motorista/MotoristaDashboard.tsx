@@ -8,6 +8,7 @@ import { Truck, Package, LogOut, CheckCircle, Clock, Eye, FileText, Menu, Zap, P
 import { toast } from 'sonner';
 import { RemessaVisualizacao } from '@/components/motorista/RemessaVisualizacao';
 import { VolumeSearchModal } from '@/components/motorista/VolumeSearchModal';
+import { FinalizarEntregaModal } from '@/components/motorista/FinalizarEntregaModal';
 import { getMotoristaShipments, getAvailableShipments, acceptShipment, type MotoristaShipment, type BaseShipment, type MotoristaVisibilidade } from '@/services/shipmentsService';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -31,9 +32,11 @@ const MotoristaDashboard = () => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<ViewType>('disponiveis');
+  const [currentView, setCurrentView] = useState<ViewType>('minhas');
   const [menuOpen, setMenuOpen] = useState(false);
   const [volumeSearchOpen, setVolumeSearchOpen] = useState(false);
+  const [finalizarEntregaOpen, setFinalizarEntregaOpen] = useState(false);
+  const [selectedShipmentForFinalize, setSelectedShipmentForFinalize] = useState<MotoristaShipment | null>(null);
 
   useEffect(() => {
     const checkMotoristaAuth = async () => {
@@ -190,15 +193,22 @@ const MotoristaDashboard = () => {
     setMenuOpen(false);
   };
 
-  // Filtrar remessas por status
+  // Verificar se é motorista de entrega (não deve ver disponíveis)
+  const isDeliveryDriver = motoristaSession?.visibilidade?.ve_b2b_entrega && !motoristaSession?.visibilidade?.ve_b2b_coleta && !motoristaSession?.visibilidade?.ve_convencional;
+
+  // Filtrar remessas por status - incluindo todos os status "ativos"
   const minhasRemessasAtivas = remessas.filter(r => 
-    ['PENDENTE_COLETA', 'EM_TRANSITO'].includes(r.status)
+    ['PENDENTE_COLETA', 'EM_TRANSITO', 'EM_ROTA', 'B2B_COLETA_ACEITA', 'ACEITA'].includes(r.status)
   );
   const remessasEntregues = remessas.filter(r => 
-    ['NO_CD', 'EM_ROTA', 'ENTREGUE'].includes(r.status)
+    ['NO_CD', 'ENTREGUE', 'B2B_COLETA_FINALIZADA', 'ENTREGA_FINALIZADA'].includes(r.status)
   );
 
-  const menuItems = [
+  // Motoristas de entrega não veem "Disponíveis"
+  const menuItems = isDeliveryDriver ? [
+    { id: 'minhas' as ViewType, label: 'Minhas Remessas', icon: Truck, count: minhasRemessasAtivas.length, color: 'text-blue-500' },
+    { id: 'entregues' as ViewType, label: 'Entregues', icon: CheckCircle, count: remessasEntregues.length, color: 'text-green-500' },
+  ] : [
     { id: 'disponiveis' as ViewType, label: 'Disponíveis', icon: Package, count: remessasDisponiveis.length, color: 'text-orange-500' },
     { id: 'minhas' as ViewType, label: 'Minhas Remessas', icon: Truck, count: minhasRemessasAtivas.length, color: 'text-blue-500' },
     { id: 'entregues' as ViewType, label: 'Entregues', icon: CheckCircle, count: remessasEntregues.length, color: 'text-green-500' },
@@ -294,6 +304,21 @@ const MotoristaDashboard = () => {
                       <CheckCircle className="h-3 w-3 mr-1" />
                     )}
                     Aceitar
+                  </Button>
+                )}
+                {/* Botão Finalizar Entrega para remessas EM_ROTA do motorista de entrega */}
+                {currentView === 'minhas' && remessa.status === 'EM_ROTA' && isB2B && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedShipmentForFinalize(remessa as MotoristaShipment);
+                      setFinalizarEntregaOpen(true);
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Finalizar Entrega
                   </Button>
                 )}
               </div>
@@ -511,9 +536,28 @@ const MotoristaDashboard = () => {
             motoristaId={motoristaSession.id}
             onVolumeAccepted={() => {
               loadMinhasRemessas(motoristaSession.id);
-              if (motoristaSession.visibilidade) {
-                loadRemessasDisponiveis(motoristaSession.visibilidade);
-              }
+              setCurrentView('minhas'); // Ir para "Minhas Remessas" após aceitar
+            }}
+          />
+        )}
+
+        {/* Modal Finalizar Entrega para motoristas de entrega B2B */}
+        {selectedShipmentForFinalize && motoristaSession?.id && (
+          <FinalizarEntregaModal
+            isOpen={finalizarEntregaOpen}
+            onClose={() => {
+              setFinalizarEntregaOpen(false);
+              setSelectedShipmentForFinalize(null);
+            }}
+            shipmentId={selectedShipmentForFinalize.id}
+            trackingCode={selectedShipmentForFinalize.tracking_code}
+            motoristaId={motoristaSession.id}
+            shipmentType="B2B-2"
+            currentStatus={selectedShipmentForFinalize.status}
+            volumeEtiCode={selectedShipmentForFinalize.volume_eti_code}
+            onSuccess={() => {
+              loadMinhasRemessas(motoristaSession.id);
+              setCurrentView('entregues');
             }}
           />
         )}
