@@ -26,6 +26,7 @@ interface FoundVolume {
   recipient_city: string | null;
   recipient_state: string | null;
   status: string;
+  motorista_id: string | null;
   b2b_client?: {
     company_name: string;
   };
@@ -51,10 +52,9 @@ export const CdEtiArrivalModal = ({
 
     setSearching(true);
     try {
-      // Formatar o código ETI (adicionar ETI- se necessário)
+      // Formatar o código ETI
       let searchCode = etiCode.trim().toUpperCase();
       if (!searchCode.startsWith('ETI-')) {
-        // Se for apenas os 4 dígitos, adicionar prefixo
         if (/^\d{4}$/.test(searchCode)) {
           searchCode = `ETI-${searchCode}`;
         }
@@ -65,7 +65,7 @@ export const CdEtiArrivalModal = ({
         .from('b2b_shipments')
         .select(`
           id, tracking_code, volume_eti_code, volume_number, volume_weight,
-          recipient_name, recipient_city, recipient_state, status,
+          recipient_name, recipient_city, recipient_state, status, motorista_id,
           b2b_clients(company_name)
         `)
         .eq('volume_eti_code', searchCode)
@@ -78,15 +78,15 @@ export const CdEtiArrivalModal = ({
       }
 
       // Verificar se já está no CD ou entregue
-      if (['B2B_NO_CD', 'B2B_VOLUME_DISPONIVEL', 'B2B_VOLUME_ACEITO', 'ENTREGUE'].includes(data.status)) {
-        toast.info('Este volume já foi registrado no CD');
+      if (['NO_CD', 'EM_ROTA', 'ENTREGUE'].includes(data.status)) {
+        toast.info('Este volume já foi registrado no CD ou entregue');
         setFoundVolume(null);
         return;
       }
 
-      // Verificar se está em status válido para chegada (aceito por motorista B2B-0)
-      if (!['B2B_COLETA_ACEITA'].includes(data.status)) {
-        toast.warning('Este volume ainda não foi coletado pelo motorista');
+      // Verificar se está em status válido para chegada (coletada pelo motorista)
+      if (!['COLETADA', 'B2B_COLETA_ACEITA', 'PENDENTE_COLETA', 'B2B_COLETA_PENDENTE'].includes(data.status)) {
+        toast.warning('Este volume não está em status válido para registro');
         setFoundVolume(null);
         return;
       }
@@ -109,12 +109,12 @@ export const CdEtiArrivalModal = ({
 
     setConfirming(true);
     try {
-      // Atualizar status do volume para B2B_VOLUME_DISPONIVEL (pronto para entrega B2B-2)
+      // Atualizar status para NO_CD e liberar motorista de coleta
       const { error: updateError } = await supabase
         .from('b2b_shipments')
         .update({ 
-          status: 'B2B_VOLUME_DISPONIVEL',
-          motorista_id: null // Libera o motorista B2B-0
+          status: 'NO_CD',
+          motorista_id: null // Libera o motorista de coleta
         })
         .eq('id', foundVolume.id);
 
@@ -123,8 +123,8 @@ export const CdEtiArrivalModal = ({
       // Registrar no histórico
       await supabase.from('shipment_status_history').insert({
         b2b_shipment_id: foundVolume.id,
-        status: 'B2B_VOLUME_DISPONIVEL',
-        observacoes: `Chegada confirmada no CD via ETI por ${cdUserName}`
+        status: 'NO_CD',
+        observacoes: `Chegada confirmada no CD via ETI por ${cdUserName}. Coleta concluída.`
       });
 
       toast.success(`Volume ${foundVolume.volume_eti_code} registrado no CD!`);
@@ -163,7 +163,7 @@ export const CdEtiArrivalModal = ({
             Registrar Chegada de Volume
           </DialogTitle>
           <DialogDescription>
-            Digite o código ETI do volume para registrar sua chegada no CD
+            Digite o código ETI para confirmar a chegada do volume no CD e finalizar a coleta do motorista
           </DialogDescription>
         </DialogHeader>
 

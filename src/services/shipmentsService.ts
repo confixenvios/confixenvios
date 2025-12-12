@@ -87,8 +87,8 @@ export interface MotoristaShipment extends BaseShipment {
 // ===== Interface de Visibilidade do Motorista =====
 export interface MotoristaVisibilidade {
   ve_convencional: boolean;
-  ve_b2b_coleta: boolean;  // B2B-0: Coleta (fase inicial após pagamento)
-  ve_b2b_entrega: boolean;  // B2B-2: Entrega final (volumes destrinchados)
+  ve_b2b_coleta: boolean;  // Motorista de Coleta
+  ve_b2b_entrega: boolean;  // Motorista de Entrega
 }
 
 /**
@@ -718,8 +718,6 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
 
 /**
  * Buscar configurações de visibilidade do motorista
- * B2B-1: Coleta (ve_b2b_coleta no banco)
- * B2B-2: Entrega (ve_b2b_entrega no banco)
  */
 export const getMotoristaVisibilidade = async (motoristaEmail: string): Promise<MotoristaVisibilidade> => {
   const { data, error } = await supabase
@@ -735,34 +733,29 @@ export const getMotoristaVisibilidade = async (motoristaEmail: string): Promise<
 
   return {
     ve_convencional: (data as any).ve_convencional ?? true,
-    ve_b2b_coleta: (data as any).ve_b2b_coleta ?? false,  // B2B-0: Coleta
-    ve_b2b_entrega: (data as any).ve_b2b_entrega ?? false  // B2B-2: Entrega
+    ve_b2b_coleta: (data as any).ve_b2b_coleta ?? false,
+    ve_b2b_entrega: (data as any).ve_b2b_entrega ?? false
   };
 };
 
 /**
- * Serviço para buscar remessas disponíveis para motoristas (normais + B2B)
- * 
- * B2B-0: Coleta - motoristas com ve_b2b_coleta veem remessas B2B_COLETA_PENDENTE
- * B2B-2: Entrega - motoristas com ve_b2b_entrega buscam volumes por código ETI
+ * Buscar remessas disponíveis para motoristas
+ * - Motorista Coleta: vê remessas B2B com status PENDENTE_COLETA
+ * - Motorista Entrega: busca por ETI (não lista automaticamente)
  */
 export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade): Promise<BaseShipment[]> => {
-  console.log('📋 Iniciando busca por remessas disponíveis');
-  console.log('📋 Visibilidade recebida:', JSON.stringify(visibilidade));
+  console.log('📋 Buscando remessas disponíveis, visibilidade:', JSON.stringify(visibilidade));
   
   try {
     let remessasNormais: BaseShipment[] = [];
-    let remessasB2B0: BaseShipment[] = [];
-    // B2B-2 não lista automaticamente - motorista precisa buscar por ETI
+    let remessasB2BColeta: BaseShipment[] = [];
 
-    // Se não tiver visibilidade definida, carrega convencionais apenas
     const loadConvencional = visibilidade?.ve_convencional ?? true;
-    const loadB2B0 = visibilidade?.ve_b2b_coleta ?? false;
-    // B2B-2 não carrega listagem - é busca ativa por ETI
+    const loadB2BColeta = visibilidade?.ve_b2b_coleta ?? false;
     
-    console.log('📋 Flags de carregamento: Conv=', loadConvencional, ', B2B-0=', loadB2B0);
+    console.log('📋 Flags: Conv=', loadConvencional, ', B2B Coleta=', loadB2BColeta);
 
-    // Buscar remessas NORMAIS/CONVENCIONAIS (se permitido)
+    // Remessas convencionais
     if (loadConvencional) {
       const { data: shipmentsData, error: shipmentsError } = await supabase
         .from('shipments')
@@ -772,12 +765,11 @@ export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade
         .order('created_at', { ascending: false });
       
       if (shipmentsError) {
-        console.error('❌ Erro ao buscar remessas normais:', shipmentsError);
+        console.error('❌ Erro remessas normais:', shipmentsError);
       }
       
-      console.log('📦 Remessas convencionais encontradas:', shipmentsData?.length || 0);
+      console.log('📦 Convencionais:', shipmentsData?.length || 0);
       
-      // Processar remessas normais com endereços
       remessasNormais = await Promise.all(
         (shipmentsData || []).map(async (shipment) => {
           const { data: senderAddress } = await supabase
@@ -792,22 +784,20 @@ export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade
             .eq('id', shipment.recipient_address_id)
             .maybeSingle();
           
-          return {
-            ...normalizeShipmentData({
-              ...shipment,
-              sender_address: senderAddress || createEmptyAddress(),
-              recipient_address: recipientAddress || createEmptyAddress()
-            })
-          };
+          return normalizeShipmentData({
+            ...shipment,
+            sender_address: senderAddress || createEmptyAddress(),
+            recipient_address: recipientAddress || createEmptyAddress()
+          });
         })
       );
     }
 
-    // Buscar remessas B2B-0 (Fase de Coleta - status B2B_COLETA_PENDENTE)
-    if (loadB2B0) {
-      console.log('📦 Buscando B2B-0 (coleta) com status B2B_COLETA_PENDENTE...');
+    // Remessas B2B para motorista de coleta (PENDENTE_COLETA)
+    if (loadB2BColeta) {
+      console.log('📦 Buscando B2B para coleta...');
       
-      const { data: b2b0Data, error: b2b0Error } = await supabase
+      const { data: b2bData, error: b2bError } = await supabase
         .from('b2b_shipments')
         .select(`
           id, tracking_code, status, created_at, updated_at,
@@ -815,41 +805,38 @@ export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade
           recipient_number, recipient_complement, recipient_neighborhood,
           recipient_city, recipient_state, observations, package_type,
           volume_count, delivery_type, delivery_date, b2b_client_id,
-          is_volume, parent_shipment_id,
+          is_volume, parent_shipment_id, volume_eti_code, volume_number, volume_weight,
           b2b_clients(company_name, email, phone, cnpj,
             default_pickup_cep, default_pickup_street, default_pickup_number,
             default_pickup_complement, default_pickup_neighborhood,
             default_pickup_city, default_pickup_state)
         `)
-        .in('status', ['B2B_COLETA_PENDENTE', 'PENDENTE'])
+        .in('status', ['PENDENTE_COLETA', 'B2B_COLETA_PENDENTE', 'PENDENTE'])
         .is('motorista_id', null)
         .order('created_at', { ascending: false });
 
-      if (b2b0Error) {
-        console.error('❌ Erro ao buscar B2B-0:', b2b0Error);
+      if (b2bError) {
+        console.error('❌ Erro B2B coleta:', b2bError);
       }
 
-      console.log('📦 Remessas B2B-0 (coleta) encontradas:', b2b0Data?.length || 0);
-      remessasB2B0 = (b2b0Data || []).map(b2b => normalizeB2BShipment(b2b, 'B2B-0'));
+      console.log('📦 B2B Coleta encontradas:', b2bData?.length || 0);
+      remessasB2BColeta = (b2bData || []).map(b2b => normalizeB2BShipment(b2b, 'Coleta'));
     }
     
-    // Combinar todas as remessas e ordenar por data
-    const allShipments = [...remessasNormais, ...remessasB2B0];
+    const allShipments = [...remessasNormais, ...remessasB2BColeta];
     allShipments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     
-    console.log('✅ Total de remessas disponíveis:', allShipments.length, 
-      '(Conv:', remessasNormais.length, 
-      ', B2B-0:', remessasB2B0.length, ')');
+    console.log('✅ Total disponíveis:', allShipments.length);
     return allShipments;
     
   } catch (error) {
-    console.error('❌ Erro completo ao buscar remessas disponíveis:', error);
+    console.error('❌ Erro busca disponíveis:', error);
     throw error;
   }
 };
 
 /**
- * NOVO: Buscar volume B2B-2 por código ETI (últimos 4 dígitos)
+ * Buscar volume por código ETI para motorista de entrega
  */
 export const searchVolumeByEtiCode = async (etiCodeDigits: string): Promise<BaseShipment | null> => {
   console.log('🔍 Buscando volume por ETI:', etiCodeDigits);
@@ -867,35 +854,34 @@ export const searchVolumeByEtiCode = async (etiCodeDigits: string): Promise<Base
       is_volume, parent_shipment_id, volume_eti_code, volume_number, volume_weight,
       b2b_clients(company_name, email, phone, cnpj)
     `)
-    .eq('is_volume', true)
     .eq('volume_eti_code', fullEtiCode)
-    .eq('status', 'B2B_VOLUME_DISPONIVEL')
+    .eq('status', 'NO_CD')  // Só pode aceitar se está no CD
     .is('motorista_id', null)
     .single();
 
   if (error || !data) {
-    console.log('❌ Volume não encontrado ou já atribuído:', error?.message);
+    console.log('❌ Volume não encontrado ou não disponível:', error?.message);
     return null;
   }
 
   console.log('✅ Volume encontrado:', data.id);
-  return normalizeB2BShipment(data, 'B2B-2');
+  return normalizeB2BShipment(data, 'Entrega');
 };
 
 /**
- * NOVO: Aceitar volume B2B-2 (vincula ao motorista)
+ * Aceitar volume para entrega (motorista entrega digita ETI)
  */
 export const acceptB2BVolume = async (volumeId: string, motoristaId: string): Promise<{ success: boolean; error?: string }> => {
-  console.log('🚚 Aceitando volume B2B-2:', volumeId, 'para motorista:', motoristaId);
+  console.log('🚚 Aceitando volume para entrega:', volumeId);
   
   const { error } = await supabase
     .from('b2b_shipments')
     .update({ 
       motorista_id: motoristaId,
-      status: 'B2B_VOLUME_ACEITO'
+      status: 'EM_ROTA'  // Agora está em rota de entrega
     })
     .eq('id', volumeId)
-    .eq('is_volume', true)
+    .eq('status', 'NO_CD')
     .is('motorista_id', null);
 
   if (error) {
@@ -1000,7 +986,7 @@ function createEmptyAddress(): ShipmentAddress {
 /**
  * Normaliza remessa B2B para formato padrão
  */
-function normalizeB2BShipment(b2b: any, phase: 'B2B-0' | 'B2B-2'): BaseShipment {
+function normalizeB2BShipment(b2b: any, phase: 'Coleta' | 'Entrega' | 'B2B-0' | 'B2B-2' = 'Coleta'): BaseShipment {
   const client = b2b.b2b_clients;
   let observationsData: any = {};
   

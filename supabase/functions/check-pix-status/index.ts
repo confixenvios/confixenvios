@@ -115,15 +115,13 @@ serve(async (req) => {
     console.log(`💰 Status do pagamento: ${paymentData?.status} - Pago: ${isPaid}`);
 
     // =====================================================
-    // NOVA ARQUITETURA: Criar remessa separada POR VOLUME
+    // FLUXO SIMPLIFICADO: Criar remessa separada POR VOLUME
+    // Status inicial: PENDENTE_COLETA
     // =====================================================
     if (isPaid && isB2B) {
-      console.log('✅ Pagamento B2B confirmado - iniciando criação das remessas por volume');
+      console.log('✅ Pagamento B2B confirmado - criando remessas por volume');
       
       try {
-        // Buscar temp_quotes B2B pendentes das últimas 2 horas
-        console.log('🔍 Buscando temp_quotes B2B pendentes...');
-        
         const { data: pendingQuotes, error: quotesError } = await supabase
           .from('temp_quotes')
           .select('*')
@@ -134,13 +132,10 @@ serve(async (req) => {
         if (quotesError) {
           console.error('❌ Erro ao buscar temp_quotes:', quotesError);
         } else {
-          console.log(`📦 Encontradas ${pendingQuotes?.length || 0} temp_quotes pendentes`);
-          
-          // Encontrar a quote B2B mais recente
           const b2bQuote = pendingQuotes?.find(q => q.quote_options?.isB2B === true);
           
           if (b2bQuote) {
-            console.log('🎯 Temp_quote B2B encontrada:', b2bQuote.id, 'external_id:', b2bQuote.external_id);
+            console.log('🎯 Temp_quote B2B encontrada:', b2bQuote.id);
             
             const senderData = b2bQuote.sender_data;
             const recipientData = b2bQuote.recipient_data;
@@ -148,14 +143,10 @@ serve(async (req) => {
             const quoteOptions = b2bQuote.quote_options;
             const b2bClientId = senderData?.clientId;
             
-            console.log('👤 ClientId B2B:', b2bClientId);
-            
             if (b2bClientId) {
-              // Verificar se temp_quote já foi processada (evita duplicação)
               if (b2bQuote.status === 'processed') {
-                console.log('⚠️ Temp_quote já foi processada, remessas B2B já existem');
+                console.log('⚠️ Temp_quote já processada');
               } else {
-                // Marcar como processada ANTES de criar para evitar race condition
                 const { error: lockError } = await supabase
                   .from('temp_quotes')
                   .update({ status: 'processing' })
@@ -163,24 +154,23 @@ serve(async (req) => {
                   .eq('status', 'pending_payment');
                 
                 if (lockError) {
-                  console.log('⚠️ Não foi possível obter lock, provavelmente já está sendo processada');
+                  console.log('⚠️ Lock não obtido');
                 } else {
-                  // Gerar código base de rastreamento (será o mesmo para todos os volumes)
+                  // Gerar código base (mesmo para todos os volumes do pedido)
                   const baseTrackingCode = Math.random().toString(36).substr(2, 8).toUpperCase();
-                  console.log('🏷️ Gerando tracking code base:', baseTrackingCode);
+                  console.log('🏷️ Base tracking code:', baseTrackingCode);
                   
                   const volumeAddresses = recipientData?.volumeAddresses || packageData?.volumeAddresses || [];
                   const volumeWeights = packageData?.volumeWeights || [];
                   const volumeCount = packageData?.volumeCount || volumeAddresses.length || 1;
                   
-                  console.log(`📦 Criando ${volumeCount} remessas individuais (uma por volume)`);
+                  console.log(`📦 Criando ${volumeCount} remessas individuais`);
                   
                   const createdShipments: any[] = [];
-                  const createdEtiCodes: any[] = [];
                   
-                  // Criar uma remessa para cada volume
                   for (let i = 0; i < volumeCount; i++) {
                     const volumeNumber = i + 1;
+                    // Formato: B2B-XXXXXXXX-V1, B2B-XXXXXXXX-V2, etc
                     const trackingCode = `B2B-${baseTrackingCode}-V${volumeNumber}`;
                     const volumeAddress = volumeAddresses[i] || volumeAddresses[0] || {};
                     const volumeWeight = volumeWeights[i] || 0;
@@ -190,14 +180,12 @@ serve(async (req) => {
                     const b2bShipmentData = {
                       b2b_client_id: b2bClientId,
                       tracking_code: trackingCode,
-                      volume_count: 1, // Cada remessa é 1 volume
+                      volume_count: 1,
                       volume_number: volumeNumber,
                       volume_weight: volumeWeight,
-                      is_volume: true, // Todos são volumes individuais desde o início
+                      is_volume: true,
                       delivery_date: recipientData?.deliveryDate || new Date().toISOString().split('T')[0],
-                      status: 'B2B_COLETA_PENDENTE',
-                      // Dados do destinatário específico deste volume
-                      // Priorizar recipient_name (estrutura de b2b_delivery_addresses) sobre name
+                      status: 'PENDENTE_COLETA', // Status simplificado
                       recipient_name: volumeAddress.recipient_name || volumeAddress.recipientName || volumeAddress.name || null,
                       recipient_phone: volumeAddress.recipient_phone || volumeAddress.recipientPhone || volumeAddress.phone || null,
                       recipient_cep: volumeAddress.cep || null,
@@ -213,99 +201,69 @@ serve(async (req) => {
                         total_volumes_in_order: volumeCount,
                         volume_address: volumeAddress,
                         pickup_address: senderData?.pickupAddress || recipientData?.pickupAddress || packageData?.pickupAddress || quoteOptions?.pickupAddress || null,
-                        amount_paid: (quoteOptions?.amount || 0) / volumeCount, // Proporção do pagamento
+                        amount_paid: (quoteOptions?.amount || 0) / volumeCount,
                         total_order_amount: quoteOptions?.amount || 0,
                         payment_id: paymentId,
                         external_id: b2bQuote.external_id,
-                        paid_at: new Date().toISOString(),
-                        paid: true,
-                        created_via: 'check-pix-status-individual-volumes'
+                        paid_at: new Date().toISOString()
                       })
                     };
                     
-                    const { data: newB2BShipment, error: b2bError } = await supabase
+                    const { data: newShipment, error: shipError } = await supabase
                       .from('b2b_shipments')
                       .insert([b2bShipmentData])
                       .select()
                       .single();
                     
-                    if (b2bError) {
-                      console.error(`❌ Erro ao criar volume ${volumeNumber}:`, JSON.stringify(b2bError));
+                    if (shipError) {
+                      console.error(`❌ Erro ao criar volume ${volumeNumber}:`, JSON.stringify(shipError));
                     } else {
-                      console.log(`✅ Volume ${volumeNumber} criado:`, newB2BShipment.id);
-                      createdShipments.push(newB2BShipment);
+                      console.log(`✅ Volume ${volumeNumber} criado:`, newShipment.id);
+                      createdShipments.push(newShipment);
                       
-                      // Gerar código ETI para este volume
+                      // Gerar código ETI
                       const { data: etiCode, error: etiError } = await supabase.rpc('create_eti_codes_for_shipment', {
-                        p_b2b_shipment_id: newB2BShipment.id,
+                        p_b2b_shipment_id: newShipment.id,
                         p_volume_count: 1
                       });
                       
-                      if (etiError) {
-                        console.error(`❌ Erro ao gerar ETI para volume ${volumeNumber}:`, etiError);
-                      } else {
-                        console.log(`✅ ETI gerado para volume ${volumeNumber}:`, etiCode);
-                        createdEtiCodes.push(etiCode);
-                        
-                        // Atualizar o volume com o código ETI
-                        if (etiCode && etiCode.length > 0) {
-                          await supabase
-                            .from('b2b_shipments')
-                            .update({ volume_eti_code: etiCode[0].eti_code })
-                            .eq('id', newB2BShipment.id);
-                        }
+                      if (!etiError && etiCode && etiCode.length > 0) {
+                        await supabase
+                          .from('b2b_shipments')
+                          .update({ volume_eti_code: etiCode[0].eti_code })
+                          .eq('id', newShipment.id);
+                        console.log(`✅ ETI gerado: ${etiCode[0].eti_code}`);
                       }
                     }
                   }
                   
-                  console.log(`✅ ${createdShipments.length} remessas B2B criadas com sucesso`);
-                  
-                  // Marcar temp_quote como processada
-                  const { error: updateError } = await supabase
+                  // Marcar como processada
+                  await supabase
                     .from('temp_quotes')
-                    .update({ 
-                      status: 'processed',
-                      updated_at: new Date().toISOString()
-                    })
+                    .update({ status: 'processed', updated_at: new Date().toISOString() })
                     .eq('id', b2bQuote.id);
                   
-                  if (updateError) {
-                    console.error('❌ Erro ao atualizar temp_quote:', updateError);
-                  } else {
-                    console.log('✅ Temp_quote marcada como processada');
-                  }
+                  console.log(`✅ ${createdShipments.length} remessas B2B criadas`);
                   
-                  // Log do webhook
-                  await supabase
-                    .from('webhook_logs')
-                    .insert([{
-                      event_type: 'b2b_shipments.created_individual_volumes',
-                      shipment_id: createdShipments[0]?.id || 'batch',
-                      payload: {
-                        b2b_shipments: createdShipments,
-                        base_tracking_code: baseTrackingCode,
-                        volume_count: volumeCount,
-                        payment_id: paymentId,
-                        external_id: b2bQuote.external_id,
-                        created_via: 'check-pix-status-individual-volumes',
-                        eti_codes: createdEtiCodes
-                      },
-                      response_status: 200,
-                      response_body: { success: true }
-                    }]);
-                  
-                  console.log('📋 Log de webhook criado');
+                  // Log webhook
+                  await supabase.from('webhook_logs').insert([{
+                    event_type: 'b2b_shipments.created',
+                    shipment_id: createdShipments[0]?.id || 'batch',
+                    payload: {
+                      shipments: createdShipments.map(s => ({ id: s.id, tracking: s.tracking_code })),
+                      base_tracking_code: baseTrackingCode,
+                      volume_count: volumeCount
+                    },
+                    response_status: 200,
+                    response_body: { success: true }
+                  }]);
                 }
               }
-            } else {
-              console.error('❌ ClientId B2B não encontrado no sender_data');
             }
-          } else {
-            console.log('⚠️ Nenhuma temp_quote B2B pendente encontrada');
           }
         }
-      } catch (fallbackError) {
-        console.error('⚠️ Erro no fallback de criação B2B:', fallbackError);
+      } catch (error) {
+        console.error('⚠️ Erro na criação B2B:', error);
       }
     }
 
