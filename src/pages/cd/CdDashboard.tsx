@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, Download, Route } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, Download, Route, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -32,6 +32,8 @@ interface B2BShipment {
   volume_count: number | null;
   volume_weight: number | null;
   volume_eti_code: string | null;
+  motorista_id: string | null;
+  motorista_nome?: string | null;
 }
 
 const CdDashboard = () => {
@@ -70,12 +72,78 @@ const CdDashboard = () => {
   const loadShipments = async () => {
     setRefreshing(true);
     try {
+      // Buscar remessas B2B
       const { data, error } = await supabase
         .from('b2b_shipments')
         .select('*')
         .order('created_at', { ascending: false });
+      
       if (error) throw error;
-      setShipments(data || []);
+
+      // Buscar nomes dos motoristas
+      const motoristaIds = [...new Set((data || []).filter(s => s.motorista_id).map(s => s.motorista_id))];
+      let motoristasMap: Record<string, string> = {};
+
+      if (motoristaIds.length > 0) {
+        const { data: motoristas } = await supabase
+          .from('motoristas')
+          .select('id, nome')
+          .in('id', motoristaIds);
+        
+        if (motoristas) {
+          motoristasMap = motoristas.reduce((acc: any, m: any) => {
+            acc[m.id] = m.nome;
+            return acc;
+          }, {});
+        }
+      }
+
+      // Buscar histórico de coleta para saber qual motorista coletou cada remessa
+      const shipmentIds = (data || []).map(s => s.id);
+      let coletaHistoryMap: Record<string, string> = {};
+
+      if (shipmentIds.length > 0) {
+        const { data: history } = await supabase
+          .from('shipment_status_history')
+          .select('b2b_shipment_id, motorista_id')
+          .in('b2b_shipment_id', shipmentIds)
+          .eq('status', 'B2B_COLETA_ACEITA');
+        
+        if (history) {
+          // Buscar nomes dos motoristas do histórico
+          const historyMotoristaIds = [...new Set(history.filter(h => h.motorista_id).map(h => h.motorista_id))];
+          if (historyMotoristaIds.length > 0) {
+            const { data: historyMotoristas } = await supabase
+              .from('motoristas')
+              .select('id, nome')
+              .in('id', historyMotoristaIds);
+            
+            if (historyMotoristas) {
+              historyMotoristas.forEach((m: any) => {
+                motoristasMap[m.id] = m.nome;
+              });
+            }
+          }
+          
+          history.forEach((h: any) => {
+            if (h.motorista_id) {
+              coletaHistoryMap[h.b2b_shipment_id] = h.motorista_id;
+            }
+          });
+        }
+      }
+
+      // Combinar dados das remessas com nomes dos motoristas
+      const shipmentsWithMotorista = (data || []).map(s => {
+        // Prioriza motorista atual, depois busca do histórico de coleta
+        const motoristaId = s.motorista_id || coletaHistoryMap[s.id];
+        return {
+          ...s,
+          motorista_nome: motoristaId ? motoristasMap[motoristaId] : null
+        };
+      });
+
+      setShipments(shipmentsWithMotorista);
     } catch (error) {
       toast.error('Erro ao carregar remessas');
     } finally {
@@ -89,27 +157,39 @@ const CdDashboard = () => {
   };
 
   // Receber volume no CD - busca por ETI e muda status para NO_CD
+  // SÓ PERMITE SE TEM MOTORISTA ATRIBUÍDO (foi coletado)
   const handleReceiveVolume = async () => {
     if (!receiveEtiInput.trim()) return;
     setReceiving(true);
     try {
-      // Busca volume em trânsito pelo código ETI
+      // Busca volume pelo código ETI que foi ACEITO por motorista de coleta
       const shipment = shipments.find(s => 
         s.volume_eti_code?.replace('ETI-', '').padStart(4, '0') === receiveEtiInput.padStart(4, '0') && 
-        ['PENDENTE_COLETA', 'EM_TRANSITO', 'B2B_COLETA_ACEITA'].includes(s.status)
+        s.status === 'B2B_COLETA_ACEITA' // Só aceita se status é B2B_COLETA_ACEITA
       );
       
       if (!shipment) {
+        // Verifica se existe mas não foi coletado ainda
+        const pendingShipment = shipments.find(s => 
+          s.volume_eti_code?.replace('ETI-', '').padStart(4, '0') === receiveEtiInput.padStart(4, '0') && 
+          ['PENDENTE_COLETA', 'B2B_COLETA_PENDENTE', 'PENDENTE'].includes(s.status)
+        );
+        
+        if (pendingShipment) {
+          toast.error('Volume ainda não foi coletado por um motorista');
+          return;
+        }
+        
         toast.error('Volume não encontrado ou já recebido');
         return;
       }
       
-      // Atualiza status para NO_CD
+      // Atualiza status para NO_CD (mantém motorista_id para histórico)
       const { error } = await supabase
         .from('b2b_shipments')
         .update({ 
-          status: 'NO_CD',
-          motorista_id: null // Limpa motorista pois chegou no CD
+          status: 'NO_CD'
+          // NÃO limpa motorista_id - mantém para saber quem coletou
         })
         .eq('id', shipment.id);
       
@@ -120,7 +200,7 @@ const CdDashboard = () => {
         b2b_shipment_id: shipment.id,
         status: 'NO_CD',
         status_description: `Volume recebido no CD por ${cdUser?.nome}`,
-        observacoes: `Código ETI validado: ${shipment.volume_eti_code}`
+        observacoes: `Código ETI validado: ${shipment.volume_eti_code}. Coletado por: ${shipment.motorista_nome || 'N/A'}`
       });
       
       toast.success(`${shipment.tracking_code} recebido no CD!`);
@@ -135,9 +215,9 @@ const CdDashboard = () => {
   };
 
   // Filtra remessas por status
-  // Em Trânsito: volumes sendo coletados/transportados para o CD
+  // Em Trânsito: volumes sendo coletados (pendentes ou aceitos por motorista de coleta)
   const emTransito = shipments.filter(s => 
-    ['PENDENTE_COLETA', 'EM_TRANSITO', 'B2B_COLETA_ACEITA', 'B2B_COLETA_PENDENTE'].includes(s.status)
+    ['PENDENTE_COLETA', 'B2B_COLETA_PENDENTE', 'PENDENTE', 'B2B_COLETA_ACEITA'].includes(s.status)
   );
   
   // No CD: volumes que chegaram e aguardam motorista de entrega aceitar
@@ -149,7 +229,7 @@ const CdDashboard = () => {
   // Entregues: volumes finalizados
   const entregues = shipments.filter(s => s.status === 'ENTREGUE');
 
-  // Renderiza card sem botão de ação (aba Em Trânsito não tem mais botão)
+  // Renderiza card com informação do motorista de coleta
   const renderCard = (s: B2BShipment, showEti = true) => (
     <Card key={s.id} className="mb-3">
       <CardContent className="p-4">
@@ -164,21 +244,33 @@ const CdDashboard = () => {
             s.status === 'ENTREGUE' ? 'bg-green-500' : 
             ['EM_ROTA', 'B2B_VOLUME_ACEITO'].includes(s.status) ? 'bg-blue-500' : 
             s.status === 'NO_CD' ? 'bg-purple-500' : 
+            s.status === 'B2B_COLETA_ACEITA' ? 'bg-yellow-500' :
             'bg-orange-500'
           }>
             {s.status === 'NO_CD' ? 'No CD' :
              ['EM_ROTA', 'B2B_VOLUME_ACEITO'].includes(s.status) ? 'Em Rota' :
              s.status === 'ENTREGUE' ? 'Entregue' :
-             'Em Trânsito'}
+             s.status === 'B2B_COLETA_ACEITA' ? 'Coletado' :
+             'Aguardando Coleta'}
           </Badge>
         </div>
+        
         <div className="text-sm text-muted-foreground">
           <MapPin className="h-3 w-3 inline mr-1" />
           {s.recipient_name || 'Destinatário'} - {s.recipient_city || 'Cidade'}/{s.recipient_state || 'UF'}
         </div>
+        
         {s.volume_weight && (
           <div className="text-sm text-muted-foreground mt-1">
             Peso: {s.volume_weight} kg
+          </div>
+        )}
+
+        {/* Mostrar motorista de coleta */}
+        {s.motorista_nome && (
+          <div className="flex items-center gap-1 mt-2 text-sm">
+            <User className="h-3 w-3 text-blue-500" />
+            <span className="text-blue-600 font-medium">Coletado por: {s.motorista_nome}</span>
           </div>
         )}
       </CardContent>
@@ -268,10 +360,15 @@ const CdDashboard = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* Em Trânsito - apenas visualização, sem ETI visível e sem botão */}
+          {/* Em Trânsito - mostra ETI e motorista se coletado */}
           <TabsContent value="em_transito">
             {emTransito.length ? (
-              emTransito.map(s => renderCard(s, false)) // showEti = false
+              <>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Volumes aguardando coleta ou sendo transportados
+                </p>
+                {emTransito.map(s => renderCard(s, true))}
+              </>
             ) : (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
@@ -281,7 +378,7 @@ const CdDashboard = () => {
             )}
           </TabsContent>
 
-          {/* No CD - aguardando motorista aceitar */}
+          {/* No CD - aguardando motorista de entrega aceitar */}
           <TabsContent value="no_cd">
             {noCd.length ? (
               <>
@@ -299,12 +396,12 @@ const CdDashboard = () => {
             )}
           </TabsContent>
 
-          {/* Em Rota - aceitos por motoristas */}
+          {/* Em Rota - aceitos por motoristas de entrega */}
           <TabsContent value="em_rota">
             {emRota.length ? (
               <>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Volumes em rota com motoristas
+                  Volumes em rota com motoristas de entrega
                 </p>
                 {emRota.map(s => renderCard(s, true))}
               </>
@@ -339,7 +436,7 @@ const CdDashboard = () => {
             <DialogTitle>Receber Volume no CD</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Digite os 4 dígitos do código ETI do volume
+            Digite os 4 dígitos do código ETI do volume coletado
           </p>
           <Input 
             placeholder="0001" 
@@ -348,6 +445,9 @@ const CdDashboard = () => {
             className="text-center text-2xl font-mono"
             maxLength={4}
           />
+          <p className="text-xs text-amber-600">
+            ⚠️ Apenas volumes já coletados por motorista podem ser recebidos
+          </p>
           <div className="flex gap-2">
             <Button 
               variant="outline" 
