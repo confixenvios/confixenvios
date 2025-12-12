@@ -184,23 +184,23 @@ const CdDashboard = () => {
         return;
       }
       
-      // Atualiza status para NO_CD (mantém motorista_id para histórico)
+      // Atualiza status para NO_CD e DESVINCULA motorista para liberar para motorista de entrega
       const { error } = await supabase
         .from('b2b_shipments')
         .update({ 
-          status: 'NO_CD'
-          // NÃO limpa motorista_id - mantém para saber quem coletou
+          status: 'NO_CD',
+          motorista_id: null  // Desvincula motorista de coleta - histórico preservado
         })
         .eq('id', shipment.id);
       
       if (error) throw error;
       
-      // Registra histórico
+      // Registra histórico com nome do motorista que coletou
       await supabase.from('shipment_status_history').insert({
         b2b_shipment_id: shipment.id,
         status: 'NO_CD',
         status_description: `Volume recebido no CD por ${cdUser?.nome}`,
-        observacoes: `Código ETI validado: ${shipment.volume_eti_code}. Coletado por: ${shipment.motorista_nome || 'N/A'}`
+        observacoes: `Código ETI validado: ${shipment.volume_eti_code}. Coletado por: ${shipment.motorista_nome || 'N/A'}. Motorista de coleta desvinculado - disponível para entrega.`
       });
       
       toast.success(`${shipment.tracking_code} recebido no CD!`);
