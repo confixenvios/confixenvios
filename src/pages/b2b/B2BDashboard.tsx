@@ -389,18 +389,6 @@ const B2BDashboard = () => {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Peso Total</p>
-                        <p className="font-semibold">{obs.total_weight?.toFixed(2) || '0'} kg</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Pesos por Volume</p>
-                        <p className="font-semibold text-sm">
-                          {obs.volume_weights?.map((w: number, i: number) => `${w}kg`).join(', ') || '-'}
-                        </p>
-                      </div>
-                    </div>
 
                     {obs.volume_addresses && obs.volume_addresses.length > 0 && (
                       <>
@@ -411,9 +399,9 @@ const B2BDashboard = () => {
                             <div key={index} className="p-3 bg-muted/30 rounded-lg border">
                               <div className="flex items-center gap-2 mb-2">
                                 <Badge variant="outline" className="text-xs">Volume {index + 1}</Badge>
-                                {obs.volume_weights?.[index] && (
-                                  <span className="text-xs text-muted-foreground">({obs.volume_weights[index]}kg)</span>
-                                )}
+                                <Badge variant="secondary" className="text-xs">
+                                  {obs.volume_weights?.[index] || addr?.weight || 0} kg
+                                </Badge>
                               </div>
                               <p className="text-sm font-semibold">{addr?.recipient_name || addr?.name || '-'}</p>
                               <p className="text-xs text-muted-foreground">{addr?.recipient_phone || '-'}</p>
