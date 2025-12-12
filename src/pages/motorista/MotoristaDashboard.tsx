@@ -696,7 +696,7 @@ const MotoristaDashboard = () => {
             trackingCode={selectedRemessa.tracking_code || ''}
             shipmentType={
               selectedRemessa.tracking_code?.startsWith('B2B-') 
-                ? (['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA'].includes(selectedRemessa.status) ? 'B2B-2' : 'B2B-1')
+                ? (['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA'].includes(selectedRemessa.status) ? 'B2B-2' : 'B2B-0')
                 : 'normal'
             }
             currentStatus={selectedRemessa.status}

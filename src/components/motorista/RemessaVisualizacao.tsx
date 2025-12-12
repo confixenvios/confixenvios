@@ -153,10 +153,10 @@ export const RemessaVisualizacao = ({
   };
 
   const getStatusPhase = (status: string): string => {
-    if (['PENDENTE', 'ACEITA', 'B2B_COLETA_FINALIZADA'].includes(status)) {
-      return 'B2B-1 (Coleta)';
+    if (['PENDENTE', 'ACEITA', 'B2B_COLETA_PENDENTE', 'B2B_COLETA_ACEITA', 'B2B_COLETA_FINALIZADA'].includes(status)) {
+      return 'B2B-0 (Coleta)';
     }
-    if (['B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(status)) {
+    if (['B2B_ENTREGA_ACEITA', 'B2B_VOLUME_DISPONIVEL', 'B2B_VOLUME_ACEITO', 'ENTREGUE'].includes(status)) {
       return 'B2B-2 (Entrega)';
     }
     return 'Convencional';
