@@ -482,16 +482,20 @@ export const RemessaVisualizacao = ({
                   );
                 }
                 
-                // Fallback para volume_addresses nas observations
+                // Fallback para volume_address (singular) nas observations
                 let volumeAddress: any = null;
                 if (remessa.observations) {
                   try {
                     const obs = typeof remessa.observations === 'string' 
                       ? JSON.parse(remessa.observations) 
                       : remessa.observations;
-                    const addresses = obs.volume_addresses || obs.volumeAddresses || [];
-                    // Pegar o primeiro endereço já que cada volume é uma remessa separada
-                    volumeAddress = addresses[0];
+                    // Nova estrutura usa volume_address (singular para cada remessa individual)
+                    volumeAddress = obs.volume_address || obs.volumeAddress;
+                    // Fallback para array antigo
+                    if (!volumeAddress) {
+                      const addresses = obs.volume_addresses || obs.volumeAddresses || [];
+                      volumeAddress = addresses[0];
+                    }
                   } catch (e) {
                     console.log('Erro ao parsear observations:', e);
                   }

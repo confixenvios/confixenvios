@@ -254,12 +254,25 @@ const B2BDashboard = () => {
                     <p className="text-sm text-muted-foreground">
                       {shipment.recipient_name ? (
                         <>
-                          <strong>{shipment.recipient_name}</strong> - {shipment.recipient_city}/{shipment.recipient_state}
+                          <strong>Destinatário:</strong> {shipment.recipient_name} - {shipment.recipient_city}/{shipment.recipient_state}
                         </>
                       ) : (
                         <>
-                          {shipment.volume_count && `${shipment.volume_count} volume(s)`}
-                          {shipment.delivery_date && ` - Entrega: ${format(new Date(shipment.delivery_date), 'dd/MM/yyyy')}`}
+                          {(() => {
+                            // Tentar extrair destinatário das observations
+                            const obs = parseObservations(shipment.observations);
+                            const volumeAddr = obs?.volume_address;
+                            if (volumeAddr?.recipient_name) {
+                              return (
+                                <>
+                                  <strong>Destinatário:</strong> {volumeAddr.recipient_name} - {volumeAddr.city}/{volumeAddr.state}
+                                </>
+                              );
+                            }
+                            return shipment.delivery_date 
+                              ? `Entrega: ${format(new Date(shipment.delivery_date), 'dd/MM/yyyy')}`
+                              : 'Destinatário não informado';
+                          })()}
                         </>
                       )}
                     </p>
