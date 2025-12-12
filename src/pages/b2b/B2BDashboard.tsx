@@ -26,6 +26,12 @@ interface B2BShipment {
   id: string;
   tracking_code: string;
   recipient_name: string | null;
+  recipient_phone: string | null;
+  recipient_cep: string | null;
+  recipient_street: string | null;
+  recipient_number: string | null;
+  recipient_complement: string | null;
+  recipient_neighborhood: string | null;
   recipient_city: string | null;
   recipient_state: string | null;
   delivery_type: string | null;
@@ -334,6 +340,32 @@ const B2BDashboard = () => {
                   </p>
                 </div>
               </div>
+
+              {/* Destinatário do Volume */}
+              {selectedShipment.recipient_name && (
+                <>
+                  <hr className="border-border" />
+                  <h4 className="font-semibold">Destinatário</h4>
+                  <div className="p-3 bg-muted/30 rounded-lg border">
+                    <p className="font-semibold">{selectedShipment.recipient_name}</p>
+                    {selectedShipment.recipient_phone && (
+                      <p className="text-sm text-muted-foreground">{selectedShipment.recipient_phone}</p>
+                    )}
+                    {selectedShipment.recipient_street && (
+                      <>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {selectedShipment.recipient_street}, {selectedShipment.recipient_number}
+                          {selectedShipment.recipient_complement && `, ${selectedShipment.recipient_complement}`}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedShipment.recipient_neighborhood} - {selectedShipment.recipient_city}/{selectedShipment.recipient_state}
+                        </p>
+                        <p className="text-sm text-muted-foreground">CEP: {selectedShipment.recipient_cep}</p>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
 
               {(() => {
                 const obs = parseObservations(selectedShipment.observations);
