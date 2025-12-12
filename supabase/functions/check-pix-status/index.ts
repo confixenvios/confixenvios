@@ -197,8 +197,9 @@ serve(async (req) => {
                       delivery_date: recipientData?.deliveryDate || new Date().toISOString().split('T')[0],
                       status: 'B2B_COLETA_PENDENTE',
                       // Dados do destinatário específico deste volume
-                      recipient_name: volumeAddress.recipientName || volumeAddress.name || null,
-                      recipient_phone: volumeAddress.recipientPhone || volumeAddress.phone || null,
+                      // Priorizar recipient_name (estrutura de b2b_delivery_addresses) sobre name
+                      recipient_name: volumeAddress.recipient_name || volumeAddress.recipientName || volumeAddress.name || null,
+                      recipient_phone: volumeAddress.recipient_phone || volumeAddress.recipientPhone || volumeAddress.phone || null,
                       recipient_cep: volumeAddress.cep || null,
                       recipient_street: volumeAddress.street || null,
                       recipient_number: volumeAddress.number || null,
