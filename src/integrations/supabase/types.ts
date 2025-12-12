@@ -599,6 +599,8 @@ export type Database = {
           delivery_type: string | null
           id: string
           is_volume: boolean | null
+          motorista_coleta_id: string | null
+          motorista_entrega_id: string | null
           motorista_id: string | null
           observations: string | null
           package_type: string | null
@@ -629,6 +631,8 @@ export type Database = {
           delivery_type?: string | null
           id?: string
           is_volume?: boolean | null
+          motorista_coleta_id?: string | null
+          motorista_entrega_id?: string | null
           motorista_id?: string | null
           observations?: string | null
           package_type?: string | null
@@ -659,6 +663,8 @@ export type Database = {
           delivery_type?: string | null
           id?: string
           is_volume?: boolean | null
+          motorista_coleta_id?: string | null
+          motorista_entrega_id?: string | null
           motorista_id?: string | null
           observations?: string | null
           package_type?: string | null
@@ -688,6 +694,20 @@ export type Database = {
             columns: ["b2b_client_id"]
             isOneToOne: false
             referencedRelation: "b2b_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "b2b_shipments_motorista_coleta_id_fkey"
+            columns: ["motorista_coleta_id"]
+            isOneToOne: false
+            referencedRelation: "motoristas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "b2b_shipments_motorista_entrega_id_fkey"
+            columns: ["motorista_entrega_id"]
+            isOneToOne: false
+            referencedRelation: "motoristas"
             referencedColumns: ["id"]
           },
           {

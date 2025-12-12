@@ -458,6 +458,7 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
 
 /**
  * Serviço para buscar remessas do portal do motorista
+ * Agora considera motorista_coleta_id e motorista_entrega_id separadamente
  */
 export const getMotoristaShipments = async (motoristaId: string): Promise<MotoristaShipment[]> => {
   console.log('📋 Buscando remessas do motorista:', motoristaId);
@@ -474,7 +475,7 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
   
   console.log('📦 Remessas normais do motorista:', normalData?.length || 0);
   
-  // Buscar remessas B2B atribuídas atualmente ao motorista (incluindo volumes)
+  // Buscar remessas B2B onde o motorista é coleta OU entrega
   const { data: b2bData, error: b2bError } = await supabase
     .from('b2b_shipments')
     .select(`
@@ -498,6 +499,8 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
       delivery_type,
       delivery_date,
       motorista_id,
+      motorista_coleta_id,
+      motorista_entrega_id,
       b2b_client_id,
       is_volume,
       parent_shipment_id,
@@ -518,14 +521,14 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
         default_pickup_state
       )
     `)
-    .eq('motorista_id', motoristaId)
+    .or(`motorista_coleta_id.eq.${motoristaId},motorista_entrega_id.eq.${motoristaId}`)
     .order('created_at', { ascending: false });
 
   if (b2bError) {
     console.error('❌ Erro ao buscar remessas B2B do motorista:', b2bError);
   }
 
-  console.log('📦 Remessas B2B atuais do motorista:', b2bData?.length || 0);
+  console.log('📦 Remessas B2B do motorista (coleta ou entrega):', b2bData?.length || 0);
 
   // Buscar IDs de remessas B2B que o motorista participou no histórico
   const { data: historyData, error: historyError } = await supabase
@@ -571,6 +574,8 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
         delivery_type,
         delivery_date,
         motorista_id,
+        motorista_coleta_id,
+        motorista_entrega_id,
         b2b_client_id,
         is_volume,
         parent_shipment_id,
@@ -837,6 +842,7 @@ export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade
 
 /**
  * Buscar volume por código ETI para motorista de entrega
+ * Agora busca volumes com status NO_CD que não tem motorista_entrega_id atribuído
  */
 export const searchVolumeByEtiCode = async (etiCodeDigits: string): Promise<BaseShipment | null> => {
   console.log('🔍 Buscando volume por ETI:', etiCodeDigits);
@@ -852,11 +858,12 @@ export const searchVolumeByEtiCode = async (etiCodeDigits: string): Promise<Base
       recipient_city, recipient_state, observations, package_type,
       volume_count, delivery_type, delivery_date, b2b_client_id,
       is_volume, parent_shipment_id, volume_eti_code, volume_number, volume_weight,
+      motorista_coleta_id, motorista_entrega_id,
       b2b_clients(company_name, email, phone, cnpj)
     `)
     .eq('volume_eti_code', fullEtiCode)
     .eq('status', 'NO_CD')  // Só pode aceitar se está no CD
-    .is('motorista_id', null)
+    .is('motorista_entrega_id', null)  // Verifica motorista_entrega_id, não motorista_id
     .single();
 
   if (error || !data) {
@@ -870,6 +877,7 @@ export const searchVolumeByEtiCode = async (etiCodeDigits: string): Promise<Base
 
 /**
  * Aceitar volume para entrega (motorista entrega digita ETI)
+ * Agora usa motorista_entrega_id ao invés de motorista_id
  */
 export const acceptB2BVolume = async (volumeId: string, motoristaId: string): Promise<{ success: boolean; error?: string }> => {
   console.log('🚚 Aceitando volume para entrega:', volumeId);
@@ -877,12 +885,12 @@ export const acceptB2BVolume = async (volumeId: string, motoristaId: string): Pr
   const { error } = await supabase
     .from('b2b_shipments')
     .update({ 
-      motorista_id: motoristaId,
+      motorista_entrega_id: motoristaId,  // Usa motorista_entrega_id
       status: 'EM_ROTA'  // Agora está em rota de entrega
     })
     .eq('id', volumeId)
     .eq('status', 'NO_CD')
-    .is('motorista_id', null);
+    .is('motorista_entrega_id', null);  // Verifica motorista_entrega_id
 
   if (error) {
     console.error('❌ Erro ao aceitar volume:', error);
@@ -893,8 +901,8 @@ export const acceptB2BVolume = async (volumeId: string, motoristaId: string): Pr
   await supabase.from('shipment_status_history').insert({
     b2b_shipment_id: volumeId,
     motorista_id: motoristaId,
-    status: 'B2B_VOLUME_ACEITO',
-    observacoes: 'Volume aceito pelo motorista B2B-2'
+    status: 'EM_ROTA',
+    observacoes: 'Volume aceito pelo motorista de entrega (B2B-2)'
   });
 
   console.log('✅ Volume aceito com sucesso');
@@ -1091,11 +1099,11 @@ export const acceptShipment = async (shipmentId: string, motoristaId: string): P
     .maybeSingle();
   
   if (b2bShipment) {
-    // É uma remessa B2B-0 (coleta) - aceita tanto PENDENTE_COLETA quanto B2B_COLETA_PENDENTE
+    // É uma remessa B2B-0 (coleta) - usa motorista_coleta_id
     const { error } = await supabase
       .from('b2b_shipments')
       .update({ 
-        motorista_id: motoristaId,
+        motorista_coleta_id: motoristaId,  // Usa motorista_coleta_id
         status: 'B2B_COLETA_ACEITA'
       })
       .eq('id', shipmentId)
