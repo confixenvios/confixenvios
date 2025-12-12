@@ -9,7 +9,7 @@ interface QRCodeScanModalProps {
   isOpen: boolean;
   onClose: () => void;
   requiredCodes: string[];
-  shipmentType: 'B2B-1' | 'B2B-2';
+  shipmentType: 'B2B-0' | 'B2B-2';
   trackingCode: string;
   onAllScanned: (photoFile?: File) => void;
 }
@@ -135,7 +135,7 @@ export const QRCodeScanModal: React.FC<QRCodeScanModalProps> = ({
                 Digite os 4 dígitos de cada etiqueta
               </p>
               <p className="text-blue-700 dark:text-blue-300 mt-0.5">
-                {shipmentType === 'B2B-1' 
+                {shipmentType === 'B2B-0' 
                   ? 'Confirme cada volume antes de realizar a coleta.'
                   : 'Confirme cada volume e anexe foto da entrega.'}
               </p>

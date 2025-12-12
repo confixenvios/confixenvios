@@ -15,7 +15,7 @@ interface FinalizarEntregaModalProps {
   shipmentId: string;
   motoristaId: string;
   trackingCode?: string;
-  shipmentType?: 'normal' | 'B2B-1' | 'B2B-2';
+  shipmentType?: 'normal' | 'B2B-0' | 'B2B-2';
   currentStatus?: string;
   volumeCount?: number;
   onSuccess: () => void;
@@ -43,7 +43,7 @@ export const FinalizarEntregaModal = ({
   const { toast } = useToast();
 
   const isB2B = trackingCode?.startsWith('B2B-') || shipmentType?.startsWith('B2B');
-  const isB2BColeta = shipmentType === 'B2B-1' || (isB2B && currentStatus === 'ACEITA');
+  const isB2BColeta = shipmentType === 'B2B-0' || (isB2B && currentStatus === 'ACEITA');
   const isB2BEntrega = shipmentType === 'B2B-2' || (isB2B && (currentStatus === 'B2B_COLETA_FINALIZADA' || currentStatus === 'B2B_ENTREGA_ACEITA'));
 
   // Fetch ETI codes for B2B shipments
@@ -354,7 +354,7 @@ export const FinalizarEntregaModal = ({
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
-              {shipmentType === 'B2B-1' ? 'Finalizar Coleta' : 'Finalizar Entrega'}
+              {shipmentType === 'B2B-0' ? 'Finalizar Coleta' : 'Finalizar Entrega'}
             </DialogTitle>
           </DialogHeader>
 
@@ -544,7 +544,7 @@ export const FinalizarEntregaModal = ({
           isOpen={showQRScan}
           onClose={() => setShowQRScan(false)}
           requiredCodes={etiCodes}
-          shipmentType={isB2BColeta ? 'B2B-1' : 'B2B-2'}
+          shipmentType={isB2BColeta ? 'B2B-0' : 'B2B-2'}
           trackingCode={trackingCode || ''}
           onAllScanned={handleQRValidationComplete}
         />
