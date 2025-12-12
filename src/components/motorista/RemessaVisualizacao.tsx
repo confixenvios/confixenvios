@@ -366,16 +366,18 @@ export const RemessaVisualizacao = ({
               Remetente
             </h4>
             {(() => {
-              const isB2B1 = isB2B && ['PENDENTE', 'ACEITA'].includes(remessa.status);
-              const isB2B2 = isB2B && ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(remessa.status);
+              // B2B-0 (coleta): status de coleta pendente ou aceita
+              const isB2B0 = isB2B && ['PENDENTE', 'ACEITA', 'B2B_COLETA_PENDENTE', 'B2B_COLETA_ACEITA'].includes(remessa.status);
+              const isB2B2 = isB2B && ['B2B_COLETA_FINALIZADA', 'B2B_NO_CD', 'B2B_DESMEMBRADA', 'B2B_VOLUME_DISPONIVEL', 'B2B_VOLUME_ACEITO', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(remessa.status);
               
               // Para B2B-2, mostrar CD como remetente (origem é o CD)
               if (isB2B2) {
                 return (
                   <div className="text-sm space-y-1 ml-6">
-                    <p className="font-medium">Centro de Distribuição</p>
-                    <p className="text-muted-foreground">Av. Primeira Avenida</p>
-                    <p className="text-muted-foreground">Cidade Vera Cruz</p>
+                    <p className="font-medium">Centro de Distribuição Confix</p>
+                    <p className="text-muted-foreground">Avenida Primeira Avenida, SN</p>
+                    <p className="text-muted-foreground">Quadra 5B Lote 03 e 01</p>
+                    <p className="text-muted-foreground">Cond. Empresarial Village</p>
                     <p className="text-muted-foreground">Aparecida de Goiânia - GO</p>
                     <p className="text-muted-foreground">CEP: 74934-600</p>
                   </div>
@@ -410,24 +412,28 @@ export const RemessaVisualizacao = ({
           {/* Destinatário(s) / Endereço do CD */}
           <div>
             {(() => {
-              const isB2B1 = isB2B && ['PENDENTE', 'ACEITA'].includes(remessa.status);
-              const isB2B2 = isB2B && ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(remessa.status);
+              // B2B-0 (coleta): status de coleta pendente ou aceita - destinatário é o CD
+              const isB2B0 = isB2B && ['PENDENTE', 'ACEITA', 'B2B_COLETA_PENDENTE', 'B2B_COLETA_ACEITA'].includes(remessa.status);
+              const isB2B2 = isB2B && ['B2B_COLETA_FINALIZADA', 'B2B_NO_CD', 'B2B_DESMEMBRADA', 'B2B_VOLUME_DISPONIVEL', 'B2B_VOLUME_ACEITO', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(remessa.status);
               
-              // Para B2B-1, mostrar endereço fixo do CD
-              if (isB2B1) {
+              // Para B2B-0 (coleta), mostrar endereço fixo do CD como destino
+              if (isB2B0) {
                 return (
                   <>
                     <h4 className="font-medium mb-2 flex items-center gap-2">
                       <MapPin className="h-4 w-4" />
-                      Endereço do CD
+                      Destinatário (CD)
                     </h4>
                     <div className="text-sm space-y-1 ml-6">
-                      <p className="font-medium">Centro de Distribuição</p>
+                      <p className="font-medium">Centro de Distribuição Confix</p>
                       <p className="text-muted-foreground">
-                        Av. Primeira Avenida
+                        Avenida Primeira Avenida, SN
                       </p>
                       <p className="text-muted-foreground">
-                        Cidade Vera Cruz
+                        Quadra 5B Lote 03 e 01
+                      </p>
+                      <p className="text-muted-foreground">
+                        Cond. Empresarial Village
                       </p>
                       <p className="text-muted-foreground">
                         Aparecida de Goiânia - GO
