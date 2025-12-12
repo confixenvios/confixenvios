@@ -587,7 +587,7 @@ const AdminMotoristas = () => {
                   <div className="flex items-center gap-2">
                     <Zap className="h-4 w-4 text-orange-500" />
                     <Label htmlFor="ve_b2b_coleta" className="text-sm font-normal cursor-pointer">
-                      B2B-0 (Coleta)
+                      B2B Coleta
                     </Label>
                   </div>
                   <span className="text-xs text-muted-foreground">- Coleta inicial após pagamento</span>
@@ -602,7 +602,7 @@ const AdminMotoristas = () => {
                   <div className="flex items-center gap-2">
                     <Truck className="h-4 w-4 text-green-600" />
                     <Label htmlFor="ve_b2b_entrega" className="text-sm font-normal cursor-pointer">
-                      B2B-2 (Entrega)
+                      B2B Entrega
                     </Label>
                   </div>
                   <span className="text-xs text-muted-foreground">- Após coleta finalizada</span>
