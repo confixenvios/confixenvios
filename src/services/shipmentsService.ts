@@ -597,7 +597,22 @@ export const getMotoristaShipments = async (motoristaId: string): Promise<Motori
     if (additionalError) {
       console.error('❌ Erro ao buscar remessas B2B do histórico:', additionalError);
     } else {
-      historyB2BData = additionalB2B || [];
+      // FILTRO CRÍTICO: Remessas do histórico só devem aparecer se:
+      // 1. O status for ENTREGUE (o motorista completou a entrega)
+      // 2. OU se não tiver outro motorista atribuído (ainda está com ele ou voltou para o CD)
+      // Isso evita que remessas em EM_ROTA com outro motorista apareçam para o motorista de coleta
+      historyB2BData = (additionalB2B || []).filter((b2b: any) => {
+        // Se está ENTREGUE, mostra no histórico independente de quem entregou
+        if (b2b.status === 'ENTREGUE') return true;
+        
+        // Se está em EM_ROTA com outro motorista, não mostra para o motorista original
+        if (b2b.status === 'EM_ROTA' && b2b.motorista_id && b2b.motorista_id !== motoristaId) {
+          return false;
+        }
+        
+        // Para outros status (NO_CD, etc), mostra no histórico
+        return true;
+      });
     }
   }
 
