@@ -75,7 +75,7 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
 
       try {
         // Call the database function to generate/fetch ETI codes
-        const { data, error } = await supabase.rpc('generate_eti_codes_for_shipment', {
+        const { data, error } = await supabase.rpc('create_eti_codes_for_shipment', {
           p_b2b_shipment_id: shipmentId,
           p_volume_count: volumeCount
         });
