@@ -65,27 +65,45 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
   const [loadingEtiCodes, setLoadingEtiCodes] = useState(true);
   const labelsContainerRef = useRef<HTMLDivElement>(null);
 
-  // Fetch or generate ETI codes for this shipment
+  // Fetch ETI codes for this shipment - first try b2b_shipments.volume_eti_code, then b2b_volume_labels
   useEffect(() => {
     const fetchEtiCodes = async () => {
-      if (!shipmentId || volumeCount <= 0) {
+      if (!shipmentId) {
         setLoadingEtiCodes(false);
         return;
       }
 
       try {
-        // Call the database function to generate/fetch ETI codes
-        const { data, error } = await supabase.rpc('create_eti_codes_for_shipment', {
-          p_b2b_shipment_id: shipmentId,
-          p_volume_count: volumeCount
-        });
+        // First check if ETI code is stored directly on the shipment
+        const { data: shipmentData, error: shipmentError } = await supabase
+          .from('b2b_shipments')
+          .select('volume_eti_code, tracking_code')
+          .eq('id', shipmentId)
+          .single();
 
-        if (error) {
-          console.error('Error fetching ETI codes:', error);
-          // Fallback to tracking code based labels
-          setEtiCodes([]);
+        if (!shipmentError && shipmentData?.volume_eti_code) {
+          // Use the ETI code from the shipment itself
+          setEtiCodes([{
+            volume_number: 1,
+            eti_code: shipmentData.volume_eti_code,
+            eti_sequence_number: 1
+          }]);
+          setLoadingEtiCodes(false);
+          return;
+        }
+
+        // Fallback: try b2b_volume_labels table
+        const { data: labelData, error: labelError } = await supabase
+          .from('b2b_volume_labels')
+          .select('*')
+          .eq('b2b_shipment_id', shipmentId)
+          .order('volume_number', { ascending: true });
+
+        if (!labelError && labelData && labelData.length > 0) {
+          setEtiCodes(labelData);
         } else {
-          setEtiCodes(data || []);
+          // No ETI codes found
+          setEtiCodes([]);
         }
       } catch (err) {
         console.error('Error in fetchEtiCodes:', err);
@@ -96,7 +114,7 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
     };
 
     fetchEtiCodes();
-  }, [shipmentId, volumeCount]);
+  }, [shipmentId]);
 
   const formatAddress = (addr: VolumeAddress | PickupAddress): string => {
     const parts = [
