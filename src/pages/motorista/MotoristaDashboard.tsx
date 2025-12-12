@@ -412,7 +412,7 @@ const MotoristaDashboard = () => {
                 )}
                 {showActions && (currentView === 'minhas' || currentView === 'em_rota') && 
                   (remessa as MotoristaShipment).motorista_id && 
-                  ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'TENTATIVA_ENTREGA', 'ACEITA', 'B2B_ENTREGA_ACEITA'].includes(remessa.status) && (
+                  ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'TENTATIVA_ENTREGA', 'ACEITA', 'B2B_ENTREGA_ACEITA', 'B2B_VOLUME_ACEITO'].includes(remessa.status) && (
                   <>
                     <Button
                       variant="default"
@@ -426,9 +426,9 @@ const MotoristaDashboard = () => {
                       <Plus className="h-3 w-3 mr-1" />
                       Ocorrência
                     </Button>
-                    {/* B2B-1 não mostra "Finalizar Coleta" - agora é responsabilidade do CD */}
-                    {/* B2B-2 e normais mostram "Finalizar" */}
-                    {!(isB2B && ['PENDENTE', 'ACEITA'].includes(remessa.status)) && (
+                    {/* B2B-0 não mostra "Finalizar Coleta" - agora é responsabilidade do CD */}
+                    {/* B2B-2 (volumes) e normais mostram "Finalizar Entrega" */}
+                    {(isVolume || !isB2B || !['PENDENTE', 'ACEITA', 'B2B_COLETA_PENDENTE', 'B2B_COLETA_ACEITA'].includes(remessa.status)) && (
                       <Button
                         variant="default"
                         size="sm"
@@ -439,7 +439,7 @@ const MotoristaDashboard = () => {
                         className="bg-green-600 hover:bg-green-700"
                       >
                         <CheckCircle className="h-3 w-3 mr-1" />
-                        Finalizar
+                        Finalizar Entrega
                       </Button>
                     )}
                   </>
