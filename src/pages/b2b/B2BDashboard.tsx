@@ -431,8 +431,8 @@ const B2BDashboard = () => {
                     </>
                   )}
 
-                  {/* Gerador de Etiquetas */}
-                  {obs && obs.volume_addresses && obs.volume_addresses.length > 0 && obs.pickup_address && (
+                  {/* Gerador de Etiquetas - Funciona com volume_address (singular) ou volume_addresses (plural) */}
+                  {obs && (obs.volume_address || obs.volume_addresses || obs.pickup_address) && (
                     <>
                       <hr className="border-border" />
                       <h4 className="font-semibold">Etiquetas</h4>
@@ -440,8 +440,8 @@ const B2BDashboard = () => {
                         shipmentId={selectedShipment.id}
                         trackingCode={selectedShipment.tracking_code}
                         volumeCount={selectedShipment.volume_count || 1}
-                        volumeWeights={obs.volume_weights || []}
-                        volumeAddresses={obs.volume_addresses || []}
+                        volumeWeights={obs.volume_weights || (selectedShipment.volume_count === 1 && obs.volume_address ? [obs.volume_address.weight || 0] : [])}
+                        volumeAddresses={obs.volume_addresses || (obs.volume_address ? [obs.volume_address] : [])}
                         pickupAddress={obs.pickup_address || {}}
                         companyName={client?.company_name || 'Remetente'}
                         deliveryDate={selectedShipment.delivery_date || undefined}
