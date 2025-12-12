@@ -6,9 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, Download, Route, User } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, Download, Route, User, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import CdShipmentDetailsModal from '@/components/cd/CdShipmentDetailsModal';
 
 interface CdUser {
   id: string;
@@ -28,12 +29,15 @@ interface B2BShipment {
   recipient_state: string | null;
   recipient_street: string | null;
   recipient_number: string | null;
+  recipient_complement?: string | null;
   recipient_neighborhood: string | null;
   volume_count: number | null;
   volume_weight: number | null;
   volume_eti_code: string | null;
   motorista_id: string | null;
   motorista_nome?: string | null;
+  delivery_date?: string | null;
+  observations?: string | null;
 }
 
 const CdDashboard = () => {
@@ -48,6 +52,10 @@ const CdDashboard = () => {
   const [receiveModalOpen, setReceiveModalOpen] = useState(false);
   const [receiveEtiInput, setReceiveEtiInput] = useState('');
   const [receiving, setReceiving] = useState(false);
+  
+  // Modal de detalhes
+  const [selectedShipment, setSelectedShipment] = useState<B2BShipment | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -229,6 +237,11 @@ const CdDashboard = () => {
   // Entregues: volumes finalizados
   const entregues = shipments.filter(s => s.status === 'ENTREGUE');
 
+  const handleShowDetails = (shipment: B2BShipment) => {
+    setSelectedShipment(shipment);
+    setShowDetailsModal(true);
+  };
+
   // Renderiza card SEM ETI visível
   const renderCard = (s: B2BShipment) => (
     <Card key={s.id} className="mb-3">
@@ -270,6 +283,17 @@ const CdDashboard = () => {
             <span className="text-blue-600 font-medium">Coletado por: {s.motorista_nome}</span>
           </div>
         )}
+
+        {/* Botão Ver Detalhes */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-3 w-full"
+          onClick={() => handleShowDetails(s)}
+        >
+          <Eye className="h-4 w-4 mr-1" />
+          Ver Detalhes
+        </Button>
       </CardContent>
     </Card>
   );
@@ -463,6 +487,13 @@ const CdDashboard = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Detalhes */}
+      <CdShipmentDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        shipment={selectedShipment}
+      />
     </div>
   );
 };
