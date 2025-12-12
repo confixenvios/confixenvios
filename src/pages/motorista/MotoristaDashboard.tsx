@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Truck, Package, LogOut, CheckCircle, Clock, Eye, FileText, Menu, Zap } from 'lucide-react';
+import { Truck, Package, LogOut, CheckCircle, Clock, Eye, FileText, Menu, Zap, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { RemessaVisualizacao } from '@/components/motorista/RemessaVisualizacao';
+import { VolumeSearchModal } from '@/components/motorista/VolumeSearchModal';
 import { getMotoristaShipments, getAvailableShipments, acceptShipment, type MotoristaShipment, type BaseShipment, type MotoristaVisibilidade } from '@/services/shipmentsService';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -32,6 +33,7 @@ const MotoristaDashboard = () => {
   const [accepting, setAccepting] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<ViewType>('disponiveis');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [volumeSearchOpen, setVolumeSearchOpen] = useState(false);
 
   useEffect(() => {
     const checkMotoristaAuth = async () => {
@@ -415,24 +417,39 @@ const MotoristaDashboard = () => {
                 </p>
               </div>
             </div>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (motoristaSession?.id && motoristaSession.visibilidade) {
-                  loadMinhasRemessas(motoristaSession.id);
-                  loadRemessasDisponiveis(motoristaSession.visibilidade);
-                }
-              }}
-              disabled={refreshing}
-            >
-              {refreshing ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
-              ) : (
-                'Atualizar'
+
+            <div className="flex items-center gap-2">
+              {/* Botão + para motoristas de entrega B2B */}
+              {motoristaSession?.visibilidade?.ve_b2b_entrega && (
+                <Button
+                  variant="default"
+                  size="icon"
+                  onClick={() => setVolumeSearchOpen(true)}
+                  className="bg-green-600 hover:bg-green-700 h-9 w-9"
+                  title="Inserir Volume B2B"
+                >
+                  <Plus className="h-5 w-5" />
+                </Button>
               )}
-            </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (motoristaSession?.id && motoristaSession.visibilidade) {
+                    loadMinhasRemessas(motoristaSession.id);
+                    loadRemessasDisponiveis(motoristaSession.visibilidade);
+                  }
+                }}
+                disabled={refreshing}
+              >
+                {refreshing ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+                ) : (
+                  'Atualizar'
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -483,6 +500,21 @@ const MotoristaDashboard = () => {
             isOpen={viewModalOpen}
             onClose={() => setViewModalOpen(false)}
             remessa={selectedRemessa}
+          />
+        )}
+
+        {/* Modal de busca de volume B2B para motoristas de entrega */}
+        {motoristaSession?.id && (
+          <VolumeSearchModal
+            open={volumeSearchOpen}
+            onClose={() => setVolumeSearchOpen(false)}
+            motoristaId={motoristaSession.id}
+            onVolumeAccepted={() => {
+              loadMinhasRemessas(motoristaSession.id);
+              if (motoristaSession.visibilidade) {
+                loadRemessasDisponiveis(motoristaSession.visibilidade);
+              }
+            }}
           />
         )}
       </main>
