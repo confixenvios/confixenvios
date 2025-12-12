@@ -499,7 +499,7 @@ const B2BNovaRemessa = () => {
                       value={formData.delivery_date}
                       onChange={(e) => handleChange('delivery_date', e.target.value)}
                       required
-                      min={new Date().toISOString().split('T')[0]}
+                      min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
                       className="h-12 text-base"
                     />
                   </div>
