@@ -18,6 +18,8 @@ interface FinalizarEntregaModalProps {
   shipmentType?: 'normal' | 'B2B-0' | 'B2B-2';
   currentStatus?: string;
   volumeCount?: number;
+  isVolume?: boolean;
+  volumeEtiCode?: string;
   onSuccess: () => void;
 }
 
@@ -30,6 +32,8 @@ export const FinalizarEntregaModal = ({
   shipmentType,
   currentStatus,
   volumeCount = 1,
+  isVolume = false,
+  volumeEtiCode,
   onSuccess
 }: FinalizarEntregaModalProps) => {
   const [showPhotoUpload, setShowPhotoUpload] = useState(false);
@@ -44,12 +48,21 @@ export const FinalizarEntregaModal = ({
 
   const isB2B = trackingCode?.startsWith('B2B-') || shipmentType?.startsWith('B2B');
   const isB2BColeta = shipmentType === 'B2B-0' || (isB2B && currentStatus === 'ACEITA');
-  const isB2BEntrega = shipmentType === 'B2B-2' || (isB2B && (currentStatus === 'B2B_COLETA_FINALIZADA' || currentStatus === 'B2B_ENTREGA_ACEITA'));
+  // B2B-2 detection: either explicit type, is a volume, or has delivery-phase status
+  const isB2BEntrega = shipmentType === 'B2B-2' || isVolume || (isB2B && ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'B2B_VOLUME_DISPONIVEL', 'B2B_VOLUME_ACEITO'].includes(currentStatus || ''));
 
   // Fetch ETI codes for B2B shipments
   useEffect(() => {
     const fetchEtiCodes = async () => {
       if (!isB2B || !shipmentId || volumeCount <= 0) {
+        return;
+      }
+
+      // Se for um volume individual com código ETI já conhecido, usar diretamente
+      if (isVolume && volumeEtiCode) {
+        setEtiCodes([volumeEtiCode]);
+        console.log('✅ Using volume ETI code:', volumeEtiCode);
+        setLoadingEtiCodes(false);
         return;
       }
 
@@ -91,7 +104,7 @@ export const FinalizarEntregaModal = ({
     if (isOpen && isB2B) {
       fetchEtiCodes();
     }
-  }, [isOpen, isB2B, shipmentId, volumeCount, trackingCode]);
+  }, [isOpen, isB2B, shipmentId, volumeCount, trackingCode, isVolume, volumeEtiCode]);
 
   // Reset when modal opens/closes
   useEffect(() => {
@@ -270,6 +283,62 @@ export const FinalizarEntregaModal = ({
         }
         
         console.log(`✅ B2B atualizado para: ${newStatus}`);
+
+        // Se for um volume B2B-2, verificar se todos os volumes irmãos foram entregues
+        if (isB2BEntrega && newStatus === 'ENTREGUE') {
+          // Buscar dados do volume atual para pegar o parent_shipment_id
+          const { data: currentVolume } = await supabase
+            .from('b2b_shipments')
+            .select('parent_shipment_id, is_volume')
+            .eq('id', shipmentId)
+            .single();
+
+          if (currentVolume?.parent_shipment_id && currentVolume?.is_volume) {
+            console.log('🔍 Volume entregue. Verificando se todos os volumes irmãos foram entregues...');
+            
+            // Buscar todos os volumes do mesmo parent_shipment_id
+            const { data: siblingVolumes } = await supabase
+              .from('b2b_shipments')
+              .select('id, status')
+              .eq('parent_shipment_id', currentVolume.parent_shipment_id)
+              .eq('is_volume', true);
+
+            if (siblingVolumes) {
+              const allDelivered = siblingVolumes.every(v => 
+                v.id === shipmentId || v.status === 'ENTREGUE'
+              );
+
+              console.log(`📦 Volumes irmãos: ${siblingVolumes.length}, Todos entregues: ${allDelivered}`);
+
+              if (allDelivered) {
+                console.log('✅ Todos os volumes foram entregues! Atualizando remessa pai...');
+                
+                // Atualizar status da remessa pai para ENTREGUE
+                const { error: parentUpdateError } = await supabase
+                  .from('b2b_shipments')
+                  .update({ 
+                    status: 'ENTREGUE',
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', currentVolume.parent_shipment_id);
+
+                if (parentUpdateError) {
+                  console.error('⚠️ Erro ao atualizar remessa pai:', parentUpdateError);
+                } else {
+                  console.log('✅ Remessa pai atualizada para ENTREGUE');
+                  
+                  // Registrar no histórico da remessa pai
+                  await supabase.from('shipment_status_history').insert({
+                    b2b_shipment_id: currentVolume.parent_shipment_id,
+                    status: 'ENTREGUE',
+                    status_description: 'Todos os volumes foram entregues',
+                    observacoes: `Remessa finalizada. Todos os ${siblingVolumes.length} volume(s) foram entregues com sucesso.`
+                  });
+                }
+              }
+            }
+          }
+        }
       } else {
         const { error: updateError } = await supabase
           .from('shipments')
@@ -400,9 +469,11 @@ export const FinalizarEntregaModal = ({
             {/* Tracking code info */}
             {trackingCode && (
               <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Remessa</p>
-                <p className="font-medium">{trackingCode}</p>
-                {isB2B && (
+                <p className="text-sm text-muted-foreground">
+                  {isVolume ? 'Volume' : 'Remessa'}
+                </p>
+                <p className="font-medium font-mono">{trackingCode}</p>
+                {isB2B && !isVolume && (
                   <p className="text-xs text-muted-foreground mt-1">{volumeCount} volume(s)</p>
                 )}
               </div>

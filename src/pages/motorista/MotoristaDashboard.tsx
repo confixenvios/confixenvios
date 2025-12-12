@@ -280,6 +280,22 @@ const MotoristaDashboard = () => {
 
   const renderShipmentCard = (remessa: MotoristaShipment | BaseShipment, showActions: boolean = true) => {
     const isB2B = remessa.tracking_code?.startsWith('B2B-');
+    const isVolume = remessa.is_volume;
+    const volumeEtiCode = remessa.volume_eti_code;
+    const volumeNumber = remessa.volume_number;
+    
+    // Para volumes B2B-2, determinar se é fase de entrega
+    const isB2B2Phase = isVolume || ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'B2B_VOLUME_DISPONIVEL', 'B2B_VOLUME_ACEITO', 'ENTREGUE'].includes(remessa.status);
+    
+    // Título do card: para volumes, mostrar o código ETI em destaque
+    const displayTitle = isVolume && volumeEtiCode 
+      ? volumeEtiCode 
+      : remessa.tracking_code;
+    
+    // Subtítulo: para volumes, mostrar o número do volume
+    const displaySubtitle = isVolume 
+      ? `Volume ${volumeNumber} • ${new Date(remessa.created_at).toLocaleDateString('pt-BR')}`
+      : new Date(remessa.created_at).toLocaleDateString('pt-BR');
     
     return (
       <Card key={remessa.id} className={`hover:shadow-md transition-shadow ${isB2B ? 'border-purple-200' : 'border-blue-200'}`}>
@@ -287,21 +303,19 @@ const MotoristaDashboard = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-              {/* Não mostrar badge B2B-1/B2B-2 ou Convencional na aba entregues */}
+              {/* Não mostrar badge B2B-0/B2B-2 ou Convencional na aba entregues */}
               {currentView !== 'entregues' && (
                 isB2B ? (
                   <Badge 
                     variant="outline" 
                     className={
-                      ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(remessa.status)
+                      isB2B2Phase
                         ? "bg-purple-100 text-purple-700 border-purple-300"
                         : "bg-blue-100 text-blue-700 border-blue-300"
                     }
                   >
                     <Zap className="h-3 w-3 mr-1" />
-                    {['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'B2B_VOLUME_DISPONIVEL', 'B2B_VOLUME_ACEITO', 'ENTREGUE'].includes(remessa.status)
-                      ? "B2B-2" 
-                      : "B2B-0"}
+                    {isB2B2Phase ? "B2B-2" : "B2B-0"}
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
@@ -311,20 +325,25 @@ const MotoristaDashboard = () => {
                 )
               )}
                 <div>
-                  <h3 className="font-medium text-sm">{remessa.tracking_code}</h3>
+                  <h3 className="font-medium text-sm font-mono">{displayTitle}</h3>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(remessa.created_at).toLocaleDateString('pt-BR')}
+                    {displaySubtitle}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {isVolume && (
+                  <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-200 text-xs">
+                    {remessa.volume_weight?.toFixed(1) || '0'}kg
+                  </Badge>
+                )}
                 {getStatusBadge(remessa.status)}
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div className="space-y-1">
-                <p className="font-medium text-muted-foreground">Remetente</p>
+                <p className="font-medium text-muted-foreground">{isB2B2Phase ? 'Origem (CD)' : 'Remetente'}</p>
                 <p className="font-medium">{remessa.sender_address?.name}</p>
                 <p className="text-muted-foreground">
                   {remessa.sender_address?.city}, {remessa.sender_address?.state}
@@ -693,19 +712,25 @@ const MotoristaDashboard = () => {
             onClose={() => setFinalizarEntregaModalOpen(false)}
             shipmentId={selectedRemessa.id}
             motoristaId={motoristaSession.id}
-            trackingCode={selectedRemessa.tracking_code || ''}
+            trackingCode={selectedRemessa.is_volume && selectedRemessa.volume_eti_code 
+              ? selectedRemessa.volume_eti_code 
+              : selectedRemessa.tracking_code || ''}
             shipmentType={
               selectedRemessa.tracking_code?.startsWith('B2B-') 
-                ? (['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA'].includes(selectedRemessa.status) ? 'B2B-2' : 'B2B-0')
+                ? (selectedRemessa.is_volume || ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'B2B_VOLUME_DISPONIVEL', 'B2B_VOLUME_ACEITO'].includes(selectedRemessa.status) ? 'B2B-2' : 'B2B-0')
                 : 'normal'
             }
             currentStatus={selectedRemessa.status}
             volumeCount={
-              selectedRemessa.quote_data?.merchandiseDetails?.volumes?.length || 
-              selectedRemessa.quote_data?.technicalData?.volumes?.length || 
-              selectedRemessa.quote_data?.volume_count || 
-              1
+              selectedRemessa.is_volume 
+                ? 1  // Para volumes individuais, sempre 1
+                : (selectedRemessa.quote_data?.merchandiseDetails?.volumes?.length || 
+                   selectedRemessa.quote_data?.technicalData?.volumes?.length || 
+                   selectedRemessa.quote_data?.volume_count || 
+                   1)
             }
+            isVolume={selectedRemessa.is_volume || false}
+            volumeEtiCode={selectedRemessa.volume_eti_code || undefined}
             onSuccess={() => {
               console.log('✅ Entrega/Coleta finalizada com sucesso');
               if (motoristaSession?.id && motoristaSession.visibilidade) {
