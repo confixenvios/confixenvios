@@ -1,19 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Truck, Package, MapPin, Phone, LogOut, CheckCircle, Clock, Calendar, Eye, User, FileText, Plus, List, ClipboardList, Menu, Route, History, Zap, Play, Undo2 } from 'lucide-react';
+import { Truck, Package, LogOut, CheckCircle, Clock, Eye, FileText, Menu, Zap } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { RemessaDetalhes } from '@/components/motorista/RemessaDetalhes';
 import { RemessaVisualizacao } from '@/components/motorista/RemessaVisualizacao';
-import { OccurrenceSimpleModal } from '@/components/motorista/OccurrenceSimpleModal';
-import { FinalizarEntregaModal } from '@/components/motorista/FinalizarEntregaModal';
-import { VolumeSearchModal } from '@/components/motorista/VolumeSearchModal';
-import { getMotoristaShipments, getAvailableShipments, acceptShipment, getMotoristaVisibilidade, type MotoristaShipment, type BaseShipment, type MotoristaVisibilidade } from '@/services/shipmentsService';
+import { getMotoristaShipments, getAvailableShipments, acceptShipment, type MotoristaShipment, type BaseShipment, type MotoristaVisibilidade } from '@/services/shipmentsService';
 import { supabase } from '@/integrations/supabase/client';
 
 interface MotoristaSession {
@@ -21,11 +15,10 @@ interface MotoristaSession {
   nome: string;
   email: string;
   status: string;
-  tipo_pedidos?: 'normal' | 'b2b' | 'ambos';
   visibilidade?: MotoristaVisibilidade;
 }
 
-type ViewType = 'disponiveis' | 'minhas' | 'em_rota' | 'entregues';
+type ViewType = 'disponiveis' | 'minhas' | 'entregues';
 
 const MotoristaDashboard = () => {
   const navigate = useNavigate();
@@ -34,40 +27,15 @@ const MotoristaDashboard = () => {
   const [remessasDisponiveis, setRemessasDisponiveis] = useState<BaseShipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRemessa, setSelectedRemessa] = useState<MotoristaShipment | null>(null);
-  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [occurrenceModalOpen, setOccurrenceModalOpen] = useState(false);
-  const [finalizarEntregaModalOpen, setFinalizarEntregaModalOpen] = useState(false);
-  const [volumeSearchModalOpen, setVolumeSearchModalOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<ViewType>('disponiveis');
   const [menuOpen, setMenuOpen] = useState(false);
-  const [remessasEmRotaIds, setRemessasEmRotaIds] = useState<string[]>(() => {
-    // Carregar do localStorage
-    const saved = localStorage.getItem('remessas_em_rota');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Salvar no localStorage quando mudar
-  useEffect(() => {
-    localStorage.setItem('remessas_em_rota', JSON.stringify(remessasEmRotaIds));
-  }, [remessasEmRotaIds]);
-
-  const handleMoveToEmRota = (remessaId: string) => {
-    setRemessasEmRotaIds(prev => [...prev, remessaId]);
-    toast.success('Remessa movida para Em Rota');
-  };
-
-  const handleMoveToMinhas = (remessaId: string) => {
-    setRemessasEmRotaIds(prev => prev.filter(id => id !== remessaId));
-    toast.success('Remessa movida para Minhas Remessas');
-  };
 
   useEffect(() => {
     const checkMotoristaAuth = async () => {
       try {
-        // Verificar sessão via Supabase Auth
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
@@ -75,7 +43,6 @@ const MotoristaDashboard = () => {
           return;
         }
 
-        // Verificar se é motorista
         const { data: roles, error: rolesError } = await supabase
           .from('user_roles')
           .select('role')
@@ -90,25 +57,22 @@ const MotoristaDashboard = () => {
           return;
         }
 
-        // Buscar dados do perfil e motorista
         const { data: profile } = await supabase
           .from('profiles')
           .select('first_name, phone, document')
           .eq('id', session.user.id)
           .single();
 
-        // Buscar dados do motorista (tipo_pedidos, status, visibilidade)
         const { data: motorista } = await supabase
           .from('motoristas')
-          .select('status, tipo_pedidos, ve_convencional, ve_b2b_coleta, ve_b2b_entrega')
+          .select('status, ve_convencional, ve_b2b_coleta, ve_b2b_entrega')
           .eq('email', session.user.email)
           .single();
 
-        // Mapeia colunas do banco para visibilidade
         const visibilidade: MotoristaVisibilidade = {
           ve_convencional: motorista?.ve_convencional ?? true,
-          ve_b2b_coleta: motorista?.ve_b2b_coleta ?? false,  // B2B-0: coleta
-          ve_b2b_entrega: motorista?.ve_b2b_entrega ?? false  // B2B-2: entrega
+          ve_b2b_coleta: motorista?.ve_b2b_coleta ?? false,
+          ve_b2b_entrega: motorista?.ve_b2b_entrega ?? false
         };
 
         const motoristaData: MotoristaSession = {
@@ -116,7 +80,6 @@ const MotoristaDashboard = () => {
           nome: profile?.first_name || session.user.email || 'Motorista',
           email: session.user.email || '',
           status: motorista?.status || 'ativo',
-          tipo_pedidos: (motorista?.tipo_pedidos as 'normal' | 'b2b' | 'ambos') || 'ambos',
           visibilidade
         };
         
@@ -133,7 +96,6 @@ const MotoristaDashboard = () => {
 
     checkMotoristaAuth();
 
-    // Escutar mudanças de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
         navigate('/motorista/auth');
@@ -144,28 +106,17 @@ const MotoristaDashboard = () => {
   }, [navigate]);
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      'PENDING_LABEL': { label: 'Aguardando Etiqueta', variant: 'secondary' as const },
-      'LABEL_GENERATED': { label: 'Etiqueta Gerada', variant: 'default' as const },
-      'PAYMENT_CONFIRMED': { label: 'Disponível para Coleta', variant: 'default' as const },
-      'PAID': { label: 'Disponível para Coleta', variant: 'default' as const },
-      'PENDENTE': { label: 'Disponível para Coleta', variant: 'default' as const },
-      'COLETA_ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
-      'ACEITA': { label: 'Coleta Aceita', variant: 'default' as const },
-      'B2B_ENTREGA_ACEITA': { label: 'Entrega Aceita', variant: 'default' as const },
-      'COLETA_FINALIZADA': { label: 'Coleta Realizada', variant: 'success' as const },
-      'B2B_COLETA_FINALIZADA': { label: 'Coleta Realizada', variant: 'success' as const },
-      'EM_TRANSITO': { label: 'Em Trânsito', variant: 'default' as const },
-      'TENTATIVA_ENTREGA': { label: 'Insucesso na Entrega', variant: 'destructive' as const },
-      'ENTREGA_FINALIZADA': { label: 'Entregue', variant: 'success' as const },
-      'ENTREGUE': { label: 'Entregue', variant: 'success' as const },
-      'AGUARDANDO_DESTINATARIO': { label: 'Aguardando Destinatário', variant: 'secondary' as const },
-      'ENDERECO_INCORRETO': { label: 'Endereço Incorreto', variant: 'destructive' as const }
+    const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+      'PENDENTE_COLETA': { label: 'Pendente Coleta', variant: 'default' },
+      'EM_TRANSITO': { label: 'Em Trânsito', variant: 'secondary' },
+      'NO_CD': { label: 'No CD', variant: 'secondary' },
+      'EM_ROTA': { label: 'Em Rota', variant: 'default' },
+      'ENTREGUE': { label: 'Entregue', variant: 'outline' },
+      'PAID': { label: 'Disponível', variant: 'default' },
+      'PAYMENT_CONFIRMED': { label: 'Disponível', variant: 'default' },
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || 
-                   { label: status, variant: 'outline' as const };
-    
+    const config = statusConfig[status] || { label: status, variant: 'outline' as const };
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
@@ -237,31 +188,17 @@ const MotoristaDashboard = () => {
     setMenuOpen(false);
   };
 
-  // Contadores - incluir status B2B nas remessas
-  // Remessas entregues: inclui finalizadas E remessas B2B que vieram do histórico (coletas B2B-1 finalizadas)
-  const remessasEntregues = remessas.filter(r => {
-    // Status de entrega final
-    if (['ENTREGA_FINALIZADA', 'ENTREGUE'].includes(r.status)) return true;
-    // Remessas B2B do histórico (o motorista finalizou a coleta B2B-1, mesmo que agora esteja em outro status)
-    if (r.quote_data?.isFromHistory && r.tracking_code?.startsWith('B2B-')) return true;
-    return false;
-  });
-  
-  // Remessas ativas: exclui finalizadas e as que vieram do histórico
-  const todasRemessasAtivas = remessas.filter(r => {
-    if (['ENTREGA_FINALIZADA', 'ENTREGUE', 'CANCELLED', 'CANCELADO'].includes(r.status)) return false;
-    if (r.quote_data?.isFromHistory) return false;
-    return true;
-  });
-
-  // Separar entre "Minhas Remessas" e "Em Rota" baseado no estado local
-  const minhasRemessasAtivas = todasRemessasAtivas.filter(r => !remessasEmRotaIds.includes(r.id));
-  const remessasEmRota = todasRemessasAtivas.filter(r => remessasEmRotaIds.includes(r.id));
+  // Filtrar remessas por status
+  const minhasRemessasAtivas = remessas.filter(r => 
+    ['PENDENTE_COLETA', 'EM_TRANSITO'].includes(r.status)
+  );
+  const remessasEntregues = remessas.filter(r => 
+    ['NO_CD', 'EM_ROTA', 'ENTREGUE'].includes(r.status)
+  );
 
   const menuItems = [
     { id: 'disponiveis' as ViewType, label: 'Disponíveis', icon: Package, count: remessasDisponiveis.length, color: 'text-orange-500' },
-    { id: 'minhas' as ViewType, label: 'Minhas Remessas', icon: ClipboardList, count: minhasRemessasAtivas.length, color: 'text-blue-500' },
-    { id: 'em_rota' as ViewType, label: 'Em Rota', icon: Route, count: remessasEmRota.length, color: 'text-purple-500' },
+    { id: 'minhas' as ViewType, label: 'Minhas Remessas', icon: Truck, count: minhasRemessasAtivas.length, color: 'text-blue-500' },
     { id: 'entregues' as ViewType, label: 'Entregues', icon: CheckCircle, count: remessasEntregues.length, color: 'text-green-500' },
   ];
 
@@ -280,22 +217,6 @@ const MotoristaDashboard = () => {
 
   const renderShipmentCard = (remessa: MotoristaShipment | BaseShipment, showActions: boolean = true) => {
     const isB2B = remessa.tracking_code?.startsWith('B2B-');
-    const isVolume = remessa.is_volume;
-    const volumeEtiCode = remessa.volume_eti_code;
-    const volumeNumber = remessa.volume_number;
-    
-    // Para volumes B2B-2, determinar se é fase de entrega
-    const isB2B2Phase = isVolume || ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'B2B_VOLUME_DISPONIVEL', 'B2B_VOLUME_ACEITO', 'ENTREGUE'].includes(remessa.status);
-    
-    // Título do card: para volumes, mostrar o código ETI em destaque
-    const displayTitle = isVolume && volumeEtiCode 
-      ? volumeEtiCode 
-      : remessa.tracking_code;
-    
-    // Subtítulo: para volumes, mostrar o número do volume
-    const displaySubtitle = isVolume 
-      ? `Volume ${volumeNumber} • ${new Date(remessa.created_at).toLocaleDateString('pt-BR')}`
-      : new Date(remessa.created_at).toLocaleDateString('pt-BR');
     
     return (
       <Card key={remessa.id} className={`hover:shadow-md transition-shadow ${isB2B ? 'border-purple-200' : 'border-blue-200'}`}>
@@ -303,47 +224,30 @@ const MotoristaDashboard = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-              {/* Não mostrar badge B2B-0/B2B-2 ou Convencional na aba entregues */}
-              {currentView !== 'entregues' && (
-                isB2B ? (
-                  <Badge 
-                    variant="outline" 
-                    className={
-                      isB2B2Phase
-                        ? "bg-purple-100 text-purple-700 border-purple-300"
-                        : "bg-blue-100 text-blue-700 border-blue-300"
-                    }
-                  >
+                {isB2B ? (
+                  <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-300">
                     <Zap className="h-3 w-3 mr-1" />
-                    {isB2B2Phase ? "B2B-2" : "B2B-0"}
+                    B2B
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
                     <Package className="h-3 w-3 mr-1" />
-                    Convencional
+                    Normal
                   </Badge>
-                )
-              )}
+                )}
                 <div>
-                  <h3 className="font-medium text-sm font-mono">{displayTitle}</h3>
+                  <h3 className="font-medium text-sm font-mono">{remessa.tracking_code}</h3>
                   <p className="text-xs text-muted-foreground">
-                    {displaySubtitle}
+                    {new Date(remessa.created_at).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {isVolume && (
-                  <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-200 text-xs">
-                    {remessa.volume_weight?.toFixed(1) || '0'}kg
-                  </Badge>
-                )}
-                {getStatusBadge(remessa.status)}
-              </div>
+              {getStatusBadge(remessa.status)}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div className="space-y-1">
-                <p className="font-medium text-muted-foreground">{isB2B2Phase ? 'Origem (CD)' : 'Remetente'}</p>
+                <p className="font-medium text-muted-foreground">Remetente</p>
                 <p className="font-medium">{remessa.sender_address?.name}</p>
                 <p className="text-muted-foreground">
                   {remessa.sender_address?.city}, {remessa.sender_address?.state}
@@ -360,7 +264,7 @@ const MotoristaDashboard = () => {
 
             <div className="flex flex-col gap-2 pt-2 border-t">
               <div className="text-xs text-muted-foreground">
-                {Number(remessa.weight).toFixed(2)}kg | {remessa.quote_data?.merchandiseDetails?.volumes?.length || remessa.quote_data?.technicalData?.volumes?.length || 1} volume(s)
+                {Number(remessa.weight).toFixed(2)}kg
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -390,60 +294,6 @@ const MotoristaDashboard = () => {
                     Aceitar
                   </Button>
                 )}
-                {showActions && currentView === 'minhas' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleMoveToEmRota(remessa.id)}
-                    className="border-purple-300 text-purple-600 hover:bg-purple-50"
-                  >
-                    <Play className="h-3 w-3" />
-                  </Button>
-                )}
-                {showActions && currentView === 'em_rota' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleMoveToMinhas(remessa.id)}
-                    className="border-blue-300 text-blue-600 hover:bg-blue-50"
-                  >
-                    <Undo2 className="h-3 w-3" />
-                  </Button>
-                )}
-                {showActions && (currentView === 'minhas' || currentView === 'em_rota') && 
-                  (remessa as MotoristaShipment).motorista_id && 
-                  ['COLETA_ACEITA', 'COLETA_FINALIZADA', 'EM_TRANSITO', 'TENTATIVA_ENTREGA', 'ACEITA', 'B2B_ENTREGA_ACEITA', 'B2B_VOLUME_ACEITO'].includes(remessa.status) && (
-                  <>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedRemessa(remessa as MotoristaShipment);
-                        setOccurrenceModalOpen(true);
-                      }}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Ocorrência
-                    </Button>
-                    {/* B2B-0 não mostra "Finalizar Coleta" - agora é responsabilidade do CD */}
-                    {/* B2B-2 (volumes) e normais mostram "Finalizar Entrega" */}
-                    {(isVolume || !isB2B || !['PENDENTE', 'ACEITA', 'B2B_COLETA_PENDENTE', 'B2B_COLETA_ACEITA'].includes(remessa.status)) && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedRemessa(remessa as MotoristaShipment);
-                          setFinalizarEntregaModalOpen(true);
-                        }}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Finalizar Entrega
-                      </Button>
-                    )}
-                  </>
-                )}
               </div>
             </div>
           </div>
@@ -458,8 +308,6 @@ const MotoristaDashboard = () => {
         return remessasDisponiveis;
       case 'minhas':
         return minhasRemessasAtivas;
-      case 'em_rota':
-        return remessasEmRota;
       case 'entregues':
         return remessasEntregues;
       default:
@@ -473,8 +321,6 @@ const MotoristaDashboard = () => {
         return { title: 'Nenhuma remessa disponível', subtitle: 'Não há remessas aguardando coleta no momento.' };
       case 'minhas':
         return { title: 'Nenhuma remessa ativa', subtitle: 'Aceite remessas da lista "Disponíveis" para começar.' };
-      case 'em_rota':
-        return { title: 'Nenhuma remessa em rota', subtitle: 'Suas remessas em trânsito aparecerão aqui.' };
       case 'entregues':
         return { title: 'Nenhuma entrega realizada', subtitle: 'Suas entregas concluídas aparecerão aqui.' };
       default:
@@ -487,12 +333,10 @@ const MotoristaDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
-      {/* Mobile-First Header with Menu */}
       <header className="sticky top-0 z-40 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 border-b">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Menu Button */}
               <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon" className="shrink-0">
@@ -515,16 +359,6 @@ const MotoristaDashboard = () => {
                   </SheetHeader>
                   
                   <div className="p-2">
-                    {/* Tipo de Pedidos Badge */}
-                    {motoristaSession?.tipo_pedidos && motoristaSession.tipo_pedidos !== 'ambos' && (
-                      <div className="p-3 mb-2 bg-muted rounded-lg">
-                        <p className="text-xs text-muted-foreground mb-1">Tipo de pedidos</p>
-                        <Badge variant="outline" className={motoristaSession.tipo_pedidos === 'b2b' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'}>
-                          {motoristaSession.tipo_pedidos === 'b2b' ? 'B2B Express' : 'Normais'}
-                        </Badge>
-                      </div>
-                    )}
-
                     <nav className="space-y-1">
                       {menuItems.map(item => (
                         <button
@@ -582,45 +416,28 @@ const MotoristaDashboard = () => {
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
-              {/* Botão Inserir Volume - apenas para drivers B2B-2 (entrega) */}
-              {motoristaSession?.visibilidade?.ve_b2b_entrega && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => setVolumeSearchModalOpen(true)}
-                  className="bg-purple-600 hover:bg-purple-700"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Inserir Volume</span>
-                </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (motoristaSession?.id && motoristaSession.visibilidade) {
+                  loadMinhasRemessas(motoristaSession.id);
+                  loadRemessasDisponiveis(motoristaSession.visibilidade);
+                }
+              }}
+              disabled={refreshing}
+            >
+              {refreshing ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+              ) : (
+                'Atualizar'
               )}
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (motoristaSession?.id && motoristaSession.visibilidade) {
-                    loadMinhasRemessas(motoristaSession.id);
-                    loadRemessasDisponiveis(motoristaSession.visibilidade);
-                  }
-                }}
-                disabled={refreshing}
-              >
-                {refreshing ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
-                ) : (
-                  'Atualizar'
-                )}
-              </Button>
-            </div>
+            </Button>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-4 space-y-4">
-        {/* Status Pendente Alert */}
         {motoristaSession?.status === 'pendente' && (
           <Card className="border-yellow-200 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900">
             <CardContent className="p-4">
@@ -633,8 +450,7 @@ const MotoristaDashboard = () => {
                     Cadastro Pendente de Aprovação
                   </h3>
                   <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                    Seu cadastro está sendo analisado pelo administrador. 
-                    Você receberá acesso às remessas após a aprovação.
+                    Seu cadastro está sendo analisado pelo administrador.
                   </p>
                 </div>
               </div>
@@ -642,7 +458,6 @@ const MotoristaDashboard = () => {
           </Card>
         )}
 
-        {/* Shipments List */}
         {motoristaSession?.status === 'ativo' && (
           <div className="space-y-3">
             {currentShipments.length === 0 ? (
@@ -663,96 +478,11 @@ const MotoristaDashboard = () => {
           </div>
         )}
 
-        {/* View Modal */}
         {selectedRemessa && (
           <RemessaVisualizacao
             isOpen={viewModalOpen}
             onClose={() => setViewModalOpen(false)}
             remessa={selectedRemessa}
-          />
-        )}
-
-        {/* Enhanced Remessa Details Modal */}
-        <RemessaDetalhes
-          isOpen={detailsModalOpen}
-          onClose={() => setDetailsModalOpen(false)}
-          remessa={selectedRemessa}
-          onUpdateStatus={(newStatus: string) => {
-            console.log('📊 Status atualizado para:', newStatus);
-            toast.success('Status atualizado com sucesso!');
-            if (motoristaSession?.id && motoristaSession.visibilidade) {
-              loadMinhasRemessas(motoristaSession.id);
-              loadRemessasDisponiveis(motoristaSession.visibilidade);
-            }
-            setDetailsModalOpen(false);
-          }}
-        />
-
-        {/* Occurrence Modal */}
-        {selectedRemessa && motoristaSession?.id && (
-          <OccurrenceSimpleModal
-            isOpen={occurrenceModalOpen}
-            onClose={() => setOccurrenceModalOpen(false)}
-            shipmentId={selectedRemessa.id}
-            motoristaId={motoristaSession.id}
-            onSuccess={() => {
-              console.log('📊 Ocorrência criada com sucesso');
-              if (motoristaSession?.id && motoristaSession.visibilidade) {
-                loadMinhasRemessas(motoristaSession.id);
-                loadRemessasDisponiveis(motoristaSession.visibilidade);
-              }
-            }}
-          />
-        )}
-
-        {/* Finalizar Entrega Modal */}
-        {selectedRemessa && motoristaSession?.id && (
-          <FinalizarEntregaModal
-            isOpen={finalizarEntregaModalOpen}
-            onClose={() => setFinalizarEntregaModalOpen(false)}
-            shipmentId={selectedRemessa.id}
-            motoristaId={motoristaSession.id}
-            trackingCode={selectedRemessa.is_volume && selectedRemessa.volume_eti_code 
-              ? selectedRemessa.volume_eti_code 
-              : selectedRemessa.tracking_code || ''}
-            shipmentType={
-              selectedRemessa.tracking_code?.startsWith('B2B-') 
-                ? (selectedRemessa.is_volume || ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'B2B_VOLUME_DISPONIVEL', 'B2B_VOLUME_ACEITO'].includes(selectedRemessa.status) ? 'B2B-2' : 'B2B-0')
-                : 'normal'
-            }
-            currentStatus={selectedRemessa.status}
-            volumeCount={
-              selectedRemessa.is_volume 
-                ? 1  // Para volumes individuais, sempre 1
-                : (selectedRemessa.quote_data?.merchandiseDetails?.volumes?.length || 
-                   selectedRemessa.quote_data?.technicalData?.volumes?.length || 
-                   selectedRemessa.quote_data?.volume_count || 
-                   1)
-            }
-            isVolume={selectedRemessa.is_volume || false}
-            volumeEtiCode={selectedRemessa.volume_eti_code || undefined}
-            onSuccess={() => {
-              console.log('✅ Entrega/Coleta finalizada com sucesso');
-              if (motoristaSession?.id && motoristaSession.visibilidade) {
-                loadMinhasRemessas(motoristaSession.id);
-                loadRemessasDisponiveis(motoristaSession.visibilidade);
-              }
-            }}
-          />
-        )}
-
-        {/* Modal de busca de volume B2B-2 */}
-        {motoristaSession?.id && (
-          <VolumeSearchModal
-            open={volumeSearchModalOpen}
-            onClose={() => setVolumeSearchModalOpen(false)}
-            motoristaId={motoristaSession.id}
-            onVolumeAccepted={() => {
-              if (motoristaSession?.id && motoristaSession.visibilidade) {
-                loadMinhasRemessas(motoristaSession.id);
-                loadRemessasDisponiveis(motoristaSession.visibilidade);
-              }
-            }}
           />
         )}
       </main>

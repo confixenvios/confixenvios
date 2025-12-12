@@ -1,509 +1,228 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Package, Search, Truck, MapPin, Calendar, User, LogOut, Eye,
-  CheckCircle, ClipboardCheck, Boxes, Route
-} from "lucide-react";
-import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, Search, Route } from 'lucide-react';
 import { toast } from 'sonner';
-import { RemessaVisualizacao } from '@/components/motorista/RemessaVisualizacao';
-import { CdEtiArrivalModal } from '@/components/cd/CdEtiArrivalModal';
-
-interface B2BShipment {
-  id: string;
-  tracking_code: string | null;
-  status: string;
-  created_at: string;
-  recipient_name: string | null;
-  recipient_city: string | null;
-  recipient_state: string | null;
-  volume_count: number | null;
-  motorista_id: string | null;
-  motorista_nome?: string;
-  observations?: string | null;
-  is_volume?: boolean;
-  volume_eti_code?: string | null;
-  volume_number?: number | null;
-  volume_weight?: number | null;
-  b2b_client?: {
-    company_name: string;
-  };
-}
+import { supabase } from '@/integrations/supabase/client';
 
 interface CdUser {
   id: string;
   nome: string;
   email: string;
-  status: string;
-  telefone: string;
 }
 
-type TabType = 'em_transito' | 'no_cd' | 'em_rota' | 'entregues';
+interface B2BShipment {
+  id: string;
+  tracking_code: string;
+  status: string;
+  created_at: string;
+  recipient_name: string | null;
+  recipient_phone: string | null;
+  recipient_cep: string | null;
+  recipient_city: string | null;
+  recipient_state: string | null;
+  recipient_street: string | null;
+  recipient_number: string | null;
+  recipient_neighborhood: string | null;
+  volume_count: number | null;
+  volume_weight: number | null;
+  volume_eti_code: string | null;
+}
 
 const CdDashboard = () => {
   const navigate = useNavigate();
   const [cdUser, setCdUser] = useState<CdUser | null>(null);
-  const [inTransitShipments, setInTransitShipments] = useState<B2BShipment[]>([]);
-  const [atCdShipments, setAtCdShipments] = useState<B2BShipment[]>([]);
-  const [inRouteShipments, setInRouteShipments] = useState<B2BShipment[]>([]);
-  const [deliveredShipments, setDeliveredShipments] = useState<B2BShipment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<TabType>('em_transito');
-  const [selectedShipment, setSelectedShipment] = useState<any>(null);
-  const [showDetails, setShowDetails] = useState(false);
-  const [etiArrivalModalOpen, setEtiArrivalModalOpen] = useState(false);
+  const [shipments, setShipments] = useState<B2BShipment[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState('em_transito');
+  
+  const [arrivalModalOpen, setArrivalModalOpen] = useState(false);
+  const [selectedShipment, setSelectedShipment] = useState<B2BShipment | null>(null);
+  const [etiInput, setEtiInput] = useState('');
+  const [validating, setValidating] = useState(false);
+
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [searchEtiInput, setSearchEtiInput] = useState('');
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
-    const userData = localStorage.getItem('cd_user');
-    if (!userData) {
-      navigate('/cd');
-      return;
-    }
-    setCdUser(JSON.parse(userData));
-    loadShipments();
-  }, [navigate]);
+    checkAuth();
+  }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('cd_user');
-    toast.success('Logout realizado com sucesso');
-    navigate('/cd');
-  };
-
-  const loadShipments = async () => {
+  const checkAuth = async () => {
     try {
-      setLoading(true);
-
-      // Em trânsito: remessas coletadas (COLETADA ou aceitas pelo motorista coleta)
-      const { data: transitData, error: transitError } = await supabase
-        .from('b2b_shipments')
-        .select(`
-          id, tracking_code, status, created_at,
-          recipient_name, recipient_city, recipient_state,
-          volume_count, motorista_id, observations,
-          is_volume, volume_eti_code, volume_number, volume_weight,
-          b2b_clients(company_name)
-        `)
-        .in('status', ['PENDENTE_COLETA', 'COLETADA', 'B2B_COLETA_PENDENTE', 'B2B_COLETA_ACEITA'])
-        .order('created_at', { ascending: false });
-
-      if (transitError) throw transitError;
-
-      // No CD: remessas que chegaram ao CD e aguardam motorista entrega
-      const { data: cdData, error: cdError } = await supabase
-        .from('b2b_shipments')
-        .select(`
-          id, tracking_code, status, created_at,
-          recipient_name, recipient_city, recipient_state,
-          volume_count, motorista_id, observations,
-          is_volume, volume_eti_code, volume_number, volume_weight,
-          b2b_clients(company_name)
-        `)
-        .eq('status', 'NO_CD')
-        .is('motorista_id', null)
-        .order('created_at', { ascending: false });
-
-      if (cdError) throw cdError;
-
-      // Em rota: remessas com motorista de entrega (EM_ROTA)
-      const { data: routeData, error: routeError } = await supabase
-        .from('b2b_shipments')
-        .select(`
-          id, tracking_code, status, created_at,
-          recipient_name, recipient_city, recipient_state,
-          volume_count, motorista_id, observations,
-          is_volume, volume_eti_code, volume_number, volume_weight,
-          b2b_clients(company_name)
-        `)
-        .eq('status', 'EM_ROTA')
-        .not('motorista_id', 'is', null)
-        .order('created_at', { ascending: false });
-
-      if (routeError) throw routeError;
-
-      // Entregues
-      const { data: deliveredData, error: deliveredError } = await supabase
-        .from('b2b_shipments')
-        .select(`
-          id, tracking_code, status, created_at,
-          recipient_name, recipient_city, recipient_state,
-          volume_count, motorista_id, observations,
-          is_volume, volume_eti_code, volume_number, volume_weight,
-          b2b_clients(company_name)
-        `)
-        .eq('status', 'ENTREGUE')
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (deliveredError) throw deliveredError;
-
-      // Buscar nomes dos motoristas
-      const allShipments = [...(transitData || []), ...(cdData || []), ...(routeData || []), ...(deliveredData || [])];
-      const motoristaIds = [...new Set(allShipments.filter(s => s.motorista_id).map(s => s.motorista_id))];
-      
-      let motoristasMap: Record<string, string> = {};
-      if (motoristaIds.length > 0) {
-        const { data: motoristasData } = await supabase
-          .from('motoristas')
-          .select('id, nome')
-          .in('id', motoristaIds);
-
-        if (motoristasData) {
-          motoristasMap = motoristasData.reduce((acc, m) => {
-            acc[m.id] = m.nome;
-            return acc;
-          }, {} as Record<string, string>);
-        }
+      const storedUser = localStorage.getItem('cd_user');
+      if (!storedUser) {
+        navigate('/cd/auth');
+        return;
       }
-
-      const mapShipment = (s: any) => ({
-        ...s,
-        motorista_nome: s.motorista_id ? motoristasMap[s.motorista_id] : undefined,
-        b2b_client: s.b2b_clients as any
-      });
-
-      setInTransitShipments((transitData || []).map(mapShipment));
-      setAtCdShipments((cdData || []).map(mapShipment));
-      setInRouteShipments((routeData || []).map(mapShipment));
-      setDeliveredShipments((deliveredData || []).map(mapShipment));
+      setCdUser(JSON.parse(storedUser));
+      await loadShipments();
     } catch (error) {
-      console.error('Erro ao carregar remessas:', error);
-      toast.error('Erro ao carregar remessas');
+      navigate('/cd/auth');
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; className: string }> = {
-      'PENDENTE_COLETA': { label: 'Aguardando Coleta', className: 'bg-amber-500 text-white hover:bg-amber-600' },
-      'B2B_COLETA_PENDENTE': { label: 'Aguardando Coleta', className: 'bg-amber-500 text-white hover:bg-amber-600' },
-      'COLETADA': { label: 'Coletada', className: 'bg-blue-500 text-white hover:bg-blue-600' },
-      'B2B_COLETA_ACEITA': { label: 'Coletada', className: 'bg-blue-500 text-white hover:bg-blue-600' },
-      'NO_CD': { label: 'No CD', className: 'bg-purple-500 text-white hover:bg-purple-600' },
-      'EM_ROTA': { label: 'Em Rota', className: 'bg-indigo-500 text-white hover:bg-indigo-600' },
-      'ENTREGUE': { label: 'Entregue', className: 'bg-green-500 text-white hover:bg-green-600' }
-    };
-
-    const config = statusConfig[status] || { label: status, className: 'bg-gray-500 text-white' };
-    return <Badge className={config.className}>{config.label}</Badge>;
-  };
-
-  const filterShipments = (list: B2BShipment[]) => {
-    if (!searchTerm) return list;
-    const term = searchTerm.toLowerCase();
-    return list.filter(s => 
-      s.tracking_code?.toLowerCase().includes(term) ||
-      s.recipient_name?.toLowerCase().includes(term) ||
-      s.recipient_city?.toLowerCase().includes(term) ||
-      s.b2b_client?.company_name?.toLowerCase().includes(term) ||
-      s.motorista_nome?.toLowerCase().includes(term) ||
-      s.volume_eti_code?.toLowerCase().includes(term)
-    );
-  };
-
-  const handleViewDetails = (shipment: B2BShipment) => {
-    let parsedObservations: any = null;
+  const loadShipments = async () => {
+    setRefreshing(true);
     try {
-      if (shipment.observations) {
-        parsedObservations = typeof shipment.observations === 'string' 
-          ? JSON.parse(shipment.observations) 
-          : shipment.observations;
+      const { data, error } = await supabase
+        .from('b2b_shipments')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setShipments(data || []);
+    } catch (error) {
+      toast.error('Erro ao carregar remessas');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('cd_user');
+    navigate('/cd/auth');
+  };
+
+  const handleRegisterArrival = async () => {
+    if (!selectedShipment || !etiInput.trim()) return;
+    setValidating(true);
+    try {
+      const expectedEti = selectedShipment.volume_eti_code?.replace('ETI-', '').padStart(4, '0');
+      if (expectedEti !== etiInput.padStart(4, '0')) {
+        toast.error('Código ETI incorreto');
+        return;
       }
-    } catch (e) {}
+      await supabase.from('b2b_shipments').update({ status: 'NO_CD' }).eq('id', selectedShipment.id);
+      toast.success('Chegada registrada!');
+      setArrivalModalOpen(false);
+      setEtiInput('');
+      await loadShipments();
+    } catch (error) {
+      toast.error('Erro ao registrar chegada');
+    } finally {
+      setValidating(false);
+    }
+  };
 
-    const mappedRemessa = {
-      id: shipment.id,
-      tracking_code: shipment.tracking_code,
-      status: shipment.status,
-      created_at: shipment.created_at,
-      weight: shipment.volume_weight || 0,
-      format: 'box',
-      selected_option: 'standard',
-      motorista_id: shipment.motorista_id,
-      observations: shipment.observations,
-      is_volume: shipment.is_volume,
-      volume_eti_code: shipment.volume_eti_code,
-      volume_number: shipment.volume_number,
-      quote_data: {
-        merchandiseDetails: { volumes: [{ volumeNumber: shipment.volume_number, weight: shipment.volume_weight }] }
-      },
-      recipient_address: {
-        name: shipment.recipient_name,
-        city: shipment.recipient_city,
-        state: shipment.recipient_state
-      },
-      sender_address: {
-        name: shipment.b2b_client?.company_name
+  const handleSendToRoute = async () => {
+    if (!searchEtiInput.trim()) return;
+    setSearching(true);
+    try {
+      const shipment = shipments.find(s => 
+        s.volume_eti_code?.replace('ETI-', '').padStart(4, '0') === searchEtiInput.padStart(4, '0') && s.status === 'NO_CD'
+      );
+      if (!shipment) {
+        toast.error('Remessa não encontrada no CD');
+        return;
       }
-    };
-    setSelectedShipment(mappedRemessa);
-    setShowDetails(true);
+      await supabase.from('b2b_shipments').update({ status: 'EM_ROTA' }).eq('id', shipment.id);
+      toast.success(`${shipment.tracking_code} enviada para rota!`);
+      setSearchModalOpen(false);
+      setSearchEtiInput('');
+      await loadShipments();
+    } catch (error) {
+      toast.error('Erro ao enviar');
+    } finally {
+      setSearching(false);
+    }
   };
 
-  const getCardColor = (status: string) => {
-    const colors: Record<string, string> = {
-      'PENDENTE_COLETA': 'border-amber-500/50 bg-amber-50/30',
-      'B2B_COLETA_PENDENTE': 'border-amber-500/50 bg-amber-50/30',
-      'COLETADA': 'border-blue-500/50 bg-blue-50/30',
-      'B2B_COLETA_ACEITA': 'border-blue-500/50 bg-blue-50/30',
-      'NO_CD': 'border-purple-500/50 bg-purple-50/30',
-      'EM_ROTA': 'border-indigo-500/50 bg-indigo-50/30',
-      'ENTREGUE': 'border-green-500/50 bg-green-50/30'
-    };
-    return colors[status] || 'border-border/50';
-  };
+  const emTransito = shipments.filter(s => ['PENDENTE_COLETA', 'EM_TRANSITO'].includes(s.status));
+  const noCd = shipments.filter(s => s.status === 'NO_CD');
+  const emRota = shipments.filter(s => s.status === 'EM_ROTA');
+  const entregues = shipments.filter(s => s.status === 'ENTREGUE');
 
-  const renderShipmentCard = (shipment: B2BShipment) => {
-    return (
-      <Card key={shipment.id} className={getCardColor(shipment.status)}>
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div className="space-y-2 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono text-sm font-medium text-foreground">
-                  {shipment.tracking_code || 'Sem código'}
-                </span>
-                {getStatusBadge(shipment.status)}
-                {shipment.volume_eti_code && (
-                  <Badge variant="outline" className="text-xs font-mono">
-                    {shipment.volume_eti_code}
-                  </Badge>
-                )}
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-                <div className="flex items-center gap-1 text-foreground font-medium">
-                  <User className="h-3 w-3" />
-                  <span>{shipment.b2b_client?.company_name || 'Cliente não identificado'}</span>
-                </div>
-                
-                {shipment.recipient_city && shipment.recipient_state && (
-                  <div className="flex items-center gap-1 text-foreground font-medium">
-                    <MapPin className="h-3 w-3" />
-                    <span>{shipment.recipient_city}/{shipment.recipient_state}</span>
-                  </div>
-                )}
-                
-                <div className="flex items-center gap-1 text-foreground font-medium">
-                  <Package className="h-3 w-3" />
-                  <span>{shipment.volume_weight?.toFixed(1) || '0'}kg</span>
-                </div>
-                
-                <div className="flex items-center gap-1 text-foreground font-medium">
-                  <Calendar className="h-3 w-3" />
-                  <span>{format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
-                </div>
-              </div>
-
-              {shipment.motorista_nome && (
-                <div className="flex items-center gap-1 text-sm text-primary">
-                  <Truck className="h-3 w-3" />
-                  <span className="font-medium">Motorista: {shipment.motorista_nome}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2 ml-2">
-              <Button variant="outline" size="sm" onClick={() => handleViewDetails(shipment)}>
-                <Eye className="h-4 w-4 mr-1" />
-                Detalhes
-              </Button>
-            </div>
+  const renderCard = (s: B2BShipment, showArrival = false) => (
+    <Card key={s.id} className="mb-3">
+      <CardContent className="p-4">
+        <div className="flex justify-between mb-2">
+          <div>
+            <h3 className="font-mono font-medium">{s.tracking_code}</h3>
+            {s.volume_eti_code && <Badge variant="outline" className="bg-purple-50">{s.volume_eti_code}</Badge>}
           </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  if (!cdUser) return null;
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center space-x-2 mb-6">
-            <Package className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground">Centro de Distribuição</h1>
-          </div>
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="text-muted-foreground mt-2">Carregando remessas...</p>
-          </div>
+          <Badge className={s.status === 'ENTREGUE' ? 'bg-green-500' : s.status === 'EM_ROTA' ? 'bg-blue-500' : s.status === 'NO_CD' ? 'bg-purple-500' : 'bg-orange-500'}>
+            {s.status === 'PENDENTE_COLETA' ? 'Em Trânsito' : s.status.replace('_', ' ')}
+          </Badge>
         </div>
-      </div>
-    );
-  }
+        <div className="text-sm text-muted-foreground">
+          <MapPin className="h-3 w-3 inline mr-1" />
+          {s.recipient_name} - {s.recipient_city}/{s.recipient_state}
+        </div>
+        {showArrival && (
+          <Button size="sm" className="w-full mt-3 bg-purple-600" onClick={() => { setSelectedShipment(s); setArrivalModalOpen(true); }}>
+            <CheckCircle className="h-4 w-4 mr-2" />Registrar Chegada
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-pulse">Carregando...</div></div>;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+      <header className="sticky top-0 z-40 bg-card/95 backdrop-blur border-b">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-              <Package className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold">Centro de Distribuição</h1>
-              <p className="text-sm text-muted-foreground">Olá, {cdUser.nome}</p>
-            </div>
+            <Package className="h-6 w-6 text-purple-600" />
+            <div><h1 className="font-semibold">Centro de Distribuição</h1><p className="text-sm text-muted-foreground">{cdUser?.nome}</p></div>
           </div>
           <div className="flex gap-2">
-            <Button 
-              variant="default" 
-              size="sm" 
-              onClick={() => setEtiArrivalModalOpen(true)}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Registrar Chegada (ETI)
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sair
-            </Button>
+            <Button variant="outline" size="sm" onClick={loadShipments}><RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /></Button>
+            <Button variant="ghost" size="sm" onClick={handleLogout}><LogOut className="h-4 w-4" /></Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-4 space-y-6">
-        {/* Search */}
-        <Card className="border-border/50">
-          <CardContent className="p-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por código, cliente, destino, ETI ou motorista..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </CardContent>
-        </Card>
+      <main className="container mx-auto px-4 py-4">
+        <div className="grid grid-cols-4 gap-3 mb-4">
+          <Card><CardContent className="p-3 text-center"><Truck className="h-5 w-5 mx-auto text-orange-500" /><p className="text-2xl font-bold">{emTransito.length}</p><p className="text-xs">Em Trânsito</p></CardContent></Card>
+          <Card><CardContent className="p-3 text-center"><Package className="h-5 w-5 mx-auto text-purple-500" /><p className="text-2xl font-bold">{noCd.length}</p><p className="text-xs">No CD</p></CardContent></Card>
+          <Card><CardContent className="p-3 text-center"><Route className="h-5 w-5 mx-auto text-blue-500" /><p className="text-2xl font-bold">{emRota.length}</p><p className="text-xs">Em Rota</p></CardContent></Card>
+          <Card><CardContent className="p-3 text-center"><CheckCircle className="h-5 w-5 mx-auto text-green-500" /><p className="text-2xl font-bold">{entregues.length}</p><p className="text-xs">Entregues</p></CardContent></Card>
+        </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
-          <TabsList className="grid w-full grid-cols-4 max-w-3xl">
-            <TabsTrigger 
-              value="em_transito" 
-              className="flex items-center gap-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white"
-            >
-              <ClipboardCheck className="h-4 w-4" />
-              <span className="hidden sm:inline">Em Trânsito</span>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700">{filterShipments(inTransitShipments).length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="no_cd" 
-              className="flex items-center gap-2 data-[state=active]:bg-purple-500 data-[state=active]:text-white"
-            >
-              <Boxes className="h-4 w-4" />
-              <span className="hidden sm:inline">No CD</span>
-              <Badge variant="secondary" className="bg-purple-100 text-purple-700">{filterShipments(atCdShipments).length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="em_rota" 
-              className="flex items-center gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white"
-            >
-              <Route className="h-4 w-4" />
-              <span className="hidden sm:inline">Em Rota</span>
-              <Badge variant="secondary" className="bg-indigo-100 text-indigo-700">{filterShipments(inRouteShipments).length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="entregues" 
-              className="flex items-center gap-2 data-[state=active]:bg-green-500 data-[state=active]:text-white"
-            >
-              <CheckCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">Entregues</span>
-              <Badge variant="secondary" className="bg-green-100 text-green-700">{filterShipments(deliveredShipments).length}</Badge>
-            </TabsTrigger>
+        <Button className="w-full mb-4 bg-blue-600" onClick={() => setSearchModalOpen(true)}><Search className="h-4 w-4 mr-2" />Enviar Volume para Rota</Button>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="em_transito">Em Trânsito</TabsTrigger>
+            <TabsTrigger value="no_cd">No CD</TabsTrigger>
+            <TabsTrigger value="em_rota">Em Rota</TabsTrigger>
+            <TabsTrigger value="entregues">Entregues</TabsTrigger>
           </TabsList>
-
-          {/* Em Trânsito */}
-          <TabsContent value="em_transito" className="mt-6 space-y-4">
-            {filterShipments(inTransitShipments).length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  <ClipboardCheck className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p>Nenhuma remessa em trânsito</p>
-                </CardContent>
-              </Card>
-            ) : (
-              filterShipments(inTransitShipments).map(renderShipmentCard)
-            )}
-          </TabsContent>
-
-          {/* No CD */}
-          <TabsContent value="no_cd" className="mt-6 space-y-4">
-            {filterShipments(atCdShipments).length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  <Boxes className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p>Nenhuma remessa aguardando no CD</p>
-                </CardContent>
-              </Card>
-            ) : (
-              filterShipments(atCdShipments).map(renderShipmentCard)
-            )}
-          </TabsContent>
-
-          {/* Em Rota */}
-          <TabsContent value="em_rota" className="mt-6 space-y-4">
-            {filterShipments(inRouteShipments).length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  <Route className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p>Nenhuma remessa em rota de entrega</p>
-                </CardContent>
-              </Card>
-            ) : (
-              filterShipments(inRouteShipments).map(renderShipmentCard)
-            )}
-          </TabsContent>
-
-          {/* Entregues */}
-          <TabsContent value="entregues" className="mt-6 space-y-4">
-            {filterShipments(deliveredShipments).length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p>Nenhuma entrega finalizada</p>
-                </CardContent>
-              </Card>
-            ) : (
-              filterShipments(deliveredShipments).map(renderShipmentCard)
-            )}
-          </TabsContent>
+          <TabsContent value="em_transito">{emTransito.length ? emTransito.map(s => renderCard(s, true)) : <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhuma remessa</CardContent></Card>}</TabsContent>
+          <TabsContent value="no_cd">{noCd.length ? noCd.map(s => renderCard(s)) : <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhuma remessa</CardContent></Card>}</TabsContent>
+          <TabsContent value="em_rota">{emRota.length ? emRota.map(s => renderCard(s)) : <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhuma remessa</CardContent></Card>}</TabsContent>
+          <TabsContent value="entregues">{entregues.length ? entregues.map(s => renderCard(s)) : <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhuma remessa</CardContent></Card>}</TabsContent>
         </Tabs>
       </main>
 
-      {/* Modal de visualização de detalhes */}
-      {selectedShipment && (
-        <RemessaVisualizacao
-          isOpen={showDetails}
-          onClose={() => setShowDetails(false)}
-          remessa={selectedShipment}
-        />
-      )}
+      <Dialog open={arrivalModalOpen} onOpenChange={setArrivalModalOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Registrar Chegada</DialogTitle></DialogHeader>
+          <p className="text-sm">Remessa: <span className="font-mono">{selectedShipment?.tracking_code}</span></p>
+          <Input placeholder="0001" value={etiInput} onChange={e => setEtiInput(e.target.value.replace(/\D/g, '').slice(0, 4))} className="text-center text-2xl font-mono" />
+          <div className="flex gap-2"><Button variant="outline" className="flex-1" onClick={() => setArrivalModalOpen(false)}>Cancelar</Button><Button className="flex-1 bg-purple-600" onClick={handleRegisterArrival} disabled={validating}>{validating ? '...' : 'Confirmar'}</Button></div>
+        </DialogContent>
+      </Dialog>
 
-      {/* Modal de registro de chegada via ETI */}
-      <CdEtiArrivalModal
-        open={etiArrivalModalOpen}
-        onClose={() => setEtiArrivalModalOpen(false)}
-        onComplete={() => {
-          setEtiArrivalModalOpen(false);
-          loadShipments();
-        }}
-        cdUserName={cdUser?.nome || ''}
-      />
+      <Dialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Enviar para Rota</DialogTitle></DialogHeader>
+          <Input placeholder="0001" value={searchEtiInput} onChange={e => setSearchEtiInput(e.target.value.replace(/\D/g, '').slice(0, 4))} className="text-center text-2xl font-mono" />
+          <div className="flex gap-2"><Button variant="outline" className="flex-1" onClick={() => setSearchModalOpen(false)}>Cancelar</Button><Button className="flex-1 bg-blue-600" onClick={handleSendToRoute} disabled={searching}>{searching ? '...' : 'Enviar'}</Button></div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
