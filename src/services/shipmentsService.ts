@@ -821,7 +821,7 @@ export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade
             default_pickup_complement, default_pickup_neighborhood,
             default_pickup_city, default_pickup_state)
         `)
-        .eq('status', 'B2B_COLETA_PENDENTE')
+        .in('status', ['B2B_COLETA_PENDENTE', 'PENDENTE'])  // Inclui ambos status para compatibilidade
         .is('motorista_id', null)
         .eq('is_volume', false)  // Apenas remessas pai, não volumes
         .order('created_at', { ascending: false });
