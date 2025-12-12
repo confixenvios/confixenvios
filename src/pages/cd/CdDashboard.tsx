@@ -148,7 +148,7 @@ const CdDashboard = () => {
 
       if (volumesError) throw volumesError;
 
-      // Entregues
+      // Entregues (remessas pai e volumes individuais)
       const { data: deliveredData, error: deliveredError } = await supabase
         .from('b2b_shipments')
         .select(`
@@ -160,7 +160,7 @@ const CdDashboard = () => {
         `)
         .eq('status', 'ENTREGUE')
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100);
 
       if (deliveredError) throw deliveredError;
 
