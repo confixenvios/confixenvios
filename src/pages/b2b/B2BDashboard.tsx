@@ -41,6 +41,7 @@ interface B2BShipment {
   delivery_date: string | null;
   package_type: string | null;
   observations: string | null;
+  volume_weight: number | null;
 }
 
 interface Stats {
@@ -433,6 +434,7 @@ const B2BDashboard = () => {
                         pickupAddress={obs.pickup_address || {}}
                         companyName={client?.company_name || 'Remetente'}
                         deliveryDate={selectedShipment.delivery_date || undefined}
+                        shipmentVolumeWeight={selectedShipment.volume_weight || undefined}
                       />
                     </>
                   )}

@@ -48,6 +48,7 @@ interface B2BLabelGeneratorProps {
   pickupAddress: PickupAddress;
   companyName: string;
   deliveryDate?: string;
+  shipmentVolumeWeight?: number; // Peso do volume direto da tabela b2b_shipments
 }
 
 const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
@@ -58,7 +59,8 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
   volumeAddresses,
   pickupAddress,
   companyName,
-  deliveryDate
+  deliveryDate,
+  shipmentVolumeWeight
 }) => {
   const [generating, setGenerating] = useState(false);
   const [etiCodes, setEtiCodes] = useState<EtiCode[]>([]);
@@ -229,7 +231,8 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
       >
         {Array.from({ length: volumeCount }).map((_, index) => {
           const volumeAddress = volumeAddresses[index] || volumeAddresses[0] || {};
-          const volumeWeight = volumeWeights[index] || volumeWeights[0] || 0;
+          // Prioriza: shipmentVolumeWeight (campo direto), depois volumeWeights array, depois address.weight
+          const volumeWeight = shipmentVolumeWeight || volumeWeights[index] || volumeWeights[0] || (volumeAddress as any).weight || 0;
           const recipientName = volumeAddress.recipient_name || volumeAddress.name || 'N/A';
           const formattedDate = formatDeliveryDate(deliveryDate);
           const etiCode = getEtiCodeForVolume(index);
@@ -317,7 +320,7 @@ const B2BLabelGenerator: React.FC<B2BLabelGeneratorProps> = ({
               )}
             </div>
             <div className="flex justify-between pt-1">
-              <p className="font-bold">Peso: {volumeWeights[0] || 0} kg</p>
+              <p className="font-bold">Peso: {shipmentVolumeWeight || volumeWeights[0] || (volumeAddresses[0] as any)?.weight || 0} kg</p>
               {deliveryDate && (
                 <p>Prev: {formatDeliveryDate(deliveryDate)}</p>
               )}
