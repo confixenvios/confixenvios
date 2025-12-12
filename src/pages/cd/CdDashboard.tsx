@@ -165,7 +165,7 @@ const CdDashboard = () => {
       // Busca volume pelo código ETI que foi ACEITO por motorista de coleta
       const shipment = shipments.find(s => 
         s.volume_eti_code?.replace('ETI-', '').padStart(4, '0') === receiveEtiInput.padStart(4, '0') && 
-        s.status === 'B2B_COLETA_ACEITA' // Só aceita se status é B2B_COLETA_ACEITA
+        s.status === 'B2B_COLETA_ACEITA'
       );
       
       if (!shipment) {
