@@ -299,9 +299,9 @@ const MotoristaDashboard = () => {
                     }
                   >
                     <Zap className="h-3 w-3 mr-1" />
-                    {['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(remessa.status)
+                    {['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'B2B_VOLUME_DISPONIVEL', 'B2B_VOLUME_ACEITO', 'ENTREGUE'].includes(remessa.status)
                       ? "B2B-2" 
-                      : "B2B-1"}
+                      : "B2B-0"}
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
