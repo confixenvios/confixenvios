@@ -6,17 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Package, 
-  Search,
-  Truck,
-  MapPin,
-  Calendar,
-  User,
-  LogOut,
-  Eye,
-  CheckCircle,
-  ClipboardCheck,
-  Boxes
+  Package, Search, Truck, MapPin, Calendar, User, LogOut, Eye,
+  CheckCircle, ClipboardCheck, Boxes, Route
 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -38,7 +29,6 @@ interface B2BShipment {
   motorista_nome?: string;
   observations?: string | null;
   is_volume?: boolean;
-  parent_shipment_id?: string | null;
   volume_eti_code?: string | null;
   volume_number?: number | null;
   volume_weight?: number | null;
@@ -55,21 +45,20 @@ interface CdUser {
   telefone: string;
 }
 
-type TabType = 'em_transito' | 'no_cd' | 'entregues';
+type TabType = 'em_transito' | 'no_cd' | 'em_rota' | 'entregues';
 
 const CdDashboard = () => {
   const navigate = useNavigate();
   const [cdUser, setCdUser] = useState<CdUser | null>(null);
-  const [inTransitShipments, setInTransitShipments] = useState<B2BShipment[]>([]); // Em trânsito (aceitos por motorista B2B-0)
-  const [atCdShipments, setAtCdShipments] = useState<B2BShipment[]>([]); // No CD (aguardando entrega B2B-2)
+  const [inTransitShipments, setInTransitShipments] = useState<B2BShipment[]>([]);
+  const [atCdShipments, setAtCdShipments] = useState<B2BShipment[]>([]);
+  const [inRouteShipments, setInRouteShipments] = useState<B2BShipment[]>([]);
   const [deliveredShipments, setDeliveredShipments] = useState<B2BShipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('em_transito');
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
-  
-  // Modal de confirmação de chegada via ETI
   const [etiArrivalModalOpen, setEtiArrivalModalOpen] = useState(false);
 
   useEffect(() => {
@@ -92,35 +81,52 @@ const CdDashboard = () => {
     try {
       setLoading(true);
 
-      // Em trânsito: volumes aceitos por motorista B2B-0 (a caminho do CD)
+      // Em trânsito: remessas coletadas (COLETADA ou aceitas pelo motorista coleta)
       const { data: transitData, error: transitError } = await supabase
         .from('b2b_shipments')
         .select(`
           id, tracking_code, status, created_at,
           recipient_name, recipient_city, recipient_state,
           volume_count, motorista_id, observations,
-          is_volume, parent_shipment_id, volume_eti_code, volume_number, volume_weight,
+          is_volume, volume_eti_code, volume_number, volume_weight,
           b2b_clients(company_name)
         `)
-        .in('status', ['B2B_COLETA_PENDENTE', 'B2B_COLETA_ACEITA'])
+        .in('status', ['PENDENTE_COLETA', 'COLETADA', 'B2B_COLETA_PENDENTE', 'B2B_COLETA_ACEITA'])
         .order('created_at', { ascending: false });
 
       if (transitError) throw transitError;
 
-      // No CD: volumes que chegaram e aguardam entrega B2B-2
+      // No CD: remessas que chegaram ao CD e aguardam motorista entrega
       const { data: cdData, error: cdError } = await supabase
         .from('b2b_shipments')
         .select(`
           id, tracking_code, status, created_at,
           recipient_name, recipient_city, recipient_state,
           volume_count, motorista_id, observations,
-          is_volume, parent_shipment_id, volume_eti_code, volume_number, volume_weight,
+          is_volume, volume_eti_code, volume_number, volume_weight,
           b2b_clients(company_name)
         `)
-        .in('status', ['B2B_NO_CD', 'B2B_VOLUME_DISPONIVEL', 'B2B_VOLUME_ACEITO'])
+        .eq('status', 'NO_CD')
+        .is('motorista_id', null)
         .order('created_at', { ascending: false });
 
       if (cdError) throw cdError;
+
+      // Em rota: remessas com motorista de entrega (EM_ROTA)
+      const { data: routeData, error: routeError } = await supabase
+        .from('b2b_shipments')
+        .select(`
+          id, tracking_code, status, created_at,
+          recipient_name, recipient_city, recipient_state,
+          volume_count, motorista_id, observations,
+          is_volume, volume_eti_code, volume_number, volume_weight,
+          b2b_clients(company_name)
+        `)
+        .eq('status', 'EM_ROTA')
+        .not('motorista_id', 'is', null)
+        .order('created_at', { ascending: false });
+
+      if (routeError) throw routeError;
 
       // Entregues
       const { data: deliveredData, error: deliveredError } = await supabase
@@ -129,7 +135,7 @@ const CdDashboard = () => {
           id, tracking_code, status, created_at,
           recipient_name, recipient_city, recipient_state,
           volume_count, motorista_id, observations,
-          is_volume, parent_shipment_id, volume_eti_code, volume_number, volume_weight,
+          is_volume, volume_eti_code, volume_number, volume_weight,
           b2b_clients(company_name)
         `)
         .eq('status', 'ENTREGUE')
@@ -139,7 +145,7 @@ const CdDashboard = () => {
       if (deliveredError) throw deliveredError;
 
       // Buscar nomes dos motoristas
-      const allShipments = [...(transitData || []), ...(cdData || []), ...(deliveredData || [])];
+      const allShipments = [...(transitData || []), ...(cdData || []), ...(routeData || []), ...(deliveredData || [])];
       const motoristaIds = [...new Set(allShipments.filter(s => s.motorista_id).map(s => s.motorista_id))];
       
       let motoristasMap: Record<string, string> = {};
@@ -165,6 +171,7 @@ const CdDashboard = () => {
 
       setInTransitShipments((transitData || []).map(mapShipment));
       setAtCdShipments((cdData || []).map(mapShipment));
+      setInRouteShipments((routeData || []).map(mapShipment));
       setDeliveredShipments((deliveredData || []).map(mapShipment));
     } catch (error) {
       console.error('Erro ao carregar remessas:', error);
@@ -174,23 +181,14 @@ const CdDashboard = () => {
     }
   };
 
-  // Abrir modal para registrar chegada de volumes via ETI
-  const handleOpenEtiArrival = () => {
-    setEtiArrivalModalOpen(true);
-  };
-
-  const handleEtiArrivalComplete = () => {
-    setEtiArrivalModalOpen(false);
-    loadShipments();
-  };
-
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; className: string }> = {
+      'PENDENTE_COLETA': { label: 'Aguardando Coleta', className: 'bg-amber-500 text-white hover:bg-amber-600' },
       'B2B_COLETA_PENDENTE': { label: 'Aguardando Coleta', className: 'bg-amber-500 text-white hover:bg-amber-600' },
-      'B2B_COLETA_ACEITA': { label: 'Em Trânsito', className: 'bg-blue-500 text-white hover:bg-blue-600' },
-      'B2B_NO_CD': { label: 'No CD', className: 'bg-orange-500 text-white hover:bg-orange-600' },
-      'B2B_VOLUME_DISPONIVEL': { label: 'Disponível p/ Entrega', className: 'bg-purple-500 text-white hover:bg-purple-600' },
-      'B2B_VOLUME_ACEITO': { label: 'Em Rota de Entrega', className: 'bg-indigo-500 text-white hover:bg-indigo-600' },
+      'COLETADA': { label: 'Coletada', className: 'bg-blue-500 text-white hover:bg-blue-600' },
+      'B2B_COLETA_ACEITA': { label: 'Coletada', className: 'bg-blue-500 text-white hover:bg-blue-600' },
+      'NO_CD': { label: 'No CD', className: 'bg-purple-500 text-white hover:bg-purple-600' },
+      'EM_ROTA': { label: 'Em Rota', className: 'bg-indigo-500 text-white hover:bg-indigo-600' },
       'ENTREGUE': { label: 'Entregue', className: 'bg-green-500 text-white hover:bg-green-600' }
     };
 
@@ -219,9 +217,7 @@ const CdDashboard = () => {
           ? JSON.parse(shipment.observations) 
           : shipment.observations;
       }
-    } catch (e) {
-      console.log('Erro ao parsear observations:', e);
-    }
+    } catch (e) {}
 
     const mappedRemessa = {
       id: shipment.id,
@@ -254,31 +250,18 @@ const CdDashboard = () => {
 
   const getCardColor = (status: string) => {
     const colors: Record<string, string> = {
+      'PENDENTE_COLETA': 'border-amber-500/50 bg-amber-50/30',
       'B2B_COLETA_PENDENTE': 'border-amber-500/50 bg-amber-50/30',
+      'COLETADA': 'border-blue-500/50 bg-blue-50/30',
       'B2B_COLETA_ACEITA': 'border-blue-500/50 bg-blue-50/30',
-      'B2B_NO_CD': 'border-orange-500/50 bg-orange-50/30',
-      'B2B_VOLUME_DISPONIVEL': 'border-purple-500/50 bg-purple-50/30',
-      'B2B_VOLUME_ACEITO': 'border-indigo-500/50 bg-indigo-50/30',
+      'NO_CD': 'border-purple-500/50 bg-purple-50/30',
+      'EM_ROTA': 'border-indigo-500/50 bg-indigo-50/30',
       'ENTREGUE': 'border-green-500/50 bg-green-50/30'
     };
     return colors[status] || 'border-border/50';
   };
 
-  const getVehicleType = (shipment: B2BShipment) => {
-    try {
-      if (shipment.observations) {
-        const parsed = typeof shipment.observations === 'string' 
-          ? JSON.parse(shipment.observations) 
-          : shipment.observations;
-        return parsed?.vehicle_type || null;
-      }
-    } catch (e) {}
-    return null;
-  };
-
   const renderShipmentCard = (shipment: B2BShipment) => {
-    const vehicleType = getVehicleType(shipment);
-    
     return (
       <Card key={shipment.id} className={getCardColor(shipment.status)}>
         <CardContent className="p-4">
@@ -314,14 +297,9 @@ const CdDashboard = () => {
                   <span>{shipment.volume_weight?.toFixed(1) || '0'}kg</span>
                 </div>
                 
-                <div className="flex items-center gap-2 text-foreground font-medium whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    <span>{format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
-                  </div>
-                  {vehicleType && (
-                    <span className="text-muted-foreground whitespace-nowrap">| {vehicleType}</span>
-                  )}
+                <div className="flex items-center gap-1 text-foreground font-medium">
+                  <Calendar className="h-3 w-3" />
+                  <span>{format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
                 </div>
               </div>
 
@@ -382,7 +360,7 @@ const CdDashboard = () => {
             <Button 
               variant="default" 
               size="sm" 
-              onClick={handleOpenEtiArrival}
+              onClick={() => setEtiArrivalModalOpen(true)}
               className="bg-green-600 hover:bg-green-700"
             >
               <CheckCircle className="h-4 w-4 mr-2" />
@@ -414,7 +392,7 @@ const CdDashboard = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
-          <TabsList className="grid w-full grid-cols-3 max-w-2xl">
+          <TabsList className="grid w-full grid-cols-4 max-w-3xl">
             <TabsTrigger 
               value="em_transito" 
               className="flex items-center gap-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white"
@@ -432,6 +410,14 @@ const CdDashboard = () => {
               <Badge variant="secondary" className="bg-purple-100 text-purple-700">{filterShipments(atCdShipments).length}</Badge>
             </TabsTrigger>
             <TabsTrigger 
+              value="em_rota" 
+              className="flex items-center gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white"
+            >
+              <Route className="h-4 w-4" />
+              <span className="hidden sm:inline">Em Rota</span>
+              <Badge variant="secondary" className="bg-indigo-100 text-indigo-700">{filterShipments(inRouteShipments).length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger 
               value="entregues" 
               className="flex items-center gap-2 data-[state=active]:bg-green-500 data-[state=active]:text-white"
             >
@@ -447,11 +433,11 @@ const CdDashboard = () => {
               <Card className="border-dashed">
                 <CardContent className="p-8 text-center text-muted-foreground">
                   <ClipboardCheck className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p>Nenhum volume em trânsito para o CD</p>
+                  <p>Nenhuma remessa em trânsito</p>
                 </CardContent>
               </Card>
             ) : (
-              filterShipments(inTransitShipments).map((shipment) => renderShipmentCard(shipment))
+              filterShipments(inTransitShipments).map(renderShipmentCard)
             )}
           </TabsContent>
 
@@ -461,11 +447,25 @@ const CdDashboard = () => {
               <Card className="border-dashed">
                 <CardContent className="p-8 text-center text-muted-foreground">
                   <Boxes className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p>Nenhum volume aguardando no CD</p>
+                  <p>Nenhuma remessa aguardando no CD</p>
                 </CardContent>
               </Card>
             ) : (
-              filterShipments(atCdShipments).map((shipment) => renderShipmentCard(shipment))
+              filterShipments(atCdShipments).map(renderShipmentCard)
+            )}
+          </TabsContent>
+
+          {/* Em Rota */}
+          <TabsContent value="em_rota" className="mt-6 space-y-4">
+            {filterShipments(inRouteShipments).length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  <Route className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p>Nenhuma remessa em rota de entrega</p>
+                </CardContent>
+              </Card>
+            ) : (
+              filterShipments(inRouteShipments).map(renderShipmentCard)
             )}
           </TabsContent>
 
@@ -479,7 +479,7 @@ const CdDashboard = () => {
                 </CardContent>
               </Card>
             ) : (
-              filterShipments(deliveredShipments).map((shipment) => renderShipmentCard(shipment))
+              filterShipments(deliveredShipments).map(renderShipmentCard)
             )}
           </TabsContent>
         </Tabs>
@@ -498,7 +498,10 @@ const CdDashboard = () => {
       <CdEtiArrivalModal
         open={etiArrivalModalOpen}
         onClose={() => setEtiArrivalModalOpen(false)}
-        onComplete={handleEtiArrivalComplete}
+        onComplete={() => {
+          setEtiArrivalModalOpen(false);
+          loadShipments();
+        }}
         cdUserName={cdUser?.nome || ''}
       />
     </div>
