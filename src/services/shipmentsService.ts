@@ -1091,15 +1091,15 @@ export const acceptShipment = async (shipmentId: string, motoristaId: string): P
     .maybeSingle();
   
   if (b2bShipment) {
-    // É uma remessa B2B-0 (coleta)
+    // É uma remessa B2B-0 (coleta) - aceita tanto PENDENTE_COLETA quanto B2B_COLETA_PENDENTE
     const { error } = await supabase
       .from('b2b_shipments')
       .update({ 
         motorista_id: motoristaId,
-        status: 'B2B_COLETA_ACEITA'  // Novo status para B2B-0 aceita
+        status: 'B2B_COLETA_ACEITA'
       })
       .eq('id', shipmentId)
-      .eq('status', 'B2B_COLETA_PENDENTE');
+      .in('status', ['PENDENTE_COLETA', 'B2B_COLETA_PENDENTE', 'PENDENTE']);
 
     if (error) {
       console.error('❌ Erro ao aceitar B2B-0:', error);
