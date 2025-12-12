@@ -16,16 +16,14 @@ import {
   Eye,
   CheckCircle,
   ClipboardCheck,
-  Boxes,
-  SplitSquareVertical
+  Boxes
 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { RemessaVisualizacao } from '@/components/motorista/RemessaVisualizacao';
-import { EtiValidationModal } from '@/components/cd/EtiValidationModal';
-import { DestrincharModal } from '@/components/cd/DestrincharModal';
+import { CdEtiArrivalModal } from '@/components/cd/CdEtiArrivalModal';
 
 interface B2BShipment {
   id: string;
@@ -57,28 +55,22 @@ interface CdUser {
   telefone: string;
 }
 
-type TabType = 'remessas' | 'disponiveis' | 'volumes' | 'entregues';
+type TabType = 'em_transito' | 'no_cd' | 'entregues';
 
 const CdDashboard = () => {
   const navigate = useNavigate();
   const [cdUser, setCdUser] = useState<CdUser | null>(null);
-  const [b2b1Shipments, setB2b1Shipments] = useState<B2BShipment[]>([]); // B2B-1: Remessas em coleta ou chegando
-  const [cdShipments, setCdShipments] = useState<B2BShipment[]>([]); // Remessas no CD (prontas p/ destrinchar)
-  const [volumes, setVolumes] = useState<B2BShipment[]>([]); // B2B-2: Volumes desmembrados
+  const [inTransitShipments, setInTransitShipments] = useState<B2BShipment[]>([]); // Em trânsito (aceitos por motorista B2B-0)
+  const [atCdShipments, setAtCdShipments] = useState<B2BShipment[]>([]); // No CD (aguardando entrega B2B-2)
   const [deliveredShipments, setDeliveredShipments] = useState<B2BShipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<TabType>('remessas');
+  const [activeTab, setActiveTab] = useState<TabType>('em_transito');
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
   
-  // Modal de conferência de chegada (B2B_COLETA_FINALIZADA → B2B_NO_CD)
-  const [etiModalOpen, setEtiModalOpen] = useState(false);
-  const [selectedB2B1Shipment, setSelectedB2B1Shipment] = useState<B2BShipment | null>(null);
-  
-  // Modal de desmembramento (B2B_NO_CD → B2B_VOLUME_DISPONIVEL)
-  const [destrincharModalOpen, setDestrincharModalOpen] = useState(false);
-  const [selectedCdShipment, setSelectedCdShipment] = useState<B2BShipment | null>(null);
+  // Modal de confirmação de chegada via ETI
+  const [etiArrivalModalOpen, setEtiArrivalModalOpen] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem('cd_user');
@@ -100,8 +92,8 @@ const CdDashboard = () => {
     try {
       setLoading(true);
 
-      // B2B-0: Remessas em coleta (motorista aceitou, a caminho do CD)
-      const { data: b2b0Data, error: b2b0Error } = await supabase
+      // Em trânsito: volumes aceitos por motorista B2B-0 (a caminho do CD)
+      const { data: transitData, error: transitError } = await supabase
         .from('b2b_shipments')
         .select(`
           id, tracking_code, status, created_at,
@@ -111,13 +103,12 @@ const CdDashboard = () => {
           b2b_clients(company_name)
         `)
         .in('status', ['B2B_COLETA_PENDENTE', 'B2B_COLETA_ACEITA'])
-        .eq('is_volume', false)
         .order('created_at', { ascending: false });
 
-      if (b2b0Error) throw b2b0Error;
+      if (transitError) throw transitError;
 
-      // B2B-1: Remessas no CD (prontas para desmembrar)
-      const { data: b2b1Data, error: b2b1Error } = await supabase
+      // No CD: volumes que chegaram e aguardam entrega B2B-2
+      const { data: cdData, error: cdError } = await supabase
         .from('b2b_shipments')
         .select(`
           id, tracking_code, status, created_at,
@@ -126,29 +117,12 @@ const CdDashboard = () => {
           is_volume, parent_shipment_id, volume_eti_code, volume_number, volume_weight,
           b2b_clients(company_name)
         `)
-        .eq('status', 'B2B_NO_CD')
-        .eq('is_volume', false)
+        .in('status', ['B2B_NO_CD', 'B2B_VOLUME_DISPONIVEL', 'B2B_VOLUME_ACEITO'])
         .order('created_at', { ascending: false });
 
-      if (b2b1Error) throw b2b1Error;
+      if (cdError) throw cdError;
 
-      // B2B-2: Volumes desmembrados (prontos para entrega)
-      const { data: volumesData, error: volumesError } = await supabase
-        .from('b2b_shipments')
-        .select(`
-          id, tracking_code, status, created_at,
-          recipient_name, recipient_city, recipient_state,
-          volume_count, motorista_id, observations,
-          is_volume, parent_shipment_id, volume_eti_code, volume_number, volume_weight,
-          b2b_clients(company_name)
-        `)
-        .eq('is_volume', true)
-        .in('status', ['B2B_VOLUME_DISPONIVEL', 'B2B_VOLUME_ACEITO'])
-        .order('created_at', { ascending: false });
-
-      if (volumesError) throw volumesError;
-
-      // Entregues (remessas pai e volumes individuais)
+      // Entregues
       const { data: deliveredData, error: deliveredError } = await supabase
         .from('b2b_shipments')
         .select(`
@@ -165,7 +139,7 @@ const CdDashboard = () => {
       if (deliveredError) throw deliveredError;
 
       // Buscar nomes dos motoristas
-      const allShipments = [...(b2b0Data || []), ...(b2b1Data || []), ...(volumesData || []), ...(deliveredData || [])];
+      const allShipments = [...(transitData || []), ...(cdData || []), ...(deliveredData || [])];
       const motoristaIds = [...new Set(allShipments.filter(s => s.motorista_id).map(s => s.motorista_id))];
       
       let motoristasMap: Record<string, string> = {};
@@ -189,9 +163,8 @@ const CdDashboard = () => {
         b2b_client: s.b2b_clients as any
       });
 
-      setB2b1Shipments((b2b0Data || []).map(mapShipment));
-      setCdShipments((b2b1Data || []).map(mapShipment));
-      setVolumes((volumesData || []).map(mapShipment));
+      setInTransitShipments((transitData || []).map(mapShipment));
+      setAtCdShipments((cdData || []).map(mapShipment));
       setDeliveredShipments((deliveredData || []).map(mapShipment));
     } catch (error) {
       console.error('Erro ao carregar remessas:', error);
@@ -201,63 +174,23 @@ const CdDashboard = () => {
     }
   };
 
-  // Conferir chegada no CD (B2B_COLETA_FINALIZADA → B2B_NO_CD)
-  const handleOpenConferirChegada = (shipment: B2BShipment) => {
-    setSelectedB2B1Shipment(shipment);
-    setEtiModalOpen(true);
+  // Abrir modal para registrar chegada de volumes via ETI
+  const handleOpenEtiArrival = () => {
+    setEtiArrivalModalOpen(true);
   };
 
-  const handleConfirmarChegada = async () => {
-    if (!selectedB2B1Shipment) return;
-    
-    try {
-      // Atualizar status para B2B_NO_CD (interno)
-      const { error } = await supabase
-        .from('b2b_shipments')
-        .update({ 
-          status: 'B2B_NO_CD',
-          motorista_id: null // Libera o motorista B2B-1
-        })
-        .eq('id', selectedB2B1Shipment.id);
-
-      if (error) throw error;
-
-      // Registrar no histórico
-      await supabase.from('shipment_status_history').insert({
-        b2b_shipment_id: selectedB2B1Shipment.id,
-        status: 'B2B_NO_CD',
-        observacoes: `Conferência de chegada realizada pelo CD - ${cdUser?.nome}`
-      });
-
-      toast.success('Chegada confirmada! Remessa movida para Disponíveis.');
-      setEtiModalOpen(false);
-      setSelectedB2B1Shipment(null);
-      loadShipments();
-    } catch (error) {
-      console.error('Erro ao confirmar chegada:', error);
-      toast.error('Erro ao confirmar chegada');
-    }
-  };
-
-  // Desmembrar remessa (B2B_NO_CD → B2B_VOLUME_DISPONIVEL)
-  const handleOpenDestrinchar = (shipment: B2BShipment) => {
-    setSelectedCdShipment(shipment);
-    setDestrincharModalOpen(true);
-  };
-
-  const handleDestrincharComplete = () => {
-    setDestrincharModalOpen(false);
-    setSelectedCdShipment(null);
+  const handleEtiArrivalComplete = () => {
+    setEtiArrivalModalOpen(false);
     loadShipments();
   };
 
-  const getStatusBadge = (status: string, isVolume?: boolean) => {
+  const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; className: string }> = {
       'B2B_COLETA_PENDENTE': { label: 'Aguardando Coleta', className: 'bg-amber-500 text-white hover:bg-amber-600' },
       'B2B_COLETA_ACEITA': { label: 'Em Trânsito', className: 'bg-blue-500 text-white hover:bg-blue-600' },
       'B2B_NO_CD': { label: 'No CD', className: 'bg-orange-500 text-white hover:bg-orange-600' },
-      'B2B_VOLUME_DISPONIVEL': { label: 'Disponível', className: 'bg-purple-500 text-white hover:bg-purple-600' },
-      'B2B_VOLUME_ACEITO': { label: 'Em Rota', className: 'bg-indigo-500 text-white hover:bg-indigo-600' },
+      'B2B_VOLUME_DISPONIVEL': { label: 'Disponível p/ Entrega', className: 'bg-purple-500 text-white hover:bg-purple-600' },
+      'B2B_VOLUME_ACEITO': { label: 'Em Rota de Entrega', className: 'bg-indigo-500 text-white hover:bg-indigo-600' },
       'ENTREGUE': { label: 'Entregue', className: 'bg-green-500 text-white hover:bg-green-600' }
     };
 
@@ -290,29 +223,12 @@ const CdDashboard = () => {
       console.log('Erro ao parsear observations:', e);
     }
 
-    const volumeWeights = parsedObservations?.volume_weights || [];
-    const totalWeight = shipment.is_volume 
-      ? (shipment.volume_weight || 0)
-      : volumeWeights.reduce((acc: number, w: number) => acc + (w || 0), 0);
-
-    const volumes = volumeWeights.length > 0
-      ? volumeWeights.map((weight: number, index: number) => ({
-          volumeNumber: index + 1,
-          weight: weight,
-          peso: weight
-        }))
-      : Array.from({ length: shipment.volume_count || 1 }, (_, i) => ({
-          volumeNumber: i + 1,
-          weight: 0,
-          peso: 0
-        }));
-
     const mappedRemessa = {
       id: shipment.id,
       tracking_code: shipment.tracking_code,
       status: shipment.status,
       created_at: shipment.created_at,
-      weight: totalWeight,
+      weight: shipment.volume_weight || 0,
       format: 'box',
       selected_option: 'standard',
       motorista_id: shipment.motorista_id,
@@ -321,7 +237,7 @@ const CdDashboard = () => {
       volume_eti_code: shipment.volume_eti_code,
       volume_number: shipment.volume_number,
       quote_data: {
-        merchandiseDetails: { volumes }
+        merchandiseDetails: { volumes: [{ volumeNumber: shipment.volume_number, weight: shipment.volume_weight }] }
       },
       recipient_address: {
         name: shipment.recipient_name,
@@ -360,7 +276,7 @@ const CdDashboard = () => {
     return null;
   };
 
-  const renderShipmentCard = (shipment: B2BShipment, actions?: React.ReactNode) => {
+  const renderShipmentCard = (shipment: B2BShipment) => {
     const vehicleType = getVehicleType(shipment);
     
     return (
@@ -370,12 +286,12 @@ const CdDashboard = () => {
             <div className="space-y-2 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-mono text-sm font-medium text-foreground">
-                  {shipment.is_volume ? shipment.volume_eti_code : shipment.tracking_code || 'Sem código'}
+                  {shipment.tracking_code || 'Sem código'}
                 </span>
-                {getStatusBadge(shipment.status, shipment.is_volume)}
-                {shipment.is_volume && (
-                  <Badge variant="outline" className="text-xs">
-                    Volume {shipment.volume_number}
+                {getStatusBadge(shipment.status)}
+                {shipment.volume_eti_code && (
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {shipment.volume_eti_code}
                   </Badge>
                 )}
               </div>
@@ -395,12 +311,7 @@ const CdDashboard = () => {
                 
                 <div className="flex items-center gap-1 text-foreground font-medium">
                   <Package className="h-3 w-3" />
-                  <span>
-                    {shipment.is_volume 
-                      ? `${shipment.volume_weight?.toFixed(1) || 0}kg`
-                      : `${shipment.volume_count || 1} volume(s)`
-                    }
-                  </span>
+                  <span>{shipment.volume_weight?.toFixed(1) || '0'}kg</span>
                 </div>
                 
                 <div className="flex items-center gap-2 text-foreground font-medium whitespace-nowrap">
@@ -427,7 +338,6 @@ const CdDashboard = () => {
                 <Eye className="h-4 w-4 mr-1" />
                 Detalhes
               </Button>
-              {actions}
             </div>
           </div>
         </CardContent>
@@ -468,10 +378,21 @@ const CdDashboard = () => {
               <p className="text-sm text-muted-foreground">Olá, {cdUser.nome}</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={handleOpenEtiArrival}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Registrar Chegada (ETI)
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sair
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -493,30 +414,22 @@ const CdDashboard = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
-          <TabsList className="grid w-full grid-cols-4 max-w-3xl">
+          <TabsList className="grid w-full grid-cols-3 max-w-2xl">
             <TabsTrigger 
-              value="remessas" 
-              className="flex items-center gap-2 data-[state=active]:bg-amber-500 data-[state=active]:text-white"
+              value="em_transito" 
+              className="flex items-center gap-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white"
             >
               <ClipboardCheck className="h-4 w-4" />
-              <span className="hidden sm:inline">Remessas</span>
-              <Badge variant="secondary" className="bg-amber-100 text-amber-700">{filterShipments(b2b1Shipments).length}</Badge>
+              <span className="hidden sm:inline">Em Trânsito</span>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-700">{filterShipments(inTransitShipments).length}</Badge>
             </TabsTrigger>
             <TabsTrigger 
-              value="disponiveis" 
-              className="flex items-center gap-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white"
-            >
-              <Package className="h-4 w-4" />
-              <span className="hidden sm:inline">Disponíveis</span>
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700">{filterShipments(cdShipments).length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="volumes" 
+              value="no_cd" 
               className="flex items-center gap-2 data-[state=active]:bg-purple-500 data-[state=active]:text-white"
             >
               <Boxes className="h-4 w-4" />
-              <span className="hidden sm:inline">Volumes</span>
-              <Badge variant="secondary" className="bg-purple-100 text-purple-700">{filterShipments(volumes).length}</Badge>
+              <span className="hidden sm:inline">No CD</span>
+              <Badge variant="secondary" className="bg-purple-100 text-purple-700">{filterShipments(atCdShipments).length}</Badge>
             </TabsTrigger>
             <TabsTrigger 
               value="entregues" 
@@ -528,71 +441,31 @@ const CdDashboard = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* B2B-1: Remessas (em coleta, a caminho do CD) */}
-          <TabsContent value="remessas" className="mt-6 space-y-4">
-            {filterShipments(b2b1Shipments).length === 0 ? (
+          {/* Em Trânsito */}
+          <TabsContent value="em_transito" className="mt-6 space-y-4">
+            {filterShipments(inTransitShipments).length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="p-8 text-center text-muted-foreground">
                   <ClipboardCheck className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p>Nenhuma remessa em trânsito para o CD</p>
+                  <p>Nenhum volume em trânsito para o CD</p>
                 </CardContent>
               </Card>
             ) : (
-              filterShipments(b2b1Shipments).map((shipment) =>
-                renderShipmentCard(shipment, 
-                  shipment.status === 'B2B_COLETA_ACEITA' && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => handleOpenConferirChegada(shipment)}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Conferir Chegada
-                    </Button>
-                  )
-                )
-              )
+              filterShipments(inTransitShipments).map((shipment) => renderShipmentCard(shipment))
             )}
           </TabsContent>
 
-          {/* Disponíveis (no CD, prontas para desmembrar) */}
-          <TabsContent value="disponiveis" className="mt-6 space-y-4">
-            {filterShipments(cdShipments).length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  <Package className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p>Nenhuma remessa disponível para desmembramento</p>
-                </CardContent>
-              </Card>
-            ) : (
-              filterShipments(cdShipments).map((shipment) =>
-                renderShipmentCard(shipment,
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => handleOpenDestrinchar(shipment)}
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
-                    <SplitSquareVertical className="h-4 w-4 mr-1" />
-                    Destrinchar
-                  </Button>
-                )
-              )
-            )}
-          </TabsContent>
-
-          {/* B2B-2: Volumes desmembrados */}
-          <TabsContent value="volumes" className="mt-6 space-y-4">
-            {filterShipments(volumes).length === 0 ? (
+          {/* No CD */}
+          <TabsContent value="no_cd" className="mt-6 space-y-4">
+            {filterShipments(atCdShipments).length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="p-8 text-center text-muted-foreground">
                   <Boxes className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p>Nenhum volume desmembrado aguardando entrega</p>
+                  <p>Nenhum volume aguardando no CD</p>
                 </CardContent>
               </Card>
             ) : (
-              filterShipments(volumes).map((volume) => renderShipmentCard(volume))
+              filterShipments(atCdShipments).map((shipment) => renderShipmentCard(shipment))
             )}
           </TabsContent>
 
@@ -621,32 +494,13 @@ const CdDashboard = () => {
         />
       )}
 
-      {/* Modal de conferência de chegada (ETI validation) */}
-      {selectedB2B1Shipment && (
-        <EtiValidationModal
-          open={etiModalOpen}
-          onClose={() => {
-            setEtiModalOpen(false);
-            setSelectedB2B1Shipment(null);
-          }}
-          shipmentId={selectedB2B1Shipment.id}
-          volumeCount={selectedB2B1Shipment.volume_count || 1}
-          onFinalize={handleConfirmarChegada}
-        />
-      )}
-
-      {/* Modal de desmembramento */}
-      {selectedCdShipment && (
-        <DestrincharModal
-          open={destrincharModalOpen}
-          onClose={() => {
-            setDestrincharModalOpen(false);
-            setSelectedCdShipment(null);
-          }}
-          shipment={selectedCdShipment}
-          onComplete={handleDestrincharComplete}
-        />
-      )}
+      {/* Modal de registro de chegada via ETI */}
+      <CdEtiArrivalModal
+        open={etiArrivalModalOpen}
+        onClose={() => setEtiArrivalModalOpen(false)}
+        onComplete={handleEtiArrivalComplete}
+        cdUserName={cdUser?.nome || ''}
+      />
     </div>
   );
 };
