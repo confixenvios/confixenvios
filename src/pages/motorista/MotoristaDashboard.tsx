@@ -698,7 +698,7 @@ const MotoristaDashboard = () => {
           <div className="flex justify-between items-start mb-2">
             <div>
               <h3 className="font-mono font-bold text-lg">{v.eti_code}</h3>
-              {!isPendente && v.shipment && (
+              {!isPendente && !isAceito && !isColetado && v.shipment && (
                 <p className="text-xs text-muted-foreground">{v.shipment.tracking_code}</p>
               )}
             </div>
