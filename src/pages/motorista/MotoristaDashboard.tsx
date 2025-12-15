@@ -795,9 +795,10 @@ const MotoristaDashboard = () => {
               </div>
               
               <div className="space-y-2">
-                <Label>Digite o código ETI para confirmar</Label>
+                <Label>Bipe a etiqueta para confirmar</Label>
                 <Input
-                  placeholder="Ex: 0001"
+                  type="password"
+                  placeholder="****"
                   value={collectEtiInput}
                   onChange={(e) => setCollectEtiInput(e.target.value)}
                   onKeyDown={(e) => {
