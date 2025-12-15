@@ -66,7 +66,7 @@ const B2BLayout = () => {
     { title: 'Envios', url: '/b2b-expresso/dashboard', icon: Truck },
     { title: 'Novo Envio', url: '/b2b-expresso/nova-remessa', icon: Plus },
     { title: 'Endereços de Coleta', url: '/b2b-expresso/enderecos-coleta', icon: MapPin },
-    { title: 'Endereços de Volumes', url: '/b2b-expresso/enderecos', icon: MapPin },
+    { title: 'Endereços de Entrega', url: '/b2b-expresso/enderecos', icon: MapPin },
     { title: 'Relatórios', url: '/b2b-expresso/relatorios', icon: BarChart3 },
   ];
 
