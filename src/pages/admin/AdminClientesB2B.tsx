@@ -179,7 +179,7 @@ const AdminClientesB2B = () => {
               <CardTitle>Lista de Clientes</CardTitle>
               <CardDescription>
                 <Input
-                  placeholder="Buscar por nome, e-mail ou CNPJ..."
+                  placeholder="Buscar por nome, e-mail ou CNPJ/CPF..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="max-w-md"
@@ -224,7 +224,7 @@ const AdminClientesB2B = () => {
                     <div className="text-sm text-muted-foreground space-y-1">
                       <p><strong>E-mail:</strong> {client.email}</p>
                       {client.phone && <p><strong>Telefone:</strong> {client.phone}</p>}
-                      {client.cnpj && <p><strong>CNPJ:</strong> {client.cnpj}</p>}
+                      {client.cnpj && <p><strong>CNPJ/CPF:</strong> {client.cnpj}</p>}
                       <p><strong>Remessas:</strong> {client._count?.shipments || 0}</p>
                       <p className="text-xs">
                         Cadastrado em {format(new Date(client.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
