@@ -468,7 +468,10 @@ const MotoristaDashboard = () => {
         status: 'CONCLUIDO',
         motorista_id: motorista.id,
         motorista_nome: motorista.nome,
-        observacoes: 'Entrega concluída com sucesso'
+        observacoes: JSON.stringify({ 
+          mensagem: 'Entrega concluída com sucesso', 
+          foto_url: urlData.publicUrl 
+        })
       });
 
       toast.success('Entrega finalizada!');
@@ -1259,23 +1262,35 @@ const MotoristaDashboard = () => {
                         id="delivery-photo"
                         onChange={(e) => setDeliveryPhoto(e.target.files?.[0] || null)}
                       />
-                      <label htmlFor="delivery-photo" className="cursor-pointer">
-                        {deliveryPhoto ? (
-                          <div className="space-y-2">
+                      {deliveryPhoto ? (
+                        <div className="space-y-2 relative">
+                          <div className="relative inline-block">
                             <img 
                               src={URL.createObjectURL(deliveryPhoto)} 
                               alt="Preview" 
                               className="max-h-40 mx-auto rounded"
                             />
-                            <p className="text-sm text-muted-foreground">Clique para trocar</p>
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="absolute -top-2 -right-2 h-7 w-7 rounded-full"
+                              onClick={() => setDeliveryPhoto(null)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
                           </div>
-                        ) : (
+                          <label htmlFor="delivery-photo" className="cursor-pointer">
+                            <p className="text-sm text-muted-foreground hover:text-primary">Clique para trocar</p>
+                          </label>
+                        </div>
+                      ) : (
+                        <label htmlFor="delivery-photo" className="cursor-pointer block">
                           <div className="space-y-2">
                             <Camera className="h-10 w-10 mx-auto text-muted-foreground" />
                             <p className="text-sm text-muted-foreground">Tirar foto</p>
                           </div>
-                        )}
-                      </label>
+                        </label>
+                      )}
                     </div>
                   </div>
                   
