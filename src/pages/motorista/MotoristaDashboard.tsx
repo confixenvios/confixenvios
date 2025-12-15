@@ -557,7 +557,7 @@ const MotoristaDashboard = () => {
             
             {showActions === 'collect' && (
               <Button 
-                className="flex-1"
+                size="sm"
                 onClick={() => {
                   setVolumeToCollect(v);
                   setCollectModalOpen(true);
