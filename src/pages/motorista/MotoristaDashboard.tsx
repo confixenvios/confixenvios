@@ -707,13 +707,19 @@ const MotoristaDashboard = () => {
             </Badge>
           </div>
           
-          {/* Para PENDENTE: mostrar apenas ETI + bairro */}
+          {/* Para PENDENTE: mostrar apenas ETI + bairro + tipo veículo */}
           {isPendente ? (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground space-y-1">
               <p className="flex items-center gap-1">
                 <MapPin className="h-3 w-3" />
                 <span className="font-medium">{v.recipient_neighborhood}</span>
               </p>
+              {v.shipment?.vehicle_type && (
+                <p className="flex items-center gap-1">
+                  <Truck className="h-3 w-3" />
+                  <span>{v.shipment.vehicle_type}</span>
+                </p>
+              )}
             </div>
           ) : (isAceito || isColetado) ? (
             /* Para ACEITO e COLETADO: mostrar nome do local de coleta + destino CD */
