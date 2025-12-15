@@ -478,6 +478,7 @@ const MotoristaDashboard = () => {
   const renderVolumeCard = (v: B2BVolume, showActions: 'accept' | 'collect' | 'bip' | 'finalize' | 'none' = 'none') => {
     const statusConfig = STATUS_CONFIG[v.status] || { label: v.status, color: 'text-gray-700', bgColor: 'bg-gray-100' };
     const recentHistory = (v.status_history || []).slice(0, 2);
+    const isPendente = v.status === 'PENDENTE';
 
     return (
       <Card key={v.id} className="mb-3">
@@ -485,7 +486,7 @@ const MotoristaDashboard = () => {
           <div className="flex justify-between items-start mb-2">
             <div>
               <h3 className="font-mono font-bold text-lg">{v.eti_code}</h3>
-              {v.shipment && (
+              {!isPendente && v.shipment && (
                 <p className="text-xs text-muted-foreground">{v.shipment.tracking_code}</p>
               )}
             </div>
@@ -494,37 +495,50 @@ const MotoristaDashboard = () => {
             </Badge>
           </div>
           
-          <div className="text-sm text-muted-foreground space-y-1">
-            <p className="flex items-center gap-1">
-              <User className="h-3 w-3" />
-              {v.recipient_name}
-            </p>
-            <p className="flex items-center gap-1">
-              <MapPin className="h-3 w-3" />
-              {v.recipient_street}, {v.recipient_number} - {v.recipient_city}/{v.recipient_state}
-            </p>
-            <p className="flex items-center gap-1">
-              <Package className="h-3 w-3" />
-              {v.weight} kg
-            </p>
-          </div>
-
-          {/* Histórico recente */}
-          {recentHistory.length > 0 && (
-            <div className="mt-3 pt-2 border-t">
-              <p className="text-xs font-medium mb-1 flex items-center gap-1">
-                <History className="h-3 w-3" />
-                Histórico
+          {/* Para PENDENTE: mostrar apenas ETI + setor (cidade/estado) */}
+          {isPendente ? (
+            <div className="text-sm text-muted-foreground">
+              <p className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                <span className="font-medium">{v.recipient_city}/{v.recipient_state}</span>
               </p>
-              {recentHistory.map((h, idx) => (
-                <div key={idx} className={`text-xs p-1 rounded mb-1 ${h.is_alert ? 'bg-red-50 text-red-700' : 'bg-muted/50'}`}>
-                  <span className="font-medium">{STATUS_CONFIG[h.status]?.label || h.status}</span>
-                  <span className="text-muted-foreground ml-2">
-                    {format(new Date(h.created_at), 'dd/MM HH:mm')}
-                  </span>
-                </div>
-              ))}
             </div>
+          ) : (
+            /* Para outros status: mostrar detalhes completos */
+            <>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p className="flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  {v.recipient_name}
+                </p>
+                <p className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {v.recipient_street}, {v.recipient_number} - {v.recipient_city}/{v.recipient_state}
+                </p>
+                <p className="flex items-center gap-1">
+                  <Package className="h-3 w-3" />
+                  {v.weight} kg
+                </p>
+              </div>
+
+              {/* Histórico recente - apenas para não pendentes */}
+              {recentHistory.length > 0 && (
+                <div className="mt-3 pt-2 border-t">
+                  <p className="text-xs font-medium mb-1 flex items-center gap-1">
+                    <History className="h-3 w-3" />
+                    Histórico
+                  </p>
+                  {recentHistory.map((h, idx) => (
+                    <div key={idx} className={`text-xs p-1 rounded mb-1 ${h.is_alert ? 'bg-red-50 text-red-700' : 'bg-muted/50'}`}>
+                      <span className="font-medium">{STATUS_CONFIG[h.status]?.label || h.status}</span>
+                      <span className="text-muted-foreground ml-2">
+                        {format(new Date(h.created_at), 'dd/MM HH:mm')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           {/* Botões de ação */}
