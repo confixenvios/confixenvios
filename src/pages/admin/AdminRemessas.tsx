@@ -182,7 +182,7 @@ const AdminRemessas = () => {
         status: b2bShipment.status,
         created_at: b2bShipment.created_at,
         delivery_date: b2bShipment.delivery_date,
-        volume_count: b2bShipment.volume_count,
+        volume_count: b2bShipment.total_volumes,
         
         // Dados do cliente B2B
         client_id: clientData?.id,

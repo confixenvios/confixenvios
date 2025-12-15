@@ -20,9 +20,7 @@ import { ptBR } from 'date-fns/locale';
 interface CdUser {
   id: string;
   nome: string;
-  cpf: string;
   email: string;
-  telefone: string;
   status: string;
   created_at: string;
 }
@@ -87,18 +85,9 @@ const AdminCdUsers = () => {
     }
   };
 
-  const formatCPF = (cpf: string) => {
-    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  };
-
-  const formatPhone = (phone: string) => {
-    return phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-  };
-
   const filteredUsers = cdUsers.filter(user =>
     user.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.cpf.includes(searchTerm)
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const pendingCount = cdUsers.filter(u => u.status === 'pendente').length;
@@ -194,8 +183,6 @@ const AdminCdUsers = () => {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>CPF</TableHead>
-                <TableHead>Telefone</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Cadastro</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -204,7 +191,7 @@ const AdminCdUsers = () => {
             <TableBody>
               {filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     Nenhum usuário CD encontrado
                   </TableCell>
                 </TableRow>
@@ -213,8 +200,6 @@ const AdminCdUsers = () => {
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.nome}</TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell>{formatCPF(user.cpf)}</TableCell>
-                    <TableCell>{formatPhone(user.telefone)}</TableCell>
                     <TableCell>{getStatusBadge(user.status)}</TableCell>
                     <TableCell>
                       {format(new Date(user.created_at), 'dd/MM/yyyy', { locale: ptBR })}

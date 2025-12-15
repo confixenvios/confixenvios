@@ -10,7 +10,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, Download, Route, User, Eye, ChevronDown, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import CdShipmentDetailsModal from '@/components/cd/CdShipmentDetailsModal';
 import B2BStatusHistory from '@/components/b2b/B2BStatusHistory';
 
 interface CdUser {
@@ -24,19 +23,10 @@ interface B2BShipment {
   tracking_code: string;
   status: string;
   created_at: string;
-  recipient_name: string | null;
-  recipient_phone: string | null;
-  recipient_cep: string | null;
-  recipient_city: string | null;
-  recipient_state: string | null;
-  recipient_street: string | null;
-  recipient_number: string | null;
-  recipient_complement?: string | null;
-  recipient_neighborhood: string | null;
-  volume_count: number | null;
-  volume_weight: number | null;
-  volume_eti_code: string | null;
-  motorista_id: string | null;
+  total_volumes: number;
+  total_weight: number;
+  motorista_coleta_id: string | null;
+  motorista_entrega_id: string | null;
   motorista_nome?: string | null;
   delivery_date?: string | null;
   observations?: string | null;
@@ -85,13 +75,16 @@ const CdDashboard = () => {
       // Buscar remessas B2B
       const { data, error } = await supabase
         .from('b2b_shipments')
-        .select('*')
+        .select('id, tracking_code, status, created_at, total_volumes, total_weight, motorista_coleta_id, motorista_entrega_id, delivery_date, observations')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
 
       // Buscar nomes dos motoristas
-      const motoristaIds = [...new Set((data || []).filter(s => s.motorista_id).map(s => s.motorista_id))];
+      const motoristaIds = [...new Set((data || [])
+        .flatMap(s => [s.motorista_coleta_id, s.motorista_entrega_id])
+        .filter(Boolean))] as string[];
+      
       let motoristasMap: Record<string, string> = {};
 
       if (motoristaIds.length > 0) {
@@ -108,50 +101,12 @@ const CdDashboard = () => {
         }
       }
 
-      // Buscar histórico de coleta para saber qual motorista coletou cada remessa
-      const shipmentIds = (data || []).map(s => s.id);
-      let coletaHistoryMap: Record<string, string> = {};
-
-      if (shipmentIds.length > 0) {
-        const { data: history } = await supabase
-          .from('shipment_status_history')
-          .select('b2b_shipment_id, motorista_id')
-          .in('b2b_shipment_id', shipmentIds)
-          .eq('status', 'B2B_COLETA_ACEITA');
-        
-        if (history) {
-          // Buscar nomes dos motoristas do histórico
-          const historyMotoristaIds = [...new Set(history.filter(h => h.motorista_id).map(h => h.motorista_id))];
-          if (historyMotoristaIds.length > 0) {
-            const { data: historyMotoristas } = await supabase
-              .from('motoristas')
-              .select('id, nome')
-              .in('id', historyMotoristaIds);
-            
-            if (historyMotoristas) {
-              historyMotoristas.forEach((m: any) => {
-                motoristasMap[m.id] = m.nome;
-              });
-            }
-          }
-          
-          history.forEach((h: any) => {
-            if (h.motorista_id) {
-              coletaHistoryMap[h.b2b_shipment_id] = h.motorista_id;
-            }
-          });
-        }
-      }
-
       // Combinar dados das remessas com nomes dos motoristas
-      const shipmentsWithMotorista = (data || []).map(s => {
-        // Prioriza motorista atual, depois busca do histórico de coleta
-        const motoristaId = s.motorista_id || coletaHistoryMap[s.id];
-        return {
-          ...s,
-          motorista_nome: motoristaId ? motoristasMap[motoristaId] : null
-        };
-      });
+      const shipmentsWithMotorista = (data || []).map(s => ({
+        ...s,
+        motorista_nome: s.motorista_coleta_id ? motoristasMap[s.motorista_coleta_id] : 
+                        s.motorista_entrega_id ? motoristasMap[s.motorista_entrega_id] : null
+      }));
 
       setShipments(shipmentsWithMotorista);
     } catch (error) {
@@ -166,57 +121,13 @@ const CdDashboard = () => {
     navigate('/cd/auth');
   };
 
-  // Receber volume no CD - busca por ETI e muda status para NO_CD
-  // SÓ PERMITE SE TEM MOTORISTA ATRIBUÍDO (foi coletado)
   const handleReceiveVolume = async () => {
     if (!receiveEtiInput.trim()) return;
     setReceiving(true);
     try {
-      // Busca volume pelo código ETI que foi ACEITO por motorista de coleta
-      const shipment = shipments.find(s => 
-        s.volume_eti_code?.replace('ETI-', '').padStart(4, '0') === receiveEtiInput.padStart(4, '0') && 
-        s.status === 'B2B_COLETA_ACEITA'
-      );
-      
-      if (!shipment) {
-        // Verifica se existe mas não foi coletado ainda
-        const pendingShipment = shipments.find(s => 
-          s.volume_eti_code?.replace('ETI-', '').padStart(4, '0') === receiveEtiInput.padStart(4, '0') && 
-          ['PENDENTE_COLETA', 'B2B_COLETA_PENDENTE', 'PENDENTE'].includes(s.status)
-        );
-        
-        if (pendingShipment) {
-          toast.error('Volume ainda não foi coletado por um motorista');
-          return;
-        }
-        
-        toast.error('Volume não encontrado ou já recebido');
-        return;
-      }
-      
-      // Atualiza status para NO_CD e DESVINCULA motorista para liberar para motorista de entrega
-      const { error } = await supabase
-        .from('b2b_shipments')
-        .update({ 
-          status: 'NO_CD',
-          motorista_id: null  // Desvincula motorista de coleta - histórico preservado
-        })
-        .eq('id', shipment.id);
-      
-      if (error) throw error;
-      
-      // Registra histórico com nome do motorista que coletou
-      await supabase.from('shipment_status_history').insert({
-        b2b_shipment_id: shipment.id,
-        status: 'NO_CD',
-        status_description: `Volume recebido no CD por ${cdUser?.nome}`,
-        observacoes: `Código ETI validado: ${shipment.volume_eti_code}. Coletado por: ${shipment.motorista_nome || 'N/A'}. Motorista de coleta desvinculado - disponível para entrega.`
-      });
-      
-      toast.success(`${shipment.tracking_code} recebido no CD!`);
+      toast.info('Funcionalidade em desenvolvimento');
       setReceiveModalOpen(false);
       setReceiveEtiInput('');
-      await loadShipments();
     } catch (error) {
       toast.error('Erro ao receber volume');
     } finally {
@@ -225,19 +136,13 @@ const CdDashboard = () => {
   };
 
   // Filtra remessas por status
-  // Em Trânsito: volumes sendo coletados (pendentes ou aceitos por motorista de coleta)
   const emTransito = shipments.filter(s => 
-    ['PENDENTE_COLETA', 'B2B_COLETA_PENDENTE', 'PENDENTE', 'B2B_COLETA_ACEITA'].includes(s.status)
+    ['PENDENTE', 'ACEITA'].includes(s.status)
   );
   
-  // No CD: volumes que chegaram e aguardam motorista de entrega aceitar
   const noCd = shipments.filter(s => s.status === 'NO_CD');
-  
-  // Em Rota: volumes aceitos por motorista de entrega
-  const emRota = shipments.filter(s => ['EM_ROTA', 'B2B_VOLUME_ACEITO'].includes(s.status));
-  
-  // Entregues: volumes finalizados
-  const entregues = shipments.filter(s => s.status === 'ENTREGUE');
+  const emRota = shipments.filter(s => ['EM_ROTA'].includes(s.status));
+  const entregues = shipments.filter(s => s.status === 'CONCLUIDO');
 
   const handleShowDetails = (shipment: B2BShipment) => {
     setSelectedShipment(shipment);
@@ -253,36 +158,28 @@ const CdDashboard = () => {
             <h3 className="font-mono font-medium">{s.tracking_code}</h3>
           </div>
           <Badge className={
-            s.status === 'ENTREGUE' ? 'bg-green-500' : 
-            ['EM_ROTA', 'B2B_VOLUME_ACEITO'].includes(s.status) ? 'bg-blue-500' : 
+            s.status === 'CONCLUIDO' ? 'bg-green-500' : 
+            ['EM_ROTA'].includes(s.status) ? 'bg-blue-500' : 
             s.status === 'NO_CD' ? 'bg-purple-500' : 
-            s.status === 'B2B_COLETA_ACEITA' ? 'bg-yellow-500' :
             'bg-orange-500'
           }>
             {s.status === 'NO_CD' ? 'No CD' :
-             ['EM_ROTA', 'B2B_VOLUME_ACEITO'].includes(s.status) ? 'Em Rota' :
-             s.status === 'ENTREGUE' ? 'Entregue' :
-             s.status === 'B2B_COLETA_ACEITA' ? 'Coletado' :
-             'Aguardando Coleta'}
+             s.status === 'EM_ROTA' ? 'Em Rota' :
+             s.status === 'CONCLUIDO' ? 'Concluído' :
+             'Pendente'}
           </Badge>
         </div>
         
         <div className="text-sm text-muted-foreground">
-          <MapPin className="h-3 w-3 inline mr-1" />
-          {s.recipient_name || 'Destinatário'} - {s.recipient_city || 'Cidade'}/{s.recipient_state || 'UF'}
+          <Package className="h-3 w-3 inline mr-1" />
+          {s.total_volumes} volume(s) - {s.total_weight} kg
         </div>
-        
-        {s.volume_weight && (
-          <div className="text-sm text-muted-foreground mt-1">
-            Peso: {s.volume_weight} kg
-          </div>
-        )}
 
-        {/* Mostrar motorista de coleta */}
+        {/* Mostrar motorista */}
         {s.motorista_nome && (
           <div className="flex items-center gap-1 mt-2 text-sm">
             <User className="h-3 w-3 text-blue-500" />
-            <span className="text-blue-600 font-medium">Coletado por: {s.motorista_nome}</span>
+            <span className="text-blue-600 font-medium">Motorista: {s.motorista_nome}</span>
           </div>
         )}
 
@@ -368,7 +265,7 @@ const CdDashboard = () => {
             <CardContent className="p-3 text-center">
               <CheckCircle className="h-5 w-5 mx-auto text-green-500" />
               <p className="text-2xl font-bold">{entregues.length}</p>
-              <p className="text-xs">Entregues</p>
+              <p className="text-xs">Concluídos</p>
             </CardContent>
           </Card>
         </div>
@@ -395,7 +292,7 @@ const CdDashboard = () => {
               Em Rota
             </TabsTrigger>
             <TabsTrigger value="entregues" className="data-[state=active]:bg-green-100 data-[state=active]:text-green-700">
-              Entregues
+              Concluídos
             </TabsTrigger>
           </TabsList>
 
@@ -417,12 +314,12 @@ const CdDashboard = () => {
             )}
           </TabsContent>
 
-          {/* No CD - aguardando motorista de entrega aceitar */}
+          {/* No CD */}
           <TabsContent value="no_cd">
             {noCd.length ? (
               <>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Volumes aguardando motorista de entrega aceitar
+                  Volumes aguardando motorista de entrega
                 </p>
                 {noCd.map(s => renderCard(s))}
               </>
@@ -435,7 +332,7 @@ const CdDashboard = () => {
             )}
           </TabsContent>
 
-          {/* Em Rota - aceitos por motoristas de entrega */}
+          {/* Em Rota */}
           <TabsContent value="em_rota">
             {emRota.length ? (
               <>
@@ -453,14 +350,14 @@ const CdDashboard = () => {
             )}
           </TabsContent>
 
-          {/* Entregues */}
+          {/* Concluídos */}
           <TabsContent value="entregues">
             {entregues.length ? (
               entregues.map(s => renderCard(s))
             ) : (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  Nenhuma remessa entregue
+                  Nenhuma remessa concluída
                 </CardContent>
               </Card>
             )}
@@ -475,43 +372,55 @@ const CdDashboard = () => {
             <DialogTitle>Receber Volume no CD</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Digite os 4 dígitos do código ETI do volume coletado
+            Digite o código ETI do volume para recebê-lo no CD.
           </p>
-          <Input 
-            placeholder="0001" 
-            value={receiveEtiInput} 
-            onChange={e => setReceiveEtiInput(e.target.value.replace(/\D/g, '').slice(0, 4))} 
-            className="text-center text-2xl font-mono"
+          <Input
+            placeholder="Ex: 0001"
+            value={receiveEtiInput}
+            onChange={(e) => setReceiveEtiInput(e.target.value)}
+            className="font-mono text-center text-lg"
             maxLength={4}
           />
-          <p className="text-xs text-amber-600">
-            ⚠️ Apenas volumes já coletados por motorista podem ser recebidos
-          </p>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              className="flex-1" 
-              onClick={() => { setReceiveModalOpen(false); setReceiveEtiInput(''); }}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              className="flex-1 bg-purple-600 hover:bg-purple-700" 
-              onClick={handleReceiveVolume} 
-              disabled={receiving || receiveEtiInput.length < 4}
-            >
-              {receiving ? 'Recebendo...' : 'Confirmar'}
-            </Button>
-          </div>
+          <Button 
+            onClick={handleReceiveVolume} 
+            disabled={receiving || !receiveEtiInput.trim()}
+            className="w-full"
+          >
+            {receiving ? 'Recebendo...' : 'Confirmar Recebimento'}
+          </Button>
         </DialogContent>
       </Dialog>
 
       {/* Modal de Detalhes */}
-      <CdShipmentDetailsModal
-        isOpen={showDetailsModal}
-        onClose={() => setShowDetailsModal(false)}
-        shipment={selectedShipment}
-      />
+      <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalhes da Remessa</DialogTitle>
+          </DialogHeader>
+          {selectedShipment && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Código</p>
+                <p className="font-mono font-semibold">{selectedShipment.tracking_code}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Volumes</p>
+                  <p className="font-semibold">{selectedShipment.total_volumes}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Peso Total</p>
+                  <p className="font-semibold">{selectedShipment.total_weight} kg</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Histórico</p>
+                <B2BStatusHistory shipmentId={selectedShipment.id} />
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

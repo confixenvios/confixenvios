@@ -324,9 +324,9 @@ const AdminRelatorios = () => {
       supabase.from('addresses').select('id, city, state').in('id', addressIds)
     ]);
 
-    const clientsMap = new Map(clientsData.data?.map(c => [c.id, c]) || []);
-    const motoristasMap = new Map(motoristasData.data?.map(m => [m.id, m]) || []);
-    const addressesMap = new Map(addressesData.data?.map(a => [a.id, a]) || []);
+    const clientsMap = new Map((clientsData.data as any[] || []).map(c => [c.id, c]));
+    const motoristasMap = new Map((motoristasData.data as any[] || []).map(m => [m.id, m]));
+    const addressesMap = new Map((addressesData.data as any[] || []).map(a => [a.id, a]));
 
     return shipments?.map(shipment => {
       const client = clientsMap.get(shipment.user_id);
@@ -349,8 +349,8 @@ const AdminRelatorios = () => {
         pickup_type: shipment.pickup_option === 'pickup' ? 'Domiciliar' : 'Balcão',
         estimated_value: quoteData?.shippingQuote?.economicPrice || quoteData?.shippingQuote?.expressPrice || 0,
         pricing_table: shipment.pricing_table_name || 'Sistema Legado',
-        driver_name: motorista?.nome || 'Não atribuído',
-        driver_email: motorista?.email || 'N/A',
+        driver_name: (motorista as any)?.nome || 'Não atribuído',
+        driver_username: (motorista as any)?.username || 'N/A',
         created_at: format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
         updated_at: format(new Date(shipment.updated_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
         days_in_transit: Math.floor((new Date().getTime() - new Date(shipment.created_at).getTime()) / (1000 * 3600 * 24)),
