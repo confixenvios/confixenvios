@@ -4,6 +4,7 @@ import { Printer, Download } from 'lucide-react';
 import Barcode from 'react-barcode';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import confixLogo from '@/assets/confix-logo-label.ico';
 
 interface B2BVolume {
   id: string;
@@ -121,9 +122,12 @@ const B2BLabelGenerator = ({
         style={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}
       >
         {/* Header */}
-        <div className="text-center border-b-2 border-black pb-3 mb-3">
-          <h2 className="font-bold text-lg">CONFIX ENVIOS</h2>
-          <p className="text-xs">B2B Express</p>
+        <div className="flex items-center justify-center gap-2 border-b-2 border-black pb-3 mb-3">
+          <img src={confixLogo} alt="Confix Logo" className="w-8 h-8" />
+          <div className="text-center">
+            <h2 className="font-bold text-lg">CONFIX ENVIOS</h2>
+            <p className="text-xs">B2B Express</p>
+          </div>
         </div>
 
         {/* Remetente */}
