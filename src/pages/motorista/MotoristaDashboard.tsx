@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, User, Camera, AlertTriangle, Menu, ClipboardList, Send, History, X } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, User, Camera, AlertTriangle, Menu, ClipboardList, Send, History, X, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -143,6 +143,9 @@ const MotoristaDashboard = () => {
   
   // Modal detalhes
   const [selectedVolume, setSelectedVolume] = useState<B2BVolume | null>(null);
+  
+  // Campo de busca
+  const [searchFilter, setSearchFilter] = useState('');
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
@@ -272,26 +275,31 @@ const MotoristaDashboard = () => {
     navigate('/motorista/auth');
   };
 
+  // Helper para filtrar por busca
+  const filterBySearch = (list: B2BVolume[]) => {
+    if (!searchFilter.trim()) return list;
+    const searchDigits = searchFilter.replace(/\D/g, '').slice(-4).padStart(4, '0');
+    return list.filter(v => v.eti_code.endsWith(searchDigits));
+  };
+
   // Filtros - Coletas
-  const pendentes = volumes.filter(v => v.status === 'PENDENTE' && !v.motorista_coleta_id);
-  const aceitos = volumes.filter(v => v.status === 'ACEITO' && v.motorista_coleta_id === motorista?.id);
-  const coletados = volumes.filter(v => v.status === 'COLETADO' && v.motorista_coleta_id === motorista?.id);
-  const entreguesAoCd = volumes.filter(v => {
+  const pendentes = filterBySearch(volumes.filter(v => v.status === 'PENDENTE' && !v.motorista_coleta_id));
+  const aceitos = filterBySearch(volumes.filter(v => v.status === 'ACEITO' && v.motorista_coleta_id === motorista?.id));
+  const coletados = filterBySearch(volumes.filter(v => v.status === 'COLETADO' && v.motorista_coleta_id === motorista?.id));
+  const entreguesAoCd = filterBySearch(volumes.filter(v => {
     if (!['EM_TRIAGEM', 'AGUARDANDO_EXPEDICAO', 'DESPACHADO', 'CONCLUIDO'].includes(v.status)) return false;
-    // Verifica se motorista_coleta_id é o motorista atual OU se no histórico há registro de COLETADO por este motorista
     if (v.motorista_coleta_id === motorista?.id) return true;
-    // Verificar no histórico se este motorista coletou
     const coletouNoHistorico = v.status_history?.some(h => 
       h.status === 'COLETADO' && h.motorista_id === motorista?.id
     );
     return coletouNoHistorico;
-  });
+  }));
 
   // Filtros - Despache
-  const aguardandoExpedicao = volumes.filter(v => v.status === 'AGUARDANDO_EXPEDICAO' && v.motorista_entrega_id === motorista?.id);
-  const despachados = volumes.filter(v => v.status === 'DESPACHADO' && v.motorista_entrega_id === motorista?.id);
-  const concluidos = volumes.filter(v => v.status === 'CONCLUIDO' && v.motorista_entrega_id === motorista?.id);
-  const devolucoes = volumes.filter(v => v.status === 'DEVOLUCAO' && v.motorista_entrega_id === motorista?.id);
+  const aguardandoExpedicao = filterBySearch(volumes.filter(v => v.status === 'AGUARDANDO_EXPEDICAO' && v.motorista_entrega_id === motorista?.id));
+  const despachados = filterBySearch(volumes.filter(v => v.status === 'DESPACHADO' && v.motorista_entrega_id === motorista?.id));
+  const concluidos = filterBySearch(volumes.filter(v => v.status === 'CONCLUIDO' && v.motorista_entrega_id === motorista?.id));
+  const devolucoes = filterBySearch(volumes.filter(v => v.status === 'DEVOLUCAO' && v.motorista_entrega_id === motorista?.id));
 
   // Parse ETI
   const parseEtiCode = (input: string): string => {
@@ -864,6 +872,19 @@ const MotoristaDashboard = () => {
             </Button>
           </div>
         </div>
+        
+        {/* Campo de busca */}
+        <div className="px-4 pb-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por ETI (ex: 0004)"
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              className="pl-9 font-mono"
+            />
+          </div>
+        </div>
       </header>
 
       <main className="container mx-auto px-4 py-4">
@@ -1158,7 +1179,7 @@ const MotoristaDashboard = () => {
               
               {!etiValidated ? (
                 <div className="space-y-2">
-                  <Label>Digite o código ETI para validar</Label>
+                  <Label>Bipe o código de barras da etiqueta para validar</Label>
                   <Input
                     placeholder="Ex: 0001"
                     value={finalizeEtiInput}
