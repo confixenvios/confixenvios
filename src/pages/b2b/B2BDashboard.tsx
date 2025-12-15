@@ -7,13 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Package, Plus, Eye, Loader2, ChevronDown, History, MapPin, User, Phone, FileText, Printer } from 'lucide-react';
+import { Package, Plus, Eye, Loader2, ChevronDown, History, MapPin, User, Phone, FileText, Printer, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import B2BStatusBadge from '@/components/b2b/B2BStatusBadge';
 import B2BVolumeStatusHistory from '@/components/b2b/B2BVolumeStatusHistory';
 import B2BLabelGenerator from '@/components/b2b/B2BLabelGenerator';
+import B2BAllLabelsGenerator from '@/components/b2b/B2BAllLabelsGenerator';
 
 interface B2BClient {
   id: string;
@@ -247,9 +248,26 @@ const B2BDashboard = () => {
                     <p className="text-xs text-muted-foreground mt-1">
                       {format(new Date(shipment.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
                     </p>
-                    <p className="text-xs font-semibold text-orange-600 dark:text-orange-400 mt-2">
-                      ⚠️ Atenção: Por favor cole esta etiqueta no produto
-                    </p>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-xs font-semibold text-orange-600 dark:text-orange-400">
+                        ⚠️ Atenção: Por favor cole as etiquetas no produto
+                      </p>
+                      <B2BAllLabelsGenerator
+                        volumes={shipmentVolumes}
+                        shipment={{
+                          id: shipment.id,
+                          tracking_code: shipment.tracking_code,
+                          delivery_date: shipment.delivery_date,
+                          pickup_address: shipment.pickup_address
+                        }}
+                        companyName={client?.company_name}
+                        companyDocument={client?.cnpj}
+                        companyPhone={client?.phone}
+                        buttonVariant="outline"
+                        buttonSize="sm"
+                        buttonClassName="h-7 text-xs"
+                      />
+                    </div>
 
                     {/* Volumes list */}
                     <Collapsible className="mt-3">
@@ -281,9 +299,6 @@ const B2BDashboard = () => {
                                 </p>
                               </div>
                             </div>
-                            <p className="text-[11px] font-semibold text-orange-600 dark:text-orange-400">
-                              ⚠️ Atenção: Por favor cole esta etiqueta no produto
-                            </p>
                             <div className="flex items-center gap-2 pt-1 border-t border-border/50">
                               <Button
                                 variant="outline"
@@ -293,15 +308,6 @@ const B2BDashboard = () => {
                               >
                                 <Eye className="h-3 w-3 mr-1" />
                                 Ver Detalhes
-                              </Button>
-                              <Button
-                                variant="default"
-                                size="sm"
-                                className="h-7 text-xs flex-1"
-                                onClick={() => handlePrintLabel(volume)}
-                              >
-                                <Printer className="h-3 w-3 mr-1" />
-                                Baixar Etiqueta
                               </Button>
                             </div>
                           </div>
