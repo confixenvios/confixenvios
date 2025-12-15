@@ -406,13 +406,6 @@ export type Database = {
           cnpj: string | null
           company_name: string
           created_at: string | null
-          default_pickup_cep: string | null
-          default_pickup_city: string | null
-          default_pickup_complement: string | null
-          default_pickup_neighborhood: string | null
-          default_pickup_number: string | null
-          default_pickup_state: string | null
-          default_pickup_street: string | null
           email: string
           id: string
           is_active: boolean | null
@@ -424,13 +417,6 @@ export type Database = {
           cnpj?: string | null
           company_name: string
           created_at?: string | null
-          default_pickup_cep?: string | null
-          default_pickup_city?: string | null
-          default_pickup_complement?: string | null
-          default_pickup_neighborhood?: string | null
-          default_pickup_number?: string | null
-          default_pickup_state?: string | null
-          default_pickup_street?: string | null
           email: string
           id?: string
           is_active?: boolean | null
@@ -442,13 +428,6 @@ export type Database = {
           cnpj?: string | null
           company_name?: string
           created_at?: string | null
-          default_pickup_cep?: string | null
-          default_pickup_city?: string | null
-          default_pickup_complement?: string | null
-          default_pickup_neighborhood?: string | null
-          default_pickup_number?: string | null
-          default_pickup_state?: string | null
-          default_pickup_street?: string | null
           email?: string
           id?: string
           is_active?: boolean | null
@@ -464,7 +443,7 @@ export type Database = {
           cep: string
           city: string
           complement: string | null
-          created_at: string
+          created_at: string | null
           id: string
           is_default: boolean | null
           name: string
@@ -476,14 +455,14 @@ export type Database = {
           reference: string | null
           state: string
           street: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           b2b_client_id: string
           cep: string
           city: string
           complement?: string | null
-          created_at?: string
+          created_at?: string | null
           id?: string
           is_default?: boolean | null
           name: string
@@ -495,14 +474,14 @@ export type Database = {
           reference?: string | null
           state: string
           street: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           b2b_client_id?: string
           cep?: string
           city?: string
           complement?: string | null
-          created_at?: string
+          created_at?: string | null
           id?: string
           is_default?: boolean | null
           name?: string
@@ -514,7 +493,7 @@ export type Database = {
           reference?: string | null
           state?: string
           street?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -534,7 +513,7 @@ export type Database = {
           complement: string | null
           contact_name: string
           contact_phone: string
-          created_at: string
+          created_at: string | null
           id: string
           is_default: boolean | null
           name: string
@@ -543,7 +522,7 @@ export type Database = {
           reference: string | null
           state: string
           street: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           b2b_client_id: string
@@ -552,7 +531,7 @@ export type Database = {
           complement?: string | null
           contact_name: string
           contact_phone: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           is_default?: boolean | null
           name: string
@@ -561,7 +540,7 @@ export type Database = {
           reference?: string | null
           state: string
           street: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           b2b_client_id?: string
@@ -570,7 +549,7 @@ export type Database = {
           complement?: string | null
           contact_name?: string
           contact_phone?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           is_default?: boolean | null
           name?: string
@@ -579,7 +558,7 @@ export type Database = {
           reference?: string | null
           state?: string
           street?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -595,92 +574,56 @@ export type Database = {
         Row: {
           b2b_client_id: string
           created_at: string | null
-          delivery_date: string | null
-          delivery_type: string | null
+          delivery_date: string
           id: string
-          is_volume: boolean | null
-          motorista_id: string | null
+          motorista_coleta_id: string | null
+          motorista_entrega_id: string | null
           observations: string | null
-          package_type: string | null
-          parent_shipment_id: string | null
-          pickup_requested_at: string | null
-          recipient_cep: string | null
-          recipient_city: string | null
-          recipient_complement: string | null
-          recipient_name: string | null
-          recipient_neighborhood: string | null
-          recipient_number: string | null
-          recipient_phone: string | null
-          recipient_state: string | null
-          recipient_street: string | null
-          shipment_id: string | null
+          payment_data: Json | null
+          pickup_address_id: string | null
           status: string
+          total_price: number
+          total_volumes: number
+          total_weight: number
           tracking_code: string | null
           updated_at: string | null
-          volume_count: number | null
-          volume_eti_code: string | null
-          volume_number: number | null
-          volume_weight: number | null
+          vehicle_type: string | null
         }
         Insert: {
           b2b_client_id: string
           created_at?: string | null
-          delivery_date?: string | null
-          delivery_type?: string | null
+          delivery_date: string
           id?: string
-          is_volume?: boolean | null
-          motorista_id?: string | null
+          motorista_coleta_id?: string | null
+          motorista_entrega_id?: string | null
           observations?: string | null
-          package_type?: string | null
-          parent_shipment_id?: string | null
-          pickup_requested_at?: string | null
-          recipient_cep?: string | null
-          recipient_city?: string | null
-          recipient_complement?: string | null
-          recipient_name?: string | null
-          recipient_neighborhood?: string | null
-          recipient_number?: string | null
-          recipient_phone?: string | null
-          recipient_state?: string | null
-          recipient_street?: string | null
-          shipment_id?: string | null
+          payment_data?: Json | null
+          pickup_address_id?: string | null
           status?: string
+          total_price?: number
+          total_volumes?: number
+          total_weight?: number
           tracking_code?: string | null
           updated_at?: string | null
-          volume_count?: number | null
-          volume_eti_code?: string | null
-          volume_number?: number | null
-          volume_weight?: number | null
+          vehicle_type?: string | null
         }
         Update: {
           b2b_client_id?: string
           created_at?: string | null
-          delivery_date?: string | null
-          delivery_type?: string | null
+          delivery_date?: string
           id?: string
-          is_volume?: boolean | null
-          motorista_id?: string | null
+          motorista_coleta_id?: string | null
+          motorista_entrega_id?: string | null
           observations?: string | null
-          package_type?: string | null
-          parent_shipment_id?: string | null
-          pickup_requested_at?: string | null
-          recipient_cep?: string | null
-          recipient_city?: string | null
-          recipient_complement?: string | null
-          recipient_name?: string | null
-          recipient_neighborhood?: string | null
-          recipient_number?: string | null
-          recipient_phone?: string | null
-          recipient_state?: string | null
-          recipient_street?: string | null
-          shipment_id?: string | null
+          payment_data?: Json | null
+          pickup_address_id?: string | null
           status?: string
+          total_price?: number
+          total_volumes?: number
+          total_weight?: number
           tracking_code?: string | null
           updated_at?: string | null
-          volume_count?: number | null
-          volume_eti_code?: string | null
-          volume_number?: number | null
-          volume_weight?: number | null
+          vehicle_type?: string | null
         }
         Relationships: [
           {
@@ -691,89 +634,207 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "b2b_shipments_parent_shipment_id_fkey"
-            columns: ["parent_shipment_id"]
+            foreignKeyName: "b2b_shipments_motorista_coleta_id_fkey"
+            columns: ["motorista_coleta_id"]
             isOneToOne: false
-            referencedRelation: "b2b_shipments"
+            referencedRelation: "motoristas"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "b2b_shipments_shipment_id_fkey"
-            columns: ["shipment_id"]
+            foreignKeyName: "b2b_shipments_motorista_entrega_id_fkey"
+            columns: ["motorista_entrega_id"]
             isOneToOne: false
-            referencedRelation: "shipments"
+            referencedRelation: "motoristas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "b2b_shipments_pickup_address_id_fkey"
+            columns: ["pickup_address_id"]
+            isOneToOne: false
+            referencedRelation: "b2b_pickup_addresses"
             referencedColumns: ["id"]
           },
         ]
       }
-      b2b_volume_labels: {
+      b2b_status_history: {
         Row: {
-          b2b_shipment_id: string
-          created_at: string
-          eti_code: string
-          eti_sequence_number: number
+          created_at: string | null
           id: string
-          volume_number: number
+          is_alert: boolean | null
+          motorista_id: string | null
+          motorista_nome: string | null
+          observacoes: string | null
+          status: string
+          volume_id: string
         }
         Insert: {
-          b2b_shipment_id: string
-          created_at?: string
-          eti_code: string
-          eti_sequence_number: number
+          created_at?: string | null
           id?: string
-          volume_number: number
+          is_alert?: boolean | null
+          motorista_id?: string | null
+          motorista_nome?: string | null
+          observacoes?: string | null
+          status: string
+          volume_id: string
         }
         Update: {
-          b2b_shipment_id?: string
-          created_at?: string
-          eti_code?: string
-          eti_sequence_number?: number
+          created_at?: string | null
           id?: string
-          volume_number?: number
+          is_alert?: boolean | null
+          motorista_id?: string | null
+          motorista_nome?: string | null
+          observacoes?: string | null
+          status?: string
+          volume_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "b2b_volume_labels_b2b_shipment_id_fkey"
+            foreignKeyName: "b2b_status_history_motorista_id_fkey"
+            columns: ["motorista_id"]
+            isOneToOne: false
+            referencedRelation: "motoristas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "b2b_status_history_volume_id_fkey"
+            columns: ["volume_id"]
+            isOneToOne: false
+            referencedRelation: "b2b_volumes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      b2b_volumes: {
+        Row: {
+          b2b_shipment_id: string
+          created_at: string | null
+          delivery_address_id: string | null
+          eti_code: string
+          foto_entrega_url: string | null
+          id: string
+          motorista_coleta_id: string | null
+          motorista_entrega_id: string | null
+          recipient_cep: string
+          recipient_city: string
+          recipient_complement: string | null
+          recipient_document: string | null
+          recipient_name: string
+          recipient_neighborhood: string
+          recipient_number: string
+          recipient_phone: string
+          recipient_state: string
+          recipient_street: string
+          status: string
+          updated_at: string | null
+          volume_number: number
+          weight: number
+        }
+        Insert: {
+          b2b_shipment_id: string
+          created_at?: string | null
+          delivery_address_id?: string | null
+          eti_code: string
+          foto_entrega_url?: string | null
+          id?: string
+          motorista_coleta_id?: string | null
+          motorista_entrega_id?: string | null
+          recipient_cep: string
+          recipient_city: string
+          recipient_complement?: string | null
+          recipient_document?: string | null
+          recipient_name: string
+          recipient_neighborhood: string
+          recipient_number: string
+          recipient_phone: string
+          recipient_state: string
+          recipient_street: string
+          status?: string
+          updated_at?: string | null
+          volume_number: number
+          weight: number
+        }
+        Update: {
+          b2b_shipment_id?: string
+          created_at?: string | null
+          delivery_address_id?: string | null
+          eti_code?: string
+          foto_entrega_url?: string | null
+          id?: string
+          motorista_coleta_id?: string | null
+          motorista_entrega_id?: string | null
+          recipient_cep?: string
+          recipient_city?: string
+          recipient_complement?: string | null
+          recipient_document?: string | null
+          recipient_name?: string
+          recipient_neighborhood?: string
+          recipient_number?: string
+          recipient_phone?: string
+          recipient_state?: string
+          recipient_street?: string
+          status?: string
+          updated_at?: string | null
+          volume_number?: number
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "b2b_volumes_b2b_shipment_id_fkey"
             columns: ["b2b_shipment_id"]
             isOneToOne: false
             referencedRelation: "b2b_shipments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "b2b_volumes_delivery_address_id_fkey"
+            columns: ["delivery_address_id"]
+            isOneToOne: false
+            referencedRelation: "b2b_delivery_addresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "b2b_volumes_motorista_coleta_id_fkey"
+            columns: ["motorista_coleta_id"]
+            isOneToOne: false
+            referencedRelation: "motoristas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "b2b_volumes_motorista_entrega_id_fkey"
+            columns: ["motorista_entrega_id"]
+            isOneToOne: false
+            referencedRelation: "motoristas"
             referencedColumns: ["id"]
           },
         ]
       }
       cd_users: {
         Row: {
-          cpf: string
-          created_at: string
+          created_at: string | null
           email: string
           id: string
           nome: string
-          senha: string
           status: string
-          telefone: string
-          updated_at: string
+          updated_at: string | null
+          user_id: string | null
         }
         Insert: {
-          cpf: string
-          created_at?: string
+          created_at?: string | null
           email: string
           id?: string
           nome: string
-          senha: string
           status?: string
-          telefone: string
-          updated_at?: string
+          updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
-          cpf?: string
-          created_at?: string
+          created_at?: string | null
           email?: string
           id?: string
           nome?: string
-          senha?: string
           status?: string
-          telefone?: string
-          updated_at?: string
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1103,48 +1164,36 @@ export type Database = {
       motoristas: {
         Row: {
           cpf: string
-          created_at: string
-          email: string
+          created_at: string | null
           id: string
           nome: string
           senha: string
           status: string
           telefone: string
-          tipo_pedidos: string
-          updated_at: string
-          ve_b2b_coleta: boolean | null
-          ve_b2b_entrega: boolean | null
-          ve_convencional: boolean | null
+          updated_at: string | null
+          username: string
         }
         Insert: {
           cpf: string
-          created_at?: string
-          email: string
+          created_at?: string | null
           id?: string
           nome: string
           senha: string
           status?: string
           telefone: string
-          tipo_pedidos?: string
-          updated_at?: string
-          ve_b2b_coleta?: boolean | null
-          ve_b2b_entrega?: boolean | null
-          ve_convencional?: boolean | null
+          updated_at?: string | null
+          username: string
         }
         Update: {
           cpf?: string
-          created_at?: string
-          email?: string
+          created_at?: string | null
           id?: string
           nome?: string
           senha?: string
           status?: string
           telefone?: string
-          tipo_pedidos?: string
-          updated_at?: string
-          ve_b2b_coleta?: boolean | null
-          ve_b2b_entrega?: boolean | null
-          ve_convencional?: boolean | null
+          updated_at?: string | null
+          username?: string
         }
         Relationships: []
       }
@@ -1535,22 +1584,7 @@ export type Database = {
           status?: string
           status_description?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "shipment_status_history_b2b_shipment_id_fkey"
-            columns: ["b2b_shipment_id"]
-            isOneToOne: false
-            referencedRelation: "b2b_shipments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shipment_status_history_motorista_id_fkey"
-            columns: ["motorista_id"]
-            isOneToOne: false
-            referencedRelation: "motoristas"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       shipments: {
         Row: {
@@ -1635,13 +1669,6 @@ export type Database = {
           width?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "shipments_motorista_id_fkey"
-            columns: ["motorista_id"]
-            isOneToOne: false
-            referencedRelation: "motoristas"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "shipments_pricing_table_id_fkey"
             columns: ["pricing_table_id"]
@@ -1909,6 +1936,16 @@ export type Database = {
           telefone: string
         }[]
       }
+      authenticate_motorista_username: {
+        Args: { p_password: string; p_username: string }
+        Returns: {
+          id: string
+          nome: string
+          status: string
+          telefone: string
+          username: string
+        }[]
+      }
       bytea_to_text: { Args: { data: string }; Returns: string }
       check_rate_limit: {
         Args: {
@@ -1980,6 +2017,7 @@ export type Database = {
       }
       generate_api_key: { Args: never; Returns: string }
       generate_b2b_tracking_code: { Args: never; Returns: string }
+      generate_eti_code: { Args: never; Returns: string }
       generate_eti_codes_for_shipment: {
         Args: { p_b2b_shipment_id: string; p_volume_count: number }
         Returns: {
