@@ -45,6 +45,7 @@ interface B2BVolume {
   shipment?: {
     tracking_code: string;
     delivery_date: string;
+    vehicle_type?: string;
     pickup_address?: {
       name: string;
       contact_name: string;
@@ -192,6 +193,7 @@ const MotoristaDashboard = () => {
           shipment:b2b_shipments(
             tracking_code, 
             delivery_date,
+            vehicle_type,
             pickup_address:b2b_pickup_addresses(name, contact_name, contact_phone, street, number, neighborhood, city, state)
           )
         `)
@@ -1378,6 +1380,19 @@ const MotoristaDashboard = () => {
                   {STATUS_CONFIG[selectedVolume.status]?.label}
                 </Badge>
               </div>
+
+              {/* Veículo Escolhido */}
+              {selectedVolume.shipment?.vehicle_type && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Veículo Escolhido:</span>
+                  <span className="font-medium capitalize">
+                    {selectedVolume.shipment.vehicle_type === 'moto' ? 'Moto' : 
+                     selectedVolume.shipment.vehicle_type === 'carro' ? 'Carro' : 
+                     selectedVolume.shipment.vehicle_type === 'caminhao' ? 'Caminhão' : 
+                     selectedVolume.shipment.vehicle_type}
+                  </span>
+                </div>
+              )}
 
               {/* Para ACEITO/COLETADO: mostrar endereço do CD fixo */}
               {(selectedVolume.status === 'ACEITO' || selectedVolume.status === 'COLETADO') ? (
