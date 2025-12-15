@@ -712,7 +712,7 @@ const MotoristaDashboard = () => {
             <div className="text-sm text-muted-foreground space-y-1">
               <p className="flex items-center gap-1">
                 <MapPin className="h-3 w-3" />
-                <span className="font-medium">{v.recipient_neighborhood}</span>
+                <span className="font-bold text-foreground">{v.recipient_neighborhood}</span>
               </p>
               {v.shipment?.vehicle_type && (
                 <p className="flex items-center gap-1">
