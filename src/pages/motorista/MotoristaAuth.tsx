@@ -90,7 +90,7 @@ const MotoristaAuth = () => {
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   className="pl-10"
-                  placeholder="seu.usuario"
+                  placeholder="Digite seu usuário"
                   required
                 />
               </div>
