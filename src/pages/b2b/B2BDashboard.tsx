@@ -261,29 +261,44 @@ const B2BDashboard = () => {
                       </CollapsibleTrigger>
                       <CollapsibleContent className="pt-2 border-t mt-2 space-y-2">
                         {shipmentVolumes.map((volume) => (
-                          <div key={volume.id} className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono font-medium">{volume.eti_code}</span>
-                              <Badge variant="outline" className={`text-[10px] ${getStatusColor(volume.status)}`}>
-                                {getStatusLabel(volume.status)}
-                              </Badge>
+                          <div key={volume.id} className="p-3 bg-muted/50 rounded text-xs space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-mono font-semibold text-sm">{volume.eti_code}</span>
+                                  <Badge variant="outline" className={`text-[10px] ${getStatusColor(volume.status)}`}>
+                                    {getStatusLabel(volume.status)}
+                                  </Badge>
+                                </div>
+                                <p className="text-muted-foreground">{volume.recipient_name}</p>
+                                <p className="text-muted-foreground">
+                                  {shipment.delivery_date 
+                                    ? `Previsão: ${format(new Date(shipment.delivery_date), 'dd/MM/yyyy')}`
+                                    : 'Previsão não definida'}
+                                </p>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <p className="text-[11px] font-semibold text-orange-600 dark:text-orange-400">
+                              ⚠️ Atenção: Por favor cole esta etiqueta no produto
+                            </p>
+                            <div className="flex items-center gap-2 pt-1 border-t border-border/50">
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
-                                className="h-6 px-2"
+                                className="h-7 text-xs flex-1"
                                 onClick={() => handleShowVolumeDetails(volume)}
                               >
-                                <Eye className="h-3 w-3" />
+                                <Eye className="h-3 w-3 mr-1" />
+                                Ver Detalhes
                               </Button>
                               <Button
-                                variant="ghost"
+                                variant="default"
                                 size="sm"
-                                className="h-6 px-2"
+                                className="h-7 text-xs flex-1"
                                 onClick={() => handlePrintLabel(volume)}
                               >
-                                <Printer className="h-3 w-3" />
+                                <Printer className="h-3 w-3 mr-1" />
+                                Baixar Etiqueta
                               </Button>
                             </div>
                           </div>
