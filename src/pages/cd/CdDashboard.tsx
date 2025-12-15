@@ -345,24 +345,25 @@ const CdDashboard = () => {
       const motoristaNome = motoristas.find(m => m.id === dispatchMotoristaId)?.nome;
 
       for (const volume of dispatchedVolumes) {
+        // CD despacha para AGUARDANDO_EXPEDICAO, motorista bipa para DESPACHADO
         await supabase
           .from('b2b_volumes')
           .update({ 
-            status: 'DESPACHADO',
+            status: 'AGUARDANDO_EXPEDICAO',
             motorista_entrega_id: dispatchMotoristaId
           })
           .eq('id', volume.id);
 
         await supabase.from('b2b_status_history').insert({
           volume_id: volume.id,
-          status: 'DESPACHADO',
+          status: 'AGUARDANDO_EXPEDICAO',
           motorista_id: dispatchMotoristaId,
           motorista_nome: motoristaNome,
-          observacoes: `Despachado para ${motoristaNome} por ${cdUser?.nome}`
+          observacoes: `Separado para expedição - ${motoristaNome} por ${cdUser?.nome}`
         });
       }
 
-      toast.success(`${dispatchedVolumes.length} volume(s) despachado(s)`);
+      toast.success(`${dispatchedVolumes.length} volume(s) separado(s) para expedição`);
       setDispatchModalOpen(false);
       setDispatchedVolumes([]);
       setDispatchMotoristaId('');
