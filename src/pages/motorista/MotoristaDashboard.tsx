@@ -517,11 +517,25 @@ const MotoristaDashboard = () => {
     { tab: 'devolucoes', label: 'Devoluções', count: devolucoes.length },
   ];
 
+  // Endereço fixo do Centro de Distribuição
+  const CD_ADDRESS = {
+    name: 'Centro de Distribuição',
+    street: 'Avenida Primeira Avenida',
+    number: 'SN',
+    complement: 'Quadra5B Lote 03 e 01 Cond Empresarial Village',
+    neighborhood: 'Cidade Vera Cruz',
+    city: 'Aparecida de Goiânia',
+    state: 'GO',
+    cep: '74934-600'
+  };
+
   // Renderizar card
   const renderVolumeCard = (v: B2BVolume, showActions: 'accept' | 'collect' | 'bip' | 'finalize' | 'none' = 'none') => {
     const statusConfig = STATUS_CONFIG[v.status] || { label: v.status, color: 'text-gray-700', bgColor: 'bg-gray-100' };
     const recentHistory = (v.status_history || []).slice(0, 2);
     const isPendente = v.status === 'PENDENTE';
+    const isAceito = v.status === 'ACEITO';
+    const isColetado = v.status === 'COLETADO';
 
     return (
       <Card key={v.id} className="mb-3">
@@ -546,8 +560,26 @@ const MotoristaDashboard = () => {
                 <span className="font-medium">{v.recipient_neighborhood}</span>
               </p>
             </div>
+          ) : (isAceito || isColetado) ? (
+            /* Para ACEITO e COLETADO: mostrar endereço do CD fixo */
+            <>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p className="flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  {CD_ADDRESS.name}
+                </p>
+                <p className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {CD_ADDRESS.street}, {CD_ADDRESS.number} - {CD_ADDRESS.neighborhood}
+                </p>
+                <p className="flex items-center gap-1">
+                  <Package className="h-3 w-3" />
+                  {v.weight} kg
+                </p>
+              </div>
+            </>
           ) : (
-            /* Para outros status: mostrar detalhes completos */
+            /* Para outros status: mostrar detalhes completos do destinatário */
             <>
               <div className="text-sm text-muted-foreground space-y-1">
                 <p className="flex items-center gap-1">
