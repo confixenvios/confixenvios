@@ -114,6 +114,12 @@ const MotoristaDashboard = () => {
   const [collectEtiInput, setCollectEtiInput] = useState('');
   const [collecting, setCollecting] = useState(false);
   
+  // Modal coletar em lote (ACEITO -> COLETADO)
+  const [collectBatchModalOpen, setCollectBatchModalOpen] = useState(false);
+  const [collectBatchEtiInput, setCollectBatchEtiInput] = useState('');
+  const [collectBatchVolumes, setCollectBatchVolumes] = useState<B2BVolume[]>([]);
+  const [collectingBatch, setCollectingBatch] = useState(false);
+  
   // Modal bipar expedição em lote (AGUARDANDO_EXPEDICAO -> DESPACHADO)
   const [bipBatchModalOpen, setBipBatchModalOpen] = useState(false);
   const [bipBatchEtiInput, setBipBatchEtiInput] = useState('');
@@ -425,6 +431,69 @@ const MotoristaDashboard = () => {
       toast.error('Erro ao finalizar entrega');
     } finally {
       setFinalizing(false);
+    }
+  };
+
+  // ==================== COLETAR EM LOTE ====================
+  const handleCollectBatchEtiKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && collectBatchEtiInput.trim()) {
+      const inputEti = parseEtiCode(collectBatchEtiInput);
+      
+      // Verificar se já foi adicionado
+      if (collectBatchVolumes.some(v => v.eti_code === inputEti)) {
+        toast.error('Volume já adicionado');
+        setCollectBatchEtiInput('');
+        return;
+      }
+      
+      // Verificar se existe nos volumes aceitos
+      const volume = aceitos.find(v => v.eti_code === inputEti);
+      if (!volume) {
+        toast.error('Volume não encontrado ou não está aceito');
+        setCollectBatchEtiInput('');
+        return;
+      }
+      
+      setCollectBatchVolumes([...collectBatchVolumes, volume]);
+      setCollectBatchEtiInput('');
+      toast.success(`Volume ${inputEti} adicionado`);
+    }
+  };
+
+  const handleRemoveCollectBatchVolume = (id: string) => {
+    setCollectBatchVolumes(collectBatchVolumes.filter(v => v.id !== id));
+  };
+
+  const handleConfirmCollectBatch = async () => {
+    if (collectBatchVolumes.length === 0 || !motorista) return;
+    
+    setCollectingBatch(true);
+    try {
+      for (const volume of collectBatchVolumes) {
+        const { error } = await supabase
+          .from('b2b_volumes')
+          .update({ status: 'COLETADO' })
+          .eq('id', volume.id);
+
+        if (error) throw error;
+
+        await supabase.from('b2b_status_history').insert({
+          volume_id: volume.id,
+          status: 'COLETADO',
+          motorista_id: motorista.id,
+          motorista_nome: motorista.nome,
+          observacoes: 'Volume coletado pelo motorista'
+        });
+      }
+
+      toast.success(`${collectBatchVolumes.length} volume(s) coletado(s)!`);
+      setCollectBatchModalOpen(false);
+      setCollectBatchVolumes([]);
+      await loadVolumes();
+    } catch (error) {
+      toast.error('Erro ao coletar volumes');
+    } finally {
+      setCollectingBatch(false);
     }
   };
 
@@ -825,6 +894,17 @@ const MotoristaDashboard = () => {
             </p>
           </div>
           
+          {/* Botão Coletar para seção Coletas na aba aceitos */}
+          {activeSection === 'coletas' && activeTab === 'aceitos' && aceitos.length > 0 && (
+            <Button
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => setCollectBatchModalOpen(true)}
+            >
+              <Package className="h-4 w-4 mr-2" />
+              Coletar
+            </Button>
+          )}
+          
           {/* Botão Bipar Saída para seção Despache na aba aguardando */}
           {activeSection === 'despache' && activeTab === 'aguardando' && aguardandoExpedicao.length > 0 && (
             <Button
@@ -923,6 +1003,77 @@ const MotoristaDashboard = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Coletar em Lote */}
+      <Dialog open={collectBatchModalOpen} onOpenChange={setCollectBatchModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-red-600" />
+              Coletar Volumes
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Bipe o código de barras da etiqueta para confirmar</Label>
+              <Input
+                type="password"
+                value={collectBatchEtiInput}
+                onChange={(e) => setCollectBatchEtiInput(e.target.value)}
+                onKeyDown={handleCollectBatchEtiKeyDown}
+                className="font-mono text-center text-lg"
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">Bipe e pressione Enter para adicionar</p>
+            </div>
+
+            {collectBatchVolumes.length > 0 && (
+              <div className="space-y-2">
+                <Label>Volumes adicionados ({collectBatchVolumes.length})</Label>
+                <ScrollArea className="h-40 border rounded p-2">
+                  {collectBatchVolumes.map(v => (
+                    <div key={v.id} className="flex items-center justify-between py-1 border-b last:border-0">
+                      <div>
+                        <span className="font-mono text-sm">{v.eti_code}</span>
+                        <span className="text-xs text-muted-foreground ml-2">{v.recipient_name}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveCollectBatchVolume(v.id)}
+                      >
+                        <X className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  ))}
+                </ScrollArea>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setCollectBatchModalOpen(false);
+                  setCollectBatchVolumes([]);
+                  setCollectBatchEtiInput('');
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 bg-red-600 hover:bg-red-700"
+                onClick={handleConfirmCollectBatch}
+                disabled={collectingBatch || collectBatchVolumes.length === 0}
+              >
+                {collectingBatch ? 'Coletando...' : `Confirmar (${collectBatchVolumes.length})`}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
