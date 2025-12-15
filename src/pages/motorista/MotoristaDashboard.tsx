@@ -916,7 +916,7 @@ const MotoristaDashboard = () => {
               </div>
               
               <div className="space-y-2">
-                <Label>Bipe a etiqueta para confirmar</Label>
+                <Label>Bipe o código de barras da etiqueta para confirmar</Label>
                 <Input
                   type="password"
                   placeholder="Ex: 0001"
