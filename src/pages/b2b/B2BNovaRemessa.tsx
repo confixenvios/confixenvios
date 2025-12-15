@@ -310,6 +310,12 @@ const B2BNovaRemessa = () => {
   };
 
   const handleNewAddressChange = (field: string, value: string) => {
+    if (field === 'recipient_phone') {
+      const formattedPhone = formatPhone(value);
+      setNewAddress(prev => ({ ...prev, [field]: formattedPhone }));
+      return;
+    }
+    
     setNewAddress(prev => ({ ...prev, [field]: value }));
     
     if (field === 'cep' && value.replace(/\D/g, '').length === 8) {
@@ -458,6 +464,12 @@ const B2BNovaRemessa = () => {
         !newAddress.cep || !newAddress.street || !newAddress.number ||
         !newAddress.neighborhood || !newAddress.city || !newAddress.state || !newAddress.complement) {
       toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    const phoneDigits = newAddress.recipient_phone.replace(/\D/g, '');
+    if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+      toast.error('Telefone deve ter 10 (fixo) ou 11 (celular) dígitos');
       return;
     }
 
