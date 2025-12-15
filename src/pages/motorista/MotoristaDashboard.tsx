@@ -822,7 +822,7 @@ const MotoristaDashboard = () => {
               )}
 
               <Button 
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => {
                   setSelectedVolume(v);
