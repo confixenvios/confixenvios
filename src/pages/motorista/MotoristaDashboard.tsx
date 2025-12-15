@@ -436,7 +436,14 @@ const MotoristaDashboard = () => {
   };
 
   const handleFinalizeDelivery = async () => {
-    if (!volumeToFinalize || !motorista || !deliveryPhoto) return;
+    if (!volumeToFinalize || !motorista || !deliveryPhoto || !finalizeEtiInput) return;
+
+    // Validar código ETI
+    const inputEti = parseEtiCode(finalizeEtiInput);
+    if (inputEti !== volumeToFinalize.eti_code) {
+      toast.error('Código ETI não confere');
+      return;
+    }
 
     setFinalizing(true);
     try {
@@ -478,7 +485,6 @@ const MotoristaDashboard = () => {
       setFinalizeModalOpen(false);
       setFinalizeEtiInput('');
       setDeliveryPhoto(null);
-      setEtiValidated(false);
       await loadVolumes();
     } catch (error) {
       toast.error('Erro ao finalizar entrega');
@@ -1222,97 +1228,78 @@ const MotoristaDashboard = () => {
                 </p>
               </div>
               
-              {!etiValidated ? (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Bipe o código de barras da etiqueta para validar</Label>
-                    <Input
-                      type="password"
-                      value={finalizeEtiInput}
-                      onChange={(e) => setFinalizeEtiInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && finalizeEtiInput && handleValidateEti()}
-                      className="font-mono text-center text-lg"
-                      autoFocus
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Bipe o código de barras da etiqueta *</Label>
+                  <Input
+                    type="password"
+                    value={finalizeEtiInput}
+                    onChange={(e) => setFinalizeEtiInput(e.target.value)}
+                    className="font-mono text-center text-lg"
+                    autoFocus
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Foto de comprovação *</Label>
+                  <div className="border-2 border-dashed rounded-lg p-4 text-center">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      id="delivery-photo"
+                      onChange={(e) => setDeliveryPhoto(e.target.files?.[0] || null)}
                     />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => setFinalizeModalOpen(false)}>
-                      Cancelar
-                    </Button>
-                    <Button className="flex-1" onClick={handleValidateEti} disabled={!finalizeEtiInput}>
-                      Validar Código
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-green-600">
-                    <CheckCircle className="h-5 w-5" />
-                    <span>Código validado!</span>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Foto de comprovação *</Label>
-                    <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        className="hidden"
-                        id="delivery-photo"
-                        onChange={(e) => setDeliveryPhoto(e.target.files?.[0] || null)}
-                      />
-                      {deliveryPhoto ? (
-                        <div className="space-y-2 relative">
-                          <div className="relative inline-block">
-                            <img 
-                              src={URL.createObjectURL(deliveryPhoto)} 
-                              alt="Preview" 
-                              className="max-h-40 mx-auto rounded"
-                            />
-                            <Button
-                              variant="destructive"
-                              size="icon"
-                              className="absolute -top-2 -right-2 h-7 w-7 rounded-full"
-                              onClick={() => setDeliveryPhoto(null)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <label htmlFor="delivery-photo" className="cursor-pointer">
-                            <p className="text-sm text-muted-foreground hover:text-primary">Clique para trocar</p>
-                          </label>
+                    {deliveryPhoto ? (
+                      <div className="space-y-2 relative">
+                        <div className="relative inline-block">
+                          <img 
+                            src={URL.createObjectURL(deliveryPhoto)} 
+                            alt="Preview" 
+                            className="max-h-40 mx-auto rounded"
+                          />
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-7 w-7 rounded-full"
+                            onClick={() => setDeliveryPhoto(null)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
-                      ) : (
-                        <label htmlFor="delivery-photo" className="cursor-pointer block">
-                          <div className="space-y-2">
-                            <Camera className="h-10 w-10 mx-auto text-muted-foreground" />
-                            <p className="text-sm text-muted-foreground">Tirar foto</p>
-                          </div>
+                        <label htmlFor="delivery-photo" className="cursor-pointer">
+                          <p className="text-sm text-muted-foreground hover:text-primary">Clique para trocar</p>
                         </label>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => {
-                      setFinalizeModalOpen(false);
-                      setFinalizeEtiInput('');
-                      setDeliveryPhoto(null);
-                      setEtiValidated(false);
-                    }}>
-                      Cancelar
-                    </Button>
-                    <Button 
-                      className="flex-1 bg-green-600 hover:bg-green-700" 
-                      onClick={handleFinalizeDelivery} 
-                      disabled={finalizing || !deliveryPhoto}
-                    >
-                      {finalizing ? 'Finalizando...' : 'Concluir Entrega'}
-                    </Button>
+                      </div>
+                    ) : (
+                      <label htmlFor="delivery-photo" className="cursor-pointer block">
+                        <div className="space-y-2">
+                          <Camera className="h-10 w-10 mx-auto text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">Tirar foto</p>
+                        </div>
+                      </label>
+                    )}
                   </div>
                 </div>
-              )}
+                
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => {
+                    setFinalizeModalOpen(false);
+                    setFinalizeEtiInput('');
+                    setDeliveryPhoto(null);
+                  }}>
+                    Cancelar
+                  </Button>
+                  <Button 
+                    className="flex-1 bg-green-600 hover:bg-green-700" 
+                    onClick={handleFinalizeDelivery} 
+                    disabled={finalizing || !deliveryPhoto || !finalizeEtiInput}
+                  >
+                    {finalizing ? 'Finalizando...' : 'Finalizar'}
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>
