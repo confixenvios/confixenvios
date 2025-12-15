@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Truck, Mail, Lock } from 'lucide-react';
+import { Truck, User, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -12,29 +12,16 @@ const MotoristaAuth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     senha: ''
   });
 
   // Verificar se já está logado como motorista
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // Verificar se é motorista
-        const { data: roles } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .eq('role', 'motorista')
-          .single();
-        
-        if (roles) {
-          navigate('/motorista/dashboard');
-        }
-      }
-    };
-    checkSession();
+    const motoristaId = localStorage.getItem('motorista_id');
+    if (motoristaId) {
+      navigate('/motorista/dashboard');
+    }
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -42,44 +29,33 @@ const MotoristaAuth = () => {
     setLoading(true);
 
     try {
-      // Login via Supabase Auth
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.senha
+      // Login via função de autenticação do banco
+      const { data, error } = await supabase.rpc('authenticate_motorista_username', {
+        p_username: formData.username.toLowerCase().trim(),
+        p_password: formData.senha
       });
 
       if (error) {
-        throw new Error(error.message === 'Invalid login credentials' 
-          ? 'E-mail ou senha incorretos' 
-          : error.message);
+        console.error('Erro na autenticação:', error);
+        throw new Error('Usuário ou senha incorretos');
       }
 
-      if (!data.user) {
-        throw new Error('Erro ao fazer login');
+      if (!data || data.length === 0) {
+        throw new Error('Usuário ou senha incorretos');
       }
 
-      // Verificar se o usuário tem role motorista
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', data.user.id)
-        .eq('role', 'motorista')
-        .single();
+      const motorista = data[0];
 
-      if (rolesError || !roles) {
-        // Não é motorista, fazer logout e mostrar erro
-        await supabase.auth.signOut();
-        throw new Error('Esta conta não tem permissão de motorista. Por favor, registre-se como motorista.');
+      if (motorista.status !== 'ativo') {
+        throw new Error('Sua conta ainda não foi ativada. Aguarde aprovação do administrador.');
       }
 
-      // Buscar dados do perfil
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, phone, document')
-        .eq('id', data.user.id)
-        .single();
+      // Salvar dados do motorista no localStorage
+      localStorage.setItem('motorista_id', motorista.id);
+      localStorage.setItem('motorista_nome', motorista.nome);
+      localStorage.setItem('motorista_username', motorista.username);
 
-      toast.success(`Bem-vindo, ${profile?.first_name || data.user.email}!`);
+      toast.success(`Bem-vindo, ${motorista.nome}!`);
       navigate('/motorista/dashboard');
 
     } catch (error: any) {
@@ -105,16 +81,16 @@ const MotoristaAuth = () => {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="username">Usuário</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  id="username"
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   className="pl-10"
-                  placeholder="seu@email.com"
+                  placeholder="seu.usuario"
                   required
                 />
               </div>
