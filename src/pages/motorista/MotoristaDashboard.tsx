@@ -3,13 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, Plus, User, ChevronDown, Camera, AlertTriangle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, User, Camera, AlertTriangle, Menu, ClipboardList, Send, History, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface Motorista {
   id: string;
@@ -51,7 +56,39 @@ interface B2BVolume {
       state: string;
     };
   };
+  status_history?: Array<{
+    status: string;
+    created_at: string;
+    observacoes: string | null;
+    motorista_nome: string | null;
+    is_alert: boolean;
+  }>;
 }
+
+// Status config
+const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
+  'PENDENTE': { label: 'Pendente', color: 'text-yellow-700', bgColor: 'bg-yellow-100 border-yellow-300' },
+  'ACEITO': { label: 'Aceito', color: 'text-blue-700', bgColor: 'bg-blue-100 border-blue-300' },
+  'COLETADO': { label: 'Coletado', color: 'text-orange-700', bgColor: 'bg-orange-100 border-orange-300' },
+  'EM_TRIAGEM': { label: 'Em Triagem', color: 'text-purple-700', bgColor: 'bg-purple-100 border-purple-300' },
+  'AGUARDANDO_EXPEDICAO': { label: 'Aguardando Expedição', color: 'text-indigo-700', bgColor: 'bg-indigo-100 border-indigo-300' },
+  'DESPACHADO': { label: 'Despachado', color: 'text-cyan-700', bgColor: 'bg-cyan-100 border-cyan-300' },
+  'CONCLUIDO': { label: 'Concluído', color: 'text-green-700', bgColor: 'bg-green-100 border-green-300' },
+  'DEVOLUCAO': { label: 'Devolução', color: 'text-red-700', bgColor: 'bg-red-100 border-red-300' },
+};
+
+// Tipos de ocorrência
+const OCCURRENCE_TYPES = [
+  'Endereço não encontrado',
+  'Destinatário ausente',
+  'Recusa de recebimento',
+  'Avaria no volume',
+  'Extravio parcial',
+  'Problema de acesso',
+  'Horário inadequado',
+  'Documentação pendente',
+  'Outro'
+];
 
 const MotoristaDashboard = () => {
   const navigate = useNavigate();
@@ -59,36 +96,41 @@ const MotoristaDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [volumes, setVolumes] = useState<B2BVolume[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('disponiveis');
   
-  // Modal para buscar volume por ETI (para entregadores)
-  const [searchModalOpen, setSearchModalOpen] = useState(false);
-  const [searchEtiInput, setSearchEtiInput] = useState('');
-  const [searching, setSearching] = useState(false);
-  const [foundVolume, setFoundVolume] = useState<B2BVolume | null>(null);
+  // Menu state
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('coletas');
+  const [activeTab, setActiveTab] = useState('pendentes');
   
-  // Modal de detalhes
-  const [selectedVolume, setSelectedVolume] = useState<B2BVolume | null>(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  
-  // Modal de aceitar coleta
+  // Modal aceitar
   const [acceptModalOpen, setAcceptModalOpen] = useState(false);
-  const [acceptEtiInput, setAcceptEtiInput] = useState('');
-  const [accepting, setAccepting] = useState(false);
   const [volumeToAccept, setVolumeToAccept] = useState<B2BVolume | null>(null);
+  const [accepting, setAccepting] = useState(false);
   
-  // Modal finalizar entrega
+  // Modal coletar
+  const [collectModalOpen, setCollectModalOpen] = useState(false);
+  const [volumeToCollect, setVolumeToCollect] = useState<B2BVolume | null>(null);
+  const [collectEtiInput, setCollectEtiInput] = useState('');
+  const [collecting, setCollecting] = useState(false);
+  
+  // Modal finalizar
   const [finalizeModalOpen, setFinalizeModalOpen] = useState(false);
+  const [volumeToFinalize, setVolumeToFinalize] = useState<B2BVolume | null>(null);
   const [finalizeEtiInput, setFinalizeEtiInput] = useState('');
   const [finalizing, setFinalizing] = useState(false);
-  const [volumeToFinalize, setVolumeToFinalize] = useState<B2BVolume | null>(null);
   const [deliveryPhoto, setDeliveryPhoto] = useState<File | null>(null);
+  const [etiValidated, setEtiValidated] = useState(false);
   
   // Modal ocorrência
   const [occurrenceModalOpen, setOccurrenceModalOpen] = useState(false);
   const [occurrenceVolume, setOccurrenceVolume] = useState<B2BVolume | null>(null);
+  const [occurrenceType, setOccurrenceType] = useState('');
   const [occurrenceText, setOccurrenceText] = useState('');
   const [savingOccurrence, setSavingOccurrence] = useState(false);
+  
+  // Modal detalhes
+  const [selectedVolume, setSelectedVolume] = useState<B2BVolume | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -96,23 +138,23 @@ const MotoristaDashboard = () => {
 
   const checkAuth = async () => {
     try {
-      const storedMotorista = localStorage.getItem('motorista_id');
+      const storedId = localStorage.getItem('motorista_id');
       const storedNome = localStorage.getItem('motorista_nome');
       const storedUsername = localStorage.getItem('motorista_username');
       
-      if (!storedMotorista || !storedNome) {
+      if (!storedId || !storedNome) {
         navigate('/motorista/auth');
         return;
       }
       
       setMotorista({
-        id: storedMotorista,
+        id: storedId,
         nome: storedNome,
         username: storedUsername || '',
         telefone: ''
       });
       
-      await loadVolumes(storedMotorista);
+      await loadVolumes(storedId);
     } catch (error) {
       navigate('/motorista/auth');
     } finally {
@@ -126,8 +168,8 @@ const MotoristaDashboard = () => {
     
     setRefreshing(true);
     try {
-      // Buscar volumes disponíveis para coleta (PENDENTE)
-      const { data: disponiveis, error: dispError } = await supabase
+      // Buscar todos os volumes relevantes
+      const { data, error } = await supabase
         .from('b2b_volumes')
         .select(`
           *,
@@ -137,32 +179,36 @@ const MotoristaDashboard = () => {
             pickup_address:b2b_pickup_addresses(name, contact_name, contact_phone, street, number, neighborhood, city, state)
           )
         `)
-        .eq('status', 'PENDENTE')
-        .is('motorista_coleta_id', null);
+        .or(`status.eq.PENDENTE,motorista_coleta_id.eq.${id},motorista_entrega_id.eq.${id}`)
+        .order('created_at', { ascending: false });
 
-      // Buscar volumes atribuídos ao motorista (coleta ou entrega)
-      const { data: meusVolumes, error: meusError } = await supabase
-        .from('b2b_volumes')
-        .select(`
-          *,
-          shipment:b2b_shipments(
-            tracking_code, 
-            delivery_date,
-            pickup_address:b2b_pickup_addresses(name, contact_name, contact_phone, street, number, neighborhood, city, state)
-          )
-        `)
-        .or(`motorista_coleta_id.eq.${id},motorista_entrega_id.eq.${id}`);
+      if (error) throw error;
 
-      if (dispError) throw dispError;
-      if (meusError) throw meusError;
+      // Buscar histórico
+      const volumeIds = (data || []).map(v => v.id);
+      let historyMap: Record<string, any[]> = {};
+      
+      if (volumeIds.length > 0) {
+        const { data: historyData } = await supabase
+          .from('b2b_status_history')
+          .select('*')
+          .in('volume_id', volumeIds)
+          .order('created_at', { ascending: false });
+        
+        if (historyData) {
+          historyData.forEach(h => {
+            if (!historyMap[h.volume_id]) historyMap[h.volume_id] = [];
+            historyMap[h.volume_id].push(h);
+          });
+        }
+      }
 
-      // Combinar volumes únicos
-      const allVolumes = [...(disponiveis || []), ...(meusVolumes || [])];
-      const uniqueVolumes = allVolumes.filter((v, i, arr) => 
-        arr.findIndex(x => x.id === v.id) === i
-      );
+      const volumesWithHistory = (data || []).map(v => ({
+        ...v,
+        status_history: historyMap[v.id] || []
+      }));
 
-      setVolumes(uniqueVolumes);
+      setVolumes(volumesWithHistory);
     } catch (error) {
       toast.error('Erro ao carregar volumes');
     } finally {
@@ -177,69 +223,51 @@ const MotoristaDashboard = () => {
     navigate('/motorista/auth');
   };
 
-  // Filtros de volumes
-  const disponiveis = volumes.filter(v => 
-    v.status === 'PENDENTE' && !v.motorista_coleta_id
-  );
-  
-  const minhasRemessas = volumes.filter(v => 
-    (v.motorista_coleta_id === motorista?.id && ['EM_TRANSITO'].includes(v.status)) ||
-    (v.motorista_entrega_id === motorista?.id && ['EM_ROTA'].includes(v.status))
-  );
-  
-  const entregues = volumes.filter(v => 
-    v.status === 'ENTREGUE' && 
-    (v.motorista_coleta_id === motorista?.id || v.motorista_entrega_id === motorista?.id)
+  // Filtros - Coletas
+  const pendentes = volumes.filter(v => v.status === 'PENDENTE' && !v.motorista_coleta_id);
+  const aceitos = volumes.filter(v => v.status === 'ACEITO' && v.motorista_coleta_id === motorista?.id);
+  const coletados = volumes.filter(v => v.status === 'COLETADO' && v.motorista_coleta_id === motorista?.id);
+  const entreguesAoCd = volumes.filter(v => 
+    ['EM_TRIAGEM', 'AGUARDANDO_EXPEDICAO', 'DESPACHADO', 'CONCLUIDO'].includes(v.status) && 
+    v.motorista_coleta_id === motorista?.id
   );
 
-  const handleShowDetails = (volume: B2BVolume) => {
-    setSelectedVolume(volume);
-    setShowDetailsModal(true);
+  // Filtros - Despache
+  const despachados = volumes.filter(v => v.status === 'DESPACHADO' && v.motorista_entrega_id === motorista?.id);
+  const concluidos = volumes.filter(v => v.status === 'CONCLUIDO' && v.motorista_entrega_id === motorista?.id);
+  const devolucoes = volumes.filter(v => v.status === 'DEVOLUCAO' && v.motorista_entrega_id === motorista?.id);
+
+  // Parse ETI
+  const parseEtiCode = (input: string): string => {
+    const cleaned = input.replace(/\D/g, '').slice(-4);
+    return `ETI-${cleaned.padStart(4, '0')}`;
   };
 
-  // Aceitar coleta
-  const handleOpenAcceptModal = (volume: B2BVolume) => {
-    setVolumeToAccept(volume);
-    setAcceptEtiInput('');
-    setAcceptModalOpen(true);
-  };
-
+  // ==================== ACEITAR ====================
   const handleAcceptVolume = async () => {
     if (!volumeToAccept || !motorista) return;
-    
-    // Validar ETI
-    const inputEti = acceptEtiInput.toUpperCase().includes('ETI-') 
-      ? acceptEtiInput.toUpperCase() 
-      : `ETI-${acceptEtiInput.padStart(4, '0')}`;
-    
-    if (inputEti !== volumeToAccept.eti_code) {
-      toast.error('Código ETI não confere');
-      return;
-    }
-
     setAccepting(true);
+
     try {
-      // Atualizar volume
       const { error } = await supabase
         .from('b2b_volumes')
         .update({
-          status: 'EM_TRANSITO',
+          status: 'ACEITO',
           motorista_coleta_id: motorista.id
         })
         .eq('id', volumeToAccept.id);
 
       if (error) throw error;
 
-      // Registrar histórico
       await supabase.from('b2b_status_history').insert({
         volume_id: volumeToAccept.id,
-        status: 'EM_TRANSITO',
+        status: 'ACEITO',
         motorista_id: motorista.id,
         motorista_nome: motorista.nome,
         observacoes: 'Coleta aceita pelo motorista'
       });
 
-      toast.success('Coleta aceita com sucesso!');
+      toast.success('Coleta aceita!');
       setAcceptModalOpen(false);
       await loadVolumes();
     } catch (error) {
@@ -249,101 +277,64 @@ const MotoristaDashboard = () => {
     }
   };
 
-  // Buscar volume para entrega (motoristas de entrega)
-  const handleSearchVolume = async () => {
-    if (!searchEtiInput.trim()) return;
+  // ==================== COLETAR ====================
+  const handleCollectVolume = async () => {
+    if (!volumeToCollect || !motorista) return;
     
-    setSearching(true);
-    try {
-      const etiCode = searchEtiInput.toUpperCase().includes('ETI-') 
-        ? searchEtiInput.toUpperCase() 
-        : `ETI-${searchEtiInput.padStart(4, '0')}`;
-
-      const { data, error } = await supabase
-        .from('b2b_volumes')
-        .select(`
-          *,
-          shipment:b2b_shipments(tracking_code, delivery_date)
-        `)
-        .eq('eti_code', etiCode)
-        .eq('status', 'NO_CD')
-        .single();
-
-      if (error || !data) {
-        toast.error('Volume não encontrado no CD');
-        setFoundVolume(null);
-        return;
-      }
-
-      setFoundVolume(data);
-    } catch (error) {
-      toast.error('Erro ao buscar volume');
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const handleClaimVolume = async () => {
-    if (!foundVolume || !motorista) return;
-
-    try {
-      const { error } = await supabase
-        .from('b2b_volumes')
-        .update({
-          status: 'EM_ROTA',
-          motorista_entrega_id: motorista.id
-        })
-        .eq('id', foundVolume.id);
-
-      if (error) throw error;
-
-      await supabase.from('b2b_status_history').insert({
-        volume_id: foundVolume.id,
-        status: 'EM_ROTA',
-        motorista_id: motorista.id,
-        motorista_nome: motorista.nome,
-        observacoes: 'Saiu para entrega'
-      });
-
-      toast.success('Volume atribuído para entrega!');
-      setSearchModalOpen(false);
-      setFoundVolume(null);
-      setSearchEtiInput('');
-      await loadVolumes();
-    } catch (error) {
-      toast.error('Erro ao atribuir volume');
-    }
-  };
-
-  // Finalizar entrega
-  const handleOpenFinalizeModal = (volume: B2BVolume) => {
-    setVolumeToFinalize(volume);
-    setFinalizeEtiInput('');
-    setDeliveryPhoto(null);
-    setFinalizeModalOpen(true);
-  };
-
-  const handleFinalizeDelivery = async () => {
-    if (!volumeToFinalize || !motorista) return;
-
-    // Validar ETI
-    const inputEti = finalizeEtiInput.toUpperCase().includes('ETI-') 
-      ? finalizeEtiInput.toUpperCase() 
-      : `ETI-${finalizeEtiInput.padStart(4, '0')}`;
-    
-    if (inputEti !== volumeToFinalize.eti_code) {
+    const inputEti = parseEtiCode(collectEtiInput);
+    if (inputEti !== volumeToCollect.eti_code) {
       toast.error('Código ETI não confere');
       return;
     }
 
-    if (!deliveryPhoto) {
-      toast.error('Tire uma foto de comprovação');
+    setCollecting(true);
+    try {
+      const { error } = await supabase
+        .from('b2b_volumes')
+        .update({ status: 'COLETADO' })
+        .eq('id', volumeToCollect.id);
+
+      if (error) throw error;
+
+      await supabase.from('b2b_status_history').insert({
+        volume_id: volumeToCollect.id,
+        status: 'COLETADO',
+        motorista_id: motorista.id,
+        motorista_nome: motorista.nome,
+        observacoes: 'Volume coletado - A caminho do CD'
+      });
+
+      toast.success('Volume coletado!');
+      setCollectModalOpen(false);
+      setCollectEtiInput('');
+      await loadVolumes();
+    } catch (error) {
+      toast.error('Erro ao coletar volume');
+    } finally {
+      setCollecting(false);
+    }
+  };
+
+  // ==================== FINALIZAR ENTREGA ====================
+  const handleValidateEti = () => {
+    if (!volumeToFinalize) return;
+    
+    const inputEti = parseEtiCode(finalizeEtiInput);
+    if (inputEti !== volumeToFinalize.eti_code) {
+      toast.error('Código ETI não confere');
       return;
     }
+    
+    setEtiValidated(true);
+    toast.success('Código validado!');
+  };
+
+  const handleFinalizeDelivery = async () => {
+    if (!volumeToFinalize || !motorista || !deliveryPhoto) return;
 
     setFinalizing(true);
     try {
-      // Upload da foto
+      // Upload foto
       const fileName = `b2b-entregas/${volumeToFinalize.id}/${Date.now()}.jpg`;
       const { error: uploadError } = await supabase.storage
         .from('shipment-photos')
@@ -359,24 +350,26 @@ const MotoristaDashboard = () => {
       const { error } = await supabase
         .from('b2b_volumes')
         .update({
-          status: 'ENTREGUE',
+          status: 'CONCLUIDO',
           foto_entrega_url: urlData.publicUrl
         })
         .eq('id', volumeToFinalize.id);
 
       if (error) throw error;
 
-      // Registrar histórico
       await supabase.from('b2b_status_history').insert({
         volume_id: volumeToFinalize.id,
-        status: 'ENTREGUE',
+        status: 'CONCLUIDO',
         motorista_id: motorista.id,
         motorista_nome: motorista.nome,
-        observacoes: 'Entrega finalizada com sucesso'
+        observacoes: 'Entrega concluída com sucesso'
       });
 
       toast.success('Entrega finalizada!');
       setFinalizeModalOpen(false);
+      setFinalizeEtiInput('');
+      setDeliveryPhoto(null);
+      setEtiValidated(false);
       await loadVolumes();
     } catch (error) {
       toast.error('Erro ao finalizar entrega');
@@ -385,29 +378,30 @@ const MotoristaDashboard = () => {
     }
   };
 
-  // Registrar ocorrência
-  const handleOpenOccurrence = (volume: B2BVolume) => {
-    setOccurrenceVolume(volume);
-    setOccurrenceText('');
-    setOccurrenceModalOpen(true);
-  };
-
+  // ==================== OCORRÊNCIA ====================
   const handleSaveOccurrence = async () => {
-    if (!occurrenceVolume || !motorista || !occurrenceText.trim()) return;
+    if (!occurrenceVolume || !motorista || !occurrenceType) return;
 
     setSavingOccurrence(true);
     try {
+      const observacao = occurrenceText 
+        ? `${occurrenceType}: ${occurrenceText}`
+        : occurrenceType;
+
       await supabase.from('b2b_status_history').insert({
         volume_id: occurrenceVolume.id,
         status: 'OCORRENCIA',
         motorista_id: motorista.id,
         motorista_nome: motorista.nome,
-        observacoes: occurrenceText,
+        observacoes: observacao,
         is_alert: true
       });
 
       toast.success('Ocorrência registrada');
       setOccurrenceModalOpen(false);
+      setOccurrenceType('');
+      setOccurrenceText('');
+      await loadVolumes();
     } catch (error) {
       toast.error('Erro ao registrar ocorrência');
     } finally {
@@ -415,143 +409,235 @@ const MotoristaDashboard = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      'PENDENTE': 'bg-yellow-500',
-      'EM_TRANSITO': 'bg-orange-500',
-      'NO_CD': 'bg-purple-500',
-      'EM_ROTA': 'bg-blue-500',
-      'ENTREGUE': 'bg-green-500',
-    };
-    return colors[status] || 'bg-gray-500';
-  };
+  // Menu items
+  const menuItems = [
+    { section: 'coletas', label: 'Coletas', icon: Truck },
+    { section: 'despache', label: 'Despache', icon: Send },
+  ];
 
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      'PENDENTE': 'Pendente',
-      'EM_TRANSITO': 'Em Trânsito',
-      'NO_CD': 'No CD',
-      'EM_ROTA': 'Em Rota',
-      'ENTREGUE': 'Entregue',
-    };
-    return labels[status] || status;
-  };
+  const coletasSubItems = [
+    { tab: 'pendentes', label: 'Pendentes', count: pendentes.length },
+    { tab: 'aceitos', label: 'Aceitos', count: aceitos.length },
+    { tab: 'coletados', label: 'Coletados', count: coletados.length },
+    { tab: 'entregues_cd', label: 'Entregue ao CD', count: entreguesAoCd.length },
+  ];
 
-  // Renderiza card de volume disponível
-  const renderDisponiveisCard = (v: B2BVolume) => (
-    <Card key={v.id} className="mb-3">
-      <CardContent className="p-4">
-        <div className="flex justify-between mb-2">
-          <div>
-            <h3 className="font-mono font-medium">{v.eti_code}</h3>
-            {v.shipment && (
-              <p className="text-xs text-muted-foreground">{v.shipment.tracking_code}</p>
-            )}
+  const despachaSubItems = [
+    { tab: 'despachados', label: 'Despachados', count: despachados.length },
+    { tab: 'concluidos', label: 'Concluídos', count: concluidos.length },
+    { tab: 'devolucoes', label: 'Devoluções', count: devolucoes.length },
+  ];
+
+  // Renderizar card
+  const renderVolumeCard = (v: B2BVolume, showActions: 'accept' | 'collect' | 'finalize' | 'none' = 'none') => {
+    const statusConfig = STATUS_CONFIG[v.status] || { label: v.status, color: 'text-gray-700', bgColor: 'bg-gray-100' };
+    const recentHistory = (v.status_history || []).slice(0, 2);
+
+    return (
+      <Card key={v.id} className="mb-3">
+        <CardContent className="p-4">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <h3 className="font-mono font-bold text-lg">{v.eti_code}</h3>
+              {v.shipment && (
+                <p className="text-xs text-muted-foreground">{v.shipment.tracking_code}</p>
+              )}
+            </div>
+            <Badge className={`${statusConfig.bgColor} ${statusConfig.color} border`}>
+              {statusConfig.label}
+            </Badge>
           </div>
-          <Badge className="bg-yellow-500">Disponível</Badge>
-        </div>
-        
-        <div className="text-sm text-muted-foreground space-y-1">
-          <p className="flex items-center gap-1">
-            <Package className="h-3 w-3" />
-            {v.weight} kg
-          </p>
-          {v.shipment?.pickup_address && (
+          
+          <div className="text-sm text-muted-foreground space-y-1">
+            <p className="flex items-center gap-1">
+              <User className="h-3 w-3" />
+              {v.recipient_name}
+            </p>
             <p className="flex items-center gap-1">
               <MapPin className="h-3 w-3" />
-              Coleta: {v.shipment.pickup_address.city}/{v.shipment.pickup_address.state}
+              {v.recipient_street}, {v.recipient_number} - {v.recipient_city}/{v.recipient_state}
             </p>
-          )}
-        </div>
-
-        <Button
-          className="w-full mt-3"
-          onClick={() => handleOpenAcceptModal(v)}
-        >
-          Aceitar Coleta
-        </Button>
-      </CardContent>
-    </Card>
-  );
-
-  // Renderiza card de minhas remessas
-  const renderMinhasRemessasCard = (v: B2BVolume) => (
-    <Card key={v.id} className="mb-3">
-      <CardContent className="p-4">
-        <div className="flex justify-between mb-2">
-          <div>
-            <h3 className="font-mono font-medium text-lg">{v.eti_code}</h3>
+            <p className="flex items-center gap-1">
+              <Package className="h-3 w-3" />
+              {v.weight} kg
+            </p>
           </div>
-          <Badge className={getStatusColor(v.status)}>
-            {getStatusLabel(v.status)}
-          </Badge>
-        </div>
-        
-        <div className="text-sm space-y-1">
-          <p className="flex items-center gap-1">
-            <User className="h-3 w-3" />
-            {v.recipient_name}
-          </p>
-          <p className="flex items-center gap-1">
-            <MapPin className="h-3 w-3" />
-            {v.recipient_street}, {v.recipient_number} - {v.recipient_city}/{v.recipient_state}
-          </p>
-          <p className="flex items-center gap-1">
-            <Package className="h-3 w-3" />
-            {v.weight} kg
-          </p>
-        </div>
 
-        <div className="flex gap-2 mt-3">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1"
-            onClick={() => handleOpenOccurrence(v)}
-          >
-            <AlertTriangle className="h-4 w-4 mr-1" />
-            Ocorrência
-          </Button>
-          {v.status === 'EM_ROTA' && (
-            <Button
-              size="sm"
-              className="flex-1"
-              onClick={() => handleOpenFinalizeModal(v)}
-            >
-              <CheckCircle className="h-4 w-4 mr-1" />
-              Finalizar
-            </Button>
+          {/* Histórico recente */}
+          {recentHistory.length > 0 && (
+            <div className="mt-3 pt-2 border-t">
+              <p className="text-xs font-medium mb-1 flex items-center gap-1">
+                <History className="h-3 w-3" />
+                Histórico
+              </p>
+              {recentHistory.map((h, idx) => (
+                <div key={idx} className={`text-xs p-1 rounded mb-1 ${h.is_alert ? 'bg-red-50 text-red-700' : 'bg-muted/50'}`}>
+                  <span className="font-medium">{STATUS_CONFIG[h.status]?.label || h.status}</span>
+                  <span className="text-muted-foreground ml-2">
+                    {format(new Date(h.created_at), 'dd/MM HH:mm')}
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
-        </div>
-      </CardContent>
-    </Card>
-  );
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-pulse">Carregando...</div></div>;
+          {/* Botões de ação */}
+          <div className="flex gap-2 mt-3">
+            {showActions === 'accept' && (
+              <Button 
+                className="flex-1"
+                onClick={() => {
+                  setVolumeToAccept(v);
+                  setAcceptModalOpen(true);
+                }}
+              >
+                Aceitar Coleta
+              </Button>
+            )}
+            
+            {showActions === 'collect' && (
+              <Button 
+                className="flex-1"
+                onClick={() => {
+                  setVolumeToCollect(v);
+                  setCollectModalOpen(true);
+                }}
+              >
+                Coletar
+              </Button>
+            )}
+            
+            {showActions === 'finalize' && (
+              <Button 
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                onClick={() => {
+                  setVolumeToFinalize(v);
+                  setFinalizeModalOpen(true);
+                  setEtiValidated(false);
+                }}
+              >
+                Finalizar
+              </Button>
+            )}
+
+            {/* Ocorrência (para todos exceto pendentes) */}
+            {v.status !== 'PENDENTE' && v.status !== 'CONCLUIDO' && (
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setOccurrenceVolume(v);
+                  setOccurrenceModalOpen(true);
+                }}
+              >
+                <AlertTriangle className="h-4 w-4" />
+              </Button>
+            )}
+
+            <Button 
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedVolume(v);
+                setShowDetailsModal(true);
+              }}
+            >
+              Ver
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderVolumeList = (volumeList: B2BVolume[], emptyMessage: string, actions: 'accept' | 'collect' | 'finalize' | 'none' = 'none') => {
+    if (volumeList.length === 0) {
+      return (
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            {emptyMessage}
+          </CardContent>
+        </Card>
+      );
+    }
+    return volumeList.map(v => renderVolumeCard(v, actions));
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse">Carregando...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+      {/* Header */}
       <header className="sticky top-0 z-40 bg-card/95 backdrop-blur border-b">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Truck className="h-6 w-6 text-primary" />
+            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72">
+                <SheetHeader>
+                  <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
+                <nav className="mt-6 space-y-2">
+                  {menuItems.map(item => (
+                    <div key={item.section}>
+                      <Button
+                        variant={activeSection === item.section ? "secondary" : "ghost"}
+                        className="w-full justify-start mb-1"
+                        onClick={() => {
+                          setActiveSection(item.section);
+                          setActiveTab(item.section === 'coletas' ? 'pendentes' : 'despachados');
+                        }}
+                      >
+                        <item.icon className="h-4 w-4 mr-2" />
+                        {item.label}
+                      </Button>
+                      
+                      {activeSection === item.section && (
+                        <div className="pl-6 space-y-1">
+                          {(item.section === 'coletas' ? coletasSubItems : despachaSubItems).map(sub => (
+                            <Button
+                              key={sub.tab}
+                              variant={activeTab === sub.tab ? "default" : "ghost"}
+                              size="sm"
+                              className="w-full justify-between"
+                              onClick={() => {
+                                setActiveTab(sub.tab);
+                                setMenuOpen(false);
+                              }}
+                            >
+                              {sub.label}
+                              <Badge variant="outline" className="ml-2">{sub.count}</Badge>
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </nav>
+              </SheetContent>
+            </Sheet>
+            
             <div>
-              <h1 className="font-semibold">Portal do Motorista</h1>
+              <h1 className="font-semibold">Motorista</h1>
               <p className="text-sm text-muted-foreground">{motorista?.nome}</p>
             </div>
           </div>
+          
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => setSearchModalOpen(true)}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={() => loadVolumes()}>
+            <Button variant="outline" size="sm" onClick={() => loadVolumes()}>
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleLogout}>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
@@ -559,198 +645,317 @@ const MotoristaDashboard = () => {
       </header>
 
       <main className="container mx-auto px-4 py-4">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="disponiveis">
-              Disponíveis ({disponiveis.length})
-            </TabsTrigger>
-            <TabsTrigger value="minhas">
-              Minhas ({minhasRemessas.length})
-            </TabsTrigger>
-            <TabsTrigger value="entregues">
-              Entregues ({entregues.length})
-            </TabsTrigger>
-          </TabsList>
+        {/* Título da seção */}
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold">
+            {activeSection === 'coletas' ? 'Coletas' : 'Despache'}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {activeTab === 'pendentes' && 'Volumes disponíveis para coleta'}
+            {activeTab === 'aceitos' && 'Volumes aceitos - aguardando coleta'}
+            {activeTab === 'coletados' && 'Volumes coletados - a caminho do CD'}
+            {activeTab === 'entregues_cd' && 'Histórico de volumes entregues ao CD'}
+            {activeTab === 'despachados' && 'Volumes para entrega'}
+            {activeTab === 'concluidos' && 'Entregas concluídas'}
+            {activeTab === 'devolucoes' && 'Volumes devolvidos'}
+          </p>
+        </div>
 
-          <TabsContent value="disponiveis">
-            {disponiveis.length ? (
-              disponiveis.map(v => renderDisponiveisCard(v))
-            ) : (
-              <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  Nenhum volume disponível para coleta
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
+        {/* Conteúdo */}
+        {activeSection === 'coletas' && (
+          <>
+            {activeTab === 'pendentes' && renderVolumeList(pendentes, 'Nenhum volume pendente', 'accept')}
+            {activeTab === 'aceitos' && renderVolumeList(aceitos, 'Nenhum volume aceito', 'collect')}
+            {activeTab === 'coletados' && renderVolumeList(coletados, 'Nenhum volume coletado')}
+            {activeTab === 'entregues_cd' && renderVolumeList(entreguesAoCd, 'Nenhum volume entregue ao CD')}
+          </>
+        )}
 
-          <TabsContent value="minhas">
-            {minhasRemessas.length ? (
-              minhasRemessas.map(v => renderMinhasRemessasCard(v))
-            ) : (
-              <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  Nenhum volume atribuído
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="entregues">
-            {entregues.length ? (
-              entregues.map(v => (
-                <Card key={v.id} className="mb-3">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between">
-                      <div>
-                        <h3 className="font-mono font-medium">{v.eti_code}</h3>
-                        <p className="text-sm text-muted-foreground">{v.recipient_name}</p>
-                      </div>
-                      <Badge className="bg-green-500">Entregue</Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  Nenhuma entrega finalizada
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+        {activeSection === 'despache' && (
+          <>
+            {activeTab === 'despachados' && renderVolumeList(despachados, 'Nenhum volume despachado', 'finalize')}
+            {activeTab === 'concluidos' && renderVolumeList(concluidos, 'Nenhuma entrega concluída')}
+            {activeTab === 'devolucoes' && renderVolumeList(devolucoes, 'Nenhuma devolução')}
+          </>
+        )}
       </main>
 
-      {/* Modal: Buscar volume para entrega */}
-      <Dialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Buscar Volume para Entrega</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Digite o código ETI do volume que está no CD.
-          </p>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Ex: ETI-0001"
-              value={searchEtiInput}
-              onChange={(e) => setSearchEtiInput(e.target.value)}
-              className="font-mono"
-            />
-            <Button onClick={handleSearchVolume} disabled={searching}>
-              {searching ? 'Buscando...' : 'Buscar'}
-            </Button>
-          </div>
-          
-          {foundVolume && (
-            <Card className="mt-4">
-              <CardContent className="p-4">
-                <div className="flex justify-between mb-2">
-                  <h3 className="font-mono font-medium">{foundVolume.eti_code}</h3>
-                  <Badge className="bg-purple-500">No CD</Badge>
-                </div>
-                <p className="text-sm">{foundVolume.recipient_name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {foundVolume.recipient_city}/{foundVolume.recipient_state}
-                </p>
-                <Button className="w-full mt-3" onClick={handleClaimVolume}>
-                  Atribuir para Entrega
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal: Aceitar coleta */}
+      {/* Modal Aceitar */}
       <Dialog open={acceptModalOpen} onOpenChange={setAcceptModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Aceitar Coleta</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Digite o código ETI para confirmar a coleta.
-          </p>
           {volumeToAccept && (
-            <p className="text-center font-mono text-lg font-bold text-muted-foreground">
-              Esperado: {volumeToAccept.eti_code}
-            </p>
+            <div className="space-y-4">
+              <div className="bg-muted/50 p-4 rounded">
+                <p className="font-mono text-xl font-bold">{volumeToAccept.eti_code}</p>
+                <p className="text-sm text-muted-foreground mt-1">{volumeToAccept.recipient_name}</p>
+                <p className="text-sm text-muted-foreground">{volumeToAccept.weight} kg</p>
+              </div>
+              <p className="text-sm">Deseja aceitar esta coleta?</p>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setAcceptModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button className="flex-1" onClick={handleAcceptVolume} disabled={accepting}>
+                  {accepting ? 'Aceitando...' : 'Confirmar'}
+                </Button>
+              </div>
+            </div>
           )}
-          <Input
-            placeholder="Digite o código ETI"
-            value={acceptEtiInput}
-            onChange={(e) => setAcceptEtiInput(e.target.value)}
-            className="font-mono text-center text-lg"
-          />
-          <Button onClick={handleAcceptVolume} disabled={accepting}>
-            {accepting ? 'Aceitando...' : 'Confirmar Coleta'}
-          </Button>
         </DialogContent>
       </Dialog>
 
-      {/* Modal: Finalizar entrega */}
+      {/* Modal Coletar */}
+      <Dialog open={collectModalOpen} onOpenChange={setCollectModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Coletar Volume</DialogTitle>
+          </DialogHeader>
+          {volumeToCollect && (
+            <div className="space-y-4">
+              <div className="bg-muted/50 p-4 rounded">
+                <p className="font-mono text-xl font-bold">{volumeToCollect.eti_code}</p>
+                <p className="text-sm text-muted-foreground mt-1">{volumeToCollect.recipient_name}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Digite o código ETI para confirmar</Label>
+                <Input
+                  placeholder="Ex: 0001"
+                  value={collectEtiInput}
+                  onChange={(e) => setCollectEtiInput(e.target.value)}
+                  className="font-mono text-center text-lg"
+                />
+              </div>
+              
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setCollectModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button className="flex-1" onClick={handleCollectVolume} disabled={collecting || !collectEtiInput}>
+                  {collecting ? 'Coletando...' : 'Confirmar Coleta'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Finalizar Entrega */}
       <Dialog open={finalizeModalOpen} onOpenChange={setFinalizeModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Finalizar Entrega</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Digite o código ETI e tire uma foto de comprovação.
-          </p>
           {volumeToFinalize && (
-            <p className="text-center font-mono text-lg font-bold text-muted-foreground">
-              Esperado: {volumeToFinalize.eti_code}
-            </p>
+            <div className="space-y-4">
+              <div className="bg-muted/50 p-4 rounded">
+                <p className="font-mono text-xl font-bold">{volumeToFinalize.eti_code}</p>
+                <p className="text-sm text-muted-foreground mt-1">{volumeToFinalize.recipient_name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {volumeToFinalize.recipient_street}, {volumeToFinalize.recipient_number}
+                </p>
+              </div>
+              
+              {!etiValidated ? (
+                <div className="space-y-2">
+                  <Label>Digite o código ETI para validar</Label>
+                  <Input
+                    placeholder="Ex: 0001"
+                    value={finalizeEtiInput}
+                    onChange={(e) => setFinalizeEtiInput(e.target.value)}
+                    className="font-mono text-center text-lg"
+                  />
+                  <Button className="w-full" onClick={handleValidateEti} disabled={!finalizeEtiInput}>
+                    Validar Código
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-green-600">
+                    <CheckCircle className="h-5 w-5" />
+                    <span>Código validado!</span>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Foto de comprovação *</Label>
+                    <div className="border-2 border-dashed rounded-lg p-4 text-center">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        id="delivery-photo"
+                        onChange={(e) => setDeliveryPhoto(e.target.files?.[0] || null)}
+                      />
+                      <label htmlFor="delivery-photo" className="cursor-pointer">
+                        {deliveryPhoto ? (
+                          <div className="space-y-2">
+                            <img 
+                              src={URL.createObjectURL(deliveryPhoto)} 
+                              alt="Preview" 
+                              className="max-h-40 mx-auto rounded"
+                            />
+                            <p className="text-sm text-muted-foreground">Clique para trocar</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <Camera className="h-10 w-10 mx-auto text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground">Tirar foto</p>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    className="w-full bg-green-600 hover:bg-green-700" 
+                    onClick={handleFinalizeDelivery} 
+                    disabled={finalizing || !deliveryPhoto}
+                  >
+                    {finalizing ? 'Finalizando...' : 'Concluir Entrega'}
+                  </Button>
+                </div>
+              )}
+              
+              <Button variant="outline" className="w-full" onClick={() => {
+                setFinalizeModalOpen(false);
+                setFinalizeEtiInput('');
+                setDeliveryPhoto(null);
+                setEtiValidated(false);
+              }}>
+                Cancelar
+              </Button>
+            </div>
           )}
-          <Input
-            placeholder="Digite o código ETI"
-            value={finalizeEtiInput}
-            onChange={(e) => setFinalizeEtiInput(e.target.value)}
-            className="font-mono text-center text-lg"
-          />
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Foto de Comprovação *</label>
-            <Input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={(e) => setDeliveryPhoto(e.target.files?.[0] || null)}
-            />
-            {deliveryPhoto && (
-              <p className="text-xs text-green-600">Foto selecionada: {deliveryPhoto.name}</p>
-            )}
-          </div>
-          
-          <Button onClick={handleFinalizeDelivery} disabled={finalizing}>
-            <Camera className="h-4 w-4 mr-2" />
-            {finalizing ? 'Finalizando...' : 'Finalizar Entrega'}
-          </Button>
         </DialogContent>
       </Dialog>
 
-      {/* Modal: Ocorrência */}
+      {/* Modal Ocorrência */}
       <Dialog open={occurrenceModalOpen} onOpenChange={setOccurrenceModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Registrar Ocorrência</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-500" />
+              Registrar Ocorrência
+            </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Descreva o problema encontrado.
-          </p>
-          <textarea
-            className="w-full p-3 border rounded-md min-h-[100px]"
-            placeholder="Descreva a ocorrência..."
-            value={occurrenceText}
-            onChange={(e) => setOccurrenceText(e.target.value)}
-          />
-          <Button 
-            onClick={handleSaveOccurrence} 
-            disabled={savingOccurrence || !occurrenceText.trim()}
-          >
-            {savingOccurrence ? 'Salvando...' : 'Registrar Ocorrência'}
-          </Button>
+          {occurrenceVolume && (
+            <div className="space-y-4">
+              <div className="bg-muted/50 p-3 rounded">
+                <p className="font-mono font-bold">{occurrenceVolume.eti_code}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Tipo de ocorrência *</Label>
+                <Select value={occurrenceType} onValueChange={setOccurrenceType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {OCCURRENCE_TYPES.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Observações</Label>
+                <Textarea
+                  placeholder="Descreva a ocorrência..."
+                  value={occurrenceText}
+                  onChange={(e) => setOccurrenceText(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setOccurrenceModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  className="flex-1" 
+                  onClick={handleSaveOccurrence} 
+                  disabled={savingOccurrence || !occurrenceType}
+                >
+                  {savingOccurrence ? 'Salvando...' : 'Registrar'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Detalhes */}
+      <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Volume</DialogTitle>
+          </DialogHeader>
+          {selectedVolume && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Código ETI</p>
+                  <p className="font-mono text-2xl font-bold">{selectedVolume.eti_code}</p>
+                </div>
+                <Badge className={`${STATUS_CONFIG[selectedVolume.status]?.bgColor} ${STATUS_CONFIG[selectedVolume.status]?.color} border`}>
+                  {STATUS_CONFIG[selectedVolume.status]?.label}
+                </Badge>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-2">Destinatário</h4>
+                <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
+                  <p className="font-medium">{selectedVolume.recipient_name}</p>
+                  <p>{selectedVolume.recipient_phone}</p>
+                  <p>{selectedVolume.recipient_street}, {selectedVolume.recipient_number}</p>
+                  {selectedVolume.recipient_complement && <p>{selectedVolume.recipient_complement}</p>}
+                  <p>{selectedVolume.recipient_neighborhood}</p>
+                  <p>{selectedVolume.recipient_city}/{selectedVolume.recipient_state}</p>
+                  <p>CEP: {selectedVolume.recipient_cep}</p>
+                </div>
+              </div>
+
+              {selectedVolume.shipment?.pickup_address && (
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-2">Endereço de Coleta</h4>
+                  <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
+                    <p className="font-medium">{selectedVolume.shipment.pickup_address.name}</p>
+                    <p>{selectedVolume.shipment.pickup_address.contact_name} - {selectedVolume.shipment.pickup_address.contact_phone}</p>
+                    <p>{selectedVolume.shipment.pickup_address.street}, {selectedVolume.shipment.pickup_address.number}</p>
+                    <p>{selectedVolume.shipment.pickup_address.neighborhood} - {selectedVolume.shipment.pickup_address.city}/{selectedVolume.shipment.pickup_address.state}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-2">Histórico Completo</h4>
+                <ScrollArea className="h-48">
+                  <div className="space-y-2">
+                    {(selectedVolume.status_history || []).map((h, idx) => (
+                      <div 
+                        key={idx} 
+                        className={`text-sm p-2 rounded border ${h.is_alert ? 'bg-red-50 border-red-200' : 'bg-muted/30'}`}
+                      >
+                        <div className="flex justify-between">
+                          <span className="font-medium">{STATUS_CONFIG[h.status]?.label || h.status}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(h.created_at), "dd/MM HH:mm")}
+                          </span>
+                        </div>
+                        {h.motorista_nome && <p className="text-xs text-muted-foreground">{h.motorista_nome}</p>}
+                        {h.observacoes && <p className="text-muted-foreground mt-1">{h.observacoes}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
