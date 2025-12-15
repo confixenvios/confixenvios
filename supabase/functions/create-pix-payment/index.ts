@@ -6,6 +6,66 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// CPF validation with checksum
+const isValidCPF = (cpf: string): boolean => {
+  const cleanCpf = cpf.replace(/\D/g, '');
+  if (cleanCpf.length !== 11) return false;
+  
+  // Check for known invalid patterns
+  if (/^(\d)\1{10}$/.test(cleanCpf)) return false;
+  
+  // Validate first digit
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(cleanCpf[i]) * (10 - i);
+  }
+  let digit = 11 - (sum % 11);
+  if (digit >= 10) digit = 0;
+  if (digit !== parseInt(cleanCpf[9])) return false;
+  
+  // Validate second digit
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(cleanCpf[i]) * (11 - i);
+  }
+  digit = 11 - (sum % 11);
+  if (digit >= 10) digit = 0;
+  if (digit !== parseInt(cleanCpf[10])) return false;
+  
+  return true;
+};
+
+// CNPJ validation with checksum
+const isValidCNPJ = (cnpj: string): boolean => {
+  const cleanCnpj = cnpj.replace(/\D/g, '');
+  if (cleanCnpj.length !== 14) return false;
+  
+  // Check for known invalid patterns
+  if (/^(\d)\1{13}$/.test(cleanCnpj)) return false;
+  
+  // Validate first digit
+  const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  let sum = 0;
+  for (let i = 0; i < 12; i++) {
+    sum += parseInt(cleanCnpj[i]) * weights1[i];
+  }
+  let digit = sum % 11;
+  digit = digit < 2 ? 0 : 11 - digit;
+  if (digit !== parseInt(cleanCnpj[12])) return false;
+  
+  // Validate second digit
+  const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  sum = 0;
+  for (let i = 0; i < 13; i++) {
+    sum += parseInt(cleanCnpj[i]) * weights2[i];
+  }
+  digit = sum % 11;
+  digit = digit < 2 ? 0 : 11 - digit;
+  if (digit !== parseInt(cleanCnpj[13])) return false;
+  
+  return true;
+};
+
 // Security: Rate limiting and input validation
 const validatePixInput = (requestBody: any): { isValid: boolean; error?: string } => {
   const { name, phone, email, cpf, amount } = requestBody;
@@ -24,10 +84,18 @@ const validatePixInput = (requestBody: any): { isValid: boolean; error?: string 
     return { isValid: false, error: 'Email inválido' };
   }
 
-  // CPF/CNPJ validation
+  // CPF/CNPJ validation with checksum
   const cleanCpf = cpf.replace(/\D/g, '');
-  if (cleanCpf.length !== 11 && cleanCpf.length !== 14) {
-    return { isValid: false, error: 'CPF/CNPJ deve ter 11 ou 14 dígitos' };
+  if (cleanCpf.length === 11) {
+    if (!isValidCPF(cleanCpf)) {
+      return { isValid: false, error: 'CPF inválido. Verifique os dígitos informados.' };
+    }
+  } else if (cleanCpf.length === 14) {
+    if (!isValidCNPJ(cleanCpf)) {
+      return { isValid: false, error: 'CNPJ inválido. Verifique os dígitos informados.' };
+    }
+  } else {
+    return { isValid: false, error: 'CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos' };
   }
 
   // Amount validation with strict limits
@@ -37,6 +105,7 @@ const validatePixInput = (requestBody: any): { isValid: boolean; error?: string 
 
   return { isValid: true };
 };
+
 
 // Security: Check rate limits
 const checkRateLimit = async (supabase: any, clientIp: string): Promise<boolean> => {
