@@ -1178,17 +1178,26 @@ const MotoristaDashboard = () => {
               </div>
               
               {!etiValidated ? (
-                <div className="space-y-2">
-                  <Label>Bipe o código de barras da etiqueta para validar</Label>
-                  <Input
-                    placeholder="Ex: 0001"
-                    value={finalizeEtiInput}
-                    onChange={(e) => setFinalizeEtiInput(e.target.value)}
-                    className="font-mono text-center text-lg"
-                  />
-                  <Button className="w-full" onClick={handleValidateEti} disabled={!finalizeEtiInput}>
-                    Validar Código
-                  </Button>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Bipe o código de barras da etiqueta para validar</Label>
+                    <Input
+                      type="password"
+                      value={finalizeEtiInput}
+                      onChange={(e) => setFinalizeEtiInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && finalizeEtiInput && handleValidateEti()}
+                      className="font-mono text-center text-lg"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setFinalizeModalOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button className="flex-1" onClick={handleValidateEti} disabled={!finalizeEtiInput}>
+                      Validar Código
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
