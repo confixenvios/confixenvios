@@ -7,10 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, Plus, User, Eye, ChevronDown, History, Camera, AlertTriangle } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, Plus, User, ChevronDown, Camera, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import B2BVolumeStatusHistory from '@/components/b2b/B2BVolumeStatusHistory';
 
 interface Motorista {
   id: string;
@@ -502,22 +501,6 @@ const MotoristaDashboard = () => {
             {v.weight} kg
           </p>
         </div>
-
-        {/* Histórico */}
-        <Collapsible className="mt-3">
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="w-full justify-between p-2 h-8 text-xs">
-              <span className="flex items-center gap-1">
-                <History className="h-3 w-3" />
-                Histórico
-              </span>
-              <ChevronDown className="h-3 w-3" />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-2 border-t mt-2">
-            <B2BVolumeStatusHistory volumeId={v.id} />
-          </CollapsibleContent>
-        </Collapsible>
 
         <div className="flex gap-2 mt-3">
           <Button
