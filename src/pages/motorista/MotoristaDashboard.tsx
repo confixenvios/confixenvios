@@ -724,17 +724,7 @@ const MotoristaDashboard = () => {
               </Button>
             )}
             
-            {showActions === 'collect' && (
-              <Button 
-                size="sm"
-                onClick={() => {
-                  setVolumeToCollect(v);
-                  setCollectModalOpen(true);
-                }}
-              >
-                Coletar
-              </Button>
-            )}
+            {/* Botão "Coletar" removido do card individual - agora é em lote no header */}
             
             {/* Botão "Bipar Saída" removido do card individual - agora é em lote no header */}
             
