@@ -45,16 +45,41 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
     }
   };
 
-  const getStatusConfig = (status: string): { label: string; color: string } => {
-    const configs: Record<string, { label: string; color: string }> = {
-      'PENDENTE': { label: 'Pendente', color: 'bg-yellow-500' },
-      'EM_TRANSITO': { label: 'Em Trânsito', color: 'bg-blue-500' },
-      'NO_CD': { label: 'Recebido no CD', color: 'bg-purple-500' },
-      'EM_ROTA': { label: 'Em Rota', color: 'bg-indigo-500' },
-      'ENTREGUE': { label: 'Entregue', color: 'bg-green-500' },
-      'OCORRENCIA': { label: 'Ocorrência', color: 'bg-red-500' },
+  const getStatusConfig = (status: string): { label: string; dotColor: string; badgeClass: string } => {
+    const configs: Record<string, { label: string; dotColor: string; badgeClass: string }> = {
+      'PENDENTE': { label: 'Pendente', dotColor: 'bg-yellow-500', badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+      'ACEITO': { label: 'Aceito', dotColor: 'bg-orange-500', badgeClass: 'bg-orange-100 text-orange-800 border-orange-300' },
+      'COLETADO': { label: 'Coletado', dotColor: 'bg-sky-500', badgeClass: 'bg-sky-100 text-sky-800 border-sky-300' },
+      'EM_TRANSITO': { label: 'Em Trânsito', dotColor: 'bg-blue-500', badgeClass: 'bg-blue-100 text-blue-800 border-blue-300' },
+      'EM_TRIAGEM': { label: 'Em Triagem', dotColor: 'bg-purple-500', badgeClass: 'bg-purple-100 text-purple-800 border-purple-300' },
+      'AGUARDANDO_EXPEDICAO': { label: 'Aguardando Expedição', dotColor: 'bg-indigo-500', badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
+      'DESPACHADO': { label: 'Despachado', dotColor: 'bg-cyan-500', badgeClass: 'bg-cyan-100 text-cyan-800 border-cyan-300' },
+      'NO_CD': { label: 'Recebido no CD', dotColor: 'bg-violet-500', badgeClass: 'bg-violet-100 text-violet-800 border-violet-300' },
+      'EM_ROTA': { label: 'Em Rota', dotColor: 'bg-blue-500', badgeClass: 'bg-blue-100 text-blue-800 border-blue-300' },
+      'ENTREGUE': { label: 'Entregue', dotColor: 'bg-green-500', badgeClass: 'bg-green-600 text-white border-green-600' },
+      'CONCLUIDO': { label: 'Concluído', dotColor: 'bg-green-500', badgeClass: 'bg-green-600 text-white border-green-600' },
+      'OCORRENCIA': { label: 'Ocorrência', dotColor: 'bg-red-500', badgeClass: 'bg-red-100 text-red-800 border-red-300' },
+      'DEVOLUCAO': { label: 'Devolução', dotColor: 'bg-red-500', badgeClass: 'bg-red-100 text-red-800 border-red-300' },
     };
-    return configs[status] || { label: status, color: 'bg-gray-500' };
+    return configs[status] || { label: status, dotColor: 'bg-gray-500', badgeClass: 'bg-gray-100 text-gray-800 border-gray-300' };
+  };
+
+  // Parseia observações JSON para extrair mensagem e foto
+  const parseObservacoes = (observacoes: string | null): { text: string | null; fotoUrl: string | null } => {
+    if (!observacoes) return { text: null, fotoUrl: null };
+    
+    try {
+      const parsed = JSON.parse(observacoes);
+      if (parsed.mensagem || parsed.foto_url) {
+        return {
+          text: parsed.mensagem || null,
+          fotoUrl: parsed.foto_url || null
+        };
+      }
+    } catch {
+      // Não é JSON, retorna como texto normal
+    }
+    return { text: observacoes, fotoUrl: null };
   };
 
   if (loading) {
@@ -76,6 +101,7 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
       {history.map((item, index) => {
         const config = getStatusConfig(item.status);
         const isLast = index === history.length - 1;
+        const parsedObs = parseObservacoes(item.observacoes);
 
         return (
           <div key={item.id} className="relative pl-6">
@@ -85,11 +111,11 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
             )}
             
             {/* Timeline dot */}
-            <div className={`absolute left-0 top-1.5 w-[18px] h-[18px] rounded-full ${config.color} border-2 border-background`} />
+            <div className={`absolute left-0 top-1.5 w-[18px] h-[18px] rounded-full ${config.dotColor} border-2 border-background`} />
             
             <div className="pb-4">
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant={item.is_alert ? 'destructive' : 'secondary'} className="text-xs">
+                <Badge variant="outline" className={`text-xs ${config.badgeClass}`}>
                   {config.label}
                 </Badge>
               </div>
@@ -104,10 +130,22 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
                 </p>
               )}
               
-              {item.observacoes && (
+              {parsedObs.text && (
                 <p className="text-xs text-muted-foreground mt-1 italic">
-                  {item.observacoes}
+                  {parsedObs.text}
                 </p>
+              )}
+              
+              {parsedObs.fotoUrl && (
+                <a 
+                  href={parsedObs.fotoUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+                >
+                  <Image className="h-3 w-3" />
+                  Ver foto da entrega
+                </a>
               )}
             </div>
           </div>
