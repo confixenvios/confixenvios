@@ -730,7 +730,8 @@ const MotoristaDashboard = () => {
             
             {showActions === 'finalize' && (
               <Button 
-                className="flex-1 bg-green-600 hover:bg-green-700"
+                size="sm"
+                className="bg-green-600 hover:bg-green-700"
                 onClick={() => {
                   setVolumeToFinalize(v);
                   setFinalizeModalOpen(true);
