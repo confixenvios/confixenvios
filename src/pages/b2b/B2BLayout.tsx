@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Package, Plus, BarChart3, LogOut, LayoutDashboard, MapPin } from 'lucide-react';
+import { Package, Plus, BarChart3, LogOut, MapPin, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Sidebar,
@@ -63,10 +63,10 @@ const B2BLayout = () => {
   };
 
   const menuItems = [
-    { title: 'Envios', url: '/b2b-expresso/dashboard', icon: LayoutDashboard },
+    { title: 'Envios', url: '/b2b-expresso/dashboard', icon: Truck },
     { title: 'Novo Envio', url: '/b2b-expresso/nova-remessa', icon: Plus },
-    { title: 'Endereços de Entrega', url: '/b2b-expresso/enderecos', icon: MapPin },
     { title: 'Endereços de Coleta', url: '/b2b-expresso/enderecos-coleta', icon: MapPin },
+    { title: 'Endereços de Volumes', url: '/b2b-expresso/enderecos', icon: MapPin },
     { title: 'Relatórios', url: '/b2b-expresso/relatorios', icon: BarChart3 },
   ];
 
@@ -80,10 +80,11 @@ const B2BLayout = () => {
             <div className="p-4 border-b">
               <div className="flex items-center gap-2 mb-1">
                 <Package className="h-5 w-5 text-primary" />
-                <span className="font-bold">B2B Expresso</span>
+                <span className="font-bold text-sm">CONFIX ENVIOS</span>
               </div>
+              <span className="text-xs text-primary font-medium">B2B Express</span>
               {client && (
-                <p className="text-xs text-muted-foreground truncate">{client.company_name}</p>
+                <p className="text-xs text-muted-foreground truncate mt-1">{client.company_name}</p>
               )}
             </div>
 
