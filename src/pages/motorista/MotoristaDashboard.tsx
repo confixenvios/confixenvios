@@ -1294,24 +1294,25 @@ const MotoristaDashboard = () => {
                     </div>
                   </div>
                   
-                  <Button 
-                    className="w-full bg-green-600 hover:bg-green-700" 
-                    onClick={handleFinalizeDelivery} 
-                    disabled={finalizing || !deliveryPhoto}
-                  >
-                    {finalizing ? 'Finalizando...' : 'Concluir Entrega'}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => {
+                      setFinalizeModalOpen(false);
+                      setFinalizeEtiInput('');
+                      setDeliveryPhoto(null);
+                      setEtiValidated(false);
+                    }}>
+                      Cancelar
+                    </Button>
+                    <Button 
+                      className="flex-1 bg-green-600 hover:bg-green-700" 
+                      onClick={handleFinalizeDelivery} 
+                      disabled={finalizing || !deliveryPhoto}
+                    >
+                      {finalizing ? 'Finalizando...' : 'Concluir Entrega'}
+                    </Button>
+                  </div>
                 </div>
               )}
-              
-              <Button variant="outline" className="w-full" onClick={() => {
-                setFinalizeModalOpen(false);
-                setFinalizeEtiInput('');
-                setDeliveryPhoto(null);
-                setEtiValidated(false);
-              }}>
-                Cancelar
-              </Button>
             </div>
           )}
         </DialogContent>
