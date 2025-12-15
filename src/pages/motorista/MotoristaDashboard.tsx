@@ -919,7 +919,6 @@ const MotoristaDashboard = () => {
                 <Label>Bipe o código de barras da etiqueta para confirmar</Label>
                 <Input
                   type="password"
-                  placeholder="Ex: 0001"
                   value={bipEtiInput}
                   onChange={(e) => setBipEtiInput(e.target.value)}
                   className="font-mono text-center text-lg"
