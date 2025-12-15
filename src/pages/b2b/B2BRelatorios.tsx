@@ -83,7 +83,7 @@ const B2BRelatorios = () => {
       'Data': format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm'),
       'Volumes': shipment.total_volumes || '-',
       'Peso Total': `${shipment.total_weight || 0} kg`,
-      'Data de Entrega': shipment.delivery_date ? format(new Date(shipment.delivery_date), 'dd/MM/yyyy') : '-',
+      'Data de Entrega': shipment.delivery_date ? format(new Date(shipment.delivery_date + 'T12:00:00'), 'dd/MM/yyyy') : '-',
       'Status': getStatusLabel(shipment.status),
     }));
 
@@ -189,7 +189,7 @@ const B2BRelatorios = () => {
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {shipment.total_volumes} volume(s)
-                      {shipment.delivery_date && ` - Entrega: ${format(new Date(shipment.delivery_date), 'dd/MM/yyyy')}`}
+                      {shipment.delivery_date && ` - Entrega: ${format(new Date(shipment.delivery_date + 'T12:00:00'), 'dd/MM/yyyy')}`}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {format(new Date(shipment.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}

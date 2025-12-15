@@ -1492,7 +1492,7 @@ const AdminRemessas = () => {
                                     <div>
                                       <div className="text-[10px] text-orange-600 font-medium uppercase">Entrega</div>
                                       <div className="text-sm font-bold text-orange-700">
-                                        {format(new Date(shipment.quote_data.delivery_date), 'dd/MM/yyyy', { locale: ptBR })}
+                                        {format(new Date(shipment.quote_data.delivery_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
                                       </div>
                                     </div>
                                   </div>
@@ -2196,7 +2196,7 @@ const AdminRemessas = () => {
                   <p className="text-sm text-muted-foreground">Data de Entrega</p>
                   <p className="font-semibold">
                     {selectedB2BShipment.quote_data?.delivery_date 
-                      ? format(new Date(selectedB2BShipment.quote_data.delivery_date), 'dd/MM/yyyy')
+                      ? format(new Date(selectedB2BShipment.quote_data.delivery_date + 'T12:00:00'), 'dd/MM/yyyy')
                       : '-'}
                   </p>
                 </div>
