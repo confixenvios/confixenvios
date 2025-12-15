@@ -242,7 +242,7 @@ const B2BDashboard = () => {
                     
                     <p className="text-sm text-foreground font-medium">
                       {shipment.delivery_date 
-                        ? `Entrega: ${format(new Date(shipment.delivery_date + 'T12:00:00'), 'dd/MM/yyyy')}`
+                        ? `Previsão de Entrega: ${format(new Date(shipment.delivery_date + 'T12:00:00'), 'dd/MM/yyyy')}`
                         : 'Data de entrega não definida'}
                     </p>
                     <div className="flex items-center justify-between mt-2">
