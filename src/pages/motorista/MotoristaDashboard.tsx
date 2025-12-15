@@ -60,6 +60,7 @@ interface B2BVolume {
     status: string;
     created_at: string;
     observacoes: string | null;
+    motorista_id: string | null;
     motorista_nome: string | null;
     is_alert: boolean;
   }>;
@@ -174,7 +175,7 @@ const MotoristaDashboard = () => {
     
     setRefreshing(true);
     try {
-      // Buscar todos os volumes relevantes
+      // Buscar todos os volumes relevantes (incluindo volumes que o motorista coletou, mesmo após triagem)
       const { data, error } = await supabase
         .from('b2b_volumes')
         .select(`
@@ -187,11 +188,47 @@ const MotoristaDashboard = () => {
         `)
         .or(`status.eq.PENDENTE,motorista_coleta_id.eq.${id},motorista_entrega_id.eq.${id}`)
         .order('created_at', { ascending: false });
+      
+      // Buscar também volumes que este motorista coletou (via histórico) para "Entregue ao CD"
+      const { data: collectedHistory } = await supabase
+        .from('b2b_status_history')
+        .select('volume_id')
+        .eq('motorista_id', id)
+        .eq('status', 'COLETADO');
+      
+      const collectedVolumeIds = (collectedHistory || []).map(h => h.volume_id);
+      
+      // Buscar volumes adicionais que o motorista coletou mas já avançaram
+      let additionalVolumes: any[] = [];
+      if (collectedVolumeIds.length > 0) {
+        const { data: additionalData } = await supabase
+          .from('b2b_volumes')
+          .select(`
+            *,
+            shipment:b2b_shipments(
+              tracking_code, 
+              delivery_date,
+              pickup_address:b2b_pickup_addresses(name, contact_name, contact_phone, street, number, neighborhood, city, state)
+            )
+          `)
+          .in('id', collectedVolumeIds)
+          .in('status', ['EM_TRIAGEM', 'AGUARDANDO_EXPEDICAO', 'DESPACHADO', 'CONCLUIDO']);
+        
+        additionalVolumes = additionalData || [];
+      }
+      
+      // Combinar e remover duplicados
+      const allVolumes = [...(data || [])];
+      additionalVolumes.forEach(av => {
+        if (!allVolumes.find(v => v.id === av.id)) {
+          allVolumes.push(av);
+        }
+      });
 
       if (error) throw error;
 
       // Buscar histórico
-      const volumeIds = (data || []).map(v => v.id);
+      const volumeIds = allVolumes.map(v => v.id);
       let historyMap: Record<string, any[]> = {};
       
       if (volumeIds.length > 0) {
@@ -209,7 +246,7 @@ const MotoristaDashboard = () => {
         }
       }
 
-      const volumesWithHistory = (data || []).map(v => ({
+      const volumesWithHistory = allVolumes.map(v => ({
         ...v,
         status_history: historyMap[v.id] || []
       }));
@@ -233,10 +270,16 @@ const MotoristaDashboard = () => {
   const pendentes = volumes.filter(v => v.status === 'PENDENTE' && !v.motorista_coleta_id);
   const aceitos = volumes.filter(v => v.status === 'ACEITO' && v.motorista_coleta_id === motorista?.id);
   const coletados = volumes.filter(v => v.status === 'COLETADO' && v.motorista_coleta_id === motorista?.id);
-  const entreguesAoCd = volumes.filter(v => 
-    ['EM_TRIAGEM', 'AGUARDANDO_EXPEDICAO', 'DESPACHADO', 'CONCLUIDO'].includes(v.status) && 
-    v.motorista_coleta_id === motorista?.id
-  );
+  const entreguesAoCd = volumes.filter(v => {
+    if (!['EM_TRIAGEM', 'AGUARDANDO_EXPEDICAO', 'DESPACHADO', 'CONCLUIDO'].includes(v.status)) return false;
+    // Verifica se motorista_coleta_id é o motorista atual OU se no histórico há registro de COLETADO por este motorista
+    if (v.motorista_coleta_id === motorista?.id) return true;
+    // Verificar no histórico se este motorista coletou
+    const coletouNoHistorico = v.status_history?.some(h => 
+      h.status === 'COLETADO' && h.motorista_id === motorista?.id
+    );
+    return coletouNoHistorico;
+  });
 
   // Filtros - Despache
   const aguardandoExpedicao = volumes.filter(v => v.status === 'AGUARDANDO_EXPEDICAO' && v.motorista_entrega_id === motorista?.id);
