@@ -810,29 +810,38 @@ export type Database = {
       }
       cd_users: {
         Row: {
+          cpf: string | null
           created_at: string | null
           email: string
           id: string
           nome: string
+          senha: string | null
           status: string
+          telefone: string | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          cpf?: string | null
           created_at?: string | null
           email: string
           id?: string
           nome: string
+          senha?: string | null
           status?: string
+          telefone?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          cpf?: string | null
           created_at?: string | null
           email?: string
           id?: string
           nome?: string
+          senha?: string | null
           status?: string
+          telefone?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
