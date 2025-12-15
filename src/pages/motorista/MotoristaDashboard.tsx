@@ -538,12 +538,12 @@ const MotoristaDashboard = () => {
             </Badge>
           </div>
           
-          {/* Para PENDENTE: mostrar apenas ETI + setor (cidade/estado) */}
+          {/* Para PENDENTE: mostrar apenas ETI + bairro */}
           {isPendente ? (
             <div className="text-sm text-muted-foreground">
               <p className="flex items-center gap-1">
                 <MapPin className="h-3 w-3" />
-                <span className="font-medium">{v.recipient_city}/{v.recipient_state}</span>
+                <span className="font-medium">{v.recipient_neighborhood}</span>
               </p>
             </div>
           ) : (
