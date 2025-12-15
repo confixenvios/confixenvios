@@ -783,38 +783,51 @@ const MotoristaDashboard = () => {
           )}
 
           {/* Botões de ação */}
-          <div className="flex gap-2 mt-3">
-            {showActions === 'accept' && (
-              <Button 
-                size="sm"
-                onClick={() => {
-                  setVolumeToAccept(v);
-                  setAcceptModalOpen(true);
-                }}
-              >
-                Aceitar Coleta
-              </Button>
-            )}
-            
-            {/* Botão "Coletar" removido do card individual - agora é em lote no header */}
-            
-            {/* Botão "Bipar Saída" removido do card individual - agora é em lote no header */}
-            
-            {showActions === 'finalize' && (
-              <Button 
-                size="sm"
-                className="bg-green-600 hover:bg-green-700"
-                onClick={() => {
-                  setVolumeToFinalize(v);
-                  setFinalizeModalOpen(true);
-                  setEtiValidated(false);
-                }}
-              >
-                Finalizar
-              </Button>
-            )}
+          <div className="flex justify-between items-center mt-3">
+            <div className="flex gap-2">
+              {showActions === 'accept' && (
+                <Button 
+                  size="sm"
+                  onClick={() => {
+                    setVolumeToAccept(v);
+                    setAcceptModalOpen(true);
+                  }}
+                >
+                  Aceitar Coleta
+                </Button>
+              )}
+              
+              {/* Botão "Coletar" removido do card individual - agora é em lote no header */}
+              
+              {/* Botão "Bipar Saída" removido do card individual - agora é em lote no header */}
+              
+              {showActions === 'finalize' && (
+                <Button 
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={() => {
+                    setVolumeToFinalize(v);
+                    setFinalizeModalOpen(true);
+                    setEtiValidated(false);
+                  }}
+                >
+                  Finalizar
+                </Button>
+              )}
 
-            {/* Ocorrência (para todos exceto pendentes e concluidos) */}
+              <Button 
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedVolume(v);
+                  setShowDetailsModal(true);
+                }}
+              >
+                Ver
+              </Button>
+            </div>
+
+            {/* Ocorrência (para todos exceto pendentes e concluidos) - alinhado à direita */}
             {v.status !== 'PENDENTE' && v.status !== 'CONCLUIDO' && (
               <Button 
                 variant="outline"
@@ -827,17 +840,6 @@ const MotoristaDashboard = () => {
                 <AlertTriangle className="h-4 w-4" />
               </Button>
             )}
-
-            <Button 
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSelectedVolume(v);
-                setShowDetailsModal(true);
-              }}
-            >
-              Ver
-            </Button>
           </div>
         </CardContent>
       </Card>
