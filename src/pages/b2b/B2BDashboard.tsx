@@ -245,9 +245,6 @@ const B2BDashboard = () => {
                         ? `Entrega: ${format(new Date(shipment.delivery_date + 'T12:00:00'), 'dd/MM/yyyy')}`
                         : 'Data de entrega não definida'}
                     </p>
-                    <p className="text-xs text-foreground mt-1">
-                      {format(new Date(shipment.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                    </p>
                     <div className="flex items-center justify-between mt-2">
                       <p className="text-xs font-semibold text-orange-600 dark:text-orange-400">
                         ⚠️ Atenção: Por favor cole as etiquetas no produto
