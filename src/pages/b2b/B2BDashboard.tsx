@@ -228,7 +228,7 @@ const B2BDashboard = () => {
                 return (
                   <div
                     key={shipment.id}
-                    className="p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                    className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -240,12 +240,12 @@ const B2BDashboard = () => {
                       <B2BStatusBadge status={shipment.status} showIcon size="sm" />
                     </div>
                     
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-foreground font-medium">
                       {shipment.delivery_date 
                         ? `Entrega: ${format(new Date(shipment.delivery_date), 'dd/MM/yyyy')}`
                         : 'Data de entrega não definida'}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-foreground mt-1">
                       {format(new Date(shipment.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
                     </p>
                     <div className="flex items-center justify-between mt-2">
