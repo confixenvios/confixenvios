@@ -242,7 +242,7 @@ const B2BDashboard = () => {
                     
                     <p className="text-sm text-foreground font-medium">
                       {shipment.delivery_date 
-                        ? `Entrega: ${format(new Date(shipment.delivery_date), 'dd/MM/yyyy')}`
+                        ? `Entrega: ${format(new Date(shipment.delivery_date + 'T12:00:00'), 'dd/MM/yyyy')}`
                         : 'Data de entrega não definida'}
                     </p>
                     <p className="text-xs text-foreground mt-1">
@@ -294,7 +294,7 @@ const B2BDashboard = () => {
                                 <p className="text-muted-foreground">{volume.recipient_name}</p>
                                 <p className="text-muted-foreground">
                                   {shipment.delivery_date 
-                                    ? `Previsão: ${format(new Date(shipment.delivery_date), 'dd/MM/yyyy')}`
+                                    ? `Previsão: ${format(new Date(shipment.delivery_date + 'T12:00:00'), 'dd/MM/yyyy')}`
                                     : 'Previsão não definida'}
                                 </p>
                               </div>
@@ -358,7 +358,7 @@ const B2BDashboard = () => {
                   <p className="text-sm text-muted-foreground">Data de Entrega</p>
                   <p className="font-semibold">
                     {selectedShipment.delivery_date 
-                      ? format(new Date(selectedShipment.delivery_date), 'dd/MM/yyyy')
+                      ? format(new Date(selectedShipment.delivery_date + 'T12:00:00'), 'dd/MM/yyyy')
                       : '-'}
                   </p>
                 </div>
