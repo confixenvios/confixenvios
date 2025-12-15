@@ -727,20 +727,26 @@ const MotoristaDashboard = () => {
               )}
             </div>
           ) : (isAceito || isColetado) ? (
-            /* Para ACEITO e COLETADO: mostrar nome do local de coleta + destino CD */
+            /* Para ACEITO e COLETADO: mostrar endereço completo de coleta + destino CD */
             <>
-              <div className="text-sm text-muted-foreground space-y-1">
+              <div className="text-sm space-y-1">
                 <p className="flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  {v.shipment?.pickup_address?.name || 'Local de Coleta'}
+                  <User className="h-3 w-3 text-muted-foreground" />
+                  <span className="font-bold text-foreground">
+                    {v.shipment?.pickup_address 
+                      ? `${v.shipment.pickup_address.street}, ${v.shipment.pickup_address.number} - ${v.shipment.pickup_address.neighborhood}, ${v.shipment.pickup_address.city}/${v.shipment.pickup_address.state}`
+                      : 'Local de Coleta'}
+                  </span>
                 </p>
                 <p className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  Centro de Distribuição
+                  <MapPin className="h-3 w-3 text-muted-foreground" />
+                  <span className="font-bold text-foreground">
+                    Rua 4, Quadra 28, Lote 26 - Jardim das Esmeraldas, Goiânia/GO
+                  </span>
                 </p>
                 <p className="flex items-center gap-1">
-                  <Package className="h-3 w-3" />
-                  {v.weight} kg
+                  <Package className="h-3 w-3 text-muted-foreground" />
+                  <span className="font-bold text-foreground">{v.weight} kg</span>
                 </p>
               </div>
             </>
