@@ -194,7 +194,7 @@ const MotoristaDashboard = () => {
             tracking_code, 
             delivery_date,
             vehicle_type,
-            pickup_address:b2b_pickup_addresses(name, contact_name, contact_phone, street, number, neighborhood, city, state)
+            pickup_address:b2b_pickup_addresses!b2b_shipments_pickup_address_id_fkey(name, contact_name, contact_phone, street, number, neighborhood, city, state)
           )
         `)
         .or(`status.eq.PENDENTE,motorista_coleta_id.eq.${id},motorista_entrega_id.eq.${id}`)
@@ -228,7 +228,7 @@ const MotoristaDashboard = () => {
             shipment:b2b_shipments(
               tracking_code, 
               delivery_date,
-              pickup_address:b2b_pickup_addresses(name, contact_name, contact_phone, street, number, neighborhood, city, state)
+              pickup_address:b2b_pickup_addresses!b2b_shipments_pickup_address_id_fkey(name, contact_name, contact_phone, street, number, neighborhood, city, state)
             )
           `)
           .in('id', collectedVolumeIds)
@@ -247,7 +247,7 @@ const MotoristaDashboard = () => {
             shipment:b2b_shipments(
               tracking_code, 
               delivery_date,
-              pickup_address:b2b_pickup_addresses(name, contact_name, contact_phone, street, number, neighborhood, city, state)
+              pickup_address:b2b_pickup_addresses!b2b_shipments_pickup_address_id_fkey(name, contact_name, contact_phone, street, number, neighborhood, city, state)
             )
           `)
           .in('id', dispatchedVolumeIds)
