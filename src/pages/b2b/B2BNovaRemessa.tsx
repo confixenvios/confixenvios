@@ -62,13 +62,29 @@ const B2BNovaRemessa = () => {
   const [addresses, setAddresses] = useState<DeliveryAddress[]>([]);
   const [pickupAddresses, setPickupAddresses] = useState<PickupAddress[]>([]);
   const [showAddressModal, setShowAddressModal] = useState(false);
+  const [showPickupAddressModal, setShowPickupAddressModal] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
+  const [savingPickupAddress, setSavingPickupAddress] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
+  const [loadingPickupCep, setLoadingPickupCep] = useState(false);
   const [newAddress, setNewAddress] = useState({
     name: '',
     recipient_name: '',
     recipient_phone: '',
     recipient_document: '',
+    cep: '',
+    street: '',
+    number: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+    reference: '',
+  });
+  const [newPickupAddress, setNewPickupAddress] = useState({
+    name: '',
+    contact_name: '',
+    contact_phone: '',
     cep: '',
     street: '',
     number: '',
@@ -318,10 +334,106 @@ const B2BNovaRemessa = () => {
     });
   };
 
+  const resetNewPickupAddress = () => {
+    setNewPickupAddress({
+      name: '',
+      contact_name: '',
+      contact_phone: '',
+      cep: '',
+      street: '',
+      number: '',
+      complement: '',
+      neighborhood: '',
+      city: '',
+      state: '',
+      reference: '',
+    });
+  };
+
+  const handlePickupCepLookup = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) return;
+
+    setLoadingPickupCep(true);
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await response.json();
+      
+      if (data.erro) {
+        toast.error('CEP não encontrado');
+        return;
+      }
+
+      setNewPickupAddress(prev => ({
+        ...prev,
+        street: data.logradouro || '',
+        neighborhood: data.bairro || '',
+        city: data.localidade || '',
+        state: data.uf || '',
+      }));
+    } catch (error) {
+      toast.error('Erro ao buscar CEP');
+    } finally {
+      setLoadingPickupCep(false);
+    }
+  };
+
+  const handleNewPickupAddressChange = (field: string, value: string) => {
+    setNewPickupAddress(prev => ({ ...prev, [field]: value }));
+    
+    if (field === 'cep' && value.replace(/\D/g, '').length === 8) {
+      handlePickupCepLookup(value);
+    }
+  };
+
+  const handleSaveNewPickupAddress = async () => {
+    if (!client) return;
+
+    if (!newPickupAddress.name || !newPickupAddress.contact_name || !newPickupAddress.contact_phone ||
+        !newPickupAddress.cep || !newPickupAddress.street || !newPickupAddress.number ||
+        !newPickupAddress.neighborhood || !newPickupAddress.city || !newPickupAddress.state || !newPickupAddress.complement) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    setSavingPickupAddress(true);
+    try {
+      const { data, error } = await supabase
+        .from('b2b_pickup_addresses')
+        .insert({
+          b2b_client_id: client.id,
+          name: newPickupAddress.name,
+          contact_name: newPickupAddress.contact_name,
+          contact_phone: newPickupAddress.contact_phone,
+          cep: newPickupAddress.cep.replace(/\D/g, ''),
+          street: newPickupAddress.street,
+          number: newPickupAddress.number,
+          complement: newPickupAddress.complement,
+          neighborhood: newPickupAddress.neighborhood,
+          city: newPickupAddress.city,
+          state: newPickupAddress.state,
+          reference: newPickupAddress.reference || null,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success('Endereço de coleta cadastrado com sucesso!');
+      setPickupAddresses(prev => [...prev, data]);
+      setFormData(prev => ({ ...prev, pickup_address_id: data.id }));
+      setShowPickupAddressModal(false);
+      resetNewPickupAddress();
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao salvar endereço de coleta');
+    } finally {
+      setSavingPickupAddress(false);
+    }
+  };
+
   const handleSaveNewAddress = async () => {
     if (!client) return;
 
-    // Validação
     if (!newAddress.name || !newAddress.recipient_name || !newAddress.recipient_phone ||
         !newAddress.cep || !newAddress.street || !newAddress.number ||
         !newAddress.neighborhood || !newAddress.city || !newAddress.state || !newAddress.complement) {
@@ -388,44 +500,43 @@ const B2BNovaRemessa = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {addresses.length === 0 ? (
-            <div className="text-center py-8 space-y-4">
-              <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground" />
-              <div>
-                <p className="font-medium">Nenhum endereço cadastrado</p>
-                <p className="text-sm text-muted-foreground">Cadastre endereços de entrega para solicitar um envio.</p>
-              </div>
-              <Button onClick={() => setShowAddressModal(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Cadastrar Primeiro Endereço
-              </Button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Seção 0: Endereço de Coleta */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Seção 0: Endereço de Coleta */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b">
+                <div className="flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-green-600" />
                   <h3 className="font-semibold text-lg">Endereço de Coleta</h3>
                 </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPickupAddressModal(true)}
+                  className="text-green-600 border-green-600 hover:bg-green-50"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Novo Endereço de Coleta
+                </Button>
+              </div>
 
-                {pickupAddresses.length === 0 ? (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Nenhum endereço de coleta cadastrado.{' '}
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="h-auto p-0"
-                        onClick={() => navigate('/b2b-expresso/enderecos-coleta')}
-                      >
-                        Cadastre um endereço de coleta
-                      </Button>{' '}
-                      para continuar.
-                    </AlertDescription>
-                  </Alert>
-                ) : (
+              {pickupAddresses.length === 0 ? (
+                <div className="text-center py-6 space-y-3 bg-muted/30 rounded-lg">
+                  <AlertCircle className="h-10 w-10 mx-auto text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Nenhum endereço de coleta cadastrado</p>
+                    <p className="text-sm text-muted-foreground">Cadastre um endereço de coleta para continuar.</p>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => setShowPickupAddressModal(true)}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Cadastrar Endereço de Coleta
+                  </Button>
+                </div>
+              ) : (
                   <div className="space-y-2">
                     <Label className="text-base">Selecione o endereço de coleta *</Label>
                     <Select
@@ -509,14 +620,42 @@ const B2BNovaRemessa = () => {
               {/* Seção 2: Volumes com Peso e Endereço */}
               {parseInt(formData.volume_count) > 0 && (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 pb-2 border-b">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    <h3 className="font-semibold text-lg">Volumes e Endereços de Entrega</h3>
+                  <div className="flex items-center justify-between pb-2 border-b">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-primary" />
+                      <h3 className="font-semibold text-lg">Volumes e Endereços de Entrega</h3>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAddressModal(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Novo Endereço de Entrega
+                    </Button>
                   </div>
 
-                  <p className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-200 dark:border-blue-900">
-                    Informe o peso e selecione o endereço de entrega para cada volume
-                  </p>
+                  {addresses.length === 0 ? (
+                    <div className="text-center py-6 space-y-3 bg-muted/30 rounded-lg">
+                      <AlertCircle className="h-10 w-10 mx-auto text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">Nenhum endereço de entrega cadastrado</p>
+                        <p className="text-sm text-muted-foreground">Cadastre endereços de entrega para os volumes.</p>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => setShowAddressModal(true)}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Cadastrar Endereço de Entrega
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-200 dark:border-blue-900">
+                        Informe o peso e selecione o endereço de entrega para cada volume
+                      </p>
 
                   <div className="space-y-4">
                     {formData.volume_weights.map((weight, index) => (
@@ -602,6 +741,8 @@ const B2BNovaRemessa = () => {
                       <strong>Peso total:</strong> {totalWeight.toFixed(2)} kg
                     </p>
                   </div>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -687,7 +828,7 @@ const B2BNovaRemessa = () => {
                 </div>
               )}
 
-              <Button type="submit" className="w-full" size="lg" disabled={loading || addresses.length === 0}>
+              <Button type="submit" className="w-full" size="lg" disabled={loading || pickupAddresses.length === 0 || addresses.length === 0}>
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -701,7 +842,6 @@ const B2BNovaRemessa = () => {
                 )}
               </Button>
             </form>
-          )}
         </CardContent>
       </Card>
 
@@ -868,6 +1008,175 @@ const B2BNovaRemessa = () => {
                 className="flex-1"
               >
                 {savingAddress ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Salvar Endereço
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para cadastrar novo endereço de coleta */}
+      <Dialog open={showPickupAddressModal} onOpenChange={setShowPickupAddressModal}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-green-600" />
+              Novo Endereço de Coleta
+            </DialogTitle>
+            <DialogDescription>
+              Cadastre um novo endereço de coleta para suas remessas
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="pickup_name">Nome do Endereço *</Label>
+              <Input
+                id="pickup_name"
+                value={newPickupAddress.name}
+                onChange={(e) => handleNewPickupAddressChange('name', e.target.value)}
+                placeholder="Ex: Sede, Filial Centro"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="pickup_contact_name">Nome do Contato *</Label>
+                <Input
+                  id="pickup_contact_name"
+                  value={newPickupAddress.contact_name}
+                  onChange={(e) => handleNewPickupAddressChange('contact_name', e.target.value)}
+                  placeholder="Nome do responsável"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pickup_contact_phone">Telefone *</Label>
+                <Input
+                  id="pickup_contact_phone"
+                  value={newPickupAddress.contact_phone}
+                  onChange={(e) => handleNewPickupAddressChange('contact_phone', e.target.value)}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="pickup_cep">CEP *</Label>
+                <div className="relative">
+                  <Input
+                    id="pickup_cep"
+                    value={newPickupAddress.cep}
+                    onChange={(e) => handleNewPickupAddressChange('cep', e.target.value)}
+                    placeholder="00000-000"
+                    maxLength={9}
+                  />
+                  {loadingPickupCep && (
+                    <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pickup_state">Estado *</Label>
+                <Input
+                  id="pickup_state"
+                  value={newPickupAddress.state}
+                  onChange={(e) => handleNewPickupAddressChange('state', e.target.value)}
+                  placeholder="UF"
+                  maxLength={2}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pickup_street">Rua *</Label>
+              <Input
+                id="pickup_street"
+                value={newPickupAddress.street}
+                onChange={(e) => handleNewPickupAddressChange('street', e.target.value)}
+                placeholder="Nome da rua"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="pickup_number">Número *</Label>
+                <Input
+                  id="pickup_number"
+                  value={newPickupAddress.number}
+                  onChange={(e) => handleNewPickupAddressChange('number', e.target.value)}
+                  placeholder="Número"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pickup_complement">Complemento *</Label>
+                <Input
+                  id="pickup_complement"
+                  value={newPickupAddress.complement}
+                  onChange={(e) => handleNewPickupAddressChange('complement', e.target.value)}
+                  placeholder="Apto, Bloco, etc."
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pickup_neighborhood">Bairro *</Label>
+              <Input
+                id="pickup_neighborhood"
+                value={newPickupAddress.neighborhood}
+                onChange={(e) => handleNewPickupAddressChange('neighborhood', e.target.value)}
+                placeholder="Bairro"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pickup_city">Cidade *</Label>
+              <Input
+                id="pickup_city"
+                value={newPickupAddress.city}
+                onChange={(e) => handleNewPickupAddressChange('city', e.target.value)}
+                placeholder="Cidade"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pickup_reference">Referência (opcional)</Label>
+              <Input
+                id="pickup_reference"
+                value={newPickupAddress.reference}
+                onChange={(e) => handleNewPickupAddressChange('reference', e.target.value)}
+                placeholder="Ponto de referência"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowPickupAddressModal(false);
+                  resetNewPickupAddress();
+                }}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSaveNewPickupAddress}
+                disabled={savingPickupAddress}
+                className="flex-1 bg-green-600 hover:bg-green-700"
+              >
+                {savingPickupAddress ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Salvando...
