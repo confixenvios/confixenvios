@@ -734,14 +734,14 @@ const MotoristaDashboard = () => {
                   <User className="h-3 w-3 text-muted-foreground" />
                   <span className="font-bold text-foreground">
                     {v.shipment?.pickup_address 
-                      ? `${v.shipment.pickup_address.street}, ${v.shipment.pickup_address.number} - ${v.shipment.pickup_address.neighborhood}, ${v.shipment.pickup_address.city}/${v.shipment.pickup_address.state}`
+                      ? `${v.shipment.pickup_address.name || 'Local de Coleta'} - ${v.shipment.pickup_address.street}, ${v.shipment.pickup_address.number}, ${v.shipment.pickup_address.neighborhood}, ${v.shipment.pickup_address.city}/${v.shipment.pickup_address.state}`
                       : 'Local de Coleta'}
                   </span>
                 </p>
                 <p className="flex items-center gap-1">
                   <MapPin className="h-3 w-3 text-muted-foreground" />
                   <span className="font-bold text-foreground">
-                    Rua 4, Quadra 28, Lote 26 - Jardim das Esmeraldas, Goiânia/GO
+                    Avenida Primeira Avenida, SN, Quadra5B Lote 03 e 01 Cond Empresarial Village, Cidade Vera Cruz, CEP: 74934-600
                   </span>
                 </p>
                 <p className="flex items-center gap-1">
