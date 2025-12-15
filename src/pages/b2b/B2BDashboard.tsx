@@ -247,6 +247,9 @@ const B2BDashboard = () => {
                     <p className="text-xs text-muted-foreground mt-1">
                       {format(new Date(shipment.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
                     </p>
+                    <p className="text-xs font-semibold text-orange-600 dark:text-orange-400 mt-2">
+                      ⚠️ Atenção: Por favor cole esta etiqueta no produto
+                    </p>
 
                     {/* Volumes list */}
                     <Collapsible className="mt-3">
