@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Truck, Mail, Lock, User, Phone, FileText } from 'lucide-react';
+import { Truck, Lock, User, Phone, FileText, AtSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -15,7 +15,7 @@ const MotoristaRegistro = () => {
     nome: '',
     cpf: '',
     telefone: '',
-    email: '',
+    username: '',
     senha: '',
     confirmarSenha: ''
   });
@@ -38,6 +38,11 @@ const MotoristaRegistro = () => {
     return cleaned;
   };
 
+  const formatUsername = (value: string) => {
+    // Apenas letras minúsculas, números, pontos e underscores
+    return value.toLowerCase().replace(/[^a-z0-9._]/g, '');
+  };
+
   const validateForm = () => {
     if (formData.senha !== formData.confirmarSenha) {
       toast.error('As senhas não coincidem');
@@ -46,6 +51,11 @@ const MotoristaRegistro = () => {
 
     if (formData.senha.length < 6) {
       toast.error('A senha deve ter pelo menos 6 caracteres');
+      return false;
+    }
+
+    if (formData.username.length < 3) {
+      toast.error('O usuário deve ter pelo menos 3 caracteres');
       return false;
     }
 
@@ -66,55 +76,54 @@ const MotoristaRegistro = () => {
     setLoading(true);
 
     try {
-      console.log('🔄 Iniciando cadastro de motorista via Supabase Auth...');
-      console.log('📧 Email:', formData.email);
+      console.log('🔄 Iniciando cadastro de motorista...');
 
-      // Registrar via Supabase Auth com metadata de motorista
-      const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.senha,
-        options: {
-          emailRedirectTo: `${window.location.origin}/motorista/auth`,
-          data: {
-            is_motorista: 'true',
-            nome: formData.nome,
-            cpf: formData.cpf,
-            telefone: formData.telefone
-          }
-        }
-      });
+      // Verificar se username já existe
+      const { data: existingUser } = await supabase
+        .from('motoristas')
+        .select('id')
+        .eq('username', formData.username.toLowerCase())
+        .maybeSingle();
 
-      console.log('📋 Resposta signup:', { data, error });
+      if (existingUser) {
+        throw new Error('Este nome de usuário já está em uso. Escolha outro.');
+      }
+
+      // Verificar se CPF já existe
+      const { data: existingCPF } = await supabase
+        .from('motoristas')
+        .select('id')
+        .eq('cpf', formData.cpf)
+        .maybeSingle();
+
+      if (existingCPF) {
+        throw new Error('Este CPF já está cadastrado.');
+      }
+
+      // Inserir motorista na tabela (senha será hasheada pelo trigger)
+      const { data, error } = await supabase
+        .from('motoristas')
+        .insert({
+          username: formData.username.toLowerCase(),
+          nome: formData.nome,
+          cpf: formData.cpf,
+          telefone: formData.telefone,
+          senha: formData.senha,
+          status: 'pendente'
+        })
+        .select()
+        .single();
 
       if (error) {
-        console.error('❌ Erro no signup:', error);
-        if (error.message.includes('already registered')) {
-          throw new Error('Este e-mail já está cadastrado. Faça login.');
-        }
-        throw error;
+        console.error('❌ Erro ao cadastrar:', error);
+        throw new Error('Erro ao realizar cadastro. Tente novamente.');
       }
 
-      if (!data.user) {
-        throw new Error('Erro ao criar conta');
-      }
-
-      console.log('✅ Motorista cadastrado:', data.user.id, data.user.email);
-      console.log('📌 User metadata:', data.user.user_metadata);
+      console.log('✅ Motorista cadastrado:', data.id);
       
-      // Verificar se o email já existe (identities vazio = email já registrado)
-      if (data.user.identities?.length === 0) {
-        toast.error('Este e-mail já está cadastrado. Faça login.');
-        return;
-      }
-
-      // Verificar se a sessão foi criada (sem confirmação de email)
-      if (data.session) {
-        toast.success('Cadastro realizado com sucesso! Redirecionando...');
-        navigate('/motorista');
-      } else {
-        toast.success('Cadastro realizado! Verifique seu e-mail para confirmar a conta.');
-        navigate('/motorista/auth');
-      }
+      toast.success('Cadastro realizado com sucesso!');
+      toast.info('Aguarde a aprovação do administrador para acessar o sistema.');
+      navigate('/motorista/auth');
 
     } catch (error: any) {
       console.error('❌ Erro ao cadastrar motorista:', error);
@@ -155,6 +164,27 @@ const MotoristaRegistro = () => {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="username">Nome de Usuário</Label>
+              <div className="relative">
+                <AtSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="username"
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: formatUsername(e.target.value) })}
+                  className="pl-10"
+                  placeholder="seu.usuario"
+                  minLength={3}
+                  maxLength={30}
+                  required
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Apenas letras minúsculas, números, pontos e underscores
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="cpf">CPF</Label>
               <div className="relative">
                 <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -183,22 +213,6 @@ const MotoristaRegistro = () => {
                   className="pl-10"
                   placeholder="(00) 00000-0000"
                   maxLength={15}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="pl-10"
-                  placeholder="seu@email.com"
                   required
                 />
               </div>
@@ -258,7 +272,7 @@ const MotoristaRegistro = () => {
 
           <div className="mt-4 p-3 bg-muted/50 rounded-lg">
             <p className="text-xs text-muted-foreground text-center">
-              Após o cadastro, você receberá um e-mail para confirmar sua conta.
+              Após o cadastro, aguarde a aprovação do administrador para acessar o sistema.
             </p>
           </div>
         </CardContent>
