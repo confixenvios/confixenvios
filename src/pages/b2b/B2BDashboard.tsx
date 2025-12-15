@@ -166,11 +166,17 @@ const B2BDashboard = () => {
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       'PENDENTE': 'bg-yellow-100 text-yellow-800 border-yellow-300',
+      'ACEITO': 'bg-orange-100 text-orange-800 border-orange-300',
+      'COLETADO': 'bg-sky-100 text-sky-800 border-sky-300',
       'EM_TRANSITO': 'bg-blue-100 text-blue-800 border-blue-300',
-      'NO_CD': 'bg-purple-100 text-purple-800 border-purple-300',
-      'EM_ROTA': 'bg-indigo-100 text-indigo-800 border-indigo-300',
+      'EM_TRIAGEM': 'bg-purple-100 text-purple-800 border-purple-300',
+      'AGUARDANDO_EXPEDICAO': 'bg-indigo-100 text-indigo-800 border-indigo-300',
+      'DESPACHADO': 'bg-cyan-100 text-cyan-800 border-cyan-300',
+      'NO_CD': 'bg-violet-100 text-violet-800 border-violet-300',
+      'EM_ROTA': 'bg-blue-100 text-blue-800 border-blue-300',
       'ENTREGUE': 'bg-green-600 text-white border-green-600',
       'CONCLUIDO': 'bg-green-600 text-white border-green-600',
+      'DEVOLUCAO': 'bg-red-100 text-red-800 border-red-300',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
@@ -178,11 +184,17 @@ const B2BDashboard = () => {
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       'PENDENTE': 'Pendente',
+      'ACEITO': 'Aceito',
+      'COLETADO': 'Coletado',
       'EM_TRANSITO': 'Em Trânsito',
+      'EM_TRIAGEM': 'Em Triagem',
+      'AGUARDANDO_EXPEDICAO': 'Aguardando Expedição',
+      'DESPACHADO': 'Despachado',
       'NO_CD': 'No CD',
       'EM_ROTA': 'Em Rota',
       'ENTREGUE': 'Concluído',
       'CONCLUIDO': 'Concluído',
+      'DEVOLUCAO': 'Devolução',
     };
     return labels[status] || status;
   };
