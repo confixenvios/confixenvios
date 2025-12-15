@@ -50,6 +50,18 @@ interface B2BVolume {
   shipment?: {
     tracking_code: string;
     delivery_date: string;
+    pickup_address?: {
+      name: string;
+      contact_name: string;
+      contact_phone: string;
+      cep: string;
+      street: string;
+      number: string;
+      complement: string | null;
+      neighborhood: string;
+      city: string;
+      state: string;
+    };
   };
   motorista_coleta_nome?: string;
   motorista_entrega_nome?: string;
@@ -150,7 +162,13 @@ const CdDashboard = () => {
         .from('b2b_volumes')
         .select(`
           *,
-          shipment:b2b_shipments(tracking_code, delivery_date)
+          shipment:b2b_shipments(
+            tracking_code, 
+            delivery_date,
+            pickup_address:b2b_pickup_addresses(
+              name, contact_name, contact_phone, cep, street, number, complement, neighborhood, city, state
+            )
+          )
         `)
         .order('created_at', { ascending: false });
       
@@ -982,6 +1000,24 @@ const CdDashboard = () => {
                   <p className="font-medium">{selectedVolume.weight} kg</p>
                 </div>
               </div>
+
+              {/* Endereço de Coleta (Remetente) */}
+              {selectedVolume.shipment?.pickup_address && (
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Endereço de Coleta
+                  </h4>
+                  <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
+                    <p className="font-medium">{selectedVolume.shipment.pickup_address.name}</p>
+                    <p>{selectedVolume.shipment.pickup_address.contact_name} - {selectedVolume.shipment.pickup_address.contact_phone}</p>
+                    <p>{selectedVolume.shipment.pickup_address.street}, {selectedVolume.shipment.pickup_address.number}</p>
+                    {selectedVolume.shipment.pickup_address.complement && <p>{selectedVolume.shipment.pickup_address.complement}</p>}
+                    <p>{selectedVolume.shipment.pickup_address.neighborhood}</p>
+                    <p>{selectedVolume.shipment.pickup_address.city}/{selectedVolume.shipment.pickup_address.state} - {selectedVolume.shipment.pickup_address.cep}</p>
+                  </div>
+                </div>
+              )}
 
               <div className="border-t pt-4">
                 <h4 className="font-semibold mb-2 flex items-center gap-2">
