@@ -169,7 +169,8 @@ const B2BDashboard = () => {
       'EM_TRANSITO': 'bg-blue-100 text-blue-800 border-blue-300',
       'NO_CD': 'bg-purple-100 text-purple-800 border-purple-300',
       'EM_ROTA': 'bg-indigo-100 text-indigo-800 border-indigo-300',
-      'ENTREGUE': 'bg-green-100 text-green-800 border-green-300',
+      'ENTREGUE': 'bg-green-600 text-white border-green-600',
+      'CONCLUIDO': 'bg-green-600 text-white border-green-600',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
@@ -180,9 +181,19 @@ const B2BDashboard = () => {
       'EM_TRANSITO': 'Em Trânsito',
       'NO_CD': 'No CD',
       'EM_ROTA': 'Em Rota',
-      'ENTREGUE': 'Entregue',
+      'ENTREGUE': 'Concluído',
+      'CONCLUIDO': 'Concluído',
     };
     return labels[status] || status;
+  };
+
+  // Verifica se todos os volumes de uma remessa estão concluídos
+  const getShipmentDisplayStatus = (shipment: B2BShipment) => {
+    const shipmentVolumes = getShipmentVolumes(shipment.id);
+    if (shipmentVolumes.length === 0) return shipment.status;
+    
+    const allConcluded = shipmentVolumes.every(v => v.status === 'ENTREGUE' || v.status === 'CONCLUIDO');
+    return allConcluded ? 'CONCLUIDO' : shipment.status;
   };
 
   if (loading) {
@@ -237,7 +248,9 @@ const B2BDashboard = () => {
                           {shipment.total_volumes} volume(s)
                         </Badge>
                       </div>
-                      <B2BStatusBadge status={shipment.status} showIcon size="sm" />
+                      <Badge variant="outline" className={`text-xs ${getStatusColor(getShipmentDisplayStatus(shipment))}`}>
+                        {getStatusLabel(getShipmentDisplayStatus(shipment))}
+                      </Badge>
                     </div>
                     
                     <p className="text-sm text-foreground font-medium">
