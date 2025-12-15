@@ -207,6 +207,15 @@ const MotoristaDashboard = () => {
       
       const collectedVolumeIds = (collectedHistory || []).map(h => h.volume_id);
       
+      // Buscar volumes que este motorista despachou (via histórico) para "Devoluções"
+      const { data: dispatchedHistory } = await supabase
+        .from('b2b_status_history')
+        .select('volume_id')
+        .eq('motorista_id', id)
+        .eq('status', 'DESPACHADO');
+      
+      const dispatchedVolumeIds = (dispatchedHistory || []).map(h => h.volume_id);
+      
       // Buscar volumes adicionais que o motorista coletou mas já avançaram
       let additionalVolumes: any[] = [];
       if (collectedVolumeIds.length > 0) {
@@ -226,11 +235,35 @@ const MotoristaDashboard = () => {
         additionalVolumes = additionalData || [];
       }
       
+      // Buscar volumes devolvidos que este motorista tinha despachado
+      let returnedVolumes: any[] = [];
+      if (dispatchedVolumeIds.length > 0) {
+        const { data: returnedData } = await supabase
+          .from('b2b_volumes')
+          .select(`
+            *,
+            shipment:b2b_shipments(
+              tracking_code, 
+              delivery_date,
+              pickup_address:b2b_pickup_addresses(name, contact_name, contact_phone, street, number, neighborhood, city, state)
+            )
+          `)
+          .in('id', dispatchedVolumeIds)
+          .eq('status', 'DEVOLUCAO');
+        
+        returnedVolumes = returnedData || [];
+      }
+      
       // Combinar e remover duplicados
       const allVolumes = [...(data || [])];
       additionalVolumes.forEach(av => {
         if (!allVolumes.find(v => v.id === av.id)) {
           allVolumes.push(av);
+        }
+      });
+      returnedVolumes.forEach(rv => {
+        if (!allVolumes.find(v => v.id === rv.id)) {
+          allVolumes.push(rv);
         }
       });
 
@@ -299,7 +332,16 @@ const MotoristaDashboard = () => {
   const aguardandoExpedicao = filterBySearch(volumes.filter(v => v.status === 'AGUARDANDO_EXPEDICAO' && v.motorista_entrega_id === motorista?.id));
   const despachados = filterBySearch(volumes.filter(v => v.status === 'DESPACHADO' && v.motorista_entrega_id === motorista?.id));
   const concluidos = filterBySearch(volumes.filter(v => v.status === 'CONCLUIDO' && v.motorista_entrega_id === motorista?.id));
-  const devolucoes = filterBySearch(volumes.filter(v => v.status === 'DEVOLUCAO' && v.motorista_entrega_id === motorista?.id));
+  const devolucoes = filterBySearch(volumes.filter(v => {
+    if (v.status !== 'DEVOLUCAO') return false;
+    // Verifica se motorista_entrega_id é o motorista atual OU se no histórico há registro de DESPACHADO por este motorista
+    if (v.motorista_entrega_id === motorista?.id) return true;
+    // Verificar no histórico se este motorista despachava o volume
+    const despachouNoHistorico = v.status_history?.some(h => 
+      h.status === 'DESPACHADO' && h.motorista_id === motorista?.id
+    );
+    return despachouNoHistorico;
+  }));
 
   // Parse ETI
   const parseEtiCode = (input: string): string => {
