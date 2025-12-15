@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Clock, Truck, Package, MapPin } from 'lucide-react';
+import { CheckCircle, Clock, Truck, Package, MapPin, Warehouse } from 'lucide-react';
 
 interface B2BStatusBadgeProps {
   status: string;
@@ -9,55 +9,63 @@ interface B2BStatusBadgeProps {
 
 const B2BStatusBadge = ({ status, showIcon = false, size = 'md' }: B2BStatusBadgeProps) => {
   const getStatusConfig = (status: string) => {
-    const configs: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: typeof Clock; className?: string }> = {
+    const configs: Record<string, { label: string; icon: typeof Clock; className: string }> = {
       'PENDENTE': { 
-        label: 'Aguardando Coleta', 
-        variant: 'secondary', 
+        label: 'Pendente', 
         icon: Clock,
         className: 'bg-yellow-100 text-yellow-800 border-yellow-300'
       },
+      'EM_TRANSITO': { 
+        label: 'Em Trânsito', 
+        icon: Truck,
+        className: 'bg-blue-100 text-blue-800 border-blue-300'
+      },
+      'NO_CD': { 
+        label: 'No CD', 
+        icon: Warehouse,
+        className: 'bg-purple-100 text-purple-800 border-purple-300'
+      },
+      'EM_ROTA': { 
+        label: 'Em Rota', 
+        icon: MapPin,
+        className: 'bg-indigo-100 text-indigo-800 border-indigo-300'
+      },
+      'ENTREGUE': { 
+        label: 'Entregue', 
+        icon: CheckCircle,
+        className: 'bg-green-100 text-green-800 border-green-300'
+      },
+      // Legacy status support
       'ACEITA': { 
-        label: 'Coleta Aceita', 
-        variant: 'secondary', 
+        label: 'Aceita', 
         icon: Package,
         className: 'bg-orange-100 text-orange-800 border-orange-300'
       },
       'COLETA_ACEITA': { 
         label: 'Coleta Aceita', 
-        variant: 'secondary', 
         icon: Package,
         className: 'bg-orange-100 text-orange-800 border-orange-300'
       },
       'B2B_COLETA_FINALIZADA': { 
-        label: 'Em Trânsito', 
-        variant: 'default', 
+        label: 'Coletado', 
         icon: Truck,
         className: 'bg-blue-100 text-blue-800 border-blue-300'
       },
       'B2B_ENTREGA_ACEITA': { 
         label: 'Saiu para Entrega', 
-        variant: 'default', 
         icon: MapPin,
         className: 'bg-purple-100 text-purple-800 border-purple-300'
       },
-      'ENTREGUE': { 
-        label: 'Entregue', 
-        variant: 'default', 
-        icon: CheckCircle,
-        className: 'bg-green-100 text-green-800 border-green-300'
-      },
       'ENTREGA_FINALIZADA': { 
         label: 'Entregue', 
-        variant: 'default', 
         icon: CheckCircle,
         className: 'bg-green-100 text-green-800 border-green-300'
       },
     };
     return configs[status] || { 
       label: status, 
-      variant: 'outline' as const, 
       icon: Clock,
-      className: ''
+      className: 'bg-gray-100 text-gray-800 border-gray-300'
     };
   };
 

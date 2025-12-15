@@ -6,12 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Package, Plus, Clock, CheckCircle, Send, Eye, Loader2, FileDown, History } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Package, Plus, Eye, Loader2, ChevronDown, History, MapPin, User, Phone, FileText, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import B2BStatusHistory from '@/components/b2b/B2BStatusHistory';
 import B2BStatusBadge from '@/components/b2b/B2BStatusBadge';
+import B2BVolumeStatusHistory from '@/components/b2b/B2BVolumeStatusHistory';
+import B2BLabelGenerator from '@/components/b2b/B2BLabelGenerator';
 
 interface B2BClient {
   id: string;
@@ -21,6 +23,31 @@ interface B2BClient {
   cnpj: string | null;
 }
 
+interface B2BVolume {
+  id: string;
+  eti_code: string;
+  volume_number: number;
+  weight: number;
+  status: string;
+  recipient_name: string;
+  recipient_phone: string;
+  recipient_document: string | null;
+  recipient_cep: string;
+  recipient_street: string;
+  recipient_number: string;
+  recipient_complement: string | null;
+  recipient_neighborhood: string;
+  recipient_city: string;
+  recipient_state: string;
+  created_at: string;
+  b2b_shipment_id: string;
+  shipment?: {
+    tracking_code: string;
+    delivery_date: string;
+    pickup_address_id: string | null;
+  };
+}
+
 interface B2BShipment {
   id: string;
   tracking_code: string;
@@ -28,27 +55,31 @@ interface B2BShipment {
   created_at: string;
   total_volumes: number;
   delivery_date: string | null;
-  observations: string | null;
   total_weight: number;
-}
-
-interface Stats {
-  total_shipments: number;
-  pending_shipments: number;
-  in_transit_shipments: number;
-  completed_shipments: number;
-  month_shipments: number;
+  pickup_address?: {
+    name: string;
+    contact_name: string;
+    contact_phone: string;
+    street: string;
+    number: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+  } | null;
 }
 
 const B2BDashboard = () => {
   const navigate = useNavigate();
   const [client, setClient] = useState<B2BClient | null>(null);
   const [shipments, setShipments] = useState<B2BShipment[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [volumes, setVolumes] = useState<B2BVolume[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sendingWebhook, setSendingWebhook] = useState<string | null>(null);
   const [selectedShipment, setSelectedShipment] = useState<B2BShipment | null>(null);
+  const [selectedVolume, setSelectedVolume] = useState<B2BVolume | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showVolumeModal, setShowVolumeModal] = useState(false);
+  const [showLabelModal, setShowLabelModal] = useState(false);
+  const [labelVolume, setLabelVolume] = useState<B2BVolume | null>(null);
 
   useEffect(() => {
     loadClientData();
@@ -78,24 +109,32 @@ const B2BDashboard = () => {
 
       setClient(clientData);
 
-      // Buscar estatísticas
-      const { data: statsData } = await supabase
-        .rpc('get_b2b_client_stats', { client_id: clientData.id });
-
-      if (statsData && statsData.length > 0) {
-        setStats(statsData[0]);
-      }
-
-      // Buscar remessas
+      // Buscar remessas com endereço de coleta
       const { data: shipmentsData, error: shipmentsError } = await supabase
         .from('b2b_shipments')
-        .select('id, tracking_code, status, created_at, total_volumes, delivery_date, observations, total_weight')
+        .select(`
+          id, tracking_code, status, created_at, total_volumes, delivery_date, total_weight,
+          pickup_address:b2b_pickup_addresses(name, contact_name, contact_phone, street, number, neighborhood, city, state)
+        `)
         .eq('b2b_client_id', clientData.id)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(20);
 
       if (shipmentsError) throw shipmentsError;
       setShipments(shipmentsData || []);
+
+      // Buscar volumes
+      const shipmentIds = (shipmentsData || []).map(s => s.id);
+      if (shipmentIds.length > 0) {
+        const { data: volumesData, error: volumesError } = await supabase
+          .from('b2b_volumes')
+          .select('*')
+          .in('b2b_shipment_id', shipmentIds)
+          .order('volume_number', { ascending: true });
+
+        if (volumesError) throw volumesError;
+        setVolumes(volumesData || []);
+      }
     } catch (error: any) {
       toast.error('Erro ao carregar dados');
       console.error(error);
@@ -104,18 +143,45 @@ const B2BDashboard = () => {
     }
   };
 
-  const parseObservations = (observations: string | null) => {
-    if (!observations) return null;
-    try {
-      return JSON.parse(observations);
-    } catch {
-      return null;
-    }
+  const getShipmentVolumes = (shipmentId: string) => {
+    return volumes.filter(v => v.b2b_shipment_id === shipmentId);
   };
 
   const handleShowDetails = (shipment: B2BShipment) => {
     setSelectedShipment(shipment);
     setShowDetailsModal(true);
+  };
+
+  const handleShowVolumeDetails = (volume: B2BVolume) => {
+    setSelectedVolume(volume);
+    setShowVolumeModal(true);
+  };
+
+  const handlePrintLabel = (volume: B2BVolume) => {
+    setLabelVolume(volume);
+    setShowLabelModal(true);
+  };
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      'PENDENTE': 'bg-yellow-100 text-yellow-800 border-yellow-300',
+      'EM_TRANSITO': 'bg-blue-100 text-blue-800 border-blue-300',
+      'NO_CD': 'bg-purple-100 text-purple-800 border-purple-300',
+      'EM_ROTA': 'bg-indigo-100 text-indigo-800 border-indigo-300',
+      'ENTREGUE': 'bg-green-100 text-green-800 border-green-300',
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      'PENDENTE': 'Pendente',
+      'EM_TRANSITO': 'Em Trânsito',
+      'NO_CD': 'No CD',
+      'EM_ROTA': 'Em Rota',
+      'ENTREGUE': 'Entregue',
+    };
+    return labels[status] || status;
   };
 
   if (loading) {
@@ -157,7 +223,7 @@ const B2BDashboard = () => {
           ) : (
             <div className="space-y-4">
               {shipments.map((shipment) => {
-                const obs = parseObservations(shipment.observations);
+                const shipmentVolumes = getShipmentVolumes(shipment.id);
                 return (
                   <div
                     key={shipment.id}
@@ -181,6 +247,49 @@ const B2BDashboard = () => {
                     <p className="text-xs text-muted-foreground mt-1">
                       {format(new Date(shipment.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
                     </p>
+
+                    {/* Volumes list */}
+                    <Collapsible className="mt-3">
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm" className="w-full justify-between p-2 h-8 text-xs">
+                          <span className="flex items-center gap-1">
+                            <Package className="h-3 w-3" />
+                            Ver {shipmentVolumes.length} Volume(s)
+                          </span>
+                          <ChevronDown className="h-3 w-3" />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-2 border-t mt-2 space-y-2">
+                        {shipmentVolumes.map((volume) => (
+                          <div key={volume.id} className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-medium">{volume.eti_code}</span>
+                              <Badge variant="outline" className={`text-[10px] ${getStatusColor(volume.status)}`}>
+                                {getStatusLabel(volume.status)}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2"
+                                onClick={() => handleShowVolumeDetails(volume)}
+                              >
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2"
+                                onClick={() => handlePrintLabel(volume)}
+                              >
+                                <Printer className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </CollapsibleContent>
+                    </Collapsible>
                     
                     <div className="flex items-center gap-2 mt-3">
                       <Button
@@ -200,7 +309,7 @@ const B2BDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Modal de Detalhes */}
+      {/* Modal de Detalhes do Shipment */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
         <DialogContent className="max-w-lg max-h-[85vh] p-0 overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-4 border-b">
@@ -230,19 +339,150 @@ const B2BDashboard = () => {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Criado em</p>
-                  <p className="font-semibold">
-                    {format(new Date(selectedShipment.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                  </p>
+                  <p className="text-sm text-muted-foreground">Peso Total</p>
+                  <p className="font-semibold">{selectedShipment.total_weight} kg</p>
+                </div>
+              </div>
+
+              {selectedShipment.pickup_address && (
+                <>
+                  <hr className="border-border" />
+                  <h4 className="font-semibold flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Endereço de Coleta
+                  </h4>
+                  <div className="text-sm bg-muted/50 p-3 rounded">
+                    <p className="font-medium">{selectedShipment.pickup_address.name}</p>
+                    <p>{selectedShipment.pickup_address.contact_name} - {selectedShipment.pickup_address.contact_phone}</p>
+                    <p>{selectedShipment.pickup_address.street}, {selectedShipment.pickup_address.number}</p>
+                    <p>{selectedShipment.pickup_address.neighborhood} - {selectedShipment.pickup_address.city}/{selectedShipment.pickup_address.state}</p>
+                  </div>
+                </>
+              )}
+
+              <hr className="border-border" />
+              <h4 className="font-semibold">Volumes</h4>
+              <div className="space-y-2">
+                {getShipmentVolumes(selectedShipment.id).map((volume) => (
+                  <div key={volume.id} className="p-3 border rounded text-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-mono font-medium">{volume.eti_code}</span>
+                      <Badge variant="outline" className={getStatusColor(volume.status)}>
+                        {getStatusLabel(volume.status)}
+                      </Badge>
+                    </div>
+                    <p className="text-muted-foreground">
+                      <User className="h-3 w-3 inline mr-1" />
+                      {volume.recipient_name}
+                    </p>
+                    <p className="text-muted-foreground">
+                      <MapPin className="h-3 w-3 inline mr-1" />
+                      {volume.recipient_city}/{volume.recipient_state}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Detalhes do Volume */}
+      <Dialog open={showVolumeModal} onOpenChange={setShowVolumeModal}>
+        <DialogContent className="max-w-lg max-h-[85vh] p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle>Detalhes do Volume</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[calc(85vh-100px)] px-6 py-4">
+          {selectedVolume && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Código ETI</p>
+                  <p className="font-mono text-xl font-bold">{selectedVolume.eti_code}</p>
+                </div>
+                <Badge variant="outline" className={getStatusColor(selectedVolume.status)}>
+                  {getStatusLabel(selectedVolume.status)}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Número do Volume</p>
+                  <p className="font-semibold">{selectedVolume.volume_number}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Peso</p>
+                  <p className="font-semibold">{selectedVolume.weight} kg</p>
                 </div>
               </div>
 
               <hr className="border-border" />
-              <h4 className="font-semibold">Histórico de Status</h4>
-              <B2BStatusHistory shipmentId={selectedShipment.id} />
+              <h4 className="font-semibold flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Destinatário
+              </h4>
+              <div className="text-sm bg-muted/50 p-3 rounded space-y-1">
+                <p className="font-medium">{selectedVolume.recipient_name}</p>
+                <p className="flex items-center gap-1">
+                  <Phone className="h-3 w-3" />
+                  {selectedVolume.recipient_phone}
+                </p>
+                {selectedVolume.recipient_document && (
+                  <p className="flex items-center gap-1">
+                    <FileText className="h-3 w-3" />
+                    {selectedVolume.recipient_document}
+                  </p>
+                )}
+              </div>
+
+              <h4 className="font-semibold flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Endereço de Entrega
+              </h4>
+              <div className="text-sm bg-muted/50 p-3 rounded">
+                <p>{selectedVolume.recipient_street}, {selectedVolume.recipient_number}</p>
+                {selectedVolume.recipient_complement && <p>{selectedVolume.recipient_complement}</p>}
+                <p>{selectedVolume.recipient_neighborhood}</p>
+                <p>{selectedVolume.recipient_city}/{selectedVolume.recipient_state} - CEP: {selectedVolume.recipient_cep}</p>
+              </div>
+
+              <hr className="border-border" />
+              <h4 className="font-semibold flex items-center gap-2">
+                <History className="h-4 w-4" />
+                Histórico de Status
+              </h4>
+              <B2BVolumeStatusHistory volumeId={selectedVolume.id} />
+
+              <Button
+                className="w-full"
+                onClick={() => handlePrintLabel(selectedVolume)}
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Imprimir Etiqueta
+              </Button>
             </div>
           )}
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Etiqueta */}
+      <Dialog open={showLabelModal} onOpenChange={setShowLabelModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Etiqueta do Volume</DialogTitle>
+          </DialogHeader>
+          {labelVolume && client && (
+            <B2BLabelGenerator
+              volume={labelVolume}
+              shipment={shipments.find(s => s.id === labelVolume.b2b_shipment_id)}
+              companyName={client.company_name}
+              companyDocument={client.cnpj}
+              companyPhone={client.phone}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>

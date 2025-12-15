@@ -7,10 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, Download, Route, User, Eye, ChevronDown, History } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, Download, Route, User, Eye, ChevronDown, History, Warehouse } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import B2BStatusHistory from '@/components/b2b/B2BStatusHistory';
+import B2BVolumeStatusHistory from '@/components/b2b/B2BVolumeStatusHistory';
 
 interface CdUser {
   id: string;
@@ -18,25 +18,38 @@ interface CdUser {
   email: string;
 }
 
-interface B2BShipment {
+interface B2BVolume {
   id: string;
-  tracking_code: string;
+  eti_code: string;
+  volume_number: number;
+  weight: number;
   status: string;
+  recipient_name: string;
+  recipient_phone: string;
+  recipient_cep: string;
+  recipient_street: string;
+  recipient_number: string;
+  recipient_complement: string | null;
+  recipient_neighborhood: string;
+  recipient_city: string;
+  recipient_state: string;
   created_at: string;
-  total_volumes: number;
-  total_weight: number;
   motorista_coleta_id: string | null;
   motorista_entrega_id: string | null;
-  motorista_nome?: string | null;
-  delivery_date?: string | null;
-  observations?: string | null;
+  b2b_shipment_id: string;
+  shipment?: {
+    tracking_code: string;
+    delivery_date: string;
+  };
+  motorista_coleta_nome?: string;
+  motorista_entrega_nome?: string;
 }
 
 const CdDashboard = () => {
   const navigate = useNavigate();
   const [cdUser, setCdUser] = useState<CdUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [shipments, setShipments] = useState<B2BShipment[]>([]);
+  const [volumes, setVolumes] = useState<B2BVolume[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('em_transito');
   
@@ -46,7 +59,7 @@ const CdDashboard = () => {
   const [receiving, setReceiving] = useState(false);
   
   // Modal de detalhes
-  const [selectedShipment, setSelectedShipment] = useState<B2BShipment | null>(null);
+  const [selectedVolume, setSelectedVolume] = useState<B2BVolume | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
@@ -61,7 +74,7 @@ const CdDashboard = () => {
         return;
       }
       setCdUser(JSON.parse(storedUser));
-      await loadShipments();
+      await loadVolumes();
     } catch (error) {
       navigate('/cd/auth');
     } finally {
@@ -69,20 +82,23 @@ const CdDashboard = () => {
     }
   };
 
-  const loadShipments = async () => {
+  const loadVolumes = async () => {
     setRefreshing(true);
     try {
-      // Buscar remessas B2B
+      // Buscar volumes B2B com dados do shipment
       const { data, error } = await supabase
-        .from('b2b_shipments')
-        .select('id, tracking_code, status, created_at, total_volumes, total_weight, motorista_coleta_id, motorista_entrega_id, delivery_date, observations')
+        .from('b2b_volumes')
+        .select(`
+          *,
+          shipment:b2b_shipments(tracking_code, delivery_date)
+        `)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
 
       // Buscar nomes dos motoristas
       const motoristaIds = [...new Set((data || [])
-        .flatMap(s => [s.motorista_coleta_id, s.motorista_entrega_id])
+        .flatMap(v => [v.motorista_coleta_id, v.motorista_entrega_id])
         .filter(Boolean))] as string[];
       
       let motoristasMap: Record<string, string> = {};
@@ -94,23 +110,23 @@ const CdDashboard = () => {
           .in('id', motoristaIds);
         
         if (motoristas) {
-          motoristasMap = motoristas.reduce((acc: any, m: any) => {
+          motoristasMap = motoristas.reduce((acc: Record<string, string>, m) => {
             acc[m.id] = m.nome;
             return acc;
           }, {});
         }
       }
 
-      // Combinar dados das remessas com nomes dos motoristas
-      const shipmentsWithMotorista = (data || []).map(s => ({
-        ...s,
-        motorista_nome: s.motorista_coleta_id ? motoristasMap[s.motorista_coleta_id] : 
-                        s.motorista_entrega_id ? motoristasMap[s.motorista_entrega_id] : null
+      // Combinar dados dos volumes com nomes dos motoristas
+      const volumesWithMotorista = (data || []).map(v => ({
+        ...v,
+        motorista_coleta_nome: v.motorista_coleta_id ? motoristasMap[v.motorista_coleta_id] : undefined,
+        motorista_entrega_nome: v.motorista_entrega_id ? motoristasMap[v.motorista_entrega_id] : undefined
       }));
 
-      setShipments(shipmentsWithMotorista);
+      setVolumes(volumesWithMotorista);
     } catch (error) {
-      toast.error('Erro ao carregar remessas');
+      toast.error('Erro ao carregar volumes');
     } finally {
       setRefreshing(false);
     }
@@ -124,10 +140,52 @@ const CdDashboard = () => {
   const handleReceiveVolume = async () => {
     if (!receiveEtiInput.trim()) return;
     setReceiving(true);
+    
     try {
-      toast.info('Funcionalidade em desenvolvimento');
+      // Formatar código ETI
+      const etiCode = receiveEtiInput.toUpperCase().includes('ETI-') 
+        ? receiveEtiInput.toUpperCase() 
+        : `ETI-${receiveEtiInput.padStart(4, '0')}`;
+
+      // Buscar volume pelo ETI code
+      const { data: volume, error: findError } = await supabase
+        .from('b2b_volumes')
+        .select('id, status, eti_code')
+        .eq('eti_code', etiCode)
+        .single();
+
+      if (findError || !volume) {
+        toast.error('Volume não encontrado');
+        return;
+      }
+
+      if (volume.status !== 'EM_TRANSITO') {
+        toast.error(`Volume não está em trânsito. Status atual: ${volume.status}`);
+        return;
+      }
+
+      // Atualizar status para NO_CD
+      const { error: updateError } = await supabase
+        .from('b2b_volumes')
+        .update({ 
+          status: 'NO_CD',
+          motorista_coleta_id: null // Desvincular motorista de coleta
+        })
+        .eq('id', volume.id);
+
+      if (updateError) throw updateError;
+
+      // Registrar histórico
+      await supabase.from('b2b_status_history').insert({
+        volume_id: volume.id,
+        status: 'NO_CD',
+        observacoes: `Recebido no CD por ${cdUser?.nome}`
+      });
+
+      toast.success(`Volume ${etiCode} recebido no CD!`);
       setReceiveModalOpen(false);
       setReceiveEtiInput('');
+      await loadVolumes();
     } catch (error) {
       toast.error('Erro ao receber volume');
     } finally {
@@ -135,51 +193,81 @@ const CdDashboard = () => {
     }
   };
 
-  // Filtra remessas por status
-  const emTransito = shipments.filter(s => 
-    ['PENDENTE', 'ACEITA'].includes(s.status)
-  );
-  
-  const noCd = shipments.filter(s => s.status === 'NO_CD');
-  const emRota = shipments.filter(s => ['EM_ROTA'].includes(s.status));
-  const entregues = shipments.filter(s => s.status === 'CONCLUIDO');
+  // Filtra volumes por status
+  const emTransito = volumes.filter(v => v.status === 'EM_TRANSITO');
+  const noCd = volumes.filter(v => v.status === 'NO_CD');
+  const emRota = volumes.filter(v => v.status === 'EM_ROTA');
+  const entregues = volumes.filter(v => v.status === 'ENTREGUE');
 
-  const handleShowDetails = (shipment: B2BShipment) => {
-    setSelectedShipment(shipment);
+  const handleShowDetails = (volume: B2BVolume) => {
+    setSelectedVolume(volume);
     setShowDetailsModal(true);
   };
 
-  // Renderiza card COM histórico de status
-  const renderCard = (s: B2BShipment) => (
-    <Card key={s.id} className="mb-3">
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      'PENDENTE': 'bg-yellow-500',
+      'EM_TRANSITO': 'bg-orange-500',
+      'NO_CD': 'bg-purple-500',
+      'EM_ROTA': 'bg-blue-500',
+      'ENTREGUE': 'bg-green-500',
+    };
+    return colors[status] || 'bg-gray-500';
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      'PENDENTE': 'Pendente',
+      'EM_TRANSITO': 'Em Trânsito',
+      'NO_CD': 'No CD',
+      'EM_ROTA': 'Em Rota',
+      'ENTREGUE': 'Entregue',
+    };
+    return labels[status] || status;
+  };
+
+  // Renderiza card de volume
+  const renderVolumeCard = (v: B2BVolume) => (
+    <Card key={v.id} className="mb-3">
       <CardContent className="p-4">
         <div className="flex justify-between mb-2">
           <div>
-            <h3 className="font-mono font-medium">{s.tracking_code}</h3>
+            <h3 className="font-mono font-medium text-lg">{v.eti_code}</h3>
+            {v.shipment && (
+              <p className="text-xs text-muted-foreground">{v.shipment.tracking_code}</p>
+            )}
           </div>
-          <Badge className={
-            s.status === 'CONCLUIDO' ? 'bg-green-500' : 
-            ['EM_ROTA'].includes(s.status) ? 'bg-blue-500' : 
-            s.status === 'NO_CD' ? 'bg-purple-500' : 
-            'bg-orange-500'
-          }>
-            {s.status === 'NO_CD' ? 'No CD' :
-             s.status === 'EM_ROTA' ? 'Em Rota' :
-             s.status === 'CONCLUIDO' ? 'Concluído' :
-             'Pendente'}
+          <Badge className={getStatusColor(v.status)}>
+            {getStatusLabel(v.status)}
           </Badge>
         </div>
         
-        <div className="text-sm text-muted-foreground">
-          <Package className="h-3 w-3 inline mr-1" />
-          {s.total_volumes} volume(s) - {s.total_weight} kg
+        <div className="text-sm text-muted-foreground space-y-1">
+          <p className="flex items-center gap-1">
+            <User className="h-3 w-3" />
+            {v.recipient_name}
+          </p>
+          <p className="flex items-center gap-1">
+            <MapPin className="h-3 w-3" />
+            {v.recipient_city}/{v.recipient_state}
+          </p>
+          <p className="flex items-center gap-1">
+            <Package className="h-3 w-3" />
+            {v.weight} kg
+          </p>
         </div>
 
-        {/* Mostrar motorista */}
-        {s.motorista_nome && (
-          <div className="flex items-center gap-1 mt-2 text-sm">
-            <User className="h-3 w-3 text-blue-500" />
-            <span className="text-blue-600 font-medium">Motorista: {s.motorista_nome}</span>
+        {/* Mostrar motoristas */}
+        {v.motorista_coleta_nome && (
+          <div className="flex items-center gap-1 mt-2 text-xs">
+            <Truck className="h-3 w-3 text-orange-500" />
+            <span>Coleta: {v.motorista_coleta_nome}</span>
+          </div>
+        )}
+        {v.motorista_entrega_nome && (
+          <div className="flex items-center gap-1 mt-1 text-xs">
+            <Route className="h-3 w-3 text-blue-500" />
+            <span>Entrega: {v.motorista_entrega_nome}</span>
           </div>
         )}
 
@@ -195,7 +283,7 @@ const CdDashboard = () => {
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-2 border-t mt-2">
-            <B2BStatusHistory shipmentId={s.id} />
+            <B2BVolumeStatusHistory volumeId={v.id} />
           </CollapsibleContent>
         </Collapsible>
 
@@ -204,7 +292,7 @@ const CdDashboard = () => {
           variant="outline"
           size="sm"
           className="mt-3 w-full"
-          onClick={() => handleShowDetails(s)}
+          onClick={() => handleShowDetails(v)}
         >
           <Eye className="h-4 w-4 mr-1" />
           Ver Detalhes
@@ -220,14 +308,14 @@ const CdDashboard = () => {
       <header className="sticky top-0 z-40 bg-card/95 backdrop-blur border-b">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Package className="h-6 w-6 text-purple-600" />
+            <Warehouse className="h-6 w-6 text-purple-600" />
             <div>
               <h1 className="font-semibold">Centro de Distribuição</h1>
               <p className="text-sm text-muted-foreground">{cdUser?.nome}</p>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={loadShipments}>
+            <Button variant="outline" size="sm" onClick={loadVolumes}>
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout}>
@@ -249,7 +337,7 @@ const CdDashboard = () => {
           </Card>
           <Card>
             <CardContent className="p-3 text-center">
-              <Package className="h-5 w-5 mx-auto text-purple-500" />
+              <Warehouse className="h-5 w-5 mx-auto text-purple-500" />
               <p className="text-2xl font-bold">{noCd.length}</p>
               <p className="text-xs">No CD</p>
             </CardContent>
@@ -265,7 +353,7 @@ const CdDashboard = () => {
             <CardContent className="p-3 text-center">
               <CheckCircle className="h-5 w-5 mx-auto text-green-500" />
               <p className="text-2xl font-bold">{entregues.length}</p>
-              <p className="text-xs">Concluídos</p>
+              <p className="text-xs">Entregues</p>
             </CardContent>
           </Card>
         </div>
@@ -283,16 +371,16 @@ const CdDashboard = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="em_transito" className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-700">
-              Em Trânsito
+              Em Trânsito ({emTransito.length})
             </TabsTrigger>
             <TabsTrigger value="no_cd" className="data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700">
-              No CD
+              No CD ({noCd.length})
             </TabsTrigger>
             <TabsTrigger value="em_rota" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
-              Em Rota
+              Em Rota ({emRota.length})
             </TabsTrigger>
             <TabsTrigger value="entregues" className="data-[state=active]:bg-green-100 data-[state=active]:text-green-700">
-              Concluídos
+              Entregues ({entregues.length})
             </TabsTrigger>
           </TabsList>
 
@@ -301,14 +389,14 @@ const CdDashboard = () => {
             {emTransito.length ? (
               <>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Volumes aguardando coleta ou sendo transportados
+                  Volumes sendo transportados pelos motoristas de coleta
                 </p>
-                {emTransito.map(s => renderCard(s))}
+                {emTransito.map(v => renderVolumeCard(v))}
               </>
             ) : (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  Nenhuma remessa em trânsito
+                  Nenhum volume em trânsito
                 </CardContent>
               </Card>
             )}
@@ -321,12 +409,12 @@ const CdDashboard = () => {
                 <p className="text-sm text-muted-foreground mb-3">
                   Volumes aguardando motorista de entrega
                 </p>
-                {noCd.map(s => renderCard(s))}
+                {noCd.map(v => renderVolumeCard(v))}
               </>
             ) : (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  Nenhuma remessa no CD
+                  Nenhum volume no CD
                 </CardContent>
               </Card>
             )}
@@ -339,25 +427,25 @@ const CdDashboard = () => {
                 <p className="text-sm text-muted-foreground mb-3">
                   Volumes em rota com motoristas de entrega
                 </p>
-                {emRota.map(s => renderCard(s))}
+                {emRota.map(v => renderVolumeCard(v))}
               </>
             ) : (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  Nenhuma remessa em rota
+                  Nenhum volume em rota
                 </CardContent>
               </Card>
             )}
           </TabsContent>
 
-          {/* Concluídos */}
+          {/* Entregues */}
           <TabsContent value="entregues">
             {entregues.length ? (
-              entregues.map(s => renderCard(s))
+              entregues.map(v => renderVolumeCard(v))
             ) : (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  Nenhuma remessa concluída
+                  Nenhum volume entregue
                 </CardContent>
               </Card>
             )}
@@ -375,11 +463,10 @@ const CdDashboard = () => {
             Digite o código ETI do volume para recebê-lo no CD.
           </p>
           <Input
-            placeholder="Ex: 0001"
+            placeholder="Ex: ETI-0001 ou 0001"
             value={receiveEtiInput}
             onChange={(e) => setReceiveEtiInput(e.target.value)}
             className="font-mono text-center text-lg"
-            maxLength={4}
           />
           <Button 
             onClick={handleReceiveVolume} 
@@ -393,29 +480,48 @@ const CdDashboard = () => {
 
       {/* Modal de Detalhes */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Detalhes da Remessa</DialogTitle>
+            <DialogTitle>Detalhes do Volume</DialogTitle>
           </DialogHeader>
-          {selectedShipment && (
+          {selectedVolume && (
             <div className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Código</p>
-                <p className="font-mono font-semibold">{selectedShipment.tracking_code}</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Código ETI</p>
+                  <p className="font-mono text-xl font-bold">{selectedVolume.eti_code}</p>
+                </div>
+                <Badge className={getStatusColor(selectedVolume.status)}>
+                  {getStatusLabel(selectedVolume.status)}
+                </Badge>
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Volumes</p>
-                  <p className="font-semibold">{selectedShipment.total_volumes}</p>
+                  <p className="text-sm text-muted-foreground">Volume</p>
+                  <p className="font-semibold">{selectedVolume.volume_number}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Peso Total</p>
-                  <p className="font-semibold">{selectedShipment.total_weight} kg</p>
+                  <p className="text-sm text-muted-foreground">Peso</p>
+                  <p className="font-semibold">{selectedVolume.weight} kg</p>
                 </div>
               </div>
+
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Destinatário</p>
+                <div className="bg-muted/50 p-3 rounded text-sm">
+                  <p className="font-medium">{selectedVolume.recipient_name}</p>
+                  <p>{selectedVolume.recipient_phone}</p>
+                  <p>{selectedVolume.recipient_street}, {selectedVolume.recipient_number}</p>
+                  {selectedVolume.recipient_complement && <p>{selectedVolume.recipient_complement}</p>}
+                  <p>{selectedVolume.recipient_neighborhood}</p>
+                  <p>{selectedVolume.recipient_city}/{selectedVolume.recipient_state} - CEP: {selectedVolume.recipient_cep}</p>
+                </div>
+              </div>
+
               <div>
                 <p className="text-sm text-muted-foreground mb-2">Histórico</p>
-                <B2BStatusHistory shipmentId={selectedShipment.id} />
+                <B2BVolumeStatusHistory volumeId={selectedVolume.id} />
               </div>
             </div>
           )}
