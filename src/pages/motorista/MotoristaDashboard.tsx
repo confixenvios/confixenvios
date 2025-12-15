@@ -1108,8 +1108,20 @@ const MotoristaDashboard = () => {
                 </Badge>
               </div>
 
-              {/* Destinatário - só mostra fora de Coletas Pendentes */}
-              {selectedVolume.status !== 'PENDENTE' && (
+              {/* Para ACEITO/COLETADO: mostrar endereço do CD fixo */}
+              {(selectedVolume.status === 'ACEITO' || selectedVolume.status === 'COLETADO') ? (
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-2">Destino</h4>
+                  <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
+                    <p className="font-medium">Centro de Distribuição</p>
+                    <p>Avenida Primeira Avenida, SN</p>
+                    <p>Quadra5B Lote 03 e 01 Cond Empresarial Village</p>
+                    <p>Cidade Vera Cruz</p>
+                    <p>CEP: 74934-600</p>
+                  </div>
+                </div>
+              ) : selectedVolume.status !== 'PENDENTE' && (
+                /* Para outros status (não PENDENTE, ACEITO, COLETADO): mostra destinatário real */
                 <div className="border-t pt-4">
                   <h4 className="font-semibold mb-2">Destinatário</h4>
                   <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
