@@ -630,6 +630,7 @@ const B2BNovaRemessa = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => setShowAddressModal(true)}
+                      className="text-destructive border-destructive hover:bg-destructive/10"
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Novo Endereço de Entrega
