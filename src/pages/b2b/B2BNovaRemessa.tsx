@@ -309,10 +309,20 @@ const B2BNovaRemessa = () => {
     }
   };
 
+  const formatDocument = (value: string): string => {
+    return value.replace(/\D/g, '').slice(0, 14); // Max 14 digits for CNPJ
+  };
+
   const handleNewAddressChange = (field: string, value: string) => {
     if (field === 'recipient_phone') {
       const formattedPhone = formatPhone(value);
       setNewAddress(prev => ({ ...prev, [field]: formattedPhone }));
+      return;
+    }
+    
+    if (field === 'recipient_document') {
+      const formattedDocument = formatDocument(value);
+      setNewAddress(prev => ({ ...prev, [field]: formattedDocument }));
       return;
     }
     
