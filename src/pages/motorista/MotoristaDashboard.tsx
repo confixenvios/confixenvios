@@ -717,7 +717,12 @@ const MotoristaDashboard = () => {
               {v.shipment?.vehicle_type && (
                 <p className="flex items-center gap-1">
                   <Truck className="h-3 w-3" />
-                  <span>{v.shipment.vehicle_type}</span>
+                  <span className="font-bold text-foreground">
+                    {v.shipment.vehicle_type === 'moto' ? 'Moto' : 
+                     v.shipment.vehicle_type === 'carro' ? 'Carro' : 
+                     v.shipment.vehicle_type === 'caminhao' ? 'Caminhão' : 
+                     v.shipment.vehicle_type}
+                  </span>
                 </p>
               )}
             </div>
