@@ -561,16 +561,16 @@ const MotoristaDashboard = () => {
               </p>
             </div>
           ) : (isAceito || isColetado) ? (
-            /* Para ACEITO e COLETADO: mostrar endereço do CD fixo */
+            /* Para ACEITO e COLETADO: mostrar nome do local de coleta + destino CD */
             <>
               <div className="text-sm text-muted-foreground space-y-1">
                 <p className="flex items-center gap-1">
                   <User className="h-3 w-3" />
-                  {CD_ADDRESS.name}
+                  {v.shipment?.pickup_address?.name || 'Local de Coleta'}
                 </p>
                 <p className="flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
-                  {CD_ADDRESS.street}, {CD_ADDRESS.number} - {CD_ADDRESS.neighborhood}
+                  Centro de Distribuição
                 </p>
                 <p className="flex items-center gap-1">
                   <Package className="h-3 w-3" />
