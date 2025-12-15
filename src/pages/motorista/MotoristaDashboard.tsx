@@ -1027,27 +1027,13 @@ const MotoristaDashboard = () => {
                 </Badge>
               </div>
 
-              <div className="border-t pt-4">
-                <h4 className="font-semibold mb-2">Destinatário</h4>
-                <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
-                  <p className="font-medium">{selectedVolume.recipient_name}</p>
-                  <p>{selectedVolume.recipient_phone}</p>
-                  <p>{selectedVolume.recipient_street}, {selectedVolume.recipient_number}</p>
-                  {selectedVolume.recipient_complement && <p>{selectedVolume.recipient_complement}</p>}
-                  <p>{selectedVolume.recipient_neighborhood}</p>
-                  <p>{selectedVolume.recipient_city}/{selectedVolume.recipient_state}</p>
-                  <p>CEP: {selectedVolume.recipient_cep}</p>
-                </div>
-              </div>
-
               {selectedVolume.shipment?.pickup_address && (
                 <div className="border-t pt-4">
                   <h4 className="font-semibold mb-2">Endereço de Coleta</h4>
                   <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
                     <p className="font-medium">{selectedVolume.shipment.pickup_address.name}</p>
-                    <p>{selectedVolume.shipment.pickup_address.contact_name} - {selectedVolume.shipment.pickup_address.contact_phone}</p>
-                    <p>{selectedVolume.shipment.pickup_address.street}, {selectedVolume.shipment.pickup_address.number}</p>
-                    <p>{selectedVolume.shipment.pickup_address.neighborhood} - {selectedVolume.shipment.pickup_address.city}/{selectedVolume.shipment.pickup_address.state}</p>
+                    <p>{selectedVolume.shipment.pickup_address.neighborhood}</p>
+                    <p>{selectedVolume.shipment.pickup_address.contact_phone}</p>
                   </div>
                 </div>
               )}
