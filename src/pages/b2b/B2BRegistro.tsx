@@ -13,15 +13,24 @@ const B2BRegistro = () => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     companyName: '',
-    cnpj: '',
+    document: '',
     email: '',
     phone: '',
     password: '',
     confirmPassword: '',
   });
 
-  const formatCNPJ = (value: string) => {
+  const formatDocument = (value: string) => {
     const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      // CPF format: 000.000.000-00
+      return numbers
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+        .slice(0, 14);
+    }
+    // CNPJ format: 00.000.000/0000-00
     return numbers
       .replace(/^(\d{2})(\d)/, '$1.$2')
       .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
@@ -45,8 +54,8 @@ const B2BRegistro = () => {
   };
 
   const handleChange = (field: string, value: string) => {
-    if (field === 'cnpj') {
-      value = formatCNPJ(value);
+    if (field === 'document') {
+      value = formatDocument(value);
     } else if (field === 'phone') {
       value = formatPhone(value);
     }
@@ -58,8 +67,9 @@ const B2BRegistro = () => {
       toast.error('Nome da empresa é obrigatório');
       return false;
     }
-    if (formData.cnpj.replace(/\D/g, '').length !== 14) {
-      toast.error('CNPJ inválido');
+    const docNumbers = formData.document.replace(/\D/g, '');
+    if (docNumbers.length !== 11 && docNumbers.length !== 14) {
+      toast.error('CPF ou CNPJ inválido');
       return false;
     }
     if (!formData.email.includes('@')) {
@@ -107,7 +117,7 @@ const B2BRegistro = () => {
         .insert({
           user_id: authData.user.id,
           company_name: formData.companyName.trim(),
-          cnpj: formData.cnpj.replace(/\D/g, ''),
+          cnpj: formData.document.replace(/\D/g, ''),
           email: formData.email.trim().toLowerCase(),
           phone: formData.phone.replace(/\D/g, ''),
           is_active: true,
@@ -171,13 +181,13 @@ const B2BRegistro = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="cnpj">CNPJ *</Label>
+                <Label htmlFor="document">CPF / CNPJ *</Label>
                 <Input
-                  id="cnpj"
+                  id="document"
                   type="text"
-                  placeholder="00.000.000/0000-00"
-                  value={formData.cnpj}
-                  onChange={(e) => handleChange('cnpj', e.target.value)}
+                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                  value={formData.document}
+                  onChange={(e) => handleChange('document', e.target.value)}
                   required
                   disabled={loading}
                 />
