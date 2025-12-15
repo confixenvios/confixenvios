@@ -800,6 +800,11 @@ const MotoristaDashboard = () => {
                   placeholder="Ex: 0001"
                   value={collectEtiInput}
                   onChange={(e) => setCollectEtiInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && collectEtiInput && !collecting) {
+                      handleCollectVolume();
+                    }
+                  }}
                   className="font-mono text-center text-lg"
                 />
               </div>
