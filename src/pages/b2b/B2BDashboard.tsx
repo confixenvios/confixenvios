@@ -10,7 +10,6 @@ import { Package, Plus, Clock, CheckCircle, Send, Eye, Loader2, FileDown, Histor
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import B2BLabelGenerator from '@/components/b2b/B2BLabelGenerator';
 import B2BStatusHistory from '@/components/b2b/B2BStatusHistory';
 import B2BStatusBadge from '@/components/b2b/B2BStatusBadge';
 
@@ -25,23 +24,12 @@ interface B2BClient {
 interface B2BShipment {
   id: string;
   tracking_code: string;
-  recipient_name: string | null;
-  recipient_phone: string | null;
-  recipient_cep: string | null;
-  recipient_street: string | null;
-  recipient_number: string | null;
-  recipient_complement: string | null;
-  recipient_neighborhood: string | null;
-  recipient_city: string | null;
-  recipient_state: string | null;
-  delivery_type: string | null;
   status: string;
   created_at: string;
-  volume_count: number | null;
+  total_volumes: number;
   delivery_date: string | null;
-  package_type: string | null;
   observations: string | null;
-  volume_weight: number | null;
+  total_weight: number;
 }
 
 interface Stats {
@@ -101,7 +89,7 @@ const B2BDashboard = () => {
       // Buscar remessas
       const { data: shipmentsData, error: shipmentsError } = await supabase
         .from('b2b_shipments')
-        .select('*')
+        .select('id, tracking_code, status, created_at, total_volumes, delivery_date, observations, total_weight')
         .eq('b2b_client_id', clientData.id)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -125,81 +113,9 @@ const B2BDashboard = () => {
     }
   };
 
-  const handleSendWebhook = async (shipment: B2BShipment) => {
-    setSendingWebhook(shipment.id);
-    
-    try {
-      const observations = parseObservations(shipment.observations);
-      
-      // Montar os parâmetros para o webhook
-      const params = new URLSearchParams({
-        shipment_id: shipment.id,
-        tracking_code: shipment.tracking_code || '',
-        status: shipment.status || '',
-        volume_count: String(shipment.volume_count || 0),
-        delivery_date: shipment.delivery_date || '',
-        created_at: shipment.created_at || '',
-        client_company: client?.company_name || '',
-        client_email: client?.email || '',
-        client_phone: client?.phone || '',
-        client_cnpj: client?.cnpj || '',
-        vehicle_type: observations?.vehicle_type || '',
-        delivery_ceps: observations?.delivery_ceps?.join(',') || '',
-        volume_weights: observations?.volume_weights?.join(',') || '',
-        total_weight: String(observations?.total_weight || 0),
-        amount_paid: String(observations?.amount_paid || 0),
-      });
-
-      const webhookUrl = `https://n8n.grupoconfix.com/webhook-test/42283b42-a19e-4be5-8cd2-367d9dbe0511?${params.toString()}`;
-      
-      const response = await fetch(webhookUrl, {
-        method: 'GET',
-      });
-
-      if (response.ok) {
-        toast.success('Webhook enviado com sucesso!');
-      } else {
-        toast.error('Erro ao enviar webhook');
-      }
-    } catch (error) {
-      console.error('Erro ao enviar webhook:', error);
-      toast.error('Erro ao enviar webhook');
-    } finally {
-      setSendingWebhook(null);
-    }
-  };
-
   const handleShowDetails = (shipment: B2BShipment) => {
     setSelectedShipment(shipment);
     setShowDetailsModal(true);
-  };
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline', label: string }> = {
-      PENDENTE: { variant: 'secondary', label: 'Pendente' },
-      PAGO: { variant: 'default', label: 'Pago' },
-      EM_TRANSITO: { variant: 'default', label: 'Em Trânsito' },
-      CONCLUIDA: { variant: 'outline', label: 'Concluída' },
-      CANCELADA: { variant: 'destructive', label: 'Cancelada' },
-    };
-    const config = variants[status] || variants.PENDENTE;
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-
-  const getPackageTypeLabel = (type: string | null) => {
-    if (!type) return null;
-    const labels: Record<string, string> = {
-      envelope: 'Envelope',
-      documento: 'Documento',
-      caixa_pequena: 'Caixa Pequena',
-      caixa_media: 'Caixa Média',
-      caixa_grande: 'Caixa Grande',
-      peca: 'Peça',
-      eletronico: 'Eletrônico',
-      medicamento: 'Medicamento',
-      fragil: 'Frágil',
-    };
-    return labels[type] || type;
   };
 
   if (loading) {
@@ -241,6 +157,7 @@ const B2BDashboard = () => {
           ) : (
             <div className="space-y-4">
               {shipments.map((shipment) => {
+                const obs = parseObservations(shipment.observations);
                 return (
                   <div
                     key={shipment.id}
@@ -249,39 +166,17 @@ const B2BDashboard = () => {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-mono text-sm font-semibold">{shipment.tracking_code}</p>
-                        {shipment.volume_count && (
-                          <Badge variant="outline" className="text-xs">
-                            {shipment.volume_count} volume(s)
-                          </Badge>
-                        )}
+                        <Badge variant="outline" className="text-xs">
+                          {shipment.total_volumes} volume(s)
+                        </Badge>
                       </div>
                       <B2BStatusBadge status={shipment.status} showIcon size="sm" />
                     </div>
                     
                     <p className="text-sm text-muted-foreground">
-                      {shipment.recipient_name ? (
-                        <>
-                          <strong>Destinatário:</strong> {shipment.recipient_name} - {shipment.recipient_city}/{shipment.recipient_state}
-                        </>
-                      ) : (
-                        <>
-                          {(() => {
-                            // Tentar extrair destinatário das observations
-                            const obs = parseObservations(shipment.observations);
-                            const volumeAddr = obs?.volume_address;
-                            if (volumeAddr?.recipient_name) {
-                              return (
-                                <>
-                                  <strong>Destinatário:</strong> {volumeAddr.recipient_name} - {volumeAddr.city}/{volumeAddr.state}
-                                </>
-                              );
-                            }
-                            return shipment.delivery_date 
-                              ? `Entrega: ${format(new Date(shipment.delivery_date), 'dd/MM/yyyy')}`
-                              : 'Destinatário não informado';
-                          })()}
-                        </>
-                      )}
+                      {shipment.delivery_date 
+                        ? `Entrega: ${format(new Date(shipment.delivery_date), 'dd/MM/yyyy')}`
+                        : 'Data de entrega não definida'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {format(new Date(shipment.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
@@ -321,7 +216,7 @@ const B2BDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Volumes</p>
-                  <p className="font-semibold">{selectedShipment.volume_count || '-'}</p>
+                  <p className="font-semibold">{selectedShipment.total_volumes || '-'}</p>
                 </div>
               </div>
 
@@ -342,136 +237,9 @@ const B2BDashboard = () => {
                 </div>
               </div>
 
-              {/* Destinatário do Volume */}
-              {selectedShipment.recipient_name && (
-                <>
-                  <hr className="border-border" />
-                  <h4 className="font-semibold">Destinatário</h4>
-                  <div className="p-3 bg-muted/30 rounded-lg border">
-                    <p className="font-semibold">{selectedShipment.recipient_name}</p>
-                    {selectedShipment.recipient_phone && (
-                      <p className="text-sm text-muted-foreground">{selectedShipment.recipient_phone}</p>
-                    )}
-                    {selectedShipment.recipient_street && (
-                      <>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {selectedShipment.recipient_street}, {selectedShipment.recipient_number}
-                          {selectedShipment.recipient_complement && `, ${selectedShipment.recipient_complement}`}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedShipment.recipient_neighborhood} - {selectedShipment.recipient_city}/{selectedShipment.recipient_state}
-                        </p>
-                        <p className="text-sm text-muted-foreground">CEP: {selectedShipment.recipient_cep}</p>
-                      </>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {(() => {
-                const obs = parseObservations(selectedShipment.observations);
-                if (!obs) return null;
-                
-                return (
-                  <>
-                    <hr className="border-border" />
-                    <h4 className="font-semibold">Dados do Pagamento</h4>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Veículo</p>
-                        <p className="font-semibold capitalize">{obs.vehicle_type || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Valor Pago</p>
-                        <p className="font-semibold text-green-600">
-                          R$ {obs.amount_paid?.toFixed(2) || '0.00'}
-                        </p>
-                      </div>
-                    </div>
-
-
-                    {obs.volume_addresses && obs.volume_addresses.length > 0 && (
-                      <>
-                        <hr className="border-border" />
-                        <h4 className="font-semibold">Endereços de Entrega por Volume</h4>
-                        <div className="space-y-3">
-                          {obs.volume_addresses.map((addr: any, index: number) => (
-                            <div key={index} className="p-3 bg-muted/30 rounded-lg border">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge variant="outline" className="text-xs">Volume {index + 1}</Badge>
-                                <Badge variant="secondary" className="text-xs">
-                                  {obs.volume_weights?.[index] || addr?.weight || 0} kg
-                                </Badge>
-                              </div>
-                              <p className="text-sm font-semibold">{addr?.recipient_name || addr?.name || '-'}</p>
-                              <p className="text-xs text-muted-foreground">{addr?.recipient_phone || '-'}</p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {addr?.street}, {addr?.number}
-                                {addr?.complement && `, ${addr.complement}`}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {addr?.neighborhood} - {addr?.city}/{addr?.state}
-                              </p>
-                              <p className="text-xs text-muted-foreground">CEP: {addr?.cep}</p>
-                            </div>
-                          ))}
-                      </div>
-                    </>
-                  )}
-
-                  {/* Gerador de Etiquetas - Funciona com volume_address (singular) ou volume_addresses (plural) */}
-                  {obs && (obs.volume_address || obs.volume_addresses || obs.pickup_address) && (
-                    <>
-                      <hr className="border-border" />
-                      <h4 className="font-semibold">Etiquetas</h4>
-                      <B2BLabelGenerator
-                        shipmentId={selectedShipment.id}
-                        trackingCode={selectedShipment.tracking_code}
-                        volumeCount={selectedShipment.volume_count || 1}
-                        volumeWeights={obs.volume_weights || (selectedShipment.volume_count === 1 && obs.volume_address ? [obs.volume_address.weight || 0] : [])}
-                        volumeAddresses={obs.volume_addresses || (obs.volume_address ? [obs.volume_address] : [])}
-                        pickupAddress={obs.pickup_address || {}}
-                        companyName={client?.company_name || 'Remetente'}
-                        deliveryDate={selectedShipment.delivery_date || undefined}
-                        shipmentVolumeWeight={selectedShipment.volume_weight || undefined}
-                      />
-                    </>
-                  )}
-                </>
-              );
-            })()}
-
-              {/* Histórico de Status */}
               <hr className="border-border" />
-              <div className="flex items-center gap-2 mb-2">
-                <History className="h-4 w-4 text-muted-foreground" />
-                <h4 className="font-semibold">Histórico de Status</h4>
-              </div>
+              <h4 className="font-semibold">Histórico de Status</h4>
               <B2BStatusHistory shipmentId={selectedShipment.id} />
-
-              <hr className="border-border" />
-              <h4 className="font-semibold">Dados do Cliente</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Empresa</p>
-                  <p className="font-semibold">{client?.company_name || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">CNPJ</p>
-                  <p className="font-semibold">{client?.cnpj || '-'}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-semibold text-sm">{client?.email || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Telefone</p>
-                  <p className="font-semibold">{client?.phone || '-'}</p>
-                </div>
-              </div>
             </div>
           )}
           </ScrollArea>

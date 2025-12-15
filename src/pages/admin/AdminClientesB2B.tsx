@@ -88,12 +88,9 @@ const AdminClientesB2B = () => {
         'E-mail': shipment.b2b_clients?.email || '',
         'Código Rastreio': shipment.tracking_code,
         'Data': format(new Date(shipment.created_at), 'dd/MM/yyyy'),
-        'Tipo de Entrega': shipment.delivery_type === 'mesmo_dia' ? 'Mesmo Dia' : 'Próximo Dia',
-        'Destinatário': shipment.recipient_name,
-        'Endereço': `${shipment.recipient_street}, ${shipment.recipient_number} - ${shipment.recipient_neighborhood}`,
-        'Cidade': shipment.recipient_city,
-        'Estado': shipment.recipient_state,
         'Status': shipment.status,
+        'Total Volumes': shipment.total_volumes,
+        'Data Entrega': shipment.delivery_date,
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(exportData);

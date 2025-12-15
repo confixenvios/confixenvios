@@ -20,11 +20,9 @@ interface B2BShipment {
   tracking_code: string | null;
   status: string;
   created_at: string;
-  recipient_name: string | null;
-  recipient_city: string | null;
-  recipient_state: string | null;
-  volume_count: number | null;
-  motorista_id: string | null;
+  total_volumes: number;
+  motorista_coleta_id: string | null;
+  motorista_entrega_id: string | null;
   motorista_nome?: string;
   b2b_client?: {
     company_name: string;
@@ -53,11 +51,9 @@ const AdminGestaoCd = () => {
           tracking_code,
           status,
           created_at,
-          recipient_name,
-          recipient_city,
-          recipient_state,
-          volume_count,
-          motorista_id,
+          total_volumes,
+          motorista_coleta_id,
+          motorista_entrega_id,
           b2b_clients(company_name)
         `)
         .order('created_at', { ascending: false });
@@ -65,7 +61,9 @@ const AdminGestaoCd = () => {
       if (b2bError) throw b2bError;
 
       // Buscar nomes dos motoristas
-      const motoristaIds = [...new Set((b2bData || []).filter(s => s.motorista_id).map(s => s.motorista_id))];
+      const motoristaIds = [...new Set((b2bData || [])
+        .flatMap(s => [s.motorista_coleta_id, s.motorista_entrega_id])
+        .filter(Boolean))] as string[];
       
       let motoristasMap: Record<string, string> = {};
       if (motoristaIds.length > 0) {
@@ -85,7 +83,8 @@ const AdminGestaoCd = () => {
       // Mapear dados com nomes de motoristas
       const mappedShipments = (b2bData || []).map(s => ({
         ...s,
-        motorista_nome: s.motorista_id ? motoristasMap[s.motorista_id] : undefined,
+        motorista_nome: s.motorista_coleta_id ? motoristasMap[s.motorista_coleta_id] : 
+                        s.motorista_entrega_id ? motoristasMap[s.motorista_entrega_id] : undefined,
         b2b_client: s.b2b_clients as any
       }));
 
@@ -127,8 +126,6 @@ const AdminGestaoCd = () => {
     const term = searchTerm.toLowerCase();
     return list.filter(s => 
       s.tracking_code?.toLowerCase().includes(term) ||
-      s.recipient_name?.toLowerCase().includes(term) ||
-      s.recipient_city?.toLowerCase().includes(term) ||
       s.b2b_client?.company_name?.toLowerCase().includes(term) ||
       s.motorista_nome?.toLowerCase().includes(term)
     );
@@ -153,18 +150,8 @@ const AdminGestaoCd = () => {
               </div>
               
               <div className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                <span>
-                  {shipment.recipient_city && shipment.recipient_state 
-                    ? `${shipment.recipient_city}/${shipment.recipient_state}`
-                    : 'Destino não informado'
-                  }
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-1">
                 <Package className="h-3 w-3" />
-                <span>{shipment.volume_count || 1} volume(s)</span>
+                <span>{shipment.total_volumes || 1} volume(s)</span>
               </div>
               
               <div className="flex items-center gap-1">

@@ -152,12 +152,12 @@ const ActiveClients = () => {
 
   const loadClients = async () => {
     try {
-      // Buscar emails de motoristas para excluí-los da lista de clientes
+      // Buscar usernames de motoristas para excluí-los da lista de clientes
       const { data: motoristasData } = await supabase
         .from('motoristas')
-        .select('email');
+        .select('username');
       
-      const motoristaEmails = new Set((motoristasData || []).map(m => m.email.toLowerCase()));
+      const motoristaUsernames = new Set((motoristasData || []).map(m => m.username.toLowerCase()));
 
       // Buscar clientes com estatísticas completas
       const { data: profilesData } = await supabase
@@ -177,10 +177,9 @@ const ActiveClients = () => {
 
       if (!profilesData) return;
 
-      // Filtrar clientes que NÃO são motoristas
-      const filteredProfiles = profilesData.filter(
-        profile => !profile.email || !motoristaEmails.has(profile.email.toLowerCase())
-      );
+      // Filtrar clientes que NÃO são motoristas (não temos como comparar pois motoristas usam username, não email)
+      // Então simplesmente usamos todos os perfis
+      const filteredProfiles = profilesData;
 
       // Para cada cliente, buscar estatísticas detalhadas de envios
       const clientsWithStats = await Promise.all(

@@ -14,19 +14,12 @@ import * as XLSX from 'xlsx';
 interface B2BShipment {
   id: string;
   tracking_code: string;
-  recipient_name: string | null;
-  recipient_city: string | null;
-  recipient_state: string | null;
-  delivery_type: string | null;
   status: string;
   created_at: string;
-  recipient_street: string | null;
-  recipient_number: string | null;
-  recipient_neighborhood: string | null;
-  recipient_phone: string | null;
-  volume_count: number | null;
+  total_volumes: number;
+  total_weight: number;
   delivery_date: string | null;
-  package_type: string | null;
+  observations: string | null;
 }
 
 const B2BRelatorios = () => {
@@ -42,9 +35,7 @@ const B2BRelatorios = () => {
 
   useEffect(() => {
     const filtered = shipments.filter(shipment =>
-      shipment.tracking_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (shipment.recipient_name && shipment.recipient_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (shipment.recipient_city && shipment.recipient_city.toLowerCase().includes(searchTerm.toLowerCase()))
+      shipment.tracking_code.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredShipments(filtered);
   }, [searchTerm, shipments]);
@@ -71,7 +62,7 @@ const B2BRelatorios = () => {
 
       const { data: shipmentsData, error } = await supabase
         .from('b2b_shipments')
-        .select('*')
+        .select('id, tracking_code, status, created_at, total_volumes, total_weight, delivery_date, observations')
         .eq('b2b_client_id', clientData.id)
         .order('created_at', { ascending: false });
 
@@ -90,15 +81,9 @@ const B2BRelatorios = () => {
     const exportData = filteredShipments.map(shipment => ({
       'Código de Rastreio': shipment.tracking_code,
       'Data': format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm'),
-      'Tipo de Envio': shipment.package_type ? getPackageTypeLabel(shipment.package_type) : '-',
-      'Volumes': shipment.volume_count || '-',
+      'Volumes': shipment.total_volumes || '-',
+      'Peso Total': `${shipment.total_weight || 0} kg`,
       'Data de Entrega': shipment.delivery_date ? format(new Date(shipment.delivery_date), 'dd/MM/yyyy') : '-',
-      'Destinatário': shipment.recipient_name || '-',
-      'Telefone': shipment.recipient_phone || '-',
-      'Endereço': shipment.recipient_street ? `${shipment.recipient_street}, ${shipment.recipient_number} - ${shipment.recipient_neighborhood}` : '-',
-      'Cidade': shipment.recipient_city || '-',
-      'Estado': shipment.recipient_state || '-',
-      'Tipo de Entrega': shipment.delivery_type ? (shipment.delivery_type === 'mesmo_dia' ? 'Mesmo Dia' : 'Próximo Dia') : '-',
       'Status': getStatusLabel(shipment.status),
     }));
 
@@ -116,8 +101,8 @@ const B2BRelatorios = () => {
     const labels: Record<string, string> = {
       PENDENTE: 'Pendente',
       EM_TRANSITO: 'Em Trânsito',
-      CONCLUIDA: 'Concluída',
-      CANCELADA: 'Cancelada',
+      CONCLUIDO: 'Concluído',
+      CANCELADO: 'Cancelado',
     };
     return labels[status] || status;
   };
@@ -126,32 +111,11 @@ const B2BRelatorios = () => {
     const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline', label: string }> = {
       PENDENTE: { variant: 'secondary', label: 'Pendente' },
       EM_TRANSITO: { variant: 'default', label: 'Em Trânsito' },
-      CONCLUIDA: { variant: 'outline', label: 'Concluída' },
-      CANCELADA: { variant: 'destructive', label: 'Cancelada' },
+      CONCLUIDO: { variant: 'outline', label: 'Concluído' },
+      CANCELADO: { variant: 'destructive', label: 'Cancelado' },
     };
     const config = variants[status] || variants.PENDENTE;
     return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-
-  const getDeliveryTypeLabel = (type: string | null) => {
-    if (!type) return null;
-    return type === 'mesmo_dia' ? 'Mesmo Dia' : 'Próximo Dia';
-  };
-
-  const getPackageTypeLabel = (type: string | null) => {
-    if (!type) return '-';
-    const labels: Record<string, string> = {
-      envelope: 'Envelope',
-      documento: 'Documento',
-      caixa_pequena: 'Caixa Pequena',
-      caixa_media: 'Caixa Média',
-      caixa_grande: 'Caixa Grande',
-      peca: 'Peça',
-      eletronico: 'Eletrônico',
-      medicamento: 'Medicamento',
-      fragil: 'Frágil',
-    };
-    return labels[type] || type;
   };
 
   if (loading) {
@@ -191,7 +155,7 @@ const B2BRelatorios = () => {
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por código, nome ou cidade..."
+                  placeholder="Buscar por código..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8"
@@ -219,33 +183,13 @@ const B2BRelatorios = () => {
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-mono text-sm font-semibold">{shipment.tracking_code}</p>
                       {getStatusBadge(shipment.status)}
-                      {shipment.volume_count && (
-                        <Badge variant="outline" className="text-xs">
-                          {shipment.volume_count} volume(s)
-                        </Badge>
-                      )}
-                      {getPackageTypeLabel(shipment.package_type) && (
-                        <Badge variant="secondary" className="text-xs">
-                          {getPackageTypeLabel(shipment.package_type)}
-                        </Badge>
-                      )}
-                      {getDeliveryTypeLabel(shipment.delivery_type) && (
-                        <Badge variant="outline" className="text-xs">
-                          {getDeliveryTypeLabel(shipment.delivery_type)}
-                        </Badge>
-                      )}
+                      <Badge variant="outline" className="text-xs">
+                        {shipment.total_volumes} volume(s)
+                      </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {shipment.recipient_name ? (
-                        <>
-                          <strong>{shipment.recipient_name}</strong> - {shipment.recipient_city}/{shipment.recipient_state}
-                        </>
-                      ) : (
-                        <>
-                          {shipment.volume_count && `${shipment.volume_count} volume(s)`}
-                          {shipment.delivery_date && ` - Entrega: ${format(new Date(shipment.delivery_date), 'dd/MM/yyyy')}`}
-                        </>
-                      )}
+                      {shipment.total_volumes} volume(s)
+                      {shipment.delivery_date && ` - Entrega: ${format(new Date(shipment.delivery_date), 'dd/MM/yyyy')}`}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {format(new Date(shipment.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
