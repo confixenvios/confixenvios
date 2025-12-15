@@ -180,6 +180,14 @@ const B2BAllLabelsGenerator = ({
                 <p className="text-[10px] text-gray-600">Volume</p>
                 <p className="text-sm font-bold">{volume.volume_number}</p>
               </div>
+              <div className="text-center">
+                <p className="text-[10px] text-gray-600">Previsão de Entrega</p>
+                <p className="text-sm font-bold">
+                  {shipment.delivery_date 
+                    ? new Date(shipment.delivery_date).toLocaleDateString('pt-BR')
+                    : '-'}
+                </p>
+              </div>
               <div className="text-right">
                 <p className="text-[10px] text-gray-600">Peso</p>
                 <p className="text-lg font-bold">{volume.weight} kg</p>
