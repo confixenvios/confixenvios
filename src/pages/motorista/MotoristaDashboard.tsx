@@ -1445,7 +1445,29 @@ const MotoristaDashboard = () => {
                           </span>
                         </div>
                         {h.motorista_nome && <p className="text-xs text-muted-foreground">{h.motorista_nome}</p>}
-                        {h.observacoes && <p className="text-muted-foreground mt-1">{h.observacoes}</p>}
+                        {h.observacoes && (() => {
+                          try {
+                            const parsed = JSON.parse(h.observacoes);
+                            if (parsed.foto_url) {
+                              return (
+                                <div className="mt-1">
+                                  <p className="text-green-600 font-medium">Entrega Finalizada</p>
+                                  <a 
+                                    href={parsed.foto_url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-blue-500 hover:underline text-sm"
+                                  >
+                                    Ver foto da entrega
+                                  </a>
+                                </div>
+                              );
+                            }
+                            return <p className="text-muted-foreground mt-1">{parsed.mensagem || h.observacoes}</p>;
+                          } catch {
+                            return <p className="text-muted-foreground mt-1">{h.observacoes}</p>;
+                          }
+                        })()}
                       </div>
                     ))}
                   </div>
