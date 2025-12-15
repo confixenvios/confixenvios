@@ -569,20 +569,23 @@ const B2BNovaRemessa = () => {
                   </Button>
                 </div>
               ) : (
-                  <div className="space-y-2">
-                    <Label className="text-base">Selecione o endereço de coleta *</Label>
+                  <div className="space-y-3">
+                    <Label className="text-base font-medium">Selecione o endereço de coleta *</Label>
                     <Select
                       value={formData.pickup_address_id}
                       onValueChange={(value) => setFormData(prev => ({ ...prev, pickup_address_id: value }))}
                       required
                     >
-                      <SelectTrigger className="h-12 border-2 border-input hover:border-primary/50 transition-colors">
-                        <SelectValue placeholder="Selecione o endereço de coleta" />
+                      <SelectTrigger className="h-14 border-2 border-muted-foreground/30 bg-muted/30 hover:border-primary hover:bg-background transition-all rounded-lg shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <SelectValue placeholder="Clique para selecionar um endereço" />
+                        </div>
                       </SelectTrigger>
                       <SelectContent>
                         {pickupAddresses.map((addr) => (
                           <SelectItem key={addr.id} value={addr.id}>
-                            <div className="flex flex-col">
+                            <div className="flex flex-col py-1">
                               <span className="font-medium">{addr.name}</span>
                               <span className="text-xs text-muted-foreground">
                                 {addr.contact_name} - {addr.city}/{addr.state}
@@ -594,16 +597,16 @@ const B2BNovaRemessa = () => {
                     </Select>
 
                     {formData.pickup_address_id && (
-                      <div className="text-xs text-muted-foreground bg-green-50 dark:bg-green-950/20 p-3 rounded-lg border border-green-200 dark:border-green-900">
+                      <div className="text-sm text-foreground bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border-2 border-green-300 dark:border-green-800">
                         {(() => {
                           const addr = getPickupAddressById(formData.pickup_address_id);
                           if (!addr) return null;
                           return (
-                            <>
-                              <p><strong>{addr.contact_name}</strong> - {addr.contact_phone}</p>
-                              <p>{addr.street}, {addr.number}{addr.complement && `, ${addr.complement}`}</p>
-                              <p>{addr.neighborhood} - {addr.city}/{addr.state} - CEP: {addr.cep}</p>
-                            </>
+                            <div className="space-y-1">
+                              <p className="font-semibold text-green-800 dark:text-green-200">{addr.contact_name} - {addr.contact_phone}</p>
+                              <p className="text-green-700 dark:text-green-300">{addr.street}, {addr.number}{addr.complement && `, ${addr.complement}`}</p>
+                              <p className="text-green-600 dark:text-green-400">{addr.neighborhood} - {addr.city}/{addr.state} - CEP: {addr.cep}</p>
+                            </div>
                           );
                         })()}
                       </div>
