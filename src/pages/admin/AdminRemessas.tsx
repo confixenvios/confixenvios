@@ -599,7 +599,7 @@ const AdminRemessas = () => {
         // Motorista
         motorista_nome: shipment.motoristas?.nome || '',
         motorista_telefone: shipment.motoristas?.telefone || '',
-        motorista_email: shipment.motoristas?.email || '',
+        motorista_email: '',
         
         // Descrição do conteúdo (declaração de conteúdo)
         content_description: (shipment.quote_data as any)?.fiscalData?.contentDescription || 
@@ -2100,10 +2100,6 @@ const AdminRemessas = () => {
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Telefone</label>
                         <p className="text-sm">{selectedShipmentDetails.motoristas.telefone}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Email</label>
-                        <p className="text-sm">{selectedShipmentDetails.motoristas.email}</p>
                       </div>
                     </CardContent>
                   </Card>
