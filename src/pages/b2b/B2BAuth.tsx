@@ -107,6 +107,13 @@ const B2BAuth = () => {
                 'Entrar'
               )}
             </Button>
+
+            <p className="text-center text-sm text-muted-foreground">
+              Não tem uma conta?{' '}
+              <Link to="/b2b-expresso/registro" className="text-primary hover:underline">
+                Cadastre-se
+              </Link>
+            </p>
           </form>
         </CardContent>
       </Card>
