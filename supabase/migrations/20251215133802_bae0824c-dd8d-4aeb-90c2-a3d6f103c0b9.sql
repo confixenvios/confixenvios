@@ -1,0 +1,1 @@
+UPDATE b2b_clients SET cnpj = '05373748170' WHERE email = 'b2b@gmail.com';
