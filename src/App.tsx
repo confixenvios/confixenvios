@@ -62,6 +62,7 @@ import CdAuth from "./pages/cd/CdAuth";
 import CdRegistro from "./pages/cd/CdRegistro";
 import CdDashboard from "./pages/cd/CdDashboard";
 import B2BAuth from "./pages/b2b/B2BAuth";
+import B2BRegistro from "./pages/b2b/B2BRegistro";
 import B2BLayout from "./pages/b2b/B2BLayout";
 import B2BDashboard from "./pages/b2b/B2BDashboard";
 import B2BNovaRemessa from "./pages/b2b/B2BNovaRemessa";
@@ -171,6 +172,7 @@ const App = () => (
 
             {/* B2B Expresso Routes */}
             <Route path="/b2b-expresso" element={<B2BAuth />} />
+            <Route path="/b2b-expresso/registro" element={<B2BRegistro />} />
             <Route path="/b2b-expresso/*" element={<B2BLayout />}>
               <Route path="dashboard" element={<B2BDashboard />} />
               <Route path="nova-remessa" element={<B2BNovaRemessa />} />
