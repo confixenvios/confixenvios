@@ -545,7 +545,7 @@ const MotoristaDashboard = () => {
           <div className="flex gap-2 mt-3">
             {showActions === 'accept' && (
               <Button 
-                className="flex-1"
+                size="sm"
                 onClick={() => {
                   setVolumeToAccept(v);
                   setAcceptModalOpen(true);
