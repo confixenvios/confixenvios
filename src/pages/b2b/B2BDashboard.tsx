@@ -291,8 +291,8 @@ const B2BDashboard = () => {
                                 <p className="text-muted-foreground">{volume.recipient_name}</p>
                                 <p className="text-muted-foreground">
                                   {shipment.delivery_date 
-                                    ? `Previsão: ${format(new Date(shipment.delivery_date + 'T12:00:00'), 'dd/MM/yyyy')}`
-                                    : 'Previsão não definida'}
+                                    ? `Previsão de Entrega: ${format(new Date(shipment.delivery_date + 'T12:00:00'), 'dd/MM/yyyy')}`
+                                    : 'Previsão de Entrega não definida'}
                                 </p>
                               </div>
                             </div>
