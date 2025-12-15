@@ -378,7 +378,21 @@ const B2BNovaRemessa = () => {
     }
   };
 
+  const formatPhone = (value: string): string => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 2) return digits.length ? `(${digits}` : '';
+    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  };
+
   const handleNewPickupAddressChange = (field: string, value: string) => {
+    if (field === 'contact_phone') {
+      const formattedPhone = formatPhone(value);
+      setNewPickupAddress(prev => ({ ...prev, [field]: formattedPhone }));
+      return;
+    }
+    
     setNewPickupAddress(prev => ({ ...prev, [field]: value }));
     
     if (field === 'cep' && value.replace(/\D/g, '').length === 8) {
@@ -393,6 +407,12 @@ const B2BNovaRemessa = () => {
         !newPickupAddress.cep || !newPickupAddress.street || !newPickupAddress.number ||
         !newPickupAddress.neighborhood || !newPickupAddress.city || !newPickupAddress.state || !newPickupAddress.complement) {
       toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    const phoneDigits = newPickupAddress.contact_phone.replace(/\D/g, '');
+    if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+      toast.error('Telefone deve ter 10 (fixo) ou 11 (celular) dígitos');
       return;
     }
 
