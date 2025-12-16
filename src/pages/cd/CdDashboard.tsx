@@ -80,7 +80,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
   'ACEITO': { label: 'Aceito', color: 'text-blue-700', bgColor: 'bg-blue-100 border-blue-300' },
   'COLETADO': { label: 'Coletado', color: 'text-orange-700', bgColor: 'bg-orange-100 border-orange-300' },
   'EM_TRIAGEM': { label: 'Em Triagem', color: 'text-purple-700', bgColor: 'bg-purple-100 border-purple-300' },
-  'AGUARDANDO_EXPEDICAO': { label: 'Aguardando Expedição', color: 'text-indigo-700', bgColor: 'bg-indigo-100 border-indigo-300' },
+  'AGUARDANDO_EXPEDICAO': { label: 'Aguardando Despache', color: 'text-indigo-700', bgColor: 'bg-indigo-100 border-indigo-300' },
   'DESPACHADO': { label: 'Despachado', color: 'text-cyan-700', bgColor: 'bg-cyan-100 border-cyan-300' },
   'CONCLUIDO': { label: 'Concluído', color: 'text-green-700', bgColor: 'bg-green-100 border-green-300' },
   'DEVOLUCAO': { label: 'Devolução', color: 'text-red-700', bgColor: 'bg-red-100 border-red-300' },
@@ -377,11 +377,11 @@ const CdDashboard = () => {
           status: 'AGUARDANDO_EXPEDICAO',
           motorista_id: dispatchMotoristaId,
           motorista_nome: motoristaNome,
-          observacoes: `Separado para expedição - ${motoristaNome} por ${cdUser?.nome}`
+          observacoes: `Separado para despache - ${motoristaNome} por ${cdUser?.nome}`
         });
       }
 
-      toast.success(`${dispatchedVolumes.length} volume(s) separado(s) para expedição`);
+      toast.success(`${dispatchedVolumes.length} volume(s) separado(s) para despache`);
       setDispatchModalOpen(false);
       setDispatchedVolumes([]);
       setDispatchMotoristaId('');
@@ -685,8 +685,8 @@ const CdDashboard = () => {
 
           {/* Operação Interna */}
           <TabsContent value="operacao" className="mt-4">
-            <p className="text-sm text-muted-foreground mb-3">Volumes aguardando expedição</p>
-            {renderVolumeList(aguardandoExpedicao, 'Nenhum volume aguardando expedição')}
+            <p className="text-sm text-muted-foreground mb-3">Volumes aguardando despache</p>
+            {renderVolumeList(aguardandoExpedicao, 'Nenhum volume aguardando despache')}
           </TabsContent>
 
           {/* Entregas */}

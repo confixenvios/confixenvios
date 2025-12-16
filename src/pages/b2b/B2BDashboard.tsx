@@ -194,7 +194,7 @@ const B2BDashboard = () => {
       'COLETADO': 'Coletado',
       'EM_TRANSITO': 'Em Trânsito',
       'EM_TRIAGEM': 'Em Triagem',
-      'AGUARDANDO_EXPEDICAO': 'Aguardando Expedição',
+      'AGUARDANDO_EXPEDICAO': 'Aguardando Despache',
       'DESPACHADO': 'Despachado',
       'NO_CD': 'No CD',
       'EM_ROTA': 'Em Rota',
@@ -308,7 +308,7 @@ const B2BDashboard = () => {
                 <SelectItem value="COLETADO">Coletado</SelectItem>
                 <SelectItem value="EM_TRANSITO">Em Trânsito</SelectItem>
                 <SelectItem value="EM_TRIAGEM">Em Triagem</SelectItem>
-                <SelectItem value="AGUARDANDO_EXPEDICAO">Aguardando Expedição</SelectItem>
+                <SelectItem value="AGUARDANDO_EXPEDICAO">Aguardando Despache</SelectItem>
                 <SelectItem value="DESPACHADO">Despachado</SelectItem>
                 <SelectItem value="EM_ROTA">Em Rota</SelectItem>
                 <SelectItem value="CONCLUIDO">Concluído</SelectItem>
