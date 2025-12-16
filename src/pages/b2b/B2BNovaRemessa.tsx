@@ -584,21 +584,16 @@ const B2BNovaRemessa = () => {
                 onValueChange={(value) => setFormData(prev => ({ ...prev, pickup_address_id: value }))}
                 required
               >
-                <SelectTrigger className="h-12 border bg-background w-full max-w-md">
+                <SelectTrigger className="h-10 border bg-background w-fit min-w-[180px]">
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <SelectValue placeholder="Clique para selecionar um endereço" />
+                    <SelectValue placeholder="Selecionar endereço" />
                   </div>
                 </SelectTrigger>
                 <SelectContent>
                   {pickupAddresses.map((addr) => (
                     <SelectItem key={addr.id} value={addr.id}>
-                      <div className="flex flex-col py-1">
-                        <span className="font-medium">{addr.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {addr.contact_name} - {addr.city}/{addr.state}
-                        </span>
-                      </div>
+                      {addr.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
