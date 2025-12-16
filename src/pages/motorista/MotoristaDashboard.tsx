@@ -699,9 +699,7 @@ const MotoristaDashboard = () => {
                 <p className="text-xs text-muted-foreground">{v.shipment.tracking_code}</p>
               )}
             </div>
-            <Badge className={`${statusConfig.bgColor} ${statusConfig.color} border`}>
-              {statusConfig.label}
-            </Badge>
+            {/* Badge de status removido do painel do motorista */}
           </div>
           
           {/* Para PENDENTE: mostrar apenas ETI + bairro + peso + tipo veículo */}
