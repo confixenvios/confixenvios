@@ -4,13 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Package, Loader2, Truck, Car, Bike, MapPin, Scale, DollarSign, Plus, AlertCircle } from 'lucide-react';
+import { Package, Loader2, Truck, Car, Bike, MapPin, Plus, AlertCircle, ChevronLeft, ChevronRight, Check, Calendar, Scale } from 'lucide-react';
 import { toast } from 'sonner';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
 
 interface B2BClient {
   id: string;
@@ -54,8 +53,11 @@ interface PickupAddress {
   is_default: boolean;
 }
 
+const TOTAL_STEPS = 5;
+
 const B2BNovaRemessa = () => {
   const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [client, setClient] = useState<B2BClient | null>(null);
@@ -180,35 +182,59 @@ const B2BNovaRemessa = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validateStep = (step: number): boolean => {
+    switch (step) {
+      case 1:
+        if (!formData.pickup_address_id) {
+          toast.error('Selecione o endereço de coleta');
+          return false;
+        }
+        return true;
+      case 2:
+        if (!formData.volume_count || parseInt(formData.volume_count) < 1) {
+          toast.error('Informe a quantidade de volumes');
+          return false;
+        }
+        if (!formData.delivery_date) {
+          toast.error('Selecione a data de entrega');
+          return false;
+        }
+        return true;
+      case 3:
+        const hasValidWeights = formData.volume_weights.every(w => parseFloat(w) > 0);
+        if (!hasValidWeights) {
+          toast.error('Preencha o peso de todos os volumes');
+          return false;
+        }
+        const hasValidAddresses = formData.volume_addresses.every(a => a && a !== '');
+        if (!hasValidAddresses) {
+          toast.error('Selecione o endereço de entrega para cada volume');
+          return false;
+        }
+        return true;
+      case 4:
+        if (!formData.vehicle_type) {
+          toast.error('Selecione o tipo de veículo');
+          return false;
+        }
+        return true;
+      default:
+        return true;
+    }
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => Math.min(prev + 1, TOTAL_STEPS));
+    }
+  };
+
+  const handlePrev = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleSubmit = async () => {
     if (!client) return;
-
-    // Validar endereço de coleta
-    if (!formData.pickup_address_id) {
-      toast.error('Selecione o endereço de coleta');
-      return;
-    }
-
-    // Validar tipo de veículo
-    if (!formData.vehicle_type) {
-      toast.error('Selecione o tipo de veículo para coleta e entrega');
-      return;
-    }
-
-    // Validar pesos
-    const hasValidWeights = formData.volume_weights.every(w => parseFloat(w) > 0);
-    if (!hasValidWeights) {
-      toast.error('Preencha o peso de todos os volumes');
-      return;
-    }
-
-    // Validar endereços de entrega
-    const hasValidAddresses = formData.volume_addresses.every(a => a && a !== '');
-    if (!hasValidAddresses) {
-      toast.error('Selecione o endereço de entrega para cada volume');
-      return;
-    }
 
     setLoading(true);
 
@@ -310,7 +336,7 @@ const B2BNovaRemessa = () => {
   };
 
   const formatDocument = (value: string): string => {
-    return value.replace(/\D/g, '').slice(0, 14); // Max 14 digits for CNPJ
+    return value.replace(/\D/g, '').slice(0, 14);
   };
 
   const handleNewAddressChange = (field: string, value: string) => {
@@ -518,6 +544,28 @@ const B2BNovaRemessa = () => {
     }
   };
 
+  const getStepTitle = (step: number) => {
+    switch (step) {
+      case 1: return 'Onde buscar?';
+      case 2: return 'Detalhes do Envio';
+      case 3: return 'Volumes';
+      case 4: return 'Veículo';
+      case 5: return 'Confirmar';
+      default: return '';
+    }
+  };
+
+  const getStepIcon = (step: number) => {
+    switch (step) {
+      case 1: return <MapPin className="h-6 w-6" />;
+      case 2: return <Calendar className="h-6 w-6" />;
+      case 3: return <Package className="h-6 w-6" />;
+      case 4: return <Truck className="h-6 w-6" />;
+      case 5: return <Check className="h-6 w-6" />;
+      default: return null;
+    }
+  };
+
   if (loadingData) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
@@ -530,368 +578,410 @@ const B2BNovaRemessa = () => {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center gap-3 mb-2">
-          <Package className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold">Novo Envio</h1>
+    <div className="p-4 md:p-6 max-w-2xl mx-auto">
+      {/* Progress Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              {getStepIcon(currentStep)}
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Etapa {currentStep} de {TOTAL_STEPS}</p>
+              <h1 className="text-xl font-bold">{getStepTitle(currentStep)}</h1>
+            </div>
+          </div>
         </div>
-        <p className="text-muted-foreground">Solicite a coleta de volumes para entrega</p>
+        <Progress value={(currentStep / TOTAL_STEPS) * 100} className="h-2" />
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Seção: Endereço de Coleta */}
-        <div className="bg-card border rounded-xl p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-green-600" />
-              <h2 className="font-semibold text-lg">Endereço de Coleta</h2>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowPickupAddressModal(true)}
-              className="text-green-600 border-green-600 hover:bg-green-50"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Novo Endereço de Coleta
-            </Button>
-          </div>
+      {/* Step Content */}
+      <div className="min-h-[400px]">
+        {/* Step 1: Endereço de Coleta */}
+        {currentStep === 1 && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <p className="text-muted-foreground text-center">
+              Selecione o local onde vamos buscar seus volumes
+            </p>
 
-          {pickupAddresses.length === 0 ? (
-            <div className="text-center py-8 space-y-3 bg-muted/30 rounded-lg">
-              <AlertCircle className="h-10 w-10 mx-auto text-muted-foreground" />
-              <div>
-                <p className="font-medium">Nenhum endereço de coleta cadastrado</p>
-                <p className="text-sm text-muted-foreground">Cadastre um endereço de coleta para continuar.</p>
-              </div>
-              <Button
-                type="button"
-                onClick={() => setShowPickupAddressModal(true)}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Cadastrar Endereço de Coleta
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">Selecione o endereço de coleta *</Label>
-              <Select
-                value={formData.pickup_address_id}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, pickup_address_id: value }))}
-                required
-              >
-                <SelectTrigger className="h-10 border border-border bg-background w-full">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <SelectValue placeholder="Selecionar endereço" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  {pickupAddresses.map((addr) => (
-                    <SelectItem key={addr.id} value={addr.id}>
-                      {addr.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {formData.pickup_address_id && (
-                <div className="text-sm text-foreground bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-                  {(() => {
-                    const addr = getPickupAddressById(formData.pickup_address_id);
-                    if (!addr) return null;
-                    return (
-                      <div className="space-y-1">
-                        <p className="font-semibold text-green-800 dark:text-green-200">{addr.contact_name} - {addr.contact_phone}</p>
-                        <p className="text-green-700 dark:text-green-300">{addr.street}, {addr.number}{addr.complement && `, ${addr.complement}`}</p>
-                        <p className="text-green-600 dark:text-green-400">{addr.neighborhood} - {addr.city}/{addr.state} - CEP: {addr.cep}</p>
-                      </div>
-                    );
-                  })()}
+            {pickupAddresses.length === 0 ? (
+              <div className="text-center py-12 space-y-4">
+                <div className="w-20 h-20 mx-auto rounded-full bg-muted flex items-center justify-center">
+                  <AlertCircle className="h-10 w-10 text-muted-foreground" />
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Seção: Informações do Envio */}
-        <div className="bg-card border rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold text-lg">Informações do Envio</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="volume_count" className="text-sm font-medium">Quantos volumes? *</Label>
-              <Input
-                id="volume_count"
-                type="number"
-                min="1"
-                value={formData.volume_count}
-                onChange={(e) => handleChange('volume_count', e.target.value)}
-                required
-                placeholder="Ex: 10"
-                className="h-12"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="delivery_date" className="text-sm font-medium">Data de entrega desejada *</Label>
-              <Input
-                id="delivery_date"
-                type="date"
-                value={formData.delivery_date}
-                onChange={(e) => handleChange('delivery_date', e.target.value)}
-                required
-                min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
-                className="h-12"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Seção: Volumes */}
-        {parseInt(formData.volume_count) > 0 && (
-          <div className="bg-card border rounded-xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-primary" />
-                <h2 className="font-semibold text-lg">Volumes</h2>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAddressModal(true)}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar Endereço
-              </Button>
-            </div>
-
-            {addresses.length === 0 ? (
-              <div className="text-center py-8 space-y-3 bg-muted/30 rounded-lg">
-                <AlertCircle className="h-10 w-10 mx-auto text-muted-foreground" />
                 <div>
-                  <p className="font-medium">Nenhum endereço de entrega cadastrado</p>
-                  <p className="text-sm text-muted-foreground">Cadastre endereços de entrega para os volumes.</p>
+                  <p className="font-medium text-lg">Nenhum endereço cadastrado</p>
+                  <p className="text-sm text-muted-foreground">Cadastre seu primeiro endereço de coleta</p>
                 </div>
                 <Button
-                  type="button"
-                  onClick={() => setShowAddressModal(true)}
+                  onClick={() => setShowPickupAddressModal(true)}
+                  size="lg"
+                  className="bg-green-600 hover:bg-green-700"
                 >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Cadastrar Endereço de Entrega
+                  <Plus className="mr-2 h-5 w-5" />
+                  Cadastrar Endereço
                 </Button>
               </div>
             ) : (
-              <>
-                <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    Informe o peso e selecione o endereço de entrega para cada volume
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  {formData.volume_weights.map((weight, index) => (
-                    <div key={index} className="border rounded-lg p-4 bg-muted/20 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-primary" />
-                        <span className="font-semibold text-sm">Volume {index + 1}</span>
+              <div className="space-y-3">
+                {pickupAddresses.map((addr) => (
+                  <button
+                    key={addr.id}
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, pickup_address_id: addr.id }))}
+                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                      formData.pickup_address_id === addr.id
+                        ? 'border-green-600 bg-green-50 dark:bg-green-950/20'
+                        : 'border-border hover:border-green-300'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 ${
+                        formData.pickup_address_id === addr.id
+                          ? 'border-green-600 bg-green-600'
+                          : 'border-muted-foreground'
+                      }`}>
+                        {formData.pickup_address_id === addr.id && (
+                          <Check className="h-3 w-3 text-white" />
+                        )}
                       </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor={`weight_${index}`} className="text-sm">Peso (kg) *</Label>
-                          <Input
-                            id={`weight_${index}`}
-                            type="text"
-                            value={weight}
-                            onChange={(e) => handleWeightChange(index, e.target.value)}
-                            required
-                            placeholder="Ex: 2.5"
-                            className="h-10"
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label htmlFor={`address_${index}`} className="text-sm">Endereço de Entrega *</Label>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setShowAddressModal(true)}
-                              className="h-6 text-xs text-primary border-primary hover:bg-primary/5"
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Novo
-                            </Button>
-                          </div>
-                          <Select
-                            value={formData.volume_addresses[index] || ''}
-                            onValueChange={(value) => handleAddressChange(index, value)}
-                            required
-                          >
-                            <SelectTrigger className="h-10 border border-border">
-                              <SelectValue placeholder="Selecione o endereço" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {addresses.map((addr) => (
-                                <SelectItem key={addr.id} value={addr.id}>
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">{addr.name}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {addr.recipient_name} - {addr.city}/{addr.state}
-                                    </span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="flex-1">
+                        <p className="font-semibold">{addr.name}</p>
+                        <p className="text-sm text-muted-foreground">{addr.contact_name} - {addr.contact_phone}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {addr.street}, {addr.number} - {addr.neighborhood}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {addr.city}/{addr.state} - CEP: {addr.cep}
+                        </p>
                       </div>
-
-                      {formData.volume_addresses[index] && (
-                        <div className="text-xs text-muted-foreground bg-background p-3 rounded border">
-                          {(() => {
-                            const addr = getAddressById(formData.volume_addresses[index]);
-                            if (!addr) return null;
-                            return (
-                              <>
-                                <p><strong>{addr.recipient_name}</strong> - {addr.recipient_phone}</p>
-                                <p>{addr.street}, {addr.number}{addr.complement && `, ${addr.complement}`}</p>
-                                <p>{addr.neighborhood} - {addr.city}/{addr.state} - CEP: {addr.cep}</p>
-                              </>
-                            );
-                          })()}
-                        </div>
-                      )}
                     </div>
-                  ))}
-                </div>
-              </>
+                  </button>
+                ))}
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowPickupAddressModal(true)}
+                  className="w-full border-dashed border-2 h-14"
+                >
+                  <Plus className="mr-2 h-5 w-5" />
+                  Adicionar novo endereço
+                </Button>
+              </div>
             )}
           </div>
         )}
 
-        {/* Seção: Tipo de Veículo */}
-        <div className="bg-card border rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-2">
-            <Truck className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold text-lg">Tipo de Veículo</h2>
-          </div>
-
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Selecione o veículo para coleta e entrega *</Label>
-            <RadioGroup
-              value={formData.vehicle_type}
-              onValueChange={(value) => handleChange('vehicle_type', value)}
-              className="grid grid-cols-1 md:grid-cols-3 gap-3"
-              required
-            >
-              <label
-                htmlFor="moto"
-                className={`flex items-center space-x-3 border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                  formData.vehicle_type === 'moto' 
-                    ? 'border-primary bg-primary/5' 
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <RadioGroupItem value="moto" id="moto" />
-                <div className="flex items-center gap-3">
-                  <Bike className="h-5 w-5" />
-                  <span className="font-medium">Moto</span>
-                </div>
-              </label>
-
-              <label
-                htmlFor="carro"
-                className={`flex items-center space-x-3 border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                  formData.vehicle_type === 'carro' 
-                    ? 'border-primary bg-primary/5' 
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <RadioGroupItem value="carro" id="carro" />
-                <div className="flex items-center gap-3">
-                  <Car className="h-5 w-5" />
-                  <span className="font-medium">Carro Utilitário</span>
-                </div>
-              </label>
-
-              <label
-                htmlFor="caminhao"
-                className={`flex items-center space-x-3 border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                  formData.vehicle_type === 'caminhao' 
-                    ? 'border-primary bg-primary/5' 
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <RadioGroupItem value="caminhao" id="caminhao" />
-                <div className="flex items-center gap-3">
-                  <Truck className="h-5 w-5" />
-                  <span className="font-medium">Caminhão</span>
-                </div>
-              </label>
-            </RadioGroup>
-          </div>
-        </div>
-
-        {/* Resumo dos Volumes */}
-        {parseInt(formData.volume_count) > 0 && (
-          <div className="bg-primary/5 border-2 border-primary/20 rounded-xl p-6">
-            <h3 className="font-semibold mb-4">Resumo do Envio</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Quantidade de Volumes</p>
-                <p className="text-2xl font-bold text-primary">{formData.volume_count}</p>
+        {/* Step 2: Informações do Envio */}
+        {currentStep === 2 && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            <div className="space-y-4">
+              <div className="text-center">
+                <Package className="h-12 w-12 mx-auto mb-3 text-primary" />
+                <Label className="text-lg font-medium">Quantos volumes você vai enviar?</Label>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Peso Total</p>
-                <p className="text-2xl font-bold">{totalWeight.toFixed(2)} kg</p>
+              <Input
+                type="number"
+                min="1"
+                value={formData.volume_count}
+                onChange={(e) => handleChange('volume_count', e.target.value)}
+                className="text-center text-2xl font-bold h-16"
+                placeholder="1"
+              />
+            </div>
+
+            <div className="space-y-4">
+              <div className="text-center">
+                <Calendar className="h-12 w-12 mx-auto mb-3 text-primary" />
+                <Label className="text-lg font-medium">Quando você deseja a entrega?</Label>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Previsão de Entrega</p>
-                <p className="text-2xl font-bold">
-                  {formData.delivery_date ? new Date(formData.delivery_date + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Valor do Frete</p>
-                <p className="text-2xl font-bold text-primary">R$ {totalPrice.toFixed(2)}</p>
-              </div>
+              <Input
+                type="date"
+                value={formData.delivery_date}
+                onChange={(e) => handleChange('delivery_date', e.target.value)}
+                min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
+                className="text-center text-lg h-14"
+              />
+              <p className="text-sm text-center text-muted-foreground">
+                A data mínima é D+1 (amanhã)
+              </p>
             </div>
           </div>
         )}
 
-        {/* Botão de Ação */}
-        <Button 
-          type="submit" 
-          className="w-full h-14 text-lg font-semibold bg-destructive hover:bg-destructive/90" 
-          size="lg" 
-          disabled={loading || pickupAddresses.length === 0 || addresses.length === 0}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Processando...
-            </>
-          ) : (
-            <>
-              <Package className="mr-2 h-5 w-5" />
-              Solicitar Coleta e Entrega
-            </>
-          )}
-        </Button>
-      </form>
+        {/* Step 3: Detalhes dos Volumes */}
+        {currentStep === 3 && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <p className="text-muted-foreground text-center">
+              Informe o peso e destino de cada volume
+            </p>
 
-      {/* Modal para cadastrar novo endereço */}
+            {addresses.length === 0 ? (
+              <div className="text-center py-8 space-y-4">
+                <AlertCircle className="h-10 w-10 mx-auto text-muted-foreground" />
+                <div>
+                  <p className="font-medium">Nenhum endereço de entrega</p>
+                  <p className="text-sm text-muted-foreground">Cadastre endereços de entrega primeiro</p>
+                </div>
+                <Button onClick={() => setShowAddressModal(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Cadastrar Endereço
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {formData.volume_weights.map((weight, index) => (
+                  <div key={index} className="border rounded-xl p-4 bg-card space-y-4">
+                    <div className="flex items-center gap-2 text-primary">
+                      <Package className="h-5 w-5" />
+                      <span className="font-semibold">Volume {index + 1}</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label className="text-sm flex items-center gap-1">
+                          <Scale className="h-3 w-3" />
+                          Peso (kg)
+                        </Label>
+                        <Input
+                          type="text"
+                          value={weight}
+                          onChange={(e) => handleWeightChange(index, e.target.value)}
+                          placeholder="Ex: 2.5"
+                          className="h-12"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label className="text-sm flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          Destino
+                        </Label>
+                        <Select
+                          value={formData.volume_addresses[index] || ''}
+                          onValueChange={(value) => handleAddressChange(index, value)}
+                        >
+                          <SelectTrigger className="h-12 border border-border">
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {addresses.map((addr) => (
+                              <SelectItem key={addr.id} value={addr.id}>
+                                <span className="font-medium">{addr.name}</span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {formData.volume_addresses[index] && (
+                      <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                        {(() => {
+                          const addr = getAddressById(formData.volume_addresses[index]);
+                          if (!addr) return null;
+                          return (
+                            <>
+                              <p className="font-medium text-foreground">{addr.recipient_name}</p>
+                              <p>{addr.street}, {addr.number} - {addr.city}/{addr.state}</p>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowAddressModal(true)}
+                  className="w-full border-dashed h-12"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo endereço de entrega
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 4: Tipo de Veículo */}
+        {currentStep === 4 && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <p className="text-muted-foreground text-center">
+              Qual veículo você precisa para a coleta e entrega?
+            </p>
+
+            <RadioGroup
+              value={formData.vehicle_type}
+              onValueChange={(value) => handleChange('vehicle_type', value)}
+              className="space-y-3"
+            >
+              {[
+                { id: 'moto', label: 'Moto', icon: Bike, desc: 'Ideal para pequenos volumes' },
+                { id: 'carro', label: 'Carro Utilitário', icon: Car, desc: 'Para volumes médios' },
+                { id: 'caminhao', label: 'Caminhão', icon: Truck, desc: 'Para grandes cargas' },
+              ].map((vehicle) => (
+                <label
+                  key={vehicle.id}
+                  htmlFor={vehicle.id}
+                  className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    formData.vehicle_type === vehicle.id
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <RadioGroupItem value={vehicle.id} id={vehicle.id} className="sr-only" />
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
+                    formData.vehicle_type === vehicle.id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  }`}>
+                    <vehicle.icon className="h-7 w-7" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold">{vehicle.label}</p>
+                    <p className="text-sm text-muted-foreground">{vehicle.desc}</p>
+                  </div>
+                  {formData.vehicle_type === vehicle.id && (
+                    <Check className="h-5 w-5 text-primary" />
+                  )}
+                </label>
+              ))}
+            </RadioGroup>
+          </div>
+        )}
+
+        {/* Step 5: Resumo */}
+        {currentStep === 5 && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <p className="text-muted-foreground text-center">
+              Confira os dados do seu envio
+            </p>
+
+            <div className="space-y-4">
+              {/* Coleta */}
+              <div className="border rounded-xl p-4 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin className="h-4 w-4 text-green-600" />
+                  <span className="font-semibold text-green-800 dark:text-green-200">Coleta</span>
+                </div>
+                {(() => {
+                  const addr = getPickupAddressById(formData.pickup_address_id);
+                  if (!addr) return null;
+                  return (
+                    <div className="text-sm text-green-700 dark:text-green-300">
+                      <p className="font-medium">{addr.name}</p>
+                      <p>{addr.street}, {addr.number} - {addr.city}/{addr.state}</p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Volumes */}
+              <div className="border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Package className="h-4 w-4 text-primary" />
+                  <span className="font-semibold">{formData.volume_count} Volume(s)</span>
+                </div>
+                <div className="space-y-2">
+                  {formData.volume_weights.map((weight, index) => {
+                    const addr = getAddressById(formData.volume_addresses[index]);
+                    return (
+                      <div key={index} className="flex justify-between text-sm py-2 border-b last:border-0">
+                        <span className="text-muted-foreground">Vol. {index + 1} - {weight}kg</span>
+                        <span className="font-medium">{addr?.name || '-'}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Veículo e Data */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="border rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Truck className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-muted-foreground">Veículo</span>
+                  </div>
+                  <p className="font-semibold capitalize">{formData.vehicle_type}</p>
+                </div>
+                <div className="border rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-muted-foreground">Entrega</span>
+                  </div>
+                  <p className="font-semibold">
+                    {formData.delivery_date ? new Date(formData.delivery_date + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Total */}
+              <div className="border-2 border-primary rounded-xl p-6 bg-primary/5 text-center">
+                <p className="text-sm text-muted-foreground mb-1">Valor do Frete</p>
+                <p className="text-4xl font-bold text-primary">R$ {totalPrice.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Peso total: {totalWeight.toFixed(2)} kg
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Navigation Buttons */}
+      <div className="flex gap-3 mt-8">
+        {currentStep > 1 && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handlePrev}
+            className="flex-1 h-14"
+          >
+            <ChevronLeft className="mr-2 h-5 w-5" />
+            Voltar
+          </Button>
+        )}
+        
+        {currentStep < TOTAL_STEPS ? (
+          <Button
+            type="button"
+            onClick={handleNext}
+            className="flex-1 h-14"
+            disabled={
+              (currentStep === 1 && pickupAddresses.length === 0) ||
+              (currentStep === 3 && addresses.length === 0)
+            }
+          >
+            Continuar
+            <ChevronRight className="ml-2 h-5 w-5" />
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            className="flex-1 h-14 bg-destructive hover:bg-destructive/90"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Processando...
+              </>
+            ) : (
+              <>
+                <Check className="mr-2 h-5 w-5" />
+                Confirmar e Pagar
+              </>
+            )}
+          </Button>
+        )}
+      </div>
+
+      {/* Modal para cadastrar novo endereço de entrega */}
       <Dialog open={showAddressModal} onOpenChange={setShowAddressModal}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -942,7 +1032,8 @@ const B2BNovaRemessa = () => {
                 id="addr_recipient_document"
                 value={newAddress.recipient_document}
                 onChange={(e) => handleNewAddressChange('recipient_document', e.target.value)}
-                placeholder="Documento do destinatário"
+                placeholder="Somente números"
+                maxLength={14}
               />
             </div>
 
