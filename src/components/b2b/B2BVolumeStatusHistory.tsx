@@ -52,7 +52,7 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
       'COLETADO': { label: 'Coletado', dotColor: 'bg-sky-500', badgeClass: 'bg-sky-100 text-sky-800 border-sky-300' },
       'EM_TRANSITO': { label: 'Em Trânsito', dotColor: 'bg-blue-500', badgeClass: 'bg-blue-100 text-blue-800 border-blue-300' },
       'EM_TRIAGEM': { label: 'Em Triagem', dotColor: 'bg-purple-500', badgeClass: 'bg-purple-100 text-purple-800 border-purple-300' },
-      'AGUARDANDO_EXPEDICAO': { label: 'Aguardando Expedição', dotColor: 'bg-indigo-500', badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
+      'AGUARDANDO_EXPEDICAO': { label: 'Aguardando Despache', dotColor: 'bg-indigo-500', badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
       'DESPACHADO': { label: 'Despachado', dotColor: 'bg-cyan-500', badgeClass: 'bg-cyan-100 text-cyan-800 border-cyan-300' },
       'NO_CD': { label: 'Recebido no CD', dotColor: 'bg-violet-500', badgeClass: 'bg-violet-100 text-violet-800 border-violet-300' },
       'EM_ROTA': { label: 'Em Rota', dotColor: 'bg-blue-500', badgeClass: 'bg-blue-100 text-blue-800 border-blue-300' },
