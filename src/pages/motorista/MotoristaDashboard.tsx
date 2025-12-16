@@ -73,7 +73,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
   'ACEITO': { label: 'Aceito', color: 'text-blue-700', bgColor: 'bg-blue-100 border-blue-300' },
   'COLETADO': { label: 'Coletado', color: 'text-orange-700', bgColor: 'bg-orange-100 border-orange-300' },
   'EM_TRIAGEM': { label: 'Em Triagem', color: 'text-purple-700', bgColor: 'bg-purple-100 border-purple-300' },
-  'AGUARDANDO_EXPEDICAO': { label: 'Aguardando Expedição', color: 'text-indigo-700', bgColor: 'bg-indigo-100 border-indigo-300' },
+  'AGUARDANDO_EXPEDICAO': { label: 'Aguardando Despache', color: 'text-indigo-700', bgColor: 'bg-indigo-100 border-indigo-300' },
   'DESPACHADO': { label: 'Despachado', color: 'text-cyan-700', bgColor: 'bg-cyan-100 border-cyan-300' },
   'CONCLUIDO': { label: 'Concluído', color: 'text-green-700', bgColor: 'bg-green-100 border-green-300' },
   'DEVOLUCAO': { label: 'Devolução', color: 'text-red-700', bgColor: 'bg-red-100 border-red-300' },
@@ -573,7 +573,7 @@ const MotoristaDashboard = () => {
       // Verificar se existe nos volumes aguardando expedição
       const volume = aguardandoExpedicao.find(v => v.eti_code === inputEti);
       if (!volume) {
-        toast.error('Volume não encontrado ou não está aguardando expedição');
+        toast.error('Volume não encontrado ou não está aguardando despache');
         setBipBatchEtiInput('');
         return;
       }
@@ -666,7 +666,7 @@ const MotoristaDashboard = () => {
   ];
 
   const despachaSubItems = [
-    { tab: 'aguardando', label: 'Aguardando Expedição', count: aguardandoExpedicao.length },
+    { tab: 'aguardando', label: 'Aguardando Despache', count: aguardandoExpedicao.length },
     { tab: 'despachados', label: 'Despachados', count: despachados.length },
     { tab: 'concluidos', label: 'Concluídos', count: concluidos.length },
     { tab: 'devolucoes', label: 'Devoluções', count: devolucoes.length },
@@ -1028,7 +1028,7 @@ const MotoristaDashboard = () => {
 
         {activeSection === 'despache' && (
           <>
-            {activeTab === 'aguardando' && renderVolumeList(aguardandoExpedicao, 'Nenhum volume aguardando expedição', 'bip')}
+            {activeTab === 'aguardando' && renderVolumeList(aguardandoExpedicao, 'Nenhum volume aguardando despache', 'bip')}
             {activeTab === 'despachados' && renderVolumeList(despachados, 'Nenhum volume despachado', 'finalize')}
             {activeTab === 'concluidos' && renderVolumeList(concluidos, 'Nenhuma entrega concluída')}
             {activeTab === 'devolucoes' && renderVolumeList(devolucoes, 'Nenhuma devolução')}
