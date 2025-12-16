@@ -303,15 +303,15 @@ const B2BDashboard = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os status</SelectItem>
-                <SelectItem value="PENDENTE">Pendente</SelectItem>
-                <SelectItem value="ACEITO">Aceito</SelectItem>
+                <SelectItem value="AGUARDANDO_ACEITE_COLETA">Aguardando Aceite Coleta</SelectItem>
+                <SelectItem value="COLETA_ACEITA">Coleta Aceita</SelectItem>
                 <SelectItem value="COLETADO">Coletado</SelectItem>
                 <SelectItem value="EM_TRANSITO">Em Trânsito</SelectItem>
                 <SelectItem value="EM_TRIAGEM">Em Triagem</SelectItem>
-                <SelectItem value="AGUARDANDO_EXPEDICAO">Aguardando Despache</SelectItem>
-                <SelectItem value="DESPACHADO">Despachado</SelectItem>
+                <SelectItem value="AGUARDANDO_ACEITE_EXPEDICAO">Aguardando Aceite Expedição</SelectItem>
+                <SelectItem value="EXPEDIDO">Expedido</SelectItem>
                 <SelectItem value="EM_ROTA">Em Rota</SelectItem>
-                <SelectItem value="CONCLUIDO">Concluído</SelectItem>
+                <SelectItem value="ENTREGUE">Entregue</SelectItem>
                 <SelectItem value="DEVOLUCAO">Devolução</SelectItem>
               </SelectContent>
             </Select>
