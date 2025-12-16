@@ -337,7 +337,7 @@ const CdDashboard = () => {
       );
 
       if (!volume) {
-        toast.error('Volume não encontrado ou não está disponível para despacho');
+        toast.error('Volume não encontrado ou não está disponível para expedição');
         setDispatchEtiInput('');
         return;
       }
