@@ -69,12 +69,12 @@ interface B2BVolume {
 
 // Status config
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
-  'PENDENTE': { label: 'Pendente', color: 'text-yellow-700', bgColor: 'bg-yellow-100 border-yellow-300' },
-  'ACEITO': { label: 'Aceito', color: 'text-blue-700', bgColor: 'bg-blue-100 border-blue-300' },
+  'AGUARDANDO_ACEITE_COLETA': { label: 'Aguardando Aceite Coleta', color: 'text-yellow-700', bgColor: 'bg-yellow-100 border-yellow-300' },
+  'COLETA_ACEITA': { label: 'Coleta Aceita', color: 'text-blue-700', bgColor: 'bg-blue-100 border-blue-300' },
   'COLETADO': { label: 'Coletado', color: 'text-orange-700', bgColor: 'bg-orange-100 border-orange-300' },
   'EM_TRIAGEM': { label: 'Em Triagem', color: 'text-purple-700', bgColor: 'bg-purple-100 border-purple-300' },
-  'AGUARDANDO_EXPEDICAO': { label: 'Aguardando Despache', color: 'text-indigo-700', bgColor: 'bg-indigo-100 border-indigo-300' },
-  'DESPACHADO': { label: 'Despachado', color: 'text-cyan-700', bgColor: 'bg-cyan-100 border-cyan-300' },
+  'AGUARDANDO_ACEITE_EXPEDICAO': { label: 'Aguardando Aceite Expedição', color: 'text-indigo-700', bgColor: 'bg-indigo-100 border-indigo-300' },
+  'EXPEDIDO': { label: 'Expedido', color: 'text-cyan-700', bgColor: 'bg-cyan-100 border-cyan-300' },
   'CONCLUIDO': { label: 'Concluído', color: 'text-green-700', bgColor: 'bg-green-100 border-green-300' },
   'DEVOLUCAO': { label: 'Devolução', color: 'text-red-700', bgColor: 'bg-red-100 border-red-300' },
 };
@@ -212,7 +212,7 @@ const MotoristaDashboard = () => {
         .from('b2b_status_history')
         .select('volume_id')
         .eq('motorista_id', id)
-        .eq('status', 'DESPACHADO');
+        .eq('status', 'EXPEDIDO');
       
       const dispatchedVolumeIds = (dispatchedHistory || []).map(h => h.volume_id);
       
@@ -230,7 +230,7 @@ const MotoristaDashboard = () => {
             )
           `)
           .in('id', collectedVolumeIds)
-          .in('status', ['EM_TRIAGEM', 'AGUARDANDO_EXPEDICAO', 'DESPACHADO', 'CONCLUIDO']);
+          .in('status', ['EM_TRIAGEM', 'AGUARDANDO_ACEITE_EXPEDICAO', 'EXPEDIDO', 'CONCLUIDO']);
         
         additionalVolumes = additionalData || [];
       }
@@ -316,11 +316,11 @@ const MotoristaDashboard = () => {
   };
 
   // Filtros - Coletas
-  const pendentes = filterBySearch(volumes.filter(v => v.status === 'PENDENTE' && !v.motorista_coleta_id));
-  const aceitos = filterBySearch(volumes.filter(v => v.status === 'ACEITO' && v.motorista_coleta_id === motorista?.id));
+  const pendentes = filterBySearch(volumes.filter(v => v.status === 'AGUARDANDO_ACEITE_COLETA' && !v.motorista_coleta_id));
+  const aceitos = filterBySearch(volumes.filter(v => v.status === 'COLETA_ACEITA' && v.motorista_coleta_id === motorista?.id));
   const coletados = filterBySearch(volumes.filter(v => v.status === 'COLETADO' && v.motorista_coleta_id === motorista?.id));
   const entreguesAoCd = filterBySearch(volumes.filter(v => {
-    if (!['EM_TRIAGEM', 'AGUARDANDO_EXPEDICAO', 'DESPACHADO', 'CONCLUIDO'].includes(v.status)) return false;
+    if (!['EM_TRIAGEM', 'AGUARDANDO_ACEITE_EXPEDICAO', 'EXPEDIDO', 'CONCLUIDO'].includes(v.status)) return false;
     if (v.motorista_coleta_id === motorista?.id) return true;
     const coletouNoHistorico = v.status_history?.some(h => 
       h.status === 'COLETADO' && h.motorista_id === motorista?.id
@@ -329,16 +329,16 @@ const MotoristaDashboard = () => {
   }));
 
   // Filtros - Despache
-  const aguardandoExpedicao = filterBySearch(volumes.filter(v => v.status === 'AGUARDANDO_EXPEDICAO' && v.motorista_entrega_id === motorista?.id));
-  const despachados = filterBySearch(volumes.filter(v => v.status === 'DESPACHADO' && v.motorista_entrega_id === motorista?.id));
+  const aguardandoExpedicao = filterBySearch(volumes.filter(v => v.status === 'AGUARDANDO_ACEITE_EXPEDICAO' && v.motorista_entrega_id === motorista?.id));
+  const despachados = filterBySearch(volumes.filter(v => v.status === 'EXPEDIDO' && v.motorista_entrega_id === motorista?.id));
   const concluidos = filterBySearch(volumes.filter(v => v.status === 'CONCLUIDO' && v.motorista_entrega_id === motorista?.id));
   const devolucoes = filterBySearch(volumes.filter(v => {
     if (v.status !== 'DEVOLUCAO') return false;
-    // Verifica se motorista_entrega_id é o motorista atual OU se no histórico há registro de DESPACHADO por este motorista
+    // Verifica se motorista_entrega_id é o motorista atual OU se no histórico há registro de EXPEDIDO por este motorista
     if (v.motorista_entrega_id === motorista?.id) return true;
     // Verificar no histórico se este motorista despachava o volume
     const despachouNoHistorico = v.status_history?.some(h => 
-      h.status === 'DESPACHADO' && h.motorista_id === motorista?.id
+      h.status === 'EXPEDIDO' && h.motorista_id === motorista?.id
     );
     return despachouNoHistorico;
   }));
@@ -358,7 +358,7 @@ const MotoristaDashboard = () => {
       const { error } = await supabase
         .from('b2b_volumes')
         .update({
-          status: 'ACEITO',
+          status: 'COLETA_ACEITA',
           motorista_coleta_id: motorista.id
         })
         .eq('id', volumeToAccept.id);
@@ -367,7 +367,7 @@ const MotoristaDashboard = () => {
 
       await supabase.from('b2b_status_history').insert({
         volume_id: volumeToAccept.id,
-        status: 'ACEITO',
+        status: 'COLETA_ACEITA',
         motorista_id: motorista.id,
         motorista_nome: motorista.nome,
         observacoes: 'Coleta aceita pelo motorista'
@@ -564,20 +564,20 @@ const MotoristaDashboard = () => {
     try {
       const { error } = await supabase
         .from('b2b_volumes')
-        .update({ status: 'DESPACHADO' })
+        .update({ status: 'EXPEDIDO' })
         .eq('id', volume.id);
 
       if (error) throw error;
 
       await supabase.from('b2b_status_history').insert({
         volume_id: volume.id,
-        status: 'DESPACHADO',
+        status: 'EXPEDIDO',
         motorista_id: motorista.id,
         motorista_nome: motorista.nome,
         observacoes: 'Volume aceito pelo motorista - saindo para entrega'
       });
 
-      toast.success('Volume despachado com sucesso!');
+      toast.success('Volume expedido com sucesso!');
       await loadVolumes();
     } catch (error) {
       toast.error('Erro ao aceitar volume');
@@ -595,14 +595,14 @@ const MotoristaDashboard = () => {
       for (const volume of aguardandoExpedicao) {
         const { error } = await supabase
           .from('b2b_volumes')
-          .update({ status: 'DESPACHADO' })
+          .update({ status: 'EXPEDIDO' })
           .eq('id', volume.id);
 
         if (error) throw error;
 
         await supabase.from('b2b_status_history').insert({
           volume_id: volume.id,
-          status: 'DESPACHADO',
+          status: 'EXPEDIDO',
           motorista_id: motorista.id,
           motorista_nome: motorista.nome,
           observacoes: 'Volume aceito em lote pelo motorista - saindo para entrega'
@@ -685,8 +685,8 @@ const MotoristaDashboard = () => {
   const renderVolumeCard = (v: B2BVolume, showActions: 'accept' | 'collect' | 'bip' | 'finalize' | 'none' = 'none') => {
     const statusConfig = STATUS_CONFIG[v.status] || { label: v.status, color: 'text-gray-700', bgColor: 'bg-gray-100' };
     const recentHistory = (v.status_history || []).slice(0, 2);
-    const isPendente = v.status === 'PENDENTE';
-    const isAceito = v.status === 'ACEITO';
+    const isPendente = v.status === 'AGUARDANDO_ACEITE_COLETA';
+    const isAceito = v.status === 'COLETA_ACEITA';
     const isColetado = v.status === 'COLETADO';
 
     return (
@@ -852,17 +852,17 @@ const MotoristaDashboard = () => {
             </div>
 
             {/* Ocorrência (para todos exceto pendentes, coletados e concluidos) - alinhado à direita */}
-            {v.status !== 'PENDENTE' && v.status !== 'COLETADO' && v.status !== 'CONCLUIDO' && (
+            {v.status !== 'AGUARDANDO_ACEITE_COLETA' && v.status !== 'COLETADO' && v.status !== 'CONCLUIDO' && (
               <Button 
                 variant="outline"
                 size="sm"
-                className={v.status === 'ACEITO' ? 'text-destructive border-destructive hover:bg-destructive/10' : ''}
+                className={v.status === 'COLETA_ACEITA' ? 'text-destructive border-destructive hover:bg-destructive/10' : ''}
                 onClick={() => {
                   setOccurrenceVolume(v);
                   setOccurrenceModalOpen(true);
                 }}
               >
-                {v.status === 'ACEITO' ? (
+                {v.status === 'COLETA_ACEITA' ? (
                   'Falha na Coleta'
                 ) : (
                   <AlertTriangle className="h-4 w-4" />
@@ -1365,8 +1365,8 @@ const MotoristaDashboard = () => {
                 </div>
               )}
 
-              {/* Para ACEITO/COLETADO: mostrar endereço do CD fixo */}
-              {(selectedVolume.status === 'ACEITO' || selectedVolume.status === 'COLETADO') ? (
+              {/* Para COLETA_ACEITA/COLETADO: mostrar endereço do CD fixo */}
+              {(selectedVolume.status === 'COLETA_ACEITA' || selectedVolume.status === 'COLETADO') ? (
                 <div className="border-t pt-4">
                   <h4 className="font-semibold mb-2">Destino</h4>
                   <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
@@ -1377,8 +1377,8 @@ const MotoristaDashboard = () => {
                     <p>CEP: 74934-600</p>
                   </div>
                 </div>
-              ) : selectedVolume.status !== 'PENDENTE' && (
-                /* Para outros status (não PENDENTE, ACEITO, COLETADO): mostra destinatário real */
+              ) : selectedVolume.status !== 'AGUARDANDO_ACEITE_COLETA' && (
+                /* Para outros status (não AGUARDANDO_ACEITE_COLETA, COLETA_ACEITA, COLETADO): mostra destinatário real */
                 <div className="border-t pt-4">
                   <h4 className="font-semibold mb-2">Destinatário</h4>
                   <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
@@ -1399,7 +1399,7 @@ const MotoristaDashboard = () => {
                   <h4 className="font-semibold mb-2">Endereço de Coleta</h4>
                   <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
                     <p className="font-medium">{selectedVolume.shipment.pickup_address.name}</p>
-                    {selectedVolume.status === 'PENDENTE' ? (
+                    {selectedVolume.status === 'AGUARDANDO_ACEITE_COLETA' ? (
                       <>
                         <p>{selectedVolume.shipment.pickup_address.neighborhood}</p>
                         <p>{selectedVolume.shipment.pickup_address.contact_phone}</p>
