@@ -214,35 +214,39 @@ const B2BDashboard = () => {
     return allConcluded ? 'CONCLUIDO' : shipment.status;
   };
 
-  // Filtra as remessas baseado na busca por ETI e status
+  // Filtra as remessas baseado na busca e status
   const filteredShipments = useMemo(() => {
     return shipments.filter(shipment => {
       const shipmentVolumes = getShipmentVolumes(shipment.id);
       const displayStatus = getShipmentDisplayStatus(shipment);
       
-      // Filtro por ETI
-      const matchesEti = searchEti === '' || 
-        shipmentVolumes.some(v => v.eti_code.toLowerCase().includes(searchEti.toLowerCase())) ||
-        shipment.tracking_code.toLowerCase().includes(searchEti.toLowerCase());
+      // Filtro por código B2B, ETI ou nome do destinatário
+      const searchLower = searchEti.toLowerCase();
+      const matchesSearch = searchEti === '' || 
+        shipmentVolumes.some(v => v.eti_code.toLowerCase().includes(searchLower)) ||
+        shipmentVolumes.some(v => v.recipient_name.toLowerCase().includes(searchLower)) ||
+        shipment.tracking_code.toLowerCase().includes(searchLower);
       
       // Filtro por status
       const matchesStatus = statusFilter === 'all' || displayStatus === statusFilter;
       
-      return matchesEti && matchesStatus;
+      return matchesSearch && matchesStatus;
     });
   }, [shipments, volumes, searchEti, statusFilter]);
 
   // Filtra volumes individuais
   const filteredVolumes = useMemo(() => {
     return volumes.filter(volume => {
-      // Filtro por ETI
-      const matchesEti = searchEti === '' || 
-        volume.eti_code.toLowerCase().includes(searchEti.toLowerCase());
+      // Filtro por ETI ou nome do destinatário
+      const searchLower = searchEti.toLowerCase();
+      const matchesSearch = searchEti === '' || 
+        volume.eti_code.toLowerCase().includes(searchLower) ||
+        volume.recipient_name.toLowerCase().includes(searchLower);
       
       // Filtro por status
       const matchesStatus = statusFilter === 'all' || volume.status === statusFilter;
       
-      return matchesEti && matchesStatus;
+      return matchesSearch && matchesStatus;
     });
   }, [volumes, searchEti, statusFilter]);
 
@@ -291,7 +295,7 @@ const B2BDashboard = () => {
             <div className="relative flex-1 max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder={viewMode === 'remessas' ? "Buscar por código B2B..." : "Buscar por ETI..."}
+                placeholder="Buscar pedido..."
                 value={searchEti}
                 onChange={(e) => setSearchEti(e.target.value)}
                 className="pl-9"
