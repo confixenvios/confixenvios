@@ -106,20 +106,32 @@ const B2BNovaRemessa = () => {
   });
 
   // Calcula o valor total do frete
+  // Regra: R$15 por endereço único + R$1 por kg acima de 5kg
   const calculateTotal = () => {
-    const basePrice = 15;
+    const basePricePerAddress = 15;
+    
+    // Contar endereços únicos
+    const uniqueAddresses = new Set(formData.volume_addresses.filter(a => a && a !== ''));
+    const uniqueAddressCount = Math.max(uniqueAddresses.size, 1); // Mínimo 1
+    
+    // Base = quantidade de endereços únicos x R$15
+    const baseTotal = uniqueAddressCount * basePricePerAddress;
+    
+    // Calcular peso total
     const weights = formData.volume_weights.map(w => parseFloat(w) || 0);
     const totalWeight = weights.reduce((sum, w) => sum + w, 0);
     
-    if (totalWeight <= 5) {
-      return basePrice;
+    // Adicional de peso: R$1 por kg acima de 5kg
+    let weightExtra = 0;
+    if (totalWeight > 5) {
+      weightExtra = Math.ceil(totalWeight - 5);
     }
     
-    const extraKgs = Math.ceil(totalWeight - 5);
-    return basePrice + extraKgs;
+    return baseTotal + weightExtra;
   };
 
   const totalWeight = formData.volume_weights.map(w => parseFloat(w) || 0).reduce((sum, w) => sum + w, 0);
+  const uniqueAddressCount = new Set(formData.volume_addresses.filter(a => a && a !== '')).size || 1;
   const totalPrice = calculateTotal();
 
   useEffect(() => {
@@ -920,12 +932,23 @@ const B2BNovaRemessa = () => {
               </div>
 
               {/* Total */}
-              <div className="border-2 border-primary rounded-xl p-6 bg-primary/5 text-center">
-                <p className="text-sm text-muted-foreground mb-1">Valor do Frete</p>
-                <p className="text-4xl font-bold text-primary">R$ {totalPrice.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Peso total: {totalWeight.toFixed(2)} kg
-                </p>
+              <div className="border-2 border-primary rounded-xl p-6 bg-primary/5">
+                <div className="text-center mb-4">
+                  <p className="text-sm text-muted-foreground mb-1">Valor do Frete</p>
+                  <p className="text-4xl font-bold text-primary">R$ {totalPrice.toFixed(2)}</p>
+                </div>
+                <div className="text-xs text-muted-foreground space-y-1 border-t pt-3">
+                  <div className="flex justify-between">
+                    <span>{uniqueAddressCount} endereço(s) único(s) × R$15</span>
+                    <span>R$ {(uniqueAddressCount * 15).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Peso total: {totalWeight.toFixed(2)} kg</span>
+                    <span>
+                      {totalWeight > 5 ? `+R$ ${Math.ceil(totalWeight - 5).toFixed(2)}` : 'Incluso'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
