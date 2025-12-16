@@ -611,7 +611,7 @@ export const getAvailableShipments = async (visibilidade?: MotoristaVisibilidade
             b2b_clients(company_name, email, phone, cnpj)
           )
         `)
-        .eq('status', 'PENDENTE')
+        .eq('status', 'AGUARDANDO_ACEITE_COLETA')
         .is('motorista_coleta_id', null)
         .order('created_at', { ascending: false });
 
@@ -684,7 +684,7 @@ export const acceptB2BVolumeForColeta = async (volumeId: string, motoristaId: st
       status: 'EM_TRANSITO'
     })
     .eq('id', volumeId)
-    .eq('status', 'PENDENTE');
+    .eq('status', 'AGUARDANDO_ACEITE_COLETA');
 
   if (error) {
     console.error('❌ Erro ao aceitar volume:', error);

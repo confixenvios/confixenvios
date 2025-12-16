@@ -76,12 +76,12 @@ interface B2BVolume {
 
 // Status labels e cores
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
-  'PENDENTE': { label: 'Pendente', color: 'text-yellow-700', bgColor: 'bg-yellow-100 border-yellow-300' },
-  'ACEITO': { label: 'Aceito', color: 'text-blue-700', bgColor: 'bg-blue-100 border-blue-300' },
+  'AGUARDANDO_ACEITE_COLETA': { label: 'Aguardando Aceite Coleta', color: 'text-yellow-700', bgColor: 'bg-yellow-100 border-yellow-300' },
+  'COLETA_ACEITA': { label: 'Coleta Aceita', color: 'text-blue-700', bgColor: 'bg-blue-100 border-blue-300' },
   'COLETADO': { label: 'Coletado', color: 'text-orange-700', bgColor: 'bg-orange-100 border-orange-300' },
   'EM_TRIAGEM': { label: 'Em Triagem', color: 'text-purple-700', bgColor: 'bg-purple-100 border-purple-300' },
-  'AGUARDANDO_EXPEDICAO': { label: 'Aguardando Despache', color: 'text-indigo-700', bgColor: 'bg-indigo-100 border-indigo-300' },
-  'DESPACHADO': { label: 'Despachado', color: 'text-cyan-700', bgColor: 'bg-cyan-100 border-cyan-300' },
+  'AGUARDANDO_ACEITE_EXPEDICAO': { label: 'Aguardando Aceite Expedição', color: 'text-indigo-700', bgColor: 'bg-indigo-100 border-indigo-300' },
+  'EXPEDIDO': { label: 'Expedido', color: 'text-cyan-700', bgColor: 'bg-cyan-100 border-cyan-300' },
   'CONCLUIDO': { label: 'Concluído', color: 'text-green-700', bgColor: 'bg-green-100 border-green-300' },
   'DEVOLUCAO': { label: 'Devolução', color: 'text-red-700', bgColor: 'bg-red-100 border-red-300' },
 };
@@ -234,12 +234,12 @@ const CdDashboard = () => {
   };
 
   // Filtros por status
-  const pendentes = volumes.filter(v => v.status === 'PENDENTE');
-  const aceitos = volumes.filter(v => v.status === 'ACEITO');
+  const pendentes = volumes.filter(v => v.status === 'AGUARDANDO_ACEITE_COLETA');
+  const aceitos = volumes.filter(v => v.status === 'COLETA_ACEITA');
   const coletados = volumes.filter(v => v.status === 'COLETADO');
   const emTriagem = volumes.filter(v => v.status === 'EM_TRIAGEM');
-  const aguardandoExpedicao = volumes.filter(v => v.status === 'AGUARDANDO_EXPEDICAO');
-  const despachados = volumes.filter(v => v.status === 'DESPACHADO');
+  const aguardandoExpedicao = volumes.filter(v => v.status === 'AGUARDANDO_ACEITE_EXPEDICAO');
+  const despachados = volumes.filter(v => v.status === 'EXPEDIDO');
   const concluidos = volumes.filter(v => v.status === 'CONCLUIDO');
   const devolucoes = volumes.filter(v => v.status === 'DEVOLUCAO');
 
@@ -330,10 +330,10 @@ const CdDashboard = () => {
         return;
       }
 
-      // Buscar volume em EM_TRIAGEM ou AGUARDANDO_EXPEDICAO
+      // Buscar volume em EM_TRIAGEM ou AGUARDANDO_ACEITE_EXPEDICAO
       const volume = volumes.find(v => 
         v.eti_code === etiCode && 
-        ['EM_TRIAGEM', 'AGUARDANDO_EXPEDICAO'].includes(v.status)
+        ['EM_TRIAGEM', 'AGUARDANDO_ACEITE_EXPEDICAO'].includes(v.status)
       );
 
       if (!volume) {
@@ -363,18 +363,18 @@ const CdDashboard = () => {
       const motoristaNome = motoristas.find(m => m.id === dispatchMotoristaId)?.nome;
 
       for (const volume of dispatchedVolumes) {
-        // CD despacha para AGUARDANDO_EXPEDICAO, motorista bipa para DESPACHADO
+        // CD despacha para AGUARDANDO_ACEITE_EXPEDICAO, motorista bipa para EXPEDIDO
         await supabase
           .from('b2b_volumes')
           .update({ 
-            status: 'AGUARDANDO_EXPEDICAO',
+            status: 'AGUARDANDO_ACEITE_EXPEDICAO',
             motorista_entrega_id: dispatchMotoristaId
           })
           .eq('id', volume.id);
 
         await supabase.from('b2b_status_history').insert({
           volume_id: volume.id,
-          status: 'AGUARDANDO_EXPEDICAO',
+          status: 'AGUARDANDO_ACEITE_EXPEDICAO',
           motorista_id: dispatchMotoristaId,
           motorista_nome: motoristaNome,
           observacoes: `Expedido - ${motoristaNome} por ${cdUser?.nome}`
@@ -405,15 +405,15 @@ const CdDashboard = () => {
         return;
       }
 
-      // Buscar volume DESPACHADO do motorista selecionado
+      // Buscar volume EXPEDIDO do motorista selecionado
       const volume = volumes.find(v => 
         v.eti_code === etiCode && 
-        v.status === 'DESPACHADO' &&
+        v.status === 'EXPEDIDO' &&
         v.motorista_entrega_id === returnMotoristaId
       );
 
       if (!volume) {
-        toast.error('Volume não encontrado ou não está despachado para este motorista');
+        toast.error('Volume não encontrado ou não está expedido para este motorista');
         setReturnEtiInput('');
         return;
       }

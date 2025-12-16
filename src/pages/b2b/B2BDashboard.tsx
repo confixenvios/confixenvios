@@ -171,13 +171,13 @@ const B2BDashboard = () => {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      'PENDENTE': 'bg-yellow-100 text-yellow-800 border-yellow-300',
-      'ACEITO': 'bg-orange-100 text-orange-800 border-orange-300',
+      'AGUARDANDO_ACEITE_COLETA': 'bg-yellow-100 text-yellow-800 border-yellow-300',
+      'COLETA_ACEITA': 'bg-orange-100 text-orange-800 border-orange-300',
       'COLETADO': 'bg-sky-100 text-sky-800 border-sky-300',
       'EM_TRANSITO': 'bg-blue-100 text-blue-800 border-blue-300',
       'EM_TRIAGEM': 'bg-purple-100 text-purple-800 border-purple-300',
-      'AGUARDANDO_EXPEDICAO': 'bg-indigo-100 text-indigo-800 border-indigo-300',
-      'DESPACHADO': 'bg-cyan-100 text-cyan-800 border-cyan-300',
+      'AGUARDANDO_ACEITE_EXPEDICAO': 'bg-indigo-100 text-indigo-800 border-indigo-300',
+      'EXPEDIDO': 'bg-cyan-100 text-cyan-800 border-cyan-300',
       'NO_CD': 'bg-violet-100 text-violet-800 border-violet-300',
       'EM_ROTA': 'bg-blue-100 text-blue-800 border-blue-300',
       'ENTREGUE': 'bg-green-600 text-white border-green-600',
@@ -189,13 +189,13 @@ const B2BDashboard = () => {
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
-      'PENDENTE': 'Pendente',
-      'ACEITO': 'Aceito',
+      'AGUARDANDO_ACEITE_COLETA': 'Aguardando Aceite Coleta',
+      'COLETA_ACEITA': 'Coleta Aceita',
       'COLETADO': 'Coletado',
       'EM_TRANSITO': 'Em Trânsito',
       'EM_TRIAGEM': 'Em Triagem',
-      'AGUARDANDO_EXPEDICAO': 'Aguardando Despache',
-      'DESPACHADO': 'Despachado',
+      'AGUARDANDO_ACEITE_EXPEDICAO': 'Aguardando Aceite Expedição',
+      'EXPEDIDO': 'Expedido',
       'NO_CD': 'No CD',
       'EM_ROTA': 'Em Rota',
       'ENTREGUE': 'Concluído',

@@ -99,7 +99,7 @@ const B2BRelatorios = () => {
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
-      PENDENTE: 'Pendente',
+      AGUARDANDO_ACEITE_COLETA: 'Aguardando Aceite Coleta',
       EM_TRANSITO: 'Em Trânsito',
       CONCLUIDO: 'Concluído',
       CANCELADO: 'Cancelado',
@@ -109,12 +109,12 @@ const B2BRelatorios = () => {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline', label: string }> = {
-      PENDENTE: { variant: 'secondary', label: 'Pendente' },
+      AGUARDANDO_ACEITE_COLETA: { variant: 'secondary', label: 'Aguardando Aceite Coleta' },
       EM_TRANSITO: { variant: 'default', label: 'Em Trânsito' },
       CONCLUIDO: { variant: 'outline', label: 'Concluído' },
       CANCELADO: { variant: 'destructive', label: 'Cancelado' },
     };
-    const config = variants[status] || variants.PENDENTE;
+    const config = variants[status] || variants.AGUARDANDO_ACEITE_COLETA;
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 

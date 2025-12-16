@@ -10,8 +10,8 @@ interface B2BStatusBadgeProps {
 const B2BStatusBadge = ({ status, showIcon = false, size = 'md' }: B2BStatusBadgeProps) => {
   const getStatusConfig = (status: string) => {
     const configs: Record<string, { label: string; icon: typeof Clock; className: string }> = {
-      'PENDENTE': { 
-        label: 'Pendente', 
+      'AGUARDANDO_ACEITE_COLETA': { 
+        label: 'Aguardando Aceite Coleta', 
         icon: Clock,
         className: 'bg-yellow-100 text-yellow-800 border-yellow-300'
       },
