@@ -121,11 +121,9 @@ const MotoristaDashboard = () => {
   const [collectBatchVolumes, setCollectBatchVolumes] = useState<B2BVolume[]>([]);
   const [collectingBatch, setCollectingBatch] = useState(false);
   
-  // Modal bipar expedição em lote (AGUARDANDO_EXPEDICAO -> DESPACHADO)
-  const [bipBatchModalOpen, setBipBatchModalOpen] = useState(false);
-  const [bipBatchEtiInput, setBipBatchEtiInput] = useState('');
-  const [bipBatchVolumes, setBipBatchVolumes] = useState<B2BVolume[]>([]);
-  const [bipingBatch, setBipingBatch] = useState(false);
+  // Aceitar despache individual ou todos
+  const [acceptingDespache, setAcceptingDespache] = useState(false);
+  const [acceptingAllDespache, setAcceptingAllDespache] = useState(false);
   
   // Modal finalizar
   const [finalizeModalOpen, setFinalizeModalOpen] = useState(false);
@@ -558,42 +556,43 @@ const MotoristaDashboard = () => {
     }
   };
 
-  // ==================== BIPAR EXPEDIÇÃO EM LOTE ====================
-  const handleBipBatchEtiKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && bipBatchEtiInput.trim()) {
-      const inputEti = parseEtiCode(bipBatchEtiInput);
-      
-      // Verificar se já foi adicionado
-      if (bipBatchVolumes.some(v => v.eti_code === inputEti)) {
-        toast.error('Volume já adicionado');
-        setBipBatchEtiInput('');
-        return;
-      }
-      
-      // Verificar se existe nos volumes aguardando expedição
-      const volume = aguardandoExpedicao.find(v => v.eti_code === inputEti);
-      if (!volume) {
-        toast.error('Volume não encontrado ou não está aguardando despache');
-        setBipBatchEtiInput('');
-        return;
-      }
-      
-      setBipBatchVolumes([...bipBatchVolumes, volume]);
-      setBipBatchEtiInput('');
-      toast.success(`Volume ${inputEti} adicionado`);
+  // ==================== ACEITAR DESPACHE INDIVIDUAL ====================
+  const handleAcceptDespacheVolume = async (volume: B2BVolume) => {
+    if (!motorista) return;
+    
+    setAcceptingDespache(true);
+    try {
+      const { error } = await supabase
+        .from('b2b_volumes')
+        .update({ status: 'DESPACHADO' })
+        .eq('id', volume.id);
+
+      if (error) throw error;
+
+      await supabase.from('b2b_status_history').insert({
+        volume_id: volume.id,
+        status: 'DESPACHADO',
+        motorista_id: motorista.id,
+        motorista_nome: motorista.nome,
+        observacoes: 'Volume aceito pelo motorista - saindo para entrega'
+      });
+
+      toast.success('Volume despachado com sucesso!');
+      await loadVolumes();
+    } catch (error) {
+      toast.error('Erro ao aceitar volume');
+    } finally {
+      setAcceptingDespache(false);
     }
   };
 
-  const handleRemoveBipBatchVolume = (id: string) => {
-    setBipBatchVolumes(bipBatchVolumes.filter(v => v.id !== id));
-  };
-
-  const handleConfirmBipBatch = async () => {
-    if (bipBatchVolumes.length === 0 || !motorista) return;
+  // ==================== ACEITAR TODOS DESPACHE ====================
+  const handleAcceptAllDespache = async () => {
+    if (!motorista || aguardandoExpedicao.length === 0) return;
     
-    setBipingBatch(true);
+    setAcceptingAllDespache(true);
     try {
-      for (const volume of bipBatchVolumes) {
+      for (const volume of aguardandoExpedicao) {
         const { error } = await supabase
           .from('b2b_volumes')
           .update({ status: 'DESPACHADO' })
@@ -606,18 +605,16 @@ const MotoristaDashboard = () => {
           status: 'DESPACHADO',
           motorista_id: motorista.id,
           motorista_nome: motorista.nome,
-          observacoes: 'Volume bipado pelo motorista - saindo para entrega'
+          observacoes: 'Volume aceito em lote pelo motorista - saindo para entrega'
         });
       }
 
-      toast.success(`${bipBatchVolumes.length} volume(s) despachado(s)!`);
-      setBipBatchModalOpen(false);
-      setBipBatchVolumes([]);
+      toast.success(`${aguardandoExpedicao.length} volume(s) despachado(s)!`);
       await loadVolumes();
     } catch (error) {
-      toast.error('Erro ao bipar volumes');
+      toast.error('Erro ao aceitar volumes');
     } finally {
-      setBipingBatch(false);
+      setAcceptingAllDespache(false);
     }
   };
 
@@ -818,9 +815,17 @@ const MotoristaDashboard = () => {
                 </Button>
               )}
               
-              {/* Botão "Coletar" removido do card individual - agora é em lote no header */}
-              
-              {/* Botão "Bipar Saída" removido do card individual - agora é em lote no header */}
+              {/* Botão Aceitar individual para volumes aguardando despache */}
+              {showActions === 'bip' && (
+                <Button 
+                  size="sm"
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                  onClick={() => handleAcceptDespacheVolume(v)}
+                  disabled={acceptingDespache}
+                >
+                  {acceptingDespache ? 'Aceitando...' : 'Aceitar'}
+                </Button>
+              )}
               
               {showActions === 'finalize' && (
                 <Button 
@@ -986,7 +991,7 @@ const MotoristaDashboard = () => {
               {activeTab === 'aceitos' && 'Volumes aceitos - aguardando coleta'}
               {activeTab === 'coletados' && 'Volumes coletados - a caminho do CD'}
               {activeTab === 'entregues_cd' && 'Histórico de volumes entregues ao CD'}
-              {activeTab === 'aguardando' && 'Volumes separados - bipe para sair'}
+              {activeTab === 'aguardando' && 'Volumes separados - aceite para sair'}
               {activeTab === 'despachados' && 'Volumes em rota - finalize a entrega'}
               {activeTab === 'concluidos' && 'Entregas concluídas'}
               {activeTab === 'devolucoes' && 'Volumes devolvidos'}
@@ -1004,14 +1009,15 @@ const MotoristaDashboard = () => {
             </Button>
           )}
           
-          {/* Botão Bipar Saída para seção Despache na aba aguardando */}
+          {/* Botão Aceitar Todos para seção Despache na aba aguardando */}
           {activeSection === 'despache' && activeTab === 'aguardando' && aguardandoExpedicao.length > 0 && (
             <Button
               className="bg-indigo-600 hover:bg-indigo-700"
-              onClick={() => setBipBatchModalOpen(true)}
+              onClick={handleAcceptAllDespache}
+              disabled={acceptingAllDespache}
             >
-              <Send className="h-4 w-4 mr-2" />
-              Bipar Saída
+              <CheckCircle className="h-4 w-4 mr-2" />
+              {acceptingAllDespache ? 'Aceitando...' : 'Aceitar Todos'}
             </Button>
           )}
         </div>
@@ -1170,78 +1176,6 @@ const MotoristaDashboard = () => {
                 disabled={collectingBatch || collectBatchVolumes.length === 0}
               >
                 {collectingBatch ? 'Coletando...' : `Confirmar (${collectBatchVolumes.length})`}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Bipar Expedição em Lote */}
-      <Dialog open={bipBatchModalOpen} onOpenChange={setBipBatchModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5 text-indigo-600" />
-              Bipar Volumes para Saída
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Bipe o código de barras da etiqueta</Label>
-              <Input
-                type="password"
-                value={bipBatchEtiInput}
-                onChange={(e) => setBipBatchEtiInput(e.target.value)}
-                onKeyDown={handleBipBatchEtiKeyDown}
-                className="font-mono text-center text-lg"
-                placeholder=""
-                autoFocus
-              />
-              <p className="text-xs text-muted-foreground">Bipe e pressione Enter para adicionar</p>
-            </div>
-
-            {bipBatchVolumes.length > 0 && (
-              <div className="space-y-2">
-                <Label>Volumes adicionados ({bipBatchVolumes.length})</Label>
-                <ScrollArea className="h-40 border rounded p-2">
-                  {bipBatchVolumes.map(v => (
-                    <div key={v.id} className="flex items-center justify-between py-1 border-b last:border-0">
-                      <div>
-                        <span className="font-mono text-sm">{v.eti_code}</span>
-                        <span className="text-xs text-muted-foreground ml-2">{v.recipient_name}</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveBipBatchVolume(v.id)}
-                      >
-                        <X className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  ))}
-                </ScrollArea>
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setBipBatchModalOpen(false);
-                  setBipBatchVolumes([]);
-                  setBipBatchEtiInput('');
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700"
-                onClick={handleConfirmBipBatch}
-                disabled={bipingBatch || bipBatchVolumes.length === 0}
-              >
-                {bipingBatch ? 'Bipando...' : `Confirmar (${bipBatchVolumes.length})`}
               </Button>
             </div>
           </div>
