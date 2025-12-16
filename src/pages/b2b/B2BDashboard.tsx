@@ -306,7 +306,6 @@ const B2BDashboard = () => {
                 <SelectItem value="AGUARDANDO_ACEITE_COLETA">Aguardando Aceite Coleta</SelectItem>
                 <SelectItem value="COLETA_ACEITA">Coleta Aceita</SelectItem>
                 <SelectItem value="COLETADO">Coletado</SelectItem>
-                <SelectItem value="EM_TRANSITO">Em Trânsito</SelectItem>
                 <SelectItem value="EM_TRIAGEM">Em Triagem</SelectItem>
                 <SelectItem value="AGUARDANDO_ACEITE_EXPEDICAO">Aguardando Aceite Expedição</SelectItem>
                 <SelectItem value="EXPEDIDO">Expedido</SelectItem>
