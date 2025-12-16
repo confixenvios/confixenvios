@@ -932,23 +932,9 @@ const B2BNovaRemessa = () => {
               </div>
 
               {/* Total */}
-              <div className="border-2 border-primary rounded-xl p-6 bg-primary/5">
-                <div className="text-center mb-4">
-                  <p className="text-sm text-muted-foreground mb-1">Valor do Frete</p>
-                  <p className="text-4xl font-bold text-primary">R$ {totalPrice.toFixed(2)}</p>
-                </div>
-                <div className="text-xs text-muted-foreground space-y-1 border-t pt-3">
-                  <div className="flex justify-between">
-                    <span>{uniqueAddressCount} endereço(s) único(s) × R$15</span>
-                    <span>R$ {(uniqueAddressCount * 15).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Peso total: {totalWeight.toFixed(2)} kg</span>
-                    <span>
-                      {totalWeight > 5 ? `+R$ ${Math.ceil(totalWeight - 5).toFixed(2)}` : 'Incluso'}
-                    </span>
-                  </div>
-                </div>
+              <div className="border-2 border-primary rounded-xl p-6 bg-primary/5 text-center">
+                <p className="text-sm text-muted-foreground mb-1">Valor do Frete</p>
+                <p className="text-4xl font-bold text-primary">R$ {totalPrice.toFixed(2)}</p>
               </div>
             </div>
           </div>
