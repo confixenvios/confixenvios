@@ -530,366 +530,371 @@ const B2BNovaRemessa = () => {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3 mb-2">
-            <Package className="h-6 w-6 text-primary" />
-            <div>
-              <CardTitle>Novo Envio</CardTitle>
-              <CardDescription>Solicite a coleta de volumes para entrega</CardDescription>
+    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <div className="flex items-center justify-center gap-3 mb-2">
+          <Package className="h-8 w-8 text-primary" />
+          <h1 className="text-2xl font-bold">Novo Envio</h1>
+        </div>
+        <p className="text-muted-foreground">Solicite a coleta de volumes para entrega</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Seção: Endereço de Coleta */}
+        <div className="bg-card border rounded-xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-green-600" />
+              <h2 className="font-semibold text-lg">Endereço de Coleta</h2>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowPickupAddressModal(true)}
+              className="text-green-600 border-green-600 hover:bg-green-50"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Novo Endereço de Coleta
+            </Button>
+          </div>
+
+          {pickupAddresses.length === 0 ? (
+            <div className="text-center py-8 space-y-3 bg-muted/30 rounded-lg">
+              <AlertCircle className="h-10 w-10 mx-auto text-muted-foreground" />
+              <div>
+                <p className="font-medium">Nenhum endereço de coleta cadastrado</p>
+                <p className="text-sm text-muted-foreground">Cadastre um endereço de coleta para continuar.</p>
+              </div>
+              <Button
+                type="button"
+                onClick={() => setShowPickupAddressModal(true)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Cadastrar Endereço de Coleta
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Selecione o endereço de coleta *</Label>
+              <Select
+                value={formData.pickup_address_id}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, pickup_address_id: value }))}
+                required
+              >
+                <SelectTrigger className="h-12 border bg-background">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <SelectValue placeholder="Clique para selecionar um endereço" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {pickupAddresses.map((addr) => (
+                    <SelectItem key={addr.id} value={addr.id}>
+                      <div className="flex flex-col py-1">
+                        <span className="font-medium">{addr.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {addr.contact_name} - {addr.city}/{addr.state}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {formData.pickup_address_id && (
+                <div className="text-sm text-foreground bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                  {(() => {
+                    const addr = getPickupAddressById(formData.pickup_address_id);
+                    if (!addr) return null;
+                    return (
+                      <div className="space-y-1">
+                        <p className="font-semibold text-green-800 dark:text-green-200">{addr.contact_name} - {addr.contact_phone}</p>
+                        <p className="text-green-700 dark:text-green-300">{addr.street}, {addr.number}{addr.complement && `, ${addr.complement}`}</p>
+                        <p className="text-green-600 dark:text-green-400">{addr.neighborhood} - {addr.city}/{addr.state} - CEP: {addr.cep}</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Seção: Informações do Envio */}
+        <div className="bg-card border rounded-xl p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold text-lg">Informações do Envio</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="volume_count" className="text-sm font-medium">Quantos volumes? *</Label>
+              <Input
+                id="volume_count"
+                type="number"
+                min="1"
+                value={formData.volume_count}
+                onChange={(e) => handleChange('volume_count', e.target.value)}
+                required
+                placeholder="Ex: 10"
+                className="h-12"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="delivery_date" className="text-sm font-medium">Data de entrega desejada *</Label>
+              <Input
+                id="delivery_date"
+                type="date"
+                value={formData.delivery_date}
+                onChange={(e) => handleChange('delivery_date', e.target.value)}
+                required
+                min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
+                className="h-12"
+              />
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Seção 0: Endereço de Coleta */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-green-600" />
-                  <h3 className="font-semibold text-lg">Endereço de Coleta</h3>
+        </div>
+
+        {/* Seção: Volumes */}
+        {parseInt(formData.volume_count) > 0 && (
+          <div className="bg-card border rounded-xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                <h2 className="font-semibold text-lg">Volumes</h2>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddressModal(true)}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar Endereço
+              </Button>
+            </div>
+
+            {addresses.length === 0 ? (
+              <div className="text-center py-8 space-y-3 bg-muted/30 rounded-lg">
+                <AlertCircle className="h-10 w-10 mx-auto text-muted-foreground" />
+                <div>
+                  <p className="font-medium">Nenhum endereço de entrega cadastrado</p>
+                  <p className="text-sm text-muted-foreground">Cadastre endereços de entrega para os volumes.</p>
                 </div>
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowPickupAddressModal(true)}
-                  className="text-green-600 border-green-600 hover:bg-green-50"
+                  onClick={() => setShowAddressModal(true)}
                 >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Novo Endereço de Coleta
+                  <Plus className="mr-2 h-4 w-4" />
+                  Cadastrar Endereço de Entrega
                 </Button>
               </div>
-
-              {pickupAddresses.length === 0 ? (
-                <div className="text-center py-6 space-y-3 bg-muted/30 rounded-lg">
-                  <AlertCircle className="h-10 w-10 mx-auto text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">Nenhum endereço de coleta cadastrado</p>
-                    <p className="text-sm text-muted-foreground">Cadastre um endereço de coleta para continuar.</p>
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={() => setShowPickupAddressModal(true)}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Cadastrar Endereço de Coleta
-                  </Button>
-                </div>
-              ) : (
-                  <div className="space-y-3">
-                    <Label className="text-base font-medium">Selecione o endereço de coleta *</Label>
-                    <Select
-                      value={formData.pickup_address_id}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, pickup_address_id: value }))}
-                      required
-                    >
-                      <SelectTrigger className="h-14 border-2 border-muted-foreground/30 bg-muted/30 hover:border-primary hover:bg-background transition-all rounded-lg shadow-sm">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <SelectValue placeholder="Clique para selecionar um endereço" />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {pickupAddresses.map((addr) => (
-                          <SelectItem key={addr.id} value={addr.id}>
-                            <div className="flex flex-col py-1">
-                              <span className="font-medium">{addr.name}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {addr.contact_name} - {addr.city}/{addr.state}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {formData.pickup_address_id && (
-                      <div className="text-sm text-foreground bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border-2 border-green-300 dark:border-green-800">
-                        {(() => {
-                          const addr = getPickupAddressById(formData.pickup_address_id);
-                          if (!addr) return null;
-                          return (
-                            <div className="space-y-1">
-                              <p className="font-semibold text-green-800 dark:text-green-200">{addr.contact_name} - {addr.contact_phone}</p>
-                              <p className="text-green-700 dark:text-green-300">{addr.street}, {addr.number}{addr.complement && `, ${addr.complement}`}</p>
-                              <p className="text-green-600 dark:text-green-400">{addr.neighborhood} - {addr.city}/{addr.state} - CEP: {addr.cep}</p>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Seção 1: Informações Básicas */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b">
-                  <Package className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-lg">Informações do Envio</h3>
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="volume_count" className="text-base">Quantos volumes? *</Label>
-                    <Input
-                      id="volume_count"
-                      type="number"
-                      min="1"
-                      value={formData.volume_count}
-                      onChange={(e) => handleChange('volume_count', e.target.value)}
-                      required
-                      placeholder="Ex: 10"
-                      className="h-12 text-base"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="delivery_date" className="text-base">Data de entrega desejada *</Label>
-                    <Input
-                      id="delivery_date"
-                      type="date"
-                      value={formData.delivery_date}
-                      onChange={(e) => handleChange('delivery_date', e.target.value)}
-                      required
-                      min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
-                      className="h-12 text-base"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Seção 2: Volumes com Peso e Endereço */}
-              {parseInt(formData.volume_count) > 0 && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between pb-2 border-b">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5 text-primary" />
-                      <h3 className="font-semibold text-lg">Volumes e Endereços de Entrega</h3>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowAddressModal(true)}
-                      className="text-destructive border-destructive hover:bg-destructive/10"
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Novo Endereço de Entrega
-                    </Button>
-                  </div>
-
-                  {addresses.length === 0 ? (
-                    <div className="text-center py-6 space-y-3 bg-muted/30 rounded-lg">
-                      <AlertCircle className="h-10 w-10 mx-auto text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">Nenhum endereço de entrega cadastrado</p>
-                        <p className="text-sm text-muted-foreground">Cadastre endereços de entrega para os volumes.</p>
-                      </div>
-                      <Button
-                        type="button"
-                        onClick={() => setShowAddressModal(true)}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Cadastrar Endereço de Entrega
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-200 dark:border-blue-900">
-                        Informe o peso e selecione o endereço de entrega para cada volume
-                      </p>
-
-                  <div className="space-y-4">
-                    {formData.volume_weights.map((weight, index) => (
-                      <div key={index} className="p-4 bg-muted/30 rounded-lg space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Package className="h-4 w-4 text-primary" />
-                          <span className="font-semibold">Volume {index + 1}</span>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor={`weight_${index}`} className="text-sm">Peso (kg) *</Label>
-                            <Input
-                              id={`weight_${index}`}
-                              type="text"
-                              value={weight}
-                              onChange={(e) => handleWeightChange(index, e.target.value)}
-                              required
-                              placeholder="Ex: 2.5"
-                              className="h-10"
-                            />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <Label htmlFor={`address_${index}`} className="text-sm">Endereço de Entrega *</Label>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setShowAddressModal(true)}
-                                className="h-6 text-xs text-primary hover:text-primary/80"
-                              >
-                                <Plus className="h-3 w-3 mr-1" />
-                                Novo
-                              </Button>
-                            </div>
-                            <Select
-                              value={formData.volume_addresses[index] || ''}
-                              onValueChange={(value) => handleAddressChange(index, value)}
-                              required
-                            >
-                              <SelectTrigger className="h-10">
-                                <SelectValue placeholder="Selecione o endereço" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {addresses.map((addr) => (
-                                  <SelectItem key={addr.id} value={addr.id}>
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">{addr.name}</span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {addr.recipient_name} - {addr.city}/{addr.state}
-                                      </span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
-                        {formData.volume_addresses[index] && (
-                          <div className="text-xs text-muted-foreground bg-background p-2 rounded border">
-                            {(() => {
-                              const addr = getAddressById(formData.volume_addresses[index]);
-                              if (!addr) return null;
-                              return (
-                                <>
-                                  <p><strong>{addr.recipient_name}</strong> - {addr.recipient_phone}</p>
-                                  <p>{addr.street}, {addr.number}{addr.complement && `, ${addr.complement}`}</p>
-                                  <p>{addr.neighborhood} - {addr.city}/{addr.state} - CEP: {addr.cep}</p>
-                                </>
-                              );
-                            })()}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="p-4 bg-muted/50 rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      <strong>Peso total:</strong> {totalWeight.toFixed(2)} kg
-                    </p>
-                  </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* Seção 3: Tipo de Veículo */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b">
-                  <Truck className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-lg">Tipo de Veículo Necessário</h3>
+            ) : (
+              <>
+                <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    Informe o peso e selecione o endereço de entrega para cada volume
+                  </p>
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="text-base">Selecione o veículo para coleta e entrega *</Label>
-                  <RadioGroup
-                    value={formData.vehicle_type}
-                    onValueChange={(value) => handleChange('vehicle_type', value)}
-                    className="grid grid-cols-1 md:grid-cols-3 gap-4"
-                    required
-                  >
-                    <label
-                      htmlFor="moto"
-                      className={`flex items-center space-x-3 border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                        formData.vehicle_type === 'moto' 
-                          ? 'border-primary bg-primary/5' 
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <RadioGroupItem value="moto" id="moto" />
-                      <div className="flex items-center gap-3">
-                        <Bike className="h-6 w-6" />
-                        <span className="font-medium">Moto</span>
+                  {formData.volume_weights.map((weight, index) => (
+                    <div key={index} className="border rounded-lg p-4 bg-muted/20 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-primary" />
+                        <span className="font-semibold text-sm">Volume {index + 1}</span>
                       </div>
-                    </label>
-
-                    <label
-                      htmlFor="carro"
-                      className={`flex items-center space-x-3 border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                        formData.vehicle_type === 'carro' 
-                          ? 'border-primary bg-primary/5' 
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <RadioGroupItem value="carro" id="carro" />
-                      <div className="flex items-center gap-3">
-                        <Car className="h-6 w-6" />
-                        <span className="font-medium">Carro Utilitário</span>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor={`weight_${index}`} className="text-sm">Peso (kg) *</Label>
+                          <Input
+                            id={`weight_${index}`}
+                            type="text"
+                            value={weight}
+                            onChange={(e) => handleWeightChange(index, e.target.value)}
+                            required
+                            placeholder="Ex: 2.5"
+                            className="h-10"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor={`address_${index}`} className="text-sm">Endereço de Entrega *</Label>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowAddressModal(true)}
+                              className="h-6 text-xs text-primary hover:text-primary/80"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Novo
+                            </Button>
+                          </div>
+                          <Select
+                            value={formData.volume_addresses[index] || ''}
+                            onValueChange={(value) => handleAddressChange(index, value)}
+                            required
+                          >
+                            <SelectTrigger className="h-10">
+                              <SelectValue placeholder="Selecione o endereço" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {addresses.map((addr) => (
+                                <SelectItem key={addr.id} value={addr.id}>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{addr.name}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {addr.recipient_name} - {addr.city}/{addr.state}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                    </label>
 
-                    <label
-                      htmlFor="caminhao"
-                      className={`flex items-center space-x-3 border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                        formData.vehicle_type === 'caminhao' 
-                          ? 'border-primary bg-primary/5' 
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <RadioGroupItem value="caminhao" id="caminhao" />
-                      <div className="flex items-center gap-3">
-                        <Truck className="h-6 w-6" />
-                        <span className="font-medium">Caminhão</span>
-                      </div>
-                    </label>
-                  </RadioGroup>
-                </div>
-              </div>
-
-              {/* Seção 4: Valor Total */}
-              {parseInt(formData.volume_count) > 0 && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 pb-2 border-b">
-                    <DollarSign className="h-5 w-5 text-primary" />
-                    <h3 className="font-semibold text-lg">Valor do Frete</h3>
-                  </div>
-
-                  <div className="p-6 bg-primary/5 border-2 border-primary/20 rounded-lg">
-                    <div className="text-center space-y-2">
-                      <p className="text-sm text-muted-foreground">Valor Total a Pagar</p>
-                      <p className="text-4xl font-bold text-primary">
-                        R$ {totalPrice.toFixed(2)}
-                      </p>
+                      {formData.volume_addresses[index] && (
+                        <div className="text-xs text-muted-foreground bg-background p-3 rounded border">
+                          {(() => {
+                            const addr = getAddressById(formData.volume_addresses[index]);
+                            if (!addr) return null;
+                            return (
+                              <>
+                                <p><strong>{addr.recipient_name}</strong> - {addr.recipient_phone}</p>
+                                <p>{addr.street}, {addr.number}{addr.complement && `, ${addr.complement}`}</p>
+                                <p>{addr.neighborhood} - {addr.city}/{addr.state} - CEP: {addr.cep}</p>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  ))}
                 </div>
-              )}
+              </>
+            )}
+          </div>
+        )}
 
-              <Button type="submit" className="w-full" size="lg" disabled={loading || pickupAddresses.length === 0 || addresses.length === 0}>
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processando...
-                  </>
-                ) : (
-                  <>
-                    <Package className="mr-2 h-4 w-4" />
-                    Solicitar Coleta e Entrega
-                  </>
-                )}
-              </Button>
-            </form>
-        </CardContent>
-      </Card>
+        {/* Seção: Tipo de Veículo */}
+        <div className="bg-card border rounded-xl p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Truck className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold text-lg">Tipo de Veículo</h2>
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Selecione o veículo para coleta e entrega *</Label>
+            <RadioGroup
+              value={formData.vehicle_type}
+              onValueChange={(value) => handleChange('vehicle_type', value)}
+              className="grid grid-cols-1 md:grid-cols-3 gap-3"
+              required
+            >
+              <label
+                htmlFor="moto"
+                className={`flex items-center space-x-3 border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                  formData.vehicle_type === 'moto' 
+                    ? 'border-primary bg-primary/5' 
+                    : 'border-border hover:border-primary/50'
+                }`}
+              >
+                <RadioGroupItem value="moto" id="moto" />
+                <div className="flex items-center gap-3">
+                  <Bike className="h-5 w-5" />
+                  <span className="font-medium">Moto</span>
+                </div>
+              </label>
+
+              <label
+                htmlFor="carro"
+                className={`flex items-center space-x-3 border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                  formData.vehicle_type === 'carro' 
+                    ? 'border-primary bg-primary/5' 
+                    : 'border-border hover:border-primary/50'
+                }`}
+              >
+                <RadioGroupItem value="carro" id="carro" />
+                <div className="flex items-center gap-3">
+                  <Car className="h-5 w-5" />
+                  <span className="font-medium">Carro Utilitário</span>
+                </div>
+              </label>
+
+              <label
+                htmlFor="caminhao"
+                className={`flex items-center space-x-3 border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                  formData.vehicle_type === 'caminhao' 
+                    ? 'border-primary bg-primary/5' 
+                    : 'border-border hover:border-primary/50'
+                }`}
+              >
+                <RadioGroupItem value="caminhao" id="caminhao" />
+                <div className="flex items-center gap-3">
+                  <Truck className="h-5 w-5" />
+                  <span className="font-medium">Caminhão</span>
+                </div>
+              </label>
+            </RadioGroup>
+          </div>
+        </div>
+
+        {/* Resumo dos Volumes */}
+        {parseInt(formData.volume_count) > 0 && (
+          <div className="bg-primary/5 border-2 border-primary/20 rounded-xl p-6">
+            <h3 className="font-semibold mb-4">Resumo do Envio</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Quantidade de Volumes</p>
+                <p className="text-2xl font-bold text-primary">{formData.volume_count}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Peso Total</p>
+                <p className="text-2xl font-bold">{totalWeight.toFixed(2)} kg</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Previsão de Entrega</p>
+                <p className="text-2xl font-bold">
+                  {formData.delivery_date ? new Date(formData.delivery_date + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Valor do Frete</p>
+                <p className="text-2xl font-bold text-primary">R$ {totalPrice.toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Botão de Ação */}
+        <Button 
+          type="submit" 
+          className="w-full h-14 text-lg font-semibold bg-destructive hover:bg-destructive/90" 
+          size="lg" 
+          disabled={loading || pickupAddresses.length === 0 || addresses.length === 0}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Processando...
+            </>
+          ) : (
+            <>
+              <Package className="mr-2 h-5 w-5" />
+              Solicitar Coleta e Entrega
+            </>
+          )}
+        </Button>
+      </form>
 
       {/* Modal para cadastrar novo endereço */}
       <Dialog open={showAddressModal} onOpenChange={setShowAddressModal}>
