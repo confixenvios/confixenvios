@@ -724,10 +724,10 @@ const B2BNovaRemessa = () => {
                             <Label htmlFor={`address_${index}`} className="text-sm">Endereço de Entrega *</Label>
                             <Button
                               type="button"
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
                               onClick={() => setShowAddressModal(true)}
-                              className="h-6 text-xs text-primary hover:text-primary/80"
+                              className="h-6 text-xs text-primary border-primary hover:bg-primary/5"
                             >
                               <Plus className="h-3 w-3 mr-1" />
                               Novo
@@ -738,7 +738,7 @@ const B2BNovaRemessa = () => {
                             onValueChange={(value) => handleAddressChange(index, value)}
                             required
                           >
-                            <SelectTrigger className="h-10 border">
+                            <SelectTrigger className="h-10 border border-input">
                               <SelectValue placeholder="Selecione o endereço" />
                             </SelectTrigger>
                             <SelectContent>
