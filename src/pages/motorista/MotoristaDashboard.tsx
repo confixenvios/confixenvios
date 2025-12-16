@@ -858,12 +858,17 @@ const MotoristaDashboard = () => {
               <Button 
                 variant="outline"
                 size="sm"
+                className={v.status === 'ACEITO' ? 'text-destructive border-destructive hover:bg-destructive/10' : ''}
                 onClick={() => {
                   setOccurrenceVolume(v);
                   setOccurrenceModalOpen(true);
                 }}
               >
-                <AlertTriangle className="h-4 w-4" />
+                {v.status === 'ACEITO' ? (
+                  'Falha na Coleta'
+                ) : (
+                  <AlertTriangle className="h-4 w-4" />
+                )}
               </Button>
             )}
           </div>
