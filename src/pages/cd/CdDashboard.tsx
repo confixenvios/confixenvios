@@ -75,15 +75,15 @@ interface B2BVolume {
 }
 
 // Status labels e cores
-const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
-  'AGUARDANDO_ACEITE_COLETA': { label: 'Aguardando Aceite Coleta', color: 'text-yellow-700', bgColor: 'bg-yellow-100 border-yellow-300' },
-  'COLETA_ACEITA': { label: 'Coleta Aceita', color: 'text-blue-700', bgColor: 'bg-blue-100 border-blue-300' },
-  'COLETADO': { label: 'Coletado', color: 'text-orange-700', bgColor: 'bg-orange-100 border-orange-300' },
-  'EM_TRIAGEM': { label: 'Em Triagem', color: 'text-purple-700', bgColor: 'bg-purple-100 border-purple-300' },
-  'AGUARDANDO_ACEITE_EXPEDICAO': { label: 'Aguardando Aceite Expedição', color: 'text-indigo-700', bgColor: 'bg-indigo-100 border-indigo-300' },
-  'EXPEDIDO': { label: 'Expedido', color: 'text-cyan-700', bgColor: 'bg-cyan-100 border-cyan-300' },
-  'CONCLUIDO': { label: 'Concluído', color: 'text-green-700', bgColor: 'bg-green-100 border-green-300' },
-  'DEVOLUCAO': { label: 'Devolução', color: 'text-red-700', bgColor: 'bg-red-100 border-red-300' },
+const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string; cardBorder: string; cardBg: string }> = {
+  'AGUARDANDO_ACEITE_COLETA': { label: 'Aguardando Aceite Coleta', color: 'text-yellow-700', bgColor: 'bg-yellow-100 border-yellow-300', cardBorder: 'border-yellow-300', cardBg: 'bg-yellow-50/50' },
+  'COLETA_ACEITA': { label: 'Coleta Aceita', color: 'text-blue-700', bgColor: 'bg-blue-100 border-blue-300', cardBorder: 'border-blue-300', cardBg: 'bg-blue-50/50' },
+  'COLETADO': { label: 'Coletado', color: 'text-orange-700', bgColor: 'bg-orange-100 border-orange-300', cardBorder: 'border-orange-300', cardBg: 'bg-orange-50/50' },
+  'EM_TRIAGEM': { label: 'Em Triagem', color: 'text-purple-700', bgColor: 'bg-purple-100 border-purple-300', cardBorder: 'border-purple-300', cardBg: 'bg-purple-50/50' },
+  'AGUARDANDO_ACEITE_EXPEDICAO': { label: 'Aguardando Aceite Expedição', color: 'text-indigo-700', bgColor: 'bg-indigo-100 border-indigo-300', cardBorder: 'border-indigo-300', cardBg: 'bg-indigo-50/50' },
+  'EXPEDIDO': { label: 'Expedido', color: 'text-cyan-700', bgColor: 'bg-cyan-100 border-cyan-300', cardBorder: 'border-cyan-300', cardBg: 'bg-cyan-50/50' },
+  'CONCLUIDO': { label: 'Concluído', color: 'text-green-700', bgColor: 'bg-green-100 border-green-300', cardBorder: 'border-green-300', cardBg: 'bg-green-50/50' },
+  'DEVOLUCAO': { label: 'Devolução', color: 'text-red-700', bgColor: 'bg-red-100 border-red-300', cardBorder: 'border-red-300', cardBg: 'bg-red-50/50' },
 };
 
 const CdDashboard = () => {
@@ -471,12 +471,12 @@ const CdDashboard = () => {
 
   // Renderizar card de volume
   const renderVolumeCard = (v: B2BVolume) => {
-    const statusConfig = STATUS_CONFIG[v.status] || { label: v.status, color: 'text-gray-700', bgColor: 'bg-gray-100' };
+    const statusConfig = STATUS_CONFIG[v.status] || { label: v.status, color: 'text-gray-700', bgColor: 'bg-gray-100', cardBorder: 'border-gray-200', cardBg: 'bg-background' };
     const recentHistory = (v.status_history || []).slice(0, 2);
     const hasDevolucaoHistory = (v.status_history || []).some(h => h.status === 'DEVOLUCAO');
 
     return (
-      <Card key={v.id} className={`mb-3 ${hasDevolucaoHistory ? 'border-red-300 border-2' : ''}`}>
+      <Card key={v.id} className={`mb-3 border-2 ${statusConfig.cardBorder} ${statusConfig.cardBg}`}>
         <CardContent className="p-4">
           <div className="flex justify-between items-start mb-3">
             <div>
