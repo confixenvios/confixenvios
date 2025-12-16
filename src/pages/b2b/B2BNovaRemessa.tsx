@@ -584,7 +584,7 @@ const B2BNovaRemessa = () => {
                 onValueChange={(value) => setFormData(prev => ({ ...prev, pickup_address_id: value }))}
                 required
               >
-                <SelectTrigger className="h-10 border border-border bg-background w-fit min-w-[180px]">
+                <SelectTrigger className="h-10 border border-border bg-background w-full">
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                     <SelectValue placeholder="Selecionar endereço" />
