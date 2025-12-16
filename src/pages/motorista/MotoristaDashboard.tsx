@@ -851,8 +851,8 @@ const MotoristaDashboard = () => {
               </Button>
             </div>
 
-            {/* Ocorrência (para todos exceto pendentes e concluidos) - alinhado à direita */}
-            {v.status !== 'PENDENTE' && v.status !== 'CONCLUIDO' && (
+            {/* Ocorrência (para todos exceto pendentes, coletados e concluidos) - alinhado à direita */}
+            {v.status !== 'PENDENTE' && v.status !== 'COLETADO' && v.status !== 'CONCLUIDO' && (
               <Button 
                 variant="outline"
                 size="sm"
