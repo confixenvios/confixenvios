@@ -82,9 +82,9 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
 // Tipos de ocorrência
 const OCCURRENCE_TYPES = [
   'Endereço não encontrado',
-  'Destinatário ausente',
   'Recusa de recebimento',
   'Avaria no volume',
+  'Embalagem inadequada',
   'Extravio parcial',
   'Problema de acesso',
   'Horário inadequado',
