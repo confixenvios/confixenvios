@@ -738,7 +738,7 @@ const B2BNovaRemessa = () => {
                             onValueChange={(value) => handleAddressChange(index, value)}
                             required
                           >
-                            <SelectTrigger className="h-10">
+                            <SelectTrigger className="h-10 border">
                               <SelectValue placeholder="Selecione o endereço" />
                             </SelectTrigger>
                             <SelectContent>
