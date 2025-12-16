@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Package, Plus, Eye, Loader2, ChevronDown, History, MapPin, User, Phone, FileText, Printer, Download } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Package, Plus, Eye, Loader2, ChevronDown, History, MapPin, User, Phone, FileText, Printer, Download, Search
+ } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -81,6 +84,8 @@ const B2BDashboard = () => {
   const [showVolumeModal, setShowVolumeModal] = useState(false);
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [labelVolume, setLabelVolume] = useState<B2BVolume | null>(null);
+  const [searchEti, setSearchEti] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
     loadClientData();
@@ -208,6 +213,24 @@ const B2BDashboard = () => {
     return allConcluded ? 'CONCLUIDO' : shipment.status;
   };
 
+  // Filtra as remessas baseado na busca por ETI e status
+  const filteredShipments = useMemo(() => {
+    return shipments.filter(shipment => {
+      const shipmentVolumes = getShipmentVolumes(shipment.id);
+      const displayStatus = getShipmentDisplayStatus(shipment);
+      
+      // Filtro por ETI
+      const matchesEti = searchEti === '' || 
+        shipmentVolumes.some(v => v.eti_code.toLowerCase().includes(searchEti.toLowerCase())) ||
+        shipment.tracking_code.toLowerCase().includes(searchEti.toLowerCase());
+      
+      // Filtro por status
+      const matchesStatus = statusFilter === 'all' || displayStatus === statusFilter;
+      
+      return matchesEti && matchesStatus;
+    });
+  }, [shipments, volumes, searchEti, statusFilter]);
+
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
@@ -223,7 +246,7 @@ const B2BDashboard = () => {
     <div className="p-6 space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center flex-wrap gap-4">
             <div>
               <CardTitle>Envios Recentes</CardTitle>
               <CardDescription>Suas últimas solicitações de coleta</CardDescription>
@@ -232,6 +255,37 @@ const B2BDashboard = () => {
               <Plus className="mr-2 h-4 w-4" />
               Novo Envio
             </Button>
+          </div>
+          
+          {/* Filtros */}
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por ETI ou código..."
+                value={searchEti}
+                onChange={(e) => setSearchEti(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filtrar por status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="PENDENTE">Pendente</SelectItem>
+                <SelectItem value="ACEITO">Aceito</SelectItem>
+                <SelectItem value="COLETADO">Coletado</SelectItem>
+                <SelectItem value="EM_TRANSITO">Em Trânsito</SelectItem>
+                <SelectItem value="EM_TRIAGEM">Em Triagem</SelectItem>
+                <SelectItem value="AGUARDANDO_EXPEDICAO">Aguardando Expedição</SelectItem>
+                <SelectItem value="DESPACHADO">Despachado</SelectItem>
+                <SelectItem value="EM_ROTA">Em Rota</SelectItem>
+                <SelectItem value="CONCLUIDO">Concluído</SelectItem>
+                <SelectItem value="DEVOLUCAO">Devolução</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
         <CardContent>
@@ -244,9 +298,17 @@ const B2BDashboard = () => {
                 Solicitar Primeira Coleta
               </Button>
             </div>
+          ) : filteredShipments.length === 0 ? (
+            <div className="text-center py-12">
+              <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground mb-4">Nenhum envio encontrado com os filtros aplicados</p>
+              <Button variant="outline" onClick={() => { setSearchEti(''); setStatusFilter('all'); }}>
+                Limpar Filtros
+              </Button>
+            </div>
           ) : (
             <div className="space-y-4">
-              {shipments.map((shipment) => {
+              {filteredShipments.map((shipment) => {
                 const shipmentVolumes = getShipmentVolumes(shipment.id);
                 return (
                   <div
