@@ -625,7 +625,7 @@ const CdDashboard = () => {
             onClick={() => setDispatchModalOpen(true)}
           >
             <Send className="h-4 w-4 mr-2" />
-            Despachar Volume
+            Expedir Volume
           </Button>
           <Button 
             variant="destructive"
@@ -805,7 +805,7 @@ const CdDashboard = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Send className="h-5 w-5 text-blue-600" />
-              Despachar Volume
+              Expedir Volume
             </DialogTitle>
           </DialogHeader>
           
