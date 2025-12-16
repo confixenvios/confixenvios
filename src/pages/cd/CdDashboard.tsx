@@ -377,7 +377,7 @@ const CdDashboard = () => {
           status: 'AGUARDANDO_EXPEDICAO',
           motorista_id: dispatchMotoristaId,
           motorista_nome: motoristaNome,
-          observacoes: `Separado para despache - ${motoristaNome} por ${cdUser?.nome}`
+          observacoes: `Expedido - ${motoristaNome} por ${cdUser?.nome}`
         });
       }
 
