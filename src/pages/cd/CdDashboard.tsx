@@ -647,7 +647,7 @@ const CdDashboard = () => {
               Recebidos ({emTriagem.length})
             </TabsTrigger>
             <TabsTrigger value="operacao">
-              Expedição ({aguardandoExpedicao.length})
+              Expedidos ({aguardandoExpedicao.length})
             </TabsTrigger>
             <TabsTrigger value="entregas">
               Entregas ({despachados.length + concluidos.length})
