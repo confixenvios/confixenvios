@@ -693,7 +693,7 @@ const CdDashboard = () => {
           <TabsContent value="entregas" className="mt-4">
             <Tabs value={subTab || 'despachados'} onValueChange={setSubTab}>
               <TabsList className="mb-4">
-                <TabsTrigger value="despachados">Despachados ({despachados.length})</TabsTrigger>
+                <TabsTrigger value="despachados">Em Rota ({despachados.length})</TabsTrigger>
                 <TabsTrigger value="concluidos">Concluídos ({concluidos.length})</TabsTrigger>
               </TabsList>
               <TabsContent value="despachados">
