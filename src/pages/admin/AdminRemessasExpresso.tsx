@@ -272,7 +272,7 @@ const AdminRemessasExpresso = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
             <div className="md:col-span-2">
               <label className="text-sm font-medium text-muted-foreground mb-2 block">Buscar</label>
               <div className="relative">
@@ -336,16 +336,15 @@ const AdminRemessasExpresso = () => {
                 </PopoverContent>
               </Popover>
             </div>
-          </div>
 
-          {(searchTerm || statusFilter !== 'all' || dateFrom || dateTo) && (
-            <div className="mt-4 flex justify-end">
-              <Button variant="outline" onClick={clearFilters}>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-2 block">&nbsp;</label>
+              <Button variant="outline" onClick={clearFilters} className="w-full">
                 <X className="h-4 w-4 mr-2" />
                 Limpar Filtros
               </Button>
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
 
