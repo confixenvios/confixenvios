@@ -91,13 +91,24 @@ const AdminDashboard = () => {
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          event: '*',
           schema: 'public',
           table: 'shipments'
         },
         (payload) => {
           console.log('Shipment change detected:', payload);
-          // Reload dashboard data when shipments change
+          loadDashboardData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public', 
+          table: 'b2b_shipments'
+        },
+        (payload) => {
+          console.log('B2B Shipment change detected:', payload);
           loadDashboardData();
         }
       )
@@ -110,7 +121,6 @@ const AdminDashboard = () => {
         },
         (payload) => {
           console.log('Profile change detected:', payload);
-          // Reload dashboard data when profiles change
           loadDashboardData();
         }
       )
@@ -138,21 +148,34 @@ const AdminDashboard = () => {
         .select('*', { count: 'exact', head: true });
       console.log('👥 [DASHBOARD] Total de clientes:', clientsCount);
 
-      // Total shipments
-      const { count: shipmentsCount } = await supabase
+      // Total shipments (convencional + B2B)
+      const { count: conventionalCount } = await supabase
         .from('shipments')
         .select('*', { count: 'exact', head: true });
-      console.log('📦 [DASHBOARD] Total de shipments:', shipmentsCount);
+      
+      const { count: b2bCount } = await supabase
+        .from('b2b_shipments')
+        .select('*', { count: 'exact', head: true });
+      
+      const totalShipmentsCount = (conventionalCount || 0) + (b2bCount || 0);
+      console.log('📦 [DASHBOARD] Total de shipments:', totalShipmentsCount, '(Conv:', conventionalCount, 'B2B:', b2bCount, ')');
 
-      // Pending shipments
-      const { count: pendingCount } = await supabase
+      // Pending shipments (convencional + B2B)
+      const { count: pendingConventional } = await supabase
         .from('shipments')
         .select('*', { count: 'exact', head: true })
         .in('status', ['PENDING_DOCUMENT', 'PENDING_LABEL', 'PENDING_PAYMENT']);
-      console.log('⏳ [DASHBOARD] Shipments pendentes:', pendingCount);
+      
+      const { count: pendingB2B } = await supabase
+        .from('b2b_shipments')
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['AGUARDANDO_ACEITE_COLETA', 'COLETA_ACEITA', 'COLETADO', 'EM_TRIAGEM', 'AGUARDANDO_ACEITE_EXPEDICAO']);
+      
+      const totalPendingCount = (pendingConventional || 0) + (pendingB2B || 0);
+      console.log('⏳ [DASHBOARD] Shipments pendentes:', totalPendingCount);
 
-      // Buscar shipments SEM tentar fazer join com profiles - IGUAL AO FATURAMENTO
-      const { data: recentShipments } = await supabase
+      // Buscar shipments convencionais recentes
+      const { data: recentConventional } = await supabase
         .from('shipments')
         .select(`
           id,
@@ -170,68 +193,119 @@ const AdminDashboard = () => {
         .not('user_id', 'is', null)
         .or('payment_data.not.is.null,quote_data.not.is.null')
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(5);
       
-      console.log('📋 [DASHBOARD] Recent shipments encontrados:', recentShipments?.length);
+      // Buscar shipments B2B recentes
+      const { data: recentB2B } = await supabase
+        .from('b2b_shipments')
+        .select(`
+          id,
+          tracking_code,
+          status,
+          created_at,
+          b2b_client_id,
+          total_price,
+          total_weight,
+          total_volumes,
+          payment_data
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
 
-      // Buscar profiles dos usuários SEPARADAMENTE - IGUAL AO FATURAMENTO
-      let enrichedShipments = [];
-      if (recentShipments && recentShipments.length > 0) {
-        const userIds = [...new Set(recentShipments.map(s => s.user_id).filter(Boolean))];
+      // Buscar profiles dos usuários convencionais
+      let enrichedConventional: any[] = [];
+      if (recentConventional && recentConventional.length > 0) {
+        const userIds = [...new Set(recentConventional.map(s => s.user_id).filter(Boolean))];
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, first_name, last_name, email')
           .in('id', userIds);
 
-        enrichedShipments = recentShipments.map(shipment => {
+        enrichedConventional = recentConventional.map(shipment => {
           const profile = profiles?.find(p => p.id === shipment.user_id);
           return {
             ...shipment,
+            type: 'conventional',
             profile: profile || { first_name: 'N/A', last_name: '', email: 'N/A' }
           };
         });
       }
 
-      // Calculate total revenue from ALL shipments with valid payment or quote data
-      // MESMA LÓGICA DO FATURAMENTO
-      const { data: allShipments } = await supabase
+      // Buscar dados dos clientes B2B
+      let enrichedB2B: any[] = [];
+      if (recentB2B && recentB2B.length > 0) {
+        const clientIds = [...new Set(recentB2B.map(s => s.b2b_client_id).filter(Boolean))];
+        const { data: b2bClients } = await supabase
+          .from('b2b_clients')
+          .select('id, company_name, email')
+          .in('id', clientIds);
+
+        enrichedB2B = recentB2B.map(shipment => {
+          const client = b2bClients?.find(c => c.id === shipment.b2b_client_id);
+          return {
+            ...shipment,
+            type: 'b2b',
+            weight: shipment.total_weight,
+            profile: { 
+              first_name: client?.company_name || 'Cliente B2B', 
+              last_name: '', 
+              email: client?.email || 'N/A' 
+            }
+          };
+        });
+      }
+
+      // Combinar e ordenar por data
+      const allRecentShipments = [...enrichedConventional, ...enrichedB2B]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 10);
+
+      console.log('📋 [DASHBOARD] Recent shipments encontrados:', allRecentShipments.length);
+
+      // Calculate total revenue from ALL shipments (convencional + B2B)
+      const { data: allConventional } = await supabase
         .from('shipments')
         .select('id, payment_data, quote_data, selected_option')
         .or('payment_data.not.is.null,quote_data.not.is.null');
       
-      console.log('💰 [DASHBOARD] Total shipments para cálculo de receita:', allShipments?.length);
+      const { data: allB2B } = await supabase
+        .from('b2b_shipments')
+        .select('id, total_price, payment_data');
 
       let totalRevenue = 0;
-      let shipmentsProcessed = 0;
       
-      if (allShipments && allShipments.length > 0) {
-        allShipments.forEach((shipment, index) => {
-          console.log(`💰 [DASHBOARD] Processando shipment ${index + 1}:`, shipment.id);
+      // Receita convencional
+      if (allConventional && allConventional.length > 0) {
+        allConventional.forEach((shipment) => {
           const shipmentValue = calculateShipmentValue(shipment);
           if (shipmentValue > 0) {
             totalRevenue += shipmentValue;
-            shipmentsProcessed++;
-            console.log(`✅ [DASHBOARD] Valor adicionado: R$ ${shipmentValue} (Total: R$ ${totalRevenue})`);
-          } else {
-            console.log('❌ [DASHBOARD] Nenhum valor encontrado para este shipment');
+          }
+        });
+      }
+      
+      // Receita B2B
+      if (allB2B && allB2B.length > 0) {
+        allB2B.forEach((shipment) => {
+          if (shipment.total_price && shipment.total_price > 0) {
+            totalRevenue += Number(shipment.total_price);
           }
         });
       }
       
       console.log('💰 [DASHBOARD] RESULTADO FINAL:', {
-        totalShipments: allShipments?.length || 0,
-        shipmentsWithValue: shipmentsProcessed,
+        totalShipments: totalShipmentsCount,
         totalRevenue: totalRevenue,
         formattedRevenue: `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       });
 
       setStats({
         totalClients: clientsCount || 0,
-        totalShipments: shipmentsCount || 0,
-        pendingShipments: pendingCount || 0,
+        totalShipments: totalShipmentsCount,
+        pendingShipments: totalPendingCount,
         totalRevenue: totalRevenue,
-        recentShipments: enrichedShipments || [],
-        pendingLabels: pendingCount || 0
+        recentShipments: allRecentShipments,
+        pendingLabels: totalPendingCount
       });
       setLastUpdated(new Date());
     } catch (error) {

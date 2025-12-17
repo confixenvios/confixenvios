@@ -228,6 +228,7 @@ const AdminRelatorios = () => {
   };
 
   const fetchFaturamentoData = async (startDate: string, endDate: string) => {
+    // Buscar shipments convencionais
     const { data: shipments, error } = await supabase
       .from('shipments')
       .select(`
@@ -246,16 +247,43 @@ const AdminRelatorios = () => {
 
     if (error) throw error;
 
-    // Buscar dados dos clientes
-    const clientIds = [...new Set(shipments?.map(s => s.user_id).filter(Boolean))];
+    // Buscar shipments B2B
+    const { data: b2bShipments, error: b2bError } = await supabase
+      .from('b2b_shipments')
+      .select(`
+        id,
+        tracking_code,
+        status,
+        created_at,
+        total_price,
+        payment_data,
+        b2b_client_id
+      `)
+      .gte('created_at', startDate)
+      .lte('created_at', endDate)
+      .order('created_at', { ascending: false });
+
+    if (b2bError) throw b2bError;
+
+    // Buscar dados dos clientes convencionais
+    const clientIds = [...new Set(shipments?.map(s => s.user_id).filter(Boolean) || [])];
     const { data: clientsData } = await supabase
       .from('profiles')
       .select('id, first_name, last_name, email')
-      .in('id', clientIds);
+      .in('id', clientIds.length > 0 ? clientIds : ['00000000-0000-0000-0000-000000000000']);
+
+    // Buscar dados dos clientes B2B
+    const b2bClientIds = [...new Set(b2bShipments?.map(s => s.b2b_client_id).filter(Boolean) || [])];
+    const { data: b2bClientsData } = await supabase
+      .from('b2b_clients')
+      .select('id, company_name, email')
+      .in('id', b2bClientIds.length > 0 ? b2bClientIds : ['00000000-0000-0000-0000-000000000000']);
 
     const clientsMap = new Map(clientsData?.map(c => [c.id, c]) || []);
+    const b2bClientsMap = new Map(b2bClientsData?.map(c => [c.id, c]) || []);
 
-    return shipments?.map(shipment => {
+    // Processar convencionais
+    const conventionalData = shipments?.map(shipment => {
       const client = clientsMap.get(shipment.user_id);
       const quoteData = shipment.quote_data as any;
       const paymentData = shipment.payment_data as any;
@@ -267,16 +295,41 @@ const AdminRelatorios = () => {
         status: shipment.status,
         status_detailed: getStatusDescription(shipment.status),
         created_at: format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
-        freight_value: quoteData?.shippingQuote?.economicPrice || quoteData?.shippingQuote?.expressPrice || 0,
-        payment_method: paymentData?.payment_method || 'N/A',
+        freight_value: quoteData?.shippingQuote?.economicPrice || quoteData?.shippingQuote?.expressPrice || paymentData?.pix_details?.amount || 0,
+        payment_method: paymentData?.payment_method || paymentData?.method || 'N/A',
         payment_status: paymentData?.status || 'N/A',
         invoice_date: format(new Date(shipment.created_at), 'dd/MM/yyyy', { locale: ptBR }),
-        commission: 0 // Implementar cálculo de comissão se necessário
+        commission: 0
       };
     }) || [];
+
+    // Processar B2B
+    const b2bData = b2bShipments?.map(shipment => {
+      const client = b2bClientsMap.get(shipment.b2b_client_id);
+
+      return {
+        tracking_code: shipment.tracking_code,
+        client_name: `${client?.company_name || 'Cliente B2B'} (B2B)`,
+        client_email: client?.email || 'N/A',
+        status: shipment.status,
+        status_detailed: getStatusDescription(shipment.status),
+        created_at: format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
+        freight_value: Number(shipment.total_price) || 0,
+        payment_method: 'PIX',
+        payment_status: shipment.status === 'ENTREGUE' ? 'Confirmado' : 'Pendente',
+        invoice_date: format(new Date(shipment.created_at), 'dd/MM/yyyy', { locale: ptBR }),
+        commission: 0
+      };
+    }) || [];
+
+    return [...conventionalData, ...b2bData].sort((a, b) => 
+      new Date(b.created_at.split(' ')[0].split('/').reverse().join('-')).getTime() - 
+      new Date(a.created_at.split(' ')[0].split('/').reverse().join('-')).getTime()
+    );
   };
 
   const fetchRemessasData = async (startDate: string, endDate: string) => {
+    // Buscar shipments convencionais
     let query = supabase
       .from('shipments')
       .select(`
@@ -310,25 +363,51 @@ const AdminRelatorios = () => {
     const { data: shipments, error } = await query;
     if (error) throw error;
 
-    // Buscar dados dos clientes, motoristas e endereços
-    const clientIds = [...new Set(shipments?.map(s => s.user_id).filter(Boolean))];
-    const motoristaIds = [...new Set(shipments?.map(s => s.motorista_id).filter(Boolean))];
+    // Buscar shipments B2B
+    let b2bQuery = supabase
+      .from('b2b_shipments')
+      .select(`
+        id,
+        tracking_code,
+        status,
+        total_weight,
+        total_volumes,
+        created_at,
+        updated_at,
+        b2b_client_id
+      `)
+      .gte('created_at', startDate)
+      .lte('created_at', endDate)
+      .order('created_at', { ascending: false });
+
+    const { data: b2bShipments, error: b2bError } = await b2bQuery;
+    if (b2bError) throw b2bError;
+
+    // Buscar dados relacionados convencionais
+    const clientIds = [...new Set(shipments?.map(s => s.user_id).filter(Boolean) || [])];
+    const motoristaIds = [...new Set(shipments?.map(s => s.motorista_id).filter(Boolean) || [])];
     const addressIds = [...new Set([
-      ...shipments?.map(s => s.sender_address_id),
-      ...shipments?.map(s => s.recipient_address_id)
+      ...shipments?.map(s => s.sender_address_id) || [],
+      ...shipments?.map(s => s.recipient_address_id) || []
     ].filter(Boolean))];
 
-    const [clientsData, motoristasData, addressesData] = await Promise.all([
-      supabase.from('profiles').select('id, first_name, last_name, email').in('id', clientIds),
-      supabase.from('motoristas').select('id, nome, email').in('id', motoristaIds),
-      supabase.from('addresses').select('id, city, state').in('id', addressIds)
+    // Buscar dados B2B
+    const b2bClientIds = [...new Set(b2bShipments?.map(s => s.b2b_client_id).filter(Boolean) || [])];
+
+    const [clientsData, motoristasData, addressesData, b2bClientsData] = await Promise.all([
+      supabase.from('profiles').select('id, first_name, last_name, email').in('id', clientIds.length > 0 ? clientIds : ['00000000-0000-0000-0000-000000000000']),
+      supabase.from('motoristas').select('id, nome, username').in('id', motoristaIds.length > 0 ? motoristaIds : ['00000000-0000-0000-0000-000000000000']),
+      supabase.from('addresses').select('id, city, state').in('id', addressIds.length > 0 ? addressIds : ['00000000-0000-0000-0000-000000000000']),
+      supabase.from('b2b_clients').select('id, company_name, email').in('id', b2bClientIds.length > 0 ? b2bClientIds : ['00000000-0000-0000-0000-000000000000'])
     ]);
 
     const clientsMap = new Map((clientsData.data as any[] || []).map(c => [c.id, c]));
     const motoristasMap = new Map((motoristasData.data as any[] || []).map(m => [m.id, m]));
     const addressesMap = new Map((addressesData.data as any[] || []).map(a => [a.id, a]));
+    const b2bClientsMap = new Map((b2bClientsData.data as any[] || []).map(c => [c.id, c]));
 
-    return shipments?.map(shipment => {
+    // Processar convencionais
+    const conventionalData = shipments?.map(shipment => {
       const client = clientsMap.get(shipment.user_id);
       const motorista = motoristasMap.get(shipment.motorista_id);
       const senderAddress = addressesMap.get(shipment.sender_address_id);
@@ -360,6 +439,38 @@ const AdminRelatorios = () => {
         recipient_state: recipientAddress?.state || 'N/A'
       };
     }) || [];
+
+    // Processar B2B
+    const b2bData = b2bShipments?.map(shipment => {
+      const client = b2bClientsMap.get(shipment.b2b_client_id);
+
+      return {
+        tracking_code: shipment.tracking_code,
+        client_name: `${client?.company_name || 'Cliente B2B'} (B2B)`,
+        client_email: client?.email || 'N/A',
+        status: shipment.status,
+        status_detailed: getStatusDescription(shipment.status),
+        weight: Number(shipment.total_weight).toFixed(2),
+        dimensions: 'B2B Express',
+        volume: '-',
+        format: 'B2B',
+        service_type: 'B2B Express',
+        pickup_type: 'Coleta',
+        estimated_value: 0,
+        pricing_table: 'B2B Express',
+        driver_name: 'N/A',
+        driver_username: 'N/A',
+        created_at: format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
+        updated_at: format(new Date(shipment.updated_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
+        days_in_transit: Math.floor((new Date().getTime() - new Date(shipment.created_at).getTime()) / (1000 * 3600 * 24)),
+        sender_city: 'B2B',
+        sender_state: '-',
+        recipient_city: 'B2B',
+        recipient_state: '-'
+      };
+    }) || [];
+
+    return [...conventionalData, ...b2bData];
   };
 
   const fetchCTEData = async (startDate: string, endDate: string) => {
