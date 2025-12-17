@@ -257,7 +257,7 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
                       className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline"
                     >
                       <Image className="h-3 w-3" />
-                      Ver assinatura
+                      Ver Assinatura
                     </a>
                     {parsedObs.entregaData.fotosUrls.map((fotoUrl, idx) => (
                       <a 
@@ -268,7 +268,7 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
                         className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline"
                       >
                         <Image className="h-3 w-3" />
-                        Ver Foto ({idx + 1})
+                        Ver Foto
                       </a>
                     ))}
                   </div>
