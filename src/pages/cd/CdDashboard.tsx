@@ -639,7 +639,7 @@ const CdDashboard = () => {
               </div>
               <div>
                 <p className="text-xs text-white/70">Centro de Distribuição</p>
-                <p className="text-sm font-medium text-white">{cdUser?.nome}</p>
+                <p className="text-sm font-medium text-white">Bem vindo, {cdUser?.nome}</p>
               </div>
             </div>
           </div>

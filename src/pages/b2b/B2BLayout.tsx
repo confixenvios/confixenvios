@@ -73,7 +73,7 @@ const B2BLayout = () => {
         <div className="mt-2">
           <span className="text-xs text-white/80 font-medium">B2B Express</span>
           {client && (
-            <p className="text-sm text-white font-medium truncate">{client.company_name}</p>
+            <p className="text-sm text-white font-medium truncate">Bem vindo, {client.company_name}</p>
           )}
         </div>
       </div>
@@ -141,7 +141,7 @@ const B2BLayout = () => {
               <img src={confixLogo} alt="Confix Envios" className="h-6 brightness-0 invert" />
             </div>
             {client && (
-              <span className="text-sm text-white/90 truncate max-w-[150px]">{client.company_name}</span>
+              <span className="text-sm text-white/90 truncate max-w-[180px]">Bem vindo, {client.company_name}</span>
             )}
           </div>
         </header>
