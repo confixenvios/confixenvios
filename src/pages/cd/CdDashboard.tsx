@@ -605,7 +605,7 @@ const CdDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
       {/* Header - Confix Brand */}
-      <header className="sticky top-0 z-40 bg-gradient-to-r from-purple-700 via-purple-600 to-indigo-600 shadow-lg">
+      <header className="sticky top-0 z-40 bg-gradient-to-r from-primary via-primary to-red-700 shadow-lg">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <img src={confixLogo} alt="Confix Envios" className="h-7 brightness-0 invert" />
@@ -670,19 +670,19 @@ const CdDashboard = () => {
         {/* Abas principais */}
         <Tabs value={mainTab} onValueChange={(v) => { setMainTab(v); setSubTab(''); }}>
           <TabsList className="grid w-full grid-cols-5 bg-white shadow-sm border-0 p-1 h-auto">
-            <TabsTrigger value="coletas" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white py-2.5">
+            <TabsTrigger value="coletas" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5">
               Coletas ({pendentes.length + aceitos.length + coletados.length})
             </TabsTrigger>
-            <TabsTrigger value="recepcao" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white py-2.5">
+            <TabsTrigger value="recepcao" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5">
               Recebidos ({emTriagem.length})
             </TabsTrigger>
-            <TabsTrigger value="operacao" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white py-2.5">
+            <TabsTrigger value="operacao" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5">
               Expedidos ({aguardandoExpedicao.length})
             </TabsTrigger>
-            <TabsTrigger value="entregas" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white py-2.5">
+            <TabsTrigger value="entregas" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5">
               Entregas ({despachados.length + concluidos.length})
             </TabsTrigger>
-            <TabsTrigger value="devolucoes" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white py-2.5">
+            <TabsTrigger value="devolucoes" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5">
               Devoluções ({devolucoes.length})
             </TabsTrigger>
           </TabsList>
