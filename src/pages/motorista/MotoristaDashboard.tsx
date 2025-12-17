@@ -131,7 +131,7 @@ const MotoristaDashboard = () => {
   const [acceptingDespache, setAcceptingDespache] = useState(false);
   const [acceptingAllDespache, setAcceptingAllDespache] = useState(false);
   
-  // Modal finalizar
+  // Modal finalizar individual (legado)
   const [finalizeModalOpen, setFinalizeModalOpen] = useState(false);
   const [volumeToFinalize, setVolumeToFinalize] = useState<B2BVolume | null>(null);
   const [finalizeEtiInput, setFinalizeEtiInput] = useState('');
@@ -142,6 +142,17 @@ const MotoristaDashboard = () => {
   const [finalizeReceiverDocument, setFinalizeReceiverDocument] = useState('');
   const [finalizeSignature, setFinalizeSignature] = useState<string | null>(null);
   const [finalizeSignaturePadOpen, setFinalizeSignaturePadOpen] = useState(false);
+  
+  // Modal finalizar em lote (EXPEDIDO -> CONCLUIDO)
+  const [finalizeBatchModalOpen, setFinalizeBatchModalOpen] = useState(false);
+  const [finalizeBatchEtiInput, setFinalizeBatchEtiInput] = useState('');
+  const [finalizeBatchVolumes, setFinalizeBatchVolumes] = useState<B2BVolume[]>([]);
+  const [finalizingBatch, setFinalizingBatch] = useState(false);
+  const [finalizeBatchReceiverName, setFinalizeBatchReceiverName] = useState('');
+  const [finalizeBatchReceiverDocument, setFinalizeBatchReceiverDocument] = useState('');
+  const [finalizeBatchSignature, setFinalizeBatchSignature] = useState<string | null>(null);
+  const [finalizeBatchSignaturePadOpen, setFinalizeBatchSignaturePadOpen] = useState(false);
+  const [finalizeBatchPhotos, setFinalizeBatchPhotos] = useState<File[]>([]);
   
   // Modal ocorrência
   const [occurrenceModalOpen, setOccurrenceModalOpen] = useState(false);
@@ -722,6 +733,156 @@ const MotoristaDashboard = () => {
     }
   };
 
+  // ==================== FINALIZAR EM LOTE ====================
+  const handleFinalizeBatchEtiKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && finalizeBatchEtiInput.trim()) {
+      const inputEti = parseEtiCode(finalizeBatchEtiInput);
+      
+      // Verificar se já foi adicionado
+      if (finalizeBatchVolumes.some(v => v.eti_code === inputEti)) {
+        toast.error('Volume já adicionado');
+        setFinalizeBatchEtiInput('');
+        return;
+      }
+      
+      // Verificar se existe nos volumes despachados
+      const volume = despachados.find(v => v.eti_code === inputEti);
+      if (!volume) {
+        toast.error('Volume não encontrado ou não está despachado');
+        setFinalizeBatchEtiInput('');
+        return;
+      }
+      
+      setFinalizeBatchVolumes([...finalizeBatchVolumes, volume]);
+      setFinalizeBatchEtiInput('');
+      toast.success(`Volume ${inputEti} adicionado`);
+    }
+  };
+
+  const handleRemoveFinalizeBatchVolume = (id: string) => {
+    setFinalizeBatchVolumes(finalizeBatchVolumes.filter(v => v.id !== id));
+  };
+
+  const handleAddFinalizeBatchPhoto = (file: File) => {
+    if (finalizeBatchPhotos.length >= 3) {
+      toast.error('Máximo de 3 fotos permitidas');
+      return;
+    }
+    setFinalizeBatchPhotos([...finalizeBatchPhotos, file]);
+  };
+
+  const handleRemoveFinalizeBatchPhoto = (index: number) => {
+    setFinalizeBatchPhotos(finalizeBatchPhotos.filter((_, i) => i !== index));
+  };
+
+  const handleConfirmFinalizeBatch = async () => {
+    if (finalizeBatchVolumes.length === 0 || !motorista) return;
+    
+    // Validar campos obrigatórios
+    if (!finalizeBatchReceiverName.trim()) {
+      toast.error('Nome de quem recebeu é obrigatório');
+      return;
+    }
+    if (!finalizeBatchReceiverDocument.trim()) {
+      toast.error('Documento de quem recebeu é obrigatório');
+      return;
+    }
+    if (!finalizeBatchSignature) {
+      toast.error('Assinatura é obrigatória');
+      return;
+    }
+    if (finalizeBatchPhotos.length === 0) {
+      toast.error('Pelo menos uma foto é obrigatória');
+      return;
+    }
+    
+    setFinalizingBatch(true);
+    try {
+      // Upload da assinatura
+      let signatureUrl = null;
+      if (finalizeBatchSignature) {
+        const signatureBlob = await fetch(finalizeBatchSignature).then(r => r.blob());
+        const signatureFileName = `b2b-entregas/assinaturas/${Date.now()}_${motorista.id}.png`;
+        const { error: uploadError } = await supabase.storage
+          .from('shipment-photos')
+          .upload(signatureFileName, signatureBlob);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from('shipment-photos')
+          .getPublicUrl(signatureFileName);
+        
+        signatureUrl = urlData.publicUrl;
+      }
+
+      // Upload das fotos
+      const photoUrls: string[] = [];
+      for (let i = 0; i < finalizeBatchPhotos.length; i++) {
+        const photo = finalizeBatchPhotos[i];
+        const photoFileName = `b2b-entregas/fotos/${Date.now()}_${motorista.id}_${i}.jpg`;
+        const { error: photoUploadError } = await supabase.storage
+          .from('shipment-photos')
+          .upload(photoFileName, photo);
+
+        if (photoUploadError) throw photoUploadError;
+
+        const { data: photoUrlData } = supabase.storage
+          .from('shipment-photos')
+          .getPublicUrl(photoFileName);
+        
+        photoUrls.push(photoUrlData.publicUrl);
+      }
+
+      // Dados da entrega que serão salvos em cada volume
+      const deliveryData = {
+        recebedor_nome: finalizeBatchReceiverName.trim(),
+        recebedor_documento: finalizeBatchReceiverDocument.trim(),
+        assinatura_url: signatureUrl,
+        fotos_urls: photoUrls,
+        finalizado_em: new Date().toISOString()
+      };
+
+      for (const volume of finalizeBatchVolumes) {
+        const { error } = await supabase
+          .from('b2b_volumes')
+          .update({ 
+            status: 'CONCLUIDO',
+            foto_entrega_url: photoUrls[0] // Primeira foto como principal
+          })
+          .eq('id', volume.id);
+
+        if (error) throw error;
+
+        await supabase.from('b2b_status_history').insert({
+          volume_id: volume.id,
+          status: 'CONCLUIDO',
+          motorista_id: motorista.id,
+          motorista_nome: motorista.nome,
+          observacoes: JSON.stringify(deliveryData)
+        });
+      }
+
+      toast.success(`${finalizeBatchVolumes.length} entrega(s) finalizada(s)!`);
+      
+      // Limpar todos os campos
+      setFinalizeBatchModalOpen(false);
+      setFinalizeBatchVolumes([]);
+      setFinalizeBatchEtiInput('');
+      setFinalizeBatchReceiverName('');
+      setFinalizeBatchReceiverDocument('');
+      setFinalizeBatchSignature(null);
+      setFinalizeBatchPhotos([]);
+      
+      await loadVolumes();
+    } catch (error) {
+      console.error('Erro ao finalizar entregas:', error);
+      toast.error('Erro ao finalizar entregas');
+    } finally {
+      setFinalizingBatch(false);
+    }
+  };
+
   // ==================== OCORRÊNCIA ====================
   const handleSaveOccurrence = async () => {
     if (!occurrenceVolume || !motorista || !occurrenceType) return;
@@ -941,19 +1102,6 @@ const MotoristaDashboard = () => {
                 </Button>
               )}
               
-              {showActions === 'finalize' && (
-                <Button 
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700"
-                  onClick={() => {
-                    setVolumeToFinalize(v);
-                    setFinalizeModalOpen(true);
-                    setEtiValidated(false);
-                  }}
-                >
-                  Finalizar
-                </Button>
-              )}
             </div>
 
             {/* Ocorrência (para todos exceto pendentes, coletados e concluidos) - alinhado à direita */}
@@ -1131,6 +1279,20 @@ const MotoristaDashboard = () => {
               {acceptingAllDespache ? 'Aceitando...' : 'Aceitar Todos'}
             </Button>
           )}
+          
+          {/* Botão Finalizar para seção Despache na aba despachados */}
+          {activeSection === 'despache' && activeTab === 'despachados' && despachados.length > 0 && (
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={() => {
+                setFinalizeBatchVolumes([]);
+                setFinalizeBatchModalOpen(true);
+              }}
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Finalizar
+            </Button>
+          )}
         </div>
 
         {/* Conteúdo */}
@@ -1146,7 +1308,7 @@ const MotoristaDashboard = () => {
         {activeSection === 'despache' && (
           <>
             {activeTab === 'aguardando' && renderVolumeList(aguardandoExpedicao, 'Nenhum volume aguardando despache', 'bip')}
-            {activeTab === 'despachados' && renderVolumeList(despachados, 'Nenhum volume despachado', 'finalize')}
+            {activeTab === 'despachados' && renderVolumeList(despachados, 'Nenhum volume despachado')}
             {activeTab === 'concluidos' && renderVolumeList(concluidos, 'Nenhuma entrega concluída')}
             {activeTab === 'devolucoes' && renderVolumeList(devolucoes, 'Nenhuma devolução')}
           </>
@@ -1576,6 +1738,219 @@ const MotoristaDashboard = () => {
         onSave={(signatureDataUrl) => {
           setFinalizeSignature(signatureDataUrl);
           setFinalizeSignaturePadOpen(false);
+        }}
+        title="Assinatura de Recebimento"
+      />
+
+      {/* Modal Finalizar em Lote */}
+      <Dialog open={finalizeBatchModalOpen} onOpenChange={setFinalizeBatchModalOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Finalizar Entregas</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Input de ETI */}
+            <div className="space-y-2">
+              <Label>Etiqueta *</Label>
+              <Input
+                type="password"
+                value={finalizeBatchEtiInput}
+                onChange={(e) => setFinalizeBatchEtiInput(e.target.value)}
+                onKeyDown={handleFinalizeBatchEtiKeyDown}
+                placeholder="Bipe o código (Enter para adicionar)"
+                className="font-mono"
+                autoFocus
+              />
+            </div>
+
+            {/* Lista de volumes selecionados */}
+            {finalizeBatchVolumes.length > 0 && (
+              <div className="space-y-2">
+                <Label>Volumes selecionados ({finalizeBatchVolumes.length})</Label>
+                <ScrollArea className="max-h-32 border rounded-md p-2">
+                  {finalizeBatchVolumes.map(v => (
+                    <div key={v.id} className="flex items-center justify-between py-1">
+                      <span className="font-mono text-sm">{v.eti_code}</span>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleRemoveFinalizeBatchVolume(v.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </ScrollArea>
+              </div>
+            )}
+
+            {/* Nome */}
+            <div className="space-y-2">
+              <Label>Nome *</Label>
+              <Input
+                value={finalizeBatchReceiverName}
+                onChange={(e) => setFinalizeBatchReceiverName(e.target.value)}
+                placeholder="Nome de quem recebeu"
+              />
+            </div>
+
+            {/* Documento */}
+            <div className="space-y-2">
+              <Label>Documento *</Label>
+              <Input
+                value={finalizeBatchReceiverDocument}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  setFinalizeBatchReceiverDocument(value);
+                }}
+                placeholder="CPF ou RG (apenas números)"
+                maxLength={14}
+              />
+            </div>
+
+            {/* Assinatura */}
+            <div className="space-y-2">
+              <Label>Local pra assinar *</Label>
+              {finalizeBatchSignature ? (
+                <div className="border rounded-md p-2 bg-white">
+                  <div className="relative">
+                    <img 
+                      src={finalizeBatchSignature} 
+                      alt="Assinatura" 
+                      className="w-full h-24 object-contain rounded"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-1 right-1"
+                      onClick={() => setFinalizeBatchSignature(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-2"
+                    onClick={() => setFinalizeBatchSignaturePadOpen(true)}
+                  >
+                    <PenTool className="h-4 w-4 mr-2" />
+                    Refazer Assinatura
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="w-full h-20 border-dashed"
+                  onClick={() => setFinalizeBatchSignaturePadOpen(true)}
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <PenTool className="h-6 w-6 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Toque para assinar</span>
+                  </div>
+                </Button>
+              )}
+            </div>
+            
+            {/* Fotos (até 3) */}
+            <div className="space-y-2">
+              <Label>Fotos * ({finalizeBatchPhotos.length}/3)</Label>
+              <div className="border-2 border-dashed rounded-lg p-4">
+                {finalizeBatchPhotos.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {finalizeBatchPhotos.map((photo, index) => (
+                      <div key={index} className="relative">
+                        <img 
+                          src={URL.createObjectURL(photo)} 
+                          alt={`Foto ${index + 1}`} 
+                          className="h-20 w-20 object-cover rounded"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                          onClick={() => handleRemoveFinalizeBatchPhoto(index)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {finalizeBatchPhotos.length < 3 && (
+                  <>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      id="batch-delivery-photo"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleAddFinalizeBatchPhoto(file);
+                          e.target.value = '';
+                        }
+                      }}
+                    />
+                    <label htmlFor="batch-delivery-photo" className="cursor-pointer block text-center">
+                      <div className="space-y-2">
+                        <Camera className="h-8 w-8 mx-auto text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          {finalizeBatchPhotos.length === 0 
+                            ? 'Tirar foto (obrigatório)' 
+                            : 'Adicionar mais foto'}
+                        </p>
+                      </div>
+                    </label>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setFinalizeBatchModalOpen(false);
+                  setFinalizeBatchVolumes([]);
+                  setFinalizeBatchEtiInput('');
+                  setFinalizeBatchReceiverName('');
+                  setFinalizeBatchReceiverDocument('');
+                  setFinalizeBatchSignature(null);
+                  setFinalizeBatchPhotos([]);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                onClick={handleConfirmFinalizeBatch}
+                disabled={
+                  finalizingBatch || 
+                  finalizeBatchVolumes.length === 0 ||
+                  !finalizeBatchReceiverName.trim() ||
+                  !finalizeBatchReceiverDocument.trim() ||
+                  !finalizeBatchSignature ||
+                  finalizeBatchPhotos.length === 0
+                }
+              >
+                {finalizingBatch ? 'Finalizando...' : `Finalizar (${finalizeBatchVolumes.length})`}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Signature Pad Modal - Finalizar em Lote */}
+      <SignaturePad
+        isOpen={finalizeBatchSignaturePadOpen}
+        onClose={() => setFinalizeBatchSignaturePadOpen(false)}
+        onSave={(signatureDataUrl) => {
+          setFinalizeBatchSignature(signatureDataUrl);
+          setFinalizeBatchSignaturePadOpen(false);
         }}
         title="Assinatura de Recebimento"
       />
