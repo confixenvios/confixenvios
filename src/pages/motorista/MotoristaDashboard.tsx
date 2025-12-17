@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { SignaturePad } from '@/components/motorista/SignaturePad';
 import B2BVolumeStatusHistory from '@/components/b2b/B2BVolumeStatusHistory';
+import confixLogo from '@/assets/logo-confix-envios.png';
 
 interface Motorista {
   id: string;
@@ -69,16 +70,16 @@ interface B2BVolume {
   }>;
 }
 
-// Status config
-const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
-  'AGUARDANDO_ACEITE_COLETA': { label: 'Aguardando Aceite Coleta', color: 'text-yellow-700', bgColor: 'bg-yellow-100 border-yellow-300' },
-  'COLETA_ACEITA': { label: 'Coleta Aceita', color: 'text-blue-700', bgColor: 'bg-blue-100 border-blue-300' },
-  'COLETADO': { label: 'Coletado', color: 'text-orange-700', bgColor: 'bg-orange-100 border-orange-300' },
-  'EM_TRIAGEM': { label: 'Em Triagem', color: 'text-purple-700', bgColor: 'bg-purple-100 border-purple-300' },
-  'AGUARDANDO_ACEITE_EXPEDICAO': { label: 'Aguardando Aceite Expedição', color: 'text-indigo-700', bgColor: 'bg-indigo-100 border-indigo-300' },
-  'EXPEDIDO': { label: 'Expedido', color: 'text-cyan-700', bgColor: 'bg-cyan-100 border-cyan-300' },
-  'CONCLUIDO': { label: 'Concluído', color: 'text-green-700', bgColor: 'bg-green-100 border-green-300' },
-  'DEVOLUCAO': { label: 'Devolução', color: 'text-red-700', bgColor: 'bg-red-100 border-red-300' },
+// Status config - Confix brand colors
+const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string; iconBg: string }> = {
+  'AGUARDANDO_ACEITE_COLETA': { label: 'Aguardando Aceite', color: 'text-amber-700', bgColor: 'bg-amber-50 border-amber-200', iconBg: 'bg-amber-500' },
+  'COLETA_ACEITA': { label: 'Coleta Aceita', color: 'text-blue-700', bgColor: 'bg-blue-50 border-blue-200', iconBg: 'bg-blue-500' },
+  'COLETADO': { label: 'Coletado', color: 'text-orange-700', bgColor: 'bg-orange-50 border-orange-200', iconBg: 'bg-orange-500' },
+  'EM_TRIAGEM': { label: 'Em Triagem', color: 'text-purple-700', bgColor: 'bg-purple-50 border-purple-200', iconBg: 'bg-purple-500' },
+  'AGUARDANDO_ACEITE_EXPEDICAO': { label: 'Aguardando Expedição', color: 'text-indigo-700', bgColor: 'bg-indigo-50 border-indigo-200', iconBg: 'bg-indigo-500' },
+  'EXPEDIDO': { label: 'Expedido', color: 'text-cyan-700', bgColor: 'bg-cyan-50 border-cyan-200', iconBg: 'bg-cyan-500' },
+  'CONCLUIDO': { label: 'Concluído', color: 'text-emerald-700', bgColor: 'bg-emerald-50 border-emerald-200', iconBg: 'bg-emerald-500' },
+  'DEVOLUCAO': { label: 'Devolução', color: 'text-red-700', bgColor: 'bg-red-50 border-red-200', iconBg: 'bg-red-500' },
 };
 
 // Tipos de ocorrência
@@ -948,23 +949,32 @@ const MotoristaDashboard = () => {
 
   // Renderizar card
   const renderVolumeCard = (v: B2BVolume, showActions: 'accept' | 'collect' | 'bip' | 'finalize' | 'none' = 'none') => {
-    const statusConfig = STATUS_CONFIG[v.status] || { label: v.status, color: 'text-gray-700', bgColor: 'bg-gray-100' };
+    const statusConfig = STATUS_CONFIG[v.status] || { label: v.status, color: 'text-gray-700', bgColor: 'bg-gray-100', iconBg: 'bg-gray-500' };
     const recentHistory = (v.status_history || []).slice(0, 2);
     const isPendente = v.status === 'AGUARDANDO_ACEITE_COLETA';
     const isAceito = v.status === 'COLETA_ACEITA';
     const isColetado = v.status === 'COLETADO';
 
     return (
-      <Card key={v.id} className="mb-3">
+      <Card key={v.id} className="mb-4 overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-white">
+        {/* Barra de status colorida no topo */}
+        <div className={`h-1 ${statusConfig.iconBg}`} />
         <CardContent className="p-4">
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <h3 className="font-mono font-bold text-lg">{v.eti_code}</h3>
-              {!isPendente && !isAceito && !isColetado && v.shipment && (
-                <p className="text-xs text-muted-foreground">{v.shipment.tracking_code}</p>
-              )}
+          <div className="flex justify-between items-start mb-3">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl ${statusConfig.iconBg} flex items-center justify-center shadow-sm`}>
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-mono font-bold text-lg text-foreground">{v.eti_code}</h3>
+                {!isPendente && !isAceito && !isColetado && v.shipment && (
+                  <p className="text-xs text-muted-foreground">{v.shipment.tracking_code}</p>
+                )}
+              </div>
             </div>
-            {/* Badge de status removido do painel do motorista */}
+            <Badge className={`${statusConfig.bgColor} ${statusConfig.color} border text-xs font-medium`}>
+              {statusConfig.label}
+            </Badge>
           </div>
           
           {/* Para PENDENTE: mostrar apenas ETI + bairro + peso + tipo veículo */}
@@ -1064,12 +1074,13 @@ const MotoristaDashboard = () => {
           )}
 
           {/* Botões de ação */}
-          <div className="flex justify-between items-center mt-3">
+          <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100">
             <div className="flex gap-2">
               {/* Botão Ver sempre primeiro (esquerda) */}
               <Button 
                 variant="outline"
                 size="sm"
+                className="border-slate-200 hover:bg-slate-50 hover:border-slate-300"
                 onClick={() => {
                   setSelectedVolume(v);
                   setShowDetailsModal(true);
@@ -1081,6 +1092,7 @@ const MotoristaDashboard = () => {
               {showActions === 'accept' && (
                 <Button 
                   size="sm"
+                  className="bg-gradient-to-r from-primary to-red-600 hover:from-primary/90 hover:to-red-700 shadow-sm"
                   onClick={() => {
                     setVolumeToAccept(v);
                     setAcceptModalOpen(true);
@@ -1094,7 +1106,7 @@ const MotoristaDashboard = () => {
               {showActions === 'bip' && (
                 <Button 
                   size="sm"
-                  className="bg-indigo-600 hover:bg-indigo-700"
+                  className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 shadow-sm"
                   onClick={() => handleAcceptDespacheVolume(v)}
                   disabled={acceptingDespache}
                 >
@@ -1109,7 +1121,9 @@ const MotoristaDashboard = () => {
               <Button 
                 variant="outline"
                 size="sm"
-                className={v.status === 'COLETA_ACEITA' ? 'text-destructive border-destructive hover:bg-destructive/10' : ''}
+                className={v.status === 'COLETA_ACEITA' 
+                  ? 'text-destructive border-destructive/50 hover:bg-destructive/10 hover:border-destructive' 
+                  : 'border-slate-200 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-700'}
                 onClick={() => {
                   setOccurrenceVolume(v);
                   setOccurrenceModalOpen(true);
@@ -1131,9 +1145,12 @@ const MotoristaDashboard = () => {
   const renderVolumeList = (volumeList: B2BVolume[], emptyMessage: string, actions: 'accept' | 'collect' | 'bip' | 'finalize' | 'none' = 'none') => {
     if (volumeList.length === 0) {
       return (
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            {emptyMessage}
+        <Card className="border-0 shadow-sm bg-white/80">
+          <CardContent className="p-12 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+              <Package className="h-8 w-8 text-slate-400" />
+            </div>
+            <p className="text-muted-foreground">{emptyMessage}</p>
           </CardContent>
         </Card>
       );
@@ -1143,34 +1160,47 @@ const MotoristaDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse">Carregando...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="flex flex-col items-center gap-4">
+          <img src={confixLogo} alt="Confix Envios" className="h-12 animate-pulse" />
+          <div className="text-muted-foreground">Carregando...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-card/95 backdrop-blur border-b">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
+      {/* Header - Confix Brand */}
+      <header className="sticky top-0 z-40 bg-gradient-to-r from-primary via-primary to-red-700 shadow-lg">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-72">
-                <SheetHeader>
-                  <SheetTitle>Menu</SheetTitle>
+              <SheetContent side="left" className="w-72 border-r-0">
+                <SheetHeader className="border-b pb-4">
+                  <div className="flex items-center gap-3">
+                    <img src={confixLogo} alt="Confix Envios" className="h-8" />
+                  </div>
+                  <div className="mt-3 p-3 bg-gradient-to-r from-primary/10 to-red-50 rounded-lg">
+                    <p className="text-sm font-medium text-foreground">{motorista?.nome}</p>
+                    <p className="text-xs text-muted-foreground">Motorista</p>
+                  </div>
                 </SheetHeader>
                 <nav className="mt-6 space-y-2">
                   {menuItems.map(item => (
                     <div key={item.section}>
                       <Button
-                        variant={activeSection === item.section ? "secondary" : "ghost"}
-                        className="w-full justify-start mb-1"
+                        variant={activeSection === item.section ? "default" : "ghost"}
+                        className={`w-full justify-start mb-1 transition-all ${
+                          activeSection === item.section 
+                            ? 'bg-primary text-white shadow-md' 
+                            : 'hover:bg-primary/10'
+                        }`}
                         onClick={() => {
                           setActiveSection(item.section);
                           setActiveTab(item.section === 'coletas' ? 'pendentes' : 'aguardando');
@@ -1181,20 +1211,29 @@ const MotoristaDashboard = () => {
                       </Button>
                       
                       {activeSection === item.section && (
-                        <div className="pl-6 space-y-1">
+                        <div className="pl-6 space-y-1 animate-fade-in">
                           {(item.section === 'coletas' ? coletasSubItems : despachaSubItems).map(sub => (
                             <Button
                               key={sub.tab}
                               variant={activeTab === sub.tab ? "default" : "ghost"}
                               size="sm"
-                              className="w-full justify-between"
+                              className={`w-full justify-between transition-all ${
+                                activeTab === sub.tab 
+                                  ? 'bg-primary/90 text-white' 
+                                  : 'hover:bg-primary/10'
+                              }`}
                               onClick={() => {
                                 setActiveTab(sub.tab);
                                 setMenuOpen(false);
                               }}
                             >
                               {sub.label}
-                              <Badge variant="outline" className="ml-2">{sub.count}</Badge>
+                              <Badge 
+                                variant="outline" 
+                                className={`ml-2 ${activeTab === sub.tab ? 'border-white/50 text-white' : ''}`}
+                              >
+                                {sub.count}
+                              </Badge>
                             </Button>
                           ))}
                         </div>
@@ -1202,47 +1241,74 @@ const MotoristaDashboard = () => {
                     </div>
                   ))}
                 </nav>
+                
+                {/* Logout no menu */}
+                <div className="absolute bottom-6 left-4 right-4">
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sair
+                  </Button>
+                </div>
               </SheetContent>
             </Sheet>
             
-            <div>
-              <h1 className="font-semibold">Motorista</h1>
-              <p className="text-sm text-muted-foreground">{motorista?.nome}</p>
+            <div className="flex items-center gap-3">
+              <img src={confixLogo} alt="Confix Envios" className="h-7 brightness-0 invert" />
+              <div className="hidden sm:block">
+                <p className="text-xs text-white/70">Olá,</p>
+                <p className="text-sm font-medium text-white">{motorista?.nome}</p>
+              </div>
             </div>
           </div>
           
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => loadVolumes()}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => loadVolumes()}
+              className="text-white hover:bg-white/20"
+            >
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>
         
         {/* Campo de busca */}
-        <div className="px-4 pb-2 flex justify-center">
+        <div className="px-4 pb-3 flex justify-center">
           <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
             <Input
               placeholder="Buscar pedido"
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              className="pl-9 font-mono"
+              className="pl-9 font-mono bg-white/10 border-white/20 text-white placeholder:text-white/60 focus:bg-white focus:text-foreground focus:placeholder:text-muted-foreground transition-all"
             />
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-4">
+      <main className="container mx-auto px-4 py-6">
         {/* Título da seção */}
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold">
-              {activeSection === 'coletas' ? 'Coletas' : 'Despache'}
+            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              {activeSection === 'coletas' ? (
+                <>
+                  <div className="w-2 h-8 bg-gradient-to-b from-primary to-red-600 rounded-full" />
+                  Coletas
+                </>
+              ) : (
+                <>
+                  <div className="w-2 h-8 bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-full" />
+                  Despache
+                </>
+              )}
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground mt-1 ml-4">
               {activeTab === 'pendentes' && 'Volumes disponíveis para coleta'}
               {activeTab === 'aceitos' && 'Volumes aceitos - aguardando coleta'}
               {activeTab === 'coletados' && 'Volumes coletados - a caminho do CD'}
@@ -1257,7 +1323,7 @@ const MotoristaDashboard = () => {
           {/* Botão Coletar Vários para seção Coletas na aba aceitos */}
           {activeSection === 'coletas' && activeTab === 'aceitos' && aceitos.length > 0 && (
             <Button
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-gradient-to-r from-primary to-red-600 hover:from-primary/90 hover:to-red-700 shadow-lg shadow-primary/20 transition-all hover:shadow-primary/30"
               onClick={() => {
                 setCollectBatchVolumes([]);
                 setCollectBatchModalOpen(true);
@@ -1271,7 +1337,7 @@ const MotoristaDashboard = () => {
           {/* Botão Aceitar Todos para seção Despache na aba aguardando */}
           {activeSection === 'despache' && activeTab === 'aguardando' && aguardandoExpedicao.length > 0 && (
             <Button
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 shadow-lg shadow-indigo-500/20 transition-all"
               onClick={handleAcceptAllDespache}
               disabled={acceptingAllDespache}
             >
@@ -1283,7 +1349,7 @@ const MotoristaDashboard = () => {
           {/* Botão Finalizar para seção Despache na aba despachados */}
           {activeSection === 'despache' && activeTab === 'despachados' && despachados.length > 0 && (
             <Button
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 shadow-lg shadow-emerald-500/20 transition-all"
               onClick={() => {
                 setFinalizeBatchVolumes([]);
                 setFinalizeBatchModalOpen(true);
