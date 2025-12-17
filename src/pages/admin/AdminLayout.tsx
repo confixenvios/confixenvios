@@ -65,6 +65,10 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     if (path === '/admin/dashboard') {
       return location.pathname === '/admin/dashboard' || location.pathname === '/admin';
     }
+    // Exact match for remessas to avoid conflict with remessas-expresso
+    if (path === '/admin/remessas') {
+      return location.pathname === '/admin/remessas';
+    }
     return location.pathname.startsWith(path);
   };
 
