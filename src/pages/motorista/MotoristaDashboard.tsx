@@ -917,6 +917,20 @@ const MotoristaDashboard = () => {
                 </Button>
               )}
               
+              {/* Botão Coletar individual para volumes aceitos */}
+              {showActions === 'collect' && (
+                <Button 
+                  size="sm"
+                  className="bg-red-600 hover:bg-red-700"
+                  onClick={() => {
+                    setCollectBatchVolumes([v]);
+                    setCollectBatchModalOpen(true);
+                  }}
+                >
+                  Coletar
+                </Button>
+              )}
+              
               {/* Botão Aceitar individual para volumes aguardando despache */}
               {showActions === 'bip' && (
                 <Button 
@@ -1105,14 +1119,17 @@ const MotoristaDashboard = () => {
             </p>
           </div>
           
-          {/* Botão Coletar para seção Coletas na aba aceitos */}
+          {/* Botão Coletar Vários para seção Coletas na aba aceitos */}
           {activeSection === 'coletas' && activeTab === 'aceitos' && aceitos.length > 0 && (
             <Button
               className="bg-red-600 hover:bg-red-700"
-              onClick={() => setCollectBatchModalOpen(true)}
+              onClick={() => {
+                setCollectBatchVolumes([]);
+                setCollectBatchModalOpen(true);
+              }}
             >
               <Package className="h-4 w-4 mr-2" />
-              Coletar
+              Coletar Vários
             </Button>
           )}
           
