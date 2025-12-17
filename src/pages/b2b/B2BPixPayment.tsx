@@ -160,32 +160,6 @@ const B2BPixPayment = () => {
     }
   };
 
-  const createB2BShipment = async () => {
-    try {
-      const { error } = await supabase
-        .from('b2b_shipments')
-        .insert({
-          b2b_client_id: shipmentData.clientId,
-          volume_count: shipmentData.volumeCount,
-          delivery_date: shipmentData.deliveryDate,
-          status: 'B2B_COLETA_PENDENTE',
-          observations: JSON.stringify({
-            vehicle_type: shipmentData.vehicleType,
-            volume_addresses: shipmentData.volumeAddresses,
-            volume_weights: shipmentData.volumeWeights,
-            total_weight: shipmentData.totalWeight,
-            pickup_address: shipmentData.pickupAddress,
-            amount_paid: amount,
-            paid: true,
-            paid_at: new Date().toISOString()
-          })
-        });
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Erro ao criar remessa B2B:', error);
-    }
-  };
 
   const handleManualCheck = async () => {
     if (!paymentIntent?.paymentId) return;
@@ -249,7 +223,7 @@ const B2BPixPayment = () => {
       });
       
       if (data?.isPaid) {
-        await createB2BShipment();
+        // Remessa B2B é criada automaticamente pela edge function check-pix-status
         toast({
           title: "Pagamento confirmado!",
           description: "Sua solicitação foi registrada com sucesso."
