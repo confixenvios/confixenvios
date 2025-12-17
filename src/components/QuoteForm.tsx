@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -2071,15 +2072,11 @@ const QuoteForm = () => {
                           </div>
                           <div className="space-y-2">
                             <Label>Telefone *</Label>
-                            <InputMask
-                              mask="(99) 99999-9999"
+                            <PhoneInput
                               value={senderData.phone}
                               onChange={(e) => handleAddressChange("sender", "phone", e.target.value)}
-                            >
-                              {(inputProps: any) => (
-                                <Input {...inputProps} type="tel" placeholder="(00) 00000-0000" className="h-12" />
-                              )}
-                            </InputMask>
+                              placeholder="(00) 0000-0000"
+                            />
                           </div>
                         </div>
 
@@ -2304,15 +2301,11 @@ const QuoteForm = () => {
                           </div>
                           <div className="space-y-2">
                             <Label>Telefone *</Label>
-                            <InputMask
-                              mask="(99) 99999-9999"
+                            <PhoneInput
                               value={recipientData.phone}
                               onChange={(e) => handleAddressChange("recipient", "phone", e.target.value)}
-                            >
-                              {(inputProps: any) => (
-                                <Input {...inputProps} type="tel" placeholder="(00) 00000-0000" className="h-12" />
-                              )}
-                            </InputMask>
+                              placeholder="(00) 0000-0000"
+                            />
                           </div>
                         </div>
 

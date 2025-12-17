@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import InputMask from 'react-input-mask';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -380,21 +381,11 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
 
       <div>
         <Label htmlFor="phone">Telefone</Label>
-        <InputMask
-          mask="(99) 99999-9999"
+        <PhoneInput
           value={formData.phone}
           onChange={(e) => handleInputChange('phone', e.target.value)}
-          disabled={loadingUserData}
-        >
-          {(inputProps: any) => (
-            <Input
-              {...inputProps}
-              id="phone"
-              type="tel"
-              placeholder="(00) 00000-0000"
-            />
-          )}
-        </InputMask>
+          placeholder="(00) 0000-0000"
+        />
       </div>
 
       <div>

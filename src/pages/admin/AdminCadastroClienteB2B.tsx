@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Building2, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import InputMask from 'react-input-mask';
+import { PhoneInput } from "@/components/ui/phone-input";
 
 const AdminCadastroClienteB2B = () => {
   const navigate = useNavigate();
@@ -169,19 +170,11 @@ const AdminCadastroClienteB2B = () => {
 
             <div className="space-y-2">
               <Label htmlFor="phone">Telefone</Label>
-              <InputMask
-                mask="(99) 99999-9999"
+              <PhoneInput
                 value={formData.phone}
                 onChange={(e) => handleChange('phone', e.target.value)}
-              >
-                {(inputProps: any) => (
-                  <Input
-                    {...inputProps}
-                    id="phone"
-                    placeholder="(00) 00000-0000"
-                  />
-                )}
-              </InputMask>
+                placeholder="(00) 0000-0000"
+              />
             </div>
 
             <div className="space-y-2">

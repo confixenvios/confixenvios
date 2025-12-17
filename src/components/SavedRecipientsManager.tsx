@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { User, Edit, Trash2, Star, Save, UserPlus } from "lucide-react";
 import InputMask from "react-input-mask";
 import { sanitizeTextInput } from "@/utils/inputValidation";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 interface SavedRecipient {
   id: string;
@@ -400,18 +401,11 @@ const RecipientFormContent = ({
           </div>
           <div className="space-y-2">
             <Label>Telefone *</Label>
-            <InputMask
-              mask="(99) 99999-9999"
+            <PhoneInput
               value={formData.phone}
               onChange={(e) => handleInputChange('phone', e.target.value)}
-            >
-              {(inputProps: any) => (
-                <Input
-                  {...inputProps}
-                  placeholder="(00) 00000-0000"
-                />
-              )}
-            </InputMask>
+              placeholder="(00) 0000-0000"
+            />
           </div>
         </div>
         
