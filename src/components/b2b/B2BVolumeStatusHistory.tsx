@@ -249,27 +249,29 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
                   <p className="text-xs text-muted-foreground">
                     <span className="font-medium">Documento:</span> {parsedObs.entregaData.recebedorDocumento}
                   </p>
-                  <a 
-                    href={parsedObs.entregaData.assinaturaUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline mt-1"
-                  >
-                    <Image className="h-3 w-3" />
-                    Ver assinatura
-                  </a>
-                  {parsedObs.entregaData.fotosUrls.map((fotoUrl, idx) => (
+                  <div className="flex flex-col gap-1 mt-1">
                     <a 
-                      key={idx}
-                      href={fotoUrl} 
+                      href={parsedObs.entregaData.assinaturaUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline"
                     >
                       <Image className="h-3 w-3" />
-                      Ver Foto ({idx + 1})
+                      Ver assinatura
                     </a>
-                  ))}
+                    {parsedObs.entregaData.fotosUrls.map((fotoUrl, idx) => (
+                      <a 
+                        key={idx}
+                        href={fotoUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline"
+                      >
+                        <Image className="h-3 w-3" />
+                        Ver Foto ({idx + 1})
+                      </a>
+                    ))}
+                  </div>
                 </div>
               )}
               
