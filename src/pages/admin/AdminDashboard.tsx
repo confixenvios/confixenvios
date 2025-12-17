@@ -258,37 +258,42 @@ const AdminDashboard = () => {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard Administrativo</h1>
-          <p className="text-muted-foreground">
-            Visão geral da plataforma e indicadores de performance
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="text-xs">
-            Atualizado: {lastUpdated.toLocaleTimeString('pt-BR')}
-          </Badge>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={loadDashboardData}
-            disabled={loading}
-          >
-            {loading ? (
-              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
-            ) : (
-              <TrendingUp className="w-4 h-4 mr-2" />
-            )}
-            Atualizar
-          </Button>
+      {/* Welcome Header */}
+      <div className="bg-gradient-to-r from-primary to-red-600 rounded-xl p-6 text-white shadow-lg">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold">
+              Bem-vindo ao Painel Administrativo! 👋
+            </h1>
+            <p className="text-white/80 mt-1">
+              Visão geral da plataforma e indicadores de performance
+            </p>
+          </div>
+          <div className="flex items-center space-x-2 mt-4 md:mt-0">
+            <Badge variant="secondary" className="text-xs bg-white/20 text-white border-0">
+              Atualizado: {lastUpdated.toLocaleTimeString('pt-BR')}
+            </Badge>
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              onClick={loadDashboardData}
+              disabled={loading}
+              className="bg-white/20 hover:bg-white/30 text-white border-0"
+            >
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+              ) : (
+                <TrendingUp className="w-4 h-4 mr-2" />
+              )}
+              Atualizar
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-border/50 shadow-card">
+        <Card className="border-t-4 border-t-primary shadow-md hover:shadow-lg transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -304,7 +309,7 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 shadow-card">
+        <Card className="border-t-4 border-t-blue-500 shadow-md hover:shadow-lg transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -313,14 +318,14 @@ const AdminDashboard = () => {
                   {loading ? '...' : stats.totalShipments}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                <Package className="w-6 h-6 text-primary" />
+              <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center">
+                <Package className="w-6 h-6 text-blue-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 shadow-card">
+        <Card className="border-t-4 border-t-green-500 shadow-md hover:shadow-lg transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -329,14 +334,14 @@ const AdminDashboard = () => {
                   {loading ? '...' : `R$ ${stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-success/10 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-success" />
+              <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-green-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 shadow-card">
+        <Card className="border-t-4 border-t-amber-500 shadow-md hover:shadow-lg transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -345,8 +350,8 @@ const AdminDashboard = () => {
                   {loading ? '...' : stats.pendingShipments}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-6 h-6 text-destructive" />
+              <div className="w-12 h-12 bg-amber-500/10 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-6 h-6 text-amber-500" />
               </div>
             </div>
           </CardContent>
@@ -356,14 +361,14 @@ const AdminDashboard = () => {
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Shipments */}
-        <Card className="border-border/50 shadow-card">
+        <Card className="border-t-4 border-t-primary shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex items-center justify-between text-foreground">
               <span className="flex items-center space-x-2">
-                <Package className="w-5 h-5" />
+                <Package className="w-5 h-5 text-primary" />
                 <span>Envios Recentes</span>
               </span>
-              <Button variant="ghost" size="sm" asChild>
+              <Button variant="ghost" size="sm" asChild className="text-primary hover:text-primary hover:bg-primary/5">
                 <Link to="/admin/remessas">
                   Ver todas
                   <ArrowRight className="w-4 h-4 ml-1" />
@@ -449,10 +454,10 @@ const AdminDashboard = () => {
         </Card>
 
         {/* Quick Actions */}
-        <Card className="border-border/50 shadow-card">
+        <Card className="border-t-4 border-t-primary shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <TrendingUp className="w-5 h-5" />
+            <CardTitle className="flex items-center space-x-2 text-foreground">
+              <TrendingUp className="w-5 h-5 text-primary" />
               <span>Ações Rápidas</span>
             </CardTitle>
             <CardDescription>
@@ -460,28 +465,28 @@ const AdminDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button variant="outline" size="sm" className="w-full justify-start" asChild>
+            <Button variant="outline" size="sm" className="w-full justify-start border-primary/30 hover:bg-primary/5 hover:border-primary" asChild>
               <Link to="/admin/clientes">
                 <Users className="w-4 h-4 mr-2" />
                 Gerenciar Clientes
               </Link>
             </Button>
             
-            <Button variant="outline" size="sm" className="w-full justify-start" asChild>
+            <Button variant="outline" size="sm" className="w-full justify-start border-primary/30 hover:bg-primary/5 hover:border-primary" asChild>
               <Link to="/admin/remessas">
                 <Package className="w-4 h-4 mr-2" />
                 Visualizar Remessas
               </Link>
             </Button>
             
-            <Button variant="outline" size="sm" className="w-full justify-start" asChild>
+            <Button variant="outline" size="sm" className="w-full justify-start border-primary/30 hover:bg-primary/5 hover:border-primary" asChild>
               <Link to="/admin/integracoes">
                 <Webhook className="w-4 h-4 mr-2" />
                 Configurar Integrações
               </Link>
             </Button>
             
-            <Button variant="outline" size="sm" className="w-full justify-start" asChild>
+            <Button variant="outline" size="sm" className="w-full justify-start border-primary/30 hover:bg-primary/5 hover:border-primary" asChild>
               <Link to="/admin/docs-integracao">
                 <FileText className="w-4 h-4 mr-2" />
                 Documentação
