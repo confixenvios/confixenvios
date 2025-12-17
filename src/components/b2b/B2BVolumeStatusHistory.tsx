@@ -63,16 +63,32 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
     return configs[status] || { label: status, dotColor: 'bg-gray-500', badgeClass: 'bg-gray-100 text-gray-800 border-gray-300', description: '' };
   };
 
-  // Parseia observações JSON para extrair mensagem, foto e dados de coleta
+  // Parseia observações JSON para extrair mensagem, foto e dados de coleta/entrega
   const parseObservacoes = (observacoes: string | null): { 
     text: string | null; 
     fotoUrl: string | null;
     coletaData: { entregadorNome: string; entregadorDocumento: string; assinaturaUrl: string } | null;
+    entregaData: { recebedorNome: string; recebedorDocumento: string; assinaturaUrl: string; fotoUrl: string } | null;
   } => {
-    if (!observacoes) return { text: null, fotoUrl: null, coletaData: null };
+    if (!observacoes) return { text: null, fotoUrl: null, coletaData: null, entregaData: null };
     
     try {
       const parsed = JSON.parse(observacoes);
+      
+      // Dados de entrega finalizada (com recebedor)
+      if (parsed.recebedor_nome && parsed.assinatura_url && parsed.foto_url) {
+        return {
+          text: null,
+          fotoUrl: null,
+          coletaData: null,
+          entregaData: {
+            recebedorNome: parsed.recebedor_nome,
+            recebedorDocumento: parsed.recebedor_documento,
+            assinaturaUrl: parsed.assinatura_url,
+            fotoUrl: parsed.foto_url
+          }
+        };
+      }
       
       // Dados de coleta com assinatura
       if (parsed.entregador_nome && parsed.assinatura_url) {
@@ -83,22 +99,24 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
             entregadorNome: parsed.entregador_nome,
             entregadorDocumento: parsed.entregador_documento,
             assinaturaUrl: parsed.assinatura_url
-          }
+          },
+          entregaData: null
         };
       }
       
-      // Foto de entrega
+      // Foto de entrega (formato antigo)
       if (parsed.mensagem || parsed.foto_url) {
         return {
           text: parsed.mensagem || null,
           fotoUrl: parsed.foto_url || null,
-          coletaData: null
+          coletaData: null,
+          entregaData: null
         };
       }
     } catch {
       // Não é JSON, retorna como texto normal
     }
-    return { text: observacoes, fotoUrl: null, coletaData: null };
+    return { text: observacoes, fotoUrl: null, coletaData: null, entregaData: null };
   };
 
   // Gera descrição contextual baseada no status e observações
@@ -206,9 +224,41 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
                   </a>
                 </div>
               )}
+
+              {/* Dados da entrega finalizada com recebedor */}
+              {parsedObs.entregaData && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-medium">Recebedor:</span> {parsedObs.entregaData.recebedorNome}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-medium">Documento:</span> {parsedObs.entregaData.recebedorDocumento}
+                  </p>
+                  <div className="flex flex-wrap gap-3 mt-1">
+                    <a 
+                      href={parsedObs.entregaData.assinaturaUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline"
+                    >
+                      <Image className="h-3 w-3" />
+                      Ver assinatura
+                    </a>
+                    <a 
+                      href={parsedObs.entregaData.fotoUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline"
+                    >
+                      <Image className="h-3 w-3" />
+                      Ver foto da entrega
+                    </a>
+                  </div>
+                </div>
+              )}
               
-              {/* Foto de entrega */}
-              {parsedObs.fotoUrl && (
+              {/* Foto de entrega (formato antigo) */}
+              {parsedObs.fotoUrl && !parsedObs.entregaData && (
                 <a 
                   href={parsedObs.fotoUrl} 
                   target="_blank" 

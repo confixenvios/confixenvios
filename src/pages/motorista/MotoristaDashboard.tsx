@@ -138,6 +138,10 @@ const MotoristaDashboard = () => {
   const [finalizing, setFinalizing] = useState(false);
   const [deliveryPhoto, setDeliveryPhoto] = useState<File | null>(null);
   const [etiValidated, setEtiValidated] = useState(false);
+  const [finalizeReceiverName, setFinalizeReceiverName] = useState('');
+  const [finalizeReceiverDocument, setFinalizeReceiverDocument] = useState('');
+  const [finalizeSignature, setFinalizeSignature] = useState<string | null>(null);
+  const [finalizeSignaturePadOpen, setFinalizeSignaturePadOpen] = useState(false);
   
   // Modal ocorrência
   const [occurrenceModalOpen, setOccurrenceModalOpen] = useState(false);
@@ -442,7 +446,29 @@ const MotoristaDashboard = () => {
   };
 
   const handleFinalizeDelivery = async () => {
-    if (!volumeToFinalize || !motorista || !deliveryPhoto || !finalizeEtiInput) return;
+    if (!volumeToFinalize || !motorista) return;
+
+    // Validações
+    if (!finalizeEtiInput.trim()) {
+      toast.error('Digite o código da etiqueta');
+      return;
+    }
+    if (!finalizeReceiverName.trim()) {
+      toast.error('Nome de quem recebeu é obrigatório');
+      return;
+    }
+    if (!finalizeReceiverDocument.trim()) {
+      toast.error('Documento de quem recebeu é obrigatório');
+      return;
+    }
+    if (!finalizeSignature) {
+      toast.error('Assinatura é obrigatória');
+      return;
+    }
+    if (!deliveryPhoto) {
+      toast.error('Foto de comprovação é obrigatória');
+      return;
+    }
 
     // Validar código ETI
     const inputEti = parseEtiCode(finalizeEtiInput);
@@ -453,46 +479,67 @@ const MotoristaDashboard = () => {
 
     setFinalizing(true);
     try {
+      // Upload assinatura
+      const signatureBlob = await fetch(finalizeSignature).then(r => r.blob());
+      const signatureFileName = `b2b-entregas/assinaturas/${volumeToFinalize.id}_${Date.now()}.png`;
+      const { error: signatureUploadError } = await supabase.storage
+        .from('shipment-photos')
+        .upload(signatureFileName, signatureBlob);
+
+      if (signatureUploadError) throw signatureUploadError;
+
+      const { data: signatureUrlData } = supabase.storage
+        .from('shipment-photos')
+        .getPublicUrl(signatureFileName);
+
       // Upload foto
-      const fileName = `b2b-entregas/${volumeToFinalize.id}/${Date.now()}.jpg`;
-      const { error: uploadError } = await supabase.storage
+      const photoFileName = `b2b-entregas/fotos/${volumeToFinalize.id}_${Date.now()}.jpg`;
+      const { error: photoUploadError } = await supabase.storage
         .from('shipment-photos')
-        .upload(fileName, deliveryPhoto);
+        .upload(photoFileName, deliveryPhoto);
 
-      if (uploadError) throw uploadError;
+      if (photoUploadError) throw photoUploadError;
 
-      const { data: urlData } = supabase.storage
+      const { data: photoUrlData } = supabase.storage
         .from('shipment-photos')
-        .getPublicUrl(fileName);
+        .getPublicUrl(photoFileName);
 
       // Atualizar volume
       const { error } = await supabase
         .from('b2b_volumes')
         .update({
           status: 'CONCLUIDO',
-          foto_entrega_url: urlData.publicUrl
+          foto_entrega_url: photoUrlData.publicUrl
         })
         .eq('id', volumeToFinalize.id);
 
       if (error) throw error;
 
+      // Salvar histórico com todos os dados da entrega
       await supabase.from('b2b_status_history').insert({
         volume_id: volumeToFinalize.id,
         status: 'CONCLUIDO',
         motorista_id: motorista.id,
         motorista_nome: motorista.nome,
         observacoes: JSON.stringify({ 
-          mensagem: 'Entrega concluída com sucesso', 
-          foto_url: urlData.publicUrl 
+          recebedor_nome: finalizeReceiverName.trim(),
+          recebedor_documento: finalizeReceiverDocument.trim(),
+          assinatura_url: signatureUrlData.publicUrl,
+          foto_url: photoUrlData.publicUrl,
+          finalizado_em: new Date().toISOString()
         })
       });
 
       toast.success('Entrega finalizada!');
       setFinalizeModalOpen(false);
       setFinalizeEtiInput('');
+      setFinalizeReceiverName('');
+      setFinalizeReceiverDocument('');
+      setFinalizeSignature(null);
       setDeliveryPhoto(null);
       await loadVolumes();
     } catch (error) {
+      console.error('Erro ao finalizar entrega:', error);
       toast.error('Erro ao finalizar entrega');
     } finally {
       setFinalizing(false);
@@ -1346,7 +1393,7 @@ const MotoristaDashboard = () => {
 
       {/* Modal Finalizar Entrega */}
       <Dialog open={finalizeModalOpen} onOpenChange={setFinalizeModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Finalizar Entrega</DialogTitle>
           </DialogHeader>
@@ -1361,19 +1408,90 @@ const MotoristaDashboard = () => {
               </div>
               
               <div className="space-y-4">
+                {/* Etiqueta */}
                 <div className="space-y-2">
-                  <Label>Bipe o código de barras da etiqueta *</Label>
+                  <Label>Etiqueta *</Label>
                   <Input
                     type="password"
                     value={finalizeEtiInput}
                     onChange={(e) => setFinalizeEtiInput(e.target.value)}
-                    className="font-mono text-center text-lg"
+                    placeholder="Bipe o código de barras"
+                    className="font-mono"
                     autoFocus
                   />
                 </div>
-                
+
+                {/* Nome */}
                 <div className="space-y-2">
-                  <Label>Foto de comprovação *</Label>
+                  <Label>Nome *</Label>
+                  <Input
+                    value={finalizeReceiverName}
+                    onChange={(e) => setFinalizeReceiverName(e.target.value)}
+                    placeholder="Nome de quem recebeu"
+                  />
+                </div>
+
+                {/* Documento */}
+                <div className="space-y-2">
+                  <Label>Documento *</Label>
+                  <Input
+                    value={finalizeReceiverDocument}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      setFinalizeReceiverDocument(value);
+                    }}
+                    placeholder="CPF ou RG (apenas números)"
+                    maxLength={14}
+                  />
+                </div>
+
+                {/* Assinatura */}
+                <div className="space-y-2">
+                  <Label>Local pra assinar *</Label>
+                  {finalizeSignature ? (
+                    <div className="border rounded-md p-2 bg-white">
+                      <div className="relative">
+                        <img 
+                          src={finalizeSignature} 
+                          alt="Assinatura" 
+                          className="w-full h-24 object-contain rounded"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-1 right-1"
+                          onClick={() => setFinalizeSignature(null)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-2"
+                        onClick={() => setFinalizeSignaturePadOpen(true)}
+                      >
+                        <PenTool className="h-4 w-4 mr-2" />
+                        Refazer Assinatura
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-full h-20 border-dashed"
+                      onClick={() => setFinalizeSignaturePadOpen(true)}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <PenTool className="h-6 w-6 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Toque para assinar</span>
+                      </div>
+                    </Button>
+                  )}
+                </div>
+                
+                {/* Foto */}
+                <div className="space-y-2">
+                  <Label>Foto *</Label>
                   <div className="border-2 border-dashed rounded-lg p-4 text-center">
                     <input
                       type="file"
@@ -1389,7 +1507,7 @@ const MotoristaDashboard = () => {
                           <img 
                             src={URL.createObjectURL(deliveryPhoto)} 
                             alt="Preview" 
-                            className="max-h-40 mx-auto rounded"
+                            className="max-h-32 mx-auto rounded"
                           />
                           <Button
                             variant="destructive"
@@ -1415,10 +1533,13 @@ const MotoristaDashboard = () => {
                   </div>
                 </div>
                 
-                <div className="flex gap-2">
+                <div className="flex gap-2 pt-2">
                   <Button variant="outline" className="flex-1" onClick={() => {
                     setFinalizeModalOpen(false);
                     setFinalizeEtiInput('');
+                    setFinalizeReceiverName('');
+                    setFinalizeReceiverDocument('');
+                    setFinalizeSignature(null);
                     setDeliveryPhoto(null);
                   }}>
                     Cancelar
@@ -1426,7 +1547,14 @@ const MotoristaDashboard = () => {
                   <Button 
                     className="flex-1 bg-green-600 hover:bg-green-700" 
                     onClick={handleFinalizeDelivery} 
-                    disabled={finalizing || !deliveryPhoto || !finalizeEtiInput}
+                    disabled={
+                      finalizing || 
+                      !finalizeEtiInput.trim() ||
+                      !finalizeReceiverName.trim() ||
+                      !finalizeReceiverDocument.trim() ||
+                      !finalizeSignature ||
+                      !deliveryPhoto
+                    }
                   >
                     {finalizing ? 'Finalizando...' : 'Finalizar'}
                   </Button>
@@ -1436,6 +1564,17 @@ const MotoristaDashboard = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Signature Pad Modal - Finalizar Entrega */}
+      <SignaturePad
+        isOpen={finalizeSignaturePadOpen}
+        onClose={() => setFinalizeSignaturePadOpen(false)}
+        onSave={(signatureDataUrl) => {
+          setFinalizeSignature(signatureDataUrl);
+          setFinalizeSignaturePadOpen(false);
+        }}
+        title="Assinatura de Recebimento"
+      />
 
       {/* Modal Ocorrência */}
       <Dialog open={occurrenceModalOpen} onOpenChange={setOccurrenceModalOpen}>
