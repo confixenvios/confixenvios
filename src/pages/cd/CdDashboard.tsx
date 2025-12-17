@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import B2BVolumeStatusHistory from '@/components/b2b/B2BVolumeStatusHistory';
+import confixLogo from '@/assets/logo-confix-envios.png';
 
 interface CdUser {
   id: string;
@@ -75,16 +76,16 @@ interface B2BVolume {
   }>;
 }
 
-// Status labels e cores
-const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string; cardBorder: string; cardBg: string }> = {
-  'AGUARDANDO_ACEITE_COLETA': { label: 'Aguardando Aceite Coleta', color: 'text-yellow-700', bgColor: 'bg-yellow-100 border-yellow-300', cardBorder: 'border-yellow-300', cardBg: 'bg-yellow-50/50' },
-  'COLETA_ACEITA': { label: 'Coleta Aceita', color: 'text-blue-700', bgColor: 'bg-blue-100 border-blue-300', cardBorder: 'border-blue-300', cardBg: 'bg-blue-50/50' },
-  'COLETADO': { label: 'Coletado', color: 'text-orange-700', bgColor: 'bg-orange-100 border-orange-300', cardBorder: 'border-orange-300', cardBg: 'bg-orange-50/50' },
-  'EM_TRIAGEM': { label: 'Em Triagem', color: 'text-purple-700', bgColor: 'bg-purple-100 border-purple-300', cardBorder: 'border-purple-300', cardBg: 'bg-purple-50/50' },
-  'AGUARDANDO_ACEITE_EXPEDICAO': { label: 'Aguardando Aceite Expedição', color: 'text-indigo-700', bgColor: 'bg-indigo-100 border-indigo-300', cardBorder: 'border-indigo-300', cardBg: 'bg-indigo-50/50' },
-  'EXPEDIDO': { label: 'Expedido', color: 'text-cyan-700', bgColor: 'bg-cyan-100 border-cyan-300', cardBorder: 'border-cyan-300', cardBg: 'bg-cyan-50/50' },
-  'CONCLUIDO': { label: 'Concluído', color: 'text-green-700', bgColor: 'bg-green-100 border-green-300', cardBorder: 'border-green-300', cardBg: 'bg-green-50/50' },
-  'DEVOLUCAO': { label: 'Devolução', color: 'text-red-700', bgColor: 'bg-red-100 border-red-300', cardBorder: 'border-red-300', cardBg: 'bg-red-50/50' },
+// Status labels e cores - Confix Brand
+const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string; cardBorder: string; cardBg: string; iconBg: string }> = {
+  'AGUARDANDO_ACEITE_COLETA': { label: 'Aguardando Aceite', color: 'text-amber-700', bgColor: 'bg-amber-50 border-amber-200', cardBorder: 'border-amber-200', cardBg: 'bg-white', iconBg: 'bg-amber-500' },
+  'COLETA_ACEITA': { label: 'Coleta Aceita', color: 'text-blue-700', bgColor: 'bg-blue-50 border-blue-200', cardBorder: 'border-blue-200', cardBg: 'bg-white', iconBg: 'bg-blue-500' },
+  'COLETADO': { label: 'Coletado', color: 'text-orange-700', bgColor: 'bg-orange-50 border-orange-200', cardBorder: 'border-orange-200', cardBg: 'bg-white', iconBg: 'bg-orange-500' },
+  'EM_TRIAGEM': { label: 'Em Triagem', color: 'text-purple-700', bgColor: 'bg-purple-50 border-purple-200', cardBorder: 'border-purple-200', cardBg: 'bg-white', iconBg: 'bg-purple-500' },
+  'AGUARDANDO_ACEITE_EXPEDICAO': { label: 'Aguardando Expedição', color: 'text-indigo-700', bgColor: 'bg-indigo-50 border-indigo-200', cardBorder: 'border-indigo-200', cardBg: 'bg-white', iconBg: 'bg-indigo-500' },
+  'EXPEDIDO': { label: 'Expedido', color: 'text-cyan-700', bgColor: 'bg-cyan-50 border-cyan-200', cardBorder: 'border-cyan-200', cardBg: 'bg-white', iconBg: 'bg-cyan-500' },
+  'CONCLUIDO': { label: 'Concluído', color: 'text-emerald-700', bgColor: 'bg-emerald-50 border-emerald-200', cardBorder: 'border-emerald-200', cardBg: 'bg-white', iconBg: 'bg-emerald-500' },
+  'DEVOLUCAO': { label: 'Devolução', color: 'text-red-700', bgColor: 'bg-red-50 border-red-200', cardBorder: 'border-red-200', cardBg: 'bg-white', iconBg: 'bg-red-500' },
 };
 
 const CdDashboard = () => {
@@ -472,21 +473,28 @@ const CdDashboard = () => {
 
   // Renderizar card de volume
   const renderVolumeCard = (v: B2BVolume) => {
-    const statusConfig = STATUS_CONFIG[v.status] || { label: v.status, color: 'text-gray-700', bgColor: 'bg-gray-100', cardBorder: 'border-gray-200', cardBg: 'bg-background' };
+    const statusConfig = STATUS_CONFIG[v.status] || { label: v.status, color: 'text-gray-700', bgColor: 'bg-gray-100', cardBorder: 'border-gray-200', cardBg: 'bg-white', iconBg: 'bg-gray-500' };
     const recentHistory = (v.status_history || []).slice(0, 2);
     const hasDevolucaoHistory = (v.status_history || []).some(h => h.status === 'DEVOLUCAO');
 
     return (
-      <Card key={v.id} className={`mb-3 border-2 ${statusConfig.cardBorder} ${statusConfig.cardBg}`}>
+      <Card key={v.id} className="mb-4 overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-white">
+        {/* Barra de status colorida no topo */}
+        <div className={`h-1 ${statusConfig.iconBg}`} />
         <CardContent className="p-4">
           <div className="flex justify-between items-start mb-3">
-            <div>
-              <h3 className="font-mono font-bold text-lg">{v.eti_code}</h3>
-              {v.shipment && (
-                <p className="text-xs text-muted-foreground">{v.shipment.tracking_code}</p>
-              )}
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl ${statusConfig.iconBg} flex items-center justify-center shadow-sm`}>
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-mono font-bold text-lg text-foreground">{v.eti_code}</h3>
+                {v.shipment && (
+                  <p className="text-xs text-muted-foreground">{v.shipment.tracking_code}</p>
+                )}
+              </div>
             </div>
-            <Badge className={`${statusConfig.bgColor} ${statusConfig.color} border`}>
+            <Badge className={`${statusConfig.bgColor} ${statusConfig.color} border text-xs font-medium`}>
               {statusConfig.label}
             </Badge>
           </div>
@@ -553,7 +561,7 @@ const CdDashboard = () => {
           <Button
             variant="outline"
             size="sm"
-            className="mt-3 w-full"
+            className="mt-4 w-full border-slate-200 hover:bg-slate-50 hover:border-slate-300"
             onClick={() => {
               setSelectedVolume(v);
               setShowDetailsModal(true);
@@ -570,9 +578,12 @@ const CdDashboard = () => {
   const renderVolumeList = (volumeList: B2BVolume[], emptyMessage: string) => {
     if (volumeList.length === 0) {
       return (
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            {emptyMessage}
+        <Card className="border-0 shadow-sm bg-white/80">
+          <CardContent className="p-12 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+              <Package className="h-8 w-8 text-slate-400" />
+            </div>
+            <p className="text-muted-foreground">{emptyMessage}</p>
           </CardContent>
         </Card>
       );
@@ -582,89 +593,107 @@ const CdDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse">Carregando...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="flex flex-col items-center gap-4">
+          <img src={confixLogo} alt="Confix Envios" className="h-12 animate-pulse" />
+          <div className="text-muted-foreground">Carregando...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-card/95 backdrop-blur border-b">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
+      {/* Header - Confix Brand */}
+      <header className="sticky top-0 z-40 bg-gradient-to-r from-purple-700 via-purple-600 to-indigo-600 shadow-lg">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <Warehouse className="h-6 w-6 text-purple-600" />
-            <div>
-              <h1 className="font-semibold">Centro de Distribuição</h1>
-              <p className="text-sm text-muted-foreground">{cdUser?.nome}</p>
+          <div className="flex items-center gap-4">
+            <img src={confixLogo} alt="Confix Envios" className="h-7 brightness-0 invert" />
+            <div className="h-8 w-px bg-white/30" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                <Warehouse className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <p className="text-xs text-white/70">Centro de Distribuição</p>
+                <p className="text-sm font-medium text-white">{cdUser?.nome}</p>
+              </div>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={loadVolumes}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={loadVolumes}
+              className="text-white hover:bg-white/20"
+            >
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleLogout}
+              className="text-white hover:bg-white/20"
+            >
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-4">
+      <main className="container mx-auto px-4 py-6">
         {/* Botões principais */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-3 gap-4 mb-6">
           <Button 
-            className="bg-green-600 hover:bg-green-700 h-12" 
+            className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 h-14 shadow-lg shadow-emerald-500/20 transition-all hover:shadow-emerald-500/30" 
             onClick={() => setReceiveModalOpen(true)}
           >
-            <Download className="h-4 w-4 mr-2" />
+            <Download className="h-5 w-5 mr-2" />
             Receber Volume
           </Button>
           <Button 
-            className="bg-blue-600 hover:bg-blue-700 h-12" 
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 h-14 shadow-lg shadow-blue-500/20 transition-all hover:shadow-blue-500/30" 
             onClick={() => setDispatchModalOpen(true)}
           >
-            <Send className="h-4 w-4 mr-2" />
+            <Send className="h-5 w-5 mr-2" />
             Expedir Volume
           </Button>
           <Button 
-            variant="destructive"
-            className="h-12" 
+            className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 h-14 shadow-lg shadow-red-500/20 transition-all hover:shadow-red-500/30"
             onClick={() => setReturnModalOpen(true)}
           >
-            <RotateCcw className="h-4 w-4 mr-2" />
+            <RotateCcw className="h-5 w-5 mr-2" />
             Devolver Volume
           </Button>
         </div>
 
         {/* Abas principais */}
         <Tabs value={mainTab} onValueChange={(v) => { setMainTab(v); setSubTab(''); }}>
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="coletas">
+          <TabsList className="grid w-full grid-cols-5 bg-white shadow-sm border-0 p-1 h-auto">
+            <TabsTrigger value="coletas" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white py-2.5">
               Coletas ({pendentes.length + aceitos.length + coletados.length})
             </TabsTrigger>
-            <TabsTrigger value="recepcao">
+            <TabsTrigger value="recepcao" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white py-2.5">
               Recebidos ({emTriagem.length})
             </TabsTrigger>
-            <TabsTrigger value="operacao">
+            <TabsTrigger value="operacao" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white py-2.5">
               Expedidos ({aguardandoExpedicao.length})
             </TabsTrigger>
-            <TabsTrigger value="entregas">
+            <TabsTrigger value="entregas" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white py-2.5">
               Entregas ({despachados.length + concluidos.length})
             </TabsTrigger>
-            <TabsTrigger value="devolucoes">
+            <TabsTrigger value="devolucoes" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white py-2.5">
               Devoluções ({devolucoes.length})
             </TabsTrigger>
           </TabsList>
 
           {/* Coletas */}
-          <TabsContent value="coletas" className="mt-4">
+          <TabsContent value="coletas" className="mt-6">
             <Tabs value={subTab || 'pendentes'} onValueChange={setSubTab}>
-              <TabsList className="mb-4">
-                <TabsTrigger value="pendentes">Pendentes ({pendentes.length})</TabsTrigger>
-                <TabsTrigger value="aceitos">Aceitos ({aceitos.length})</TabsTrigger>
-                <TabsTrigger value="coletados">Coletados ({coletados.length})</TabsTrigger>
+              <TabsList className="mb-4 bg-slate-100/80">
+                <TabsTrigger value="pendentes" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Pendentes ({pendentes.length})</TabsTrigger>
+                <TabsTrigger value="aceitos" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Aceitos ({aceitos.length})</TabsTrigger>
+                <TabsTrigger value="coletados" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Coletados ({coletados.length})</TabsTrigger>
               </TabsList>
               <TabsContent value="pendentes">
                 {renderVolumeList(pendentes, 'Nenhum volume pendente')}
@@ -679,23 +708,29 @@ const CdDashboard = () => {
           </TabsContent>
 
           {/* Recepção */}
-          <TabsContent value="recepcao" className="mt-4">
-            <p className="text-sm text-muted-foreground mb-3">Volumes em triagem no CD</p>
+          <TabsContent value="recepcao" className="mt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1.5 h-6 bg-purple-500 rounded-full" />
+              <p className="text-sm text-muted-foreground">Volumes em triagem no CD</p>
+            </div>
             {renderVolumeList(emTriagem, 'Nenhum volume em triagem')}
           </TabsContent>
 
           {/* Operação Interna */}
-          <TabsContent value="operacao" className="mt-4">
-            <p className="text-sm text-muted-foreground mb-3">Volumes aguardando despache</p>
+          <TabsContent value="operacao" className="mt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1.5 h-6 bg-indigo-500 rounded-full" />
+              <p className="text-sm text-muted-foreground">Volumes aguardando despache</p>
+            </div>
             {renderVolumeList(aguardandoExpedicao, 'Nenhum volume aguardando despache')}
           </TabsContent>
 
           {/* Entregas */}
-          <TabsContent value="entregas" className="mt-4">
+          <TabsContent value="entregas" className="mt-6">
             <Tabs value={subTab || 'despachados'} onValueChange={setSubTab}>
-              <TabsList className="mb-4">
-                <TabsTrigger value="despachados">Em Rota ({despachados.length})</TabsTrigger>
-                <TabsTrigger value="concluidos">Concluídos ({concluidos.length})</TabsTrigger>
+              <TabsList className="mb-4 bg-slate-100/80">
+                <TabsTrigger value="despachados" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Em Rota ({despachados.length})</TabsTrigger>
+                <TabsTrigger value="concluidos" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Concluídos ({concluidos.length})</TabsTrigger>
               </TabsList>
               <TabsContent value="despachados">
                 {renderVolumeList(despachados, 'Nenhum volume despachado')}
@@ -707,8 +742,11 @@ const CdDashboard = () => {
           </TabsContent>
 
           {/* Devoluções */}
-          <TabsContent value="devolucoes" className="mt-4">
-            <p className="text-sm text-muted-foreground mb-3">Volumes devolvidos</p>
+          <TabsContent value="devolucoes" className="mt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1.5 h-6 bg-red-500 rounded-full" />
+              <p className="text-sm text-muted-foreground">Volumes devolvidos</p>
+            </div>
             {renderVolumeList(devolucoes, 'Nenhuma devolução')}
           </TabsContent>
         </Tabs>
