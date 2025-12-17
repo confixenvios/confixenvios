@@ -125,25 +125,16 @@ const ClientDashboard = () => {
       {/* Email Confirmation Banner */}
       <EmailConfirmationBanner />
       
-      {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-primary to-red-600 rounded-xl p-6 text-white shadow-lg">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">
-              Bem-vindo{user?.email ? `, ${user.email.split('@')[0]}` : ''}! 👋
-            </h1>
-            <p className="text-white/80 mt-1">
-              Visão geral das suas remessas e ações rápidas
-            </p>
-          </div>
-          <div className="hidden md:block">
-            <Package className="w-16 h-16 text-white/20" />
-          </div>
-        </div>
+      {/* Header - Simple like reference */}
+      <div className="flex flex-col space-y-2">
+        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-muted-foreground">
+          Visão geral das suas remessas e ações rápidas
+        </p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="border-t-4 border-t-primary shadow-md hover:shadow-lg transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -160,7 +151,7 @@ const ClientDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-t-4 border-t-warning shadow-md hover:shadow-lg transition-shadow">
+        <Card className="border-t-4 border-t-amber-500 shadow-md hover:shadow-lg transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -169,8 +160,8 @@ const ClientDashboard = () => {
                   {loading ? '...' : stats.pendingShipments}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center">
-                <Clock className="w-6 h-6 text-warning" />
+              <div className="w-12 h-12 bg-amber-500/10 rounded-full flex items-center justify-center">
+                <Clock className="w-6 h-6 text-amber-500" />
               </div>
             </div>
           </CardContent>
@@ -192,7 +183,6 @@ const ClientDashboard = () => {
           </CardContent>
         </Card>
       </div>
-
 
       {/* Quick Access & Recent Shipments */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

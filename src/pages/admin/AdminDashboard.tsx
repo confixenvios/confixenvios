@@ -258,36 +258,32 @@ const AdminDashboard = () => {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-primary to-red-600 rounded-xl p-6 text-white shadow-lg">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">
-              Bem-vindo ao Painel Administrativo! 👋
-            </h1>
-            <p className="text-white/80 mt-1">
-              Visão geral da plataforma e indicadores de performance
-            </p>
-          </div>
-          <div className="flex items-center space-x-2 mt-4 md:mt-0">
-            <Badge variant="secondary" className="text-xs bg-white/20 text-white border-0">
-              Atualizado: {lastUpdated.toLocaleTimeString('pt-BR')}
-            </Badge>
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              onClick={loadDashboardData}
-              disabled={loading}
-              className="bg-white/20 hover:bg-white/30 text-white border-0"
-            >
-              {loading ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-              ) : (
-                <TrendingUp className="w-4 h-4 mr-2" />
-              )}
-              Atualizar
-            </Button>
-          </div>
+      {/* Header - Simple like reference */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Dashboard Administrativo</h1>
+          <p className="text-muted-foreground">
+            Visão geral da plataforma e indicadores de performance
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Badge variant="outline" className="text-xs">
+            Atualizado: {lastUpdated.toLocaleTimeString('pt-BR')}
+          </Badge>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={loadDashboardData}
+            disabled={loading}
+            className="border-primary/30 hover:bg-primary/5 hover:border-primary"
+          >
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
+            ) : (
+              <TrendingUp className="w-4 h-4 mr-2" />
+            )}
+            Atualizar
+          </Button>
         </div>
       </div>
 
