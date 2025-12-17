@@ -179,7 +179,7 @@ serve(async (req) => {
                   eti_code: etiCode,
                   volume_number: volumeNumber,
                   weight: volumeWeight,
-                  status: 'PENDENTE',
+                  status: 'AGUARDANDO_ACEITE_COLETA',
                   recipient_name: volumeAddress.recipient_name || volumeAddress.recipientName || volumeAddress.name || 'Destinatário',
                   recipient_phone: volumeAddress.recipient_phone || volumeAddress.recipientPhone || volumeAddress.phone || '',
                   recipient_document: volumeAddress.recipient_document || volumeAddress.recipientDocument || volumeAddress.document || null,
@@ -206,7 +206,7 @@ serve(async (req) => {
                   // Registrar histórico inicial
                   await supabase.from('b2b_status_history').insert({
                     volume_id: newVolume.id,
-                    status: 'PENDENTE',
+                    status: 'AGUARDANDO_ACEITE_COLETA',
                     observacoes: 'Volume criado após confirmação de pagamento'
                   });
                 }

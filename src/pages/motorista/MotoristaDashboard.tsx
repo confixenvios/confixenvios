@@ -195,7 +195,7 @@ const MotoristaDashboard = () => {
             pickup_address:b2b_pickup_addresses!b2b_shipments_pickup_address_id_fkey(name, contact_name, contact_phone, street, number, neighborhood, city, state)
           )
         `)
-        .or(`status.eq.PENDENTE,motorista_coleta_id.eq.${id},motorista_entrega_id.eq.${id}`)
+        .or(`status.eq.AGUARDANDO_ACEITE_COLETA,status.eq.PENDENTE,motorista_coleta_id.eq.${id},motorista_entrega_id.eq.${id}`)
         .order('created_at', { ascending: false });
       
       // Buscar também volumes que este motorista coletou (via histórico) para "Entregue ao CD"
@@ -316,7 +316,7 @@ const MotoristaDashboard = () => {
   };
 
   // Filtros - Coletas
-  const pendentes = filterBySearch(volumes.filter(v => v.status === 'AGUARDANDO_ACEITE_COLETA' && !v.motorista_coleta_id));
+  const pendentes = filterBySearch(volumes.filter(v => (v.status === 'AGUARDANDO_ACEITE_COLETA' || v.status === 'PENDENTE') && !v.motorista_coleta_id));
   const aceitos = filterBySearch(volumes.filter(v => v.status === 'COLETA_ACEITA' && v.motorista_coleta_id === motorista?.id));
   const coletados = filterBySearch(volumes.filter(v => v.status === 'COLETADO' && v.motorista_coleta_id === motorista?.id));
   const entreguesAoCd = filterBySearch(volumes.filter(v => {
