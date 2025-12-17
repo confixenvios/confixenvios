@@ -2304,57 +2304,44 @@ const AdminRemessas = () => {
                 <p className="text-sm text-muted-foreground">Nenhum histórico registrado.</p>
               ) : (
                 <div className="space-y-2">
-                  {b2bStatusHistory.map((entry, idx) => {
-                    const isB2B0 = ['ACEITA', 'COLETA_ACEITA', 'B2B_COLETA_FINALIZADA'].includes(entry.status);
-                    const isB2B2 = ['B2B_ENTREGA_ACEITA', 'ENTREGUE', 'ENTREGA_FINALIZADA'].includes(entry.status);
-                    const phaseLabel = isB2B0 ? 'B2B-0' : isB2B2 ? 'B2B-2' : '';
-                    
-                    return (
-                      <div key={entry.id} className="bg-muted/50 p-3 rounded-lg space-y-1 text-sm">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {entry.status}
-                            </Badge>
-                            {phaseLabel && (
-                              <Badge variant={isB2B0 ? 'secondary' : 'default'} className="text-xs">
-                                {phaseLabel}
-                              </Badge>
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(entry.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                          </span>
-                        </div>
-                        {entry.status_description && (
-                          <p className="text-muted-foreground">{entry.status_description}</p>
-                        )}
-                        {entry.motoristas && (
-                          <div className="flex items-center gap-1 text-xs">
-                            <Truck className="w-3 h-3" />
-                            <span className="font-medium">{entry.motoristas.nome}</span>
-                            <span className="text-muted-foreground">({entry.motoristas.telefone})</span>
-                          </div>
-                        )}
-                        {entry.observacoes && (
-                          <p className="text-xs text-muted-foreground italic">{entry.observacoes}</p>
-                        )}
-                        {entry.photo_url && (
-                          <div className="mt-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => window.open(entry.photo_url, '_blank')}
-                            >
-                              <Eye className="w-3 h-3 mr-1" />
-                              Ver Foto de Comprovação
-                            </Button>
-                          </div>
-                        )}
+                  {b2bStatusHistory.map((entry) => (
+                    <div key={entry.id} className="bg-muted/50 p-3 rounded-lg space-y-1 text-sm">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="text-xs">
+                          {entry.status}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(entry.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        </span>
                       </div>
-                    );
-                  })}
+                      {entry.status_description && (
+                        <p className="text-muted-foreground">{entry.status_description}</p>
+                      )}
+                      {entry.motoristas && (
+                        <div className="flex items-center gap-1 text-xs">
+                          <Truck className="w-3 h-3" />
+                          <span className="font-medium">{entry.motoristas.nome}</span>
+                          <span className="text-muted-foreground">({entry.motoristas.telefone})</span>
+                        </div>
+                      )}
+                      {entry.observacoes && (
+                        <p className="text-xs text-muted-foreground italic">{entry.observacoes}</p>
+                      )}
+                      {entry.photo_url && (
+                        <div className="mt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => window.open(entry.photo_url, '_blank')}
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            Ver Foto de Comprovação
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
