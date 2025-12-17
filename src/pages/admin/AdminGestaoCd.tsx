@@ -110,14 +110,14 @@ const AdminGestaoCd = () => {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  // Filtrar remessas B2B-0 (Coleta) - status antes de B2B_COLETA_FINALIZADA
-  const b2b0Shipments = shipments.filter(s => 
+  // Filtrar remessas de Coleta - status antes de finalização
+  const coletaShipments = shipments.filter(s => 
     ['PENDENTE', 'ACEITA'].includes(s.status) ||
     (s.status === 'B2B_COLETA_FINALIZADA')
   );
 
-  // Filtrar remessas B2B-2 (Entrega) - status após coleta finalizada
-  const b2b2Shipments = shipments.filter(s => 
+  // Filtrar remessas de Entrega - status após coleta finalizada
+  const entregaShipments = shipments.filter(s => 
     ['B2B_COLETA_FINALIZADA', 'B2B_ENTREGA_ACEITA', 'ENTREGUE'].includes(s.status)
   );
 
@@ -198,14 +198,10 @@ const AdminGestaoCd = () => {
         
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 text-blue-600 rounded-lg">
-            <span className="font-medium">B2B-0</span>
-            <span>=</span>
-            <span>Coleta</span>
+            <span className="font-medium">Coleta</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 text-green-600 rounded-lg">
-            <span className="font-medium">B2B-2</span>
-            <span>=</span>
-            <span>Entrega</span>
+            <span className="font-medium">Entrega</span>
           </div>
         </div>
       </div>
@@ -229,36 +225,36 @@ const AdminGestaoCd = () => {
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'b2b0' | 'b2b2')}>
         <TabsList className="grid w-full grid-cols-2 max-w-md">
           <TabsTrigger value="b2b0" className="flex items-center gap-2">
-            <span>B2B-0 (Coleta)</span>
-            <Badge variant="secondary">{filterShipments(b2b0Shipments).length}</Badge>
+            <span>Coleta</span>
+            <Badge variant="secondary">{filterShipments(coletaShipments).length}</Badge>
           </TabsTrigger>
           <TabsTrigger value="b2b2" className="flex items-center gap-2">
-            <span>B2B-2 (Entrega)</span>
-            <Badge variant="secondary">{filterShipments(b2b2Shipments).length}</Badge>
+            <span>Entrega</span>
+            <Badge variant="secondary">{filterShipments(entregaShipments).length}</Badge>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="b2b0" className="mt-4 space-y-4">
-          {filterShipments(b2b0Shipments).length === 0 ? (
+          {filterShipments(coletaShipments).length === 0 ? (
             <Card className="border-border/50">
               <CardContent className="p-8 text-center text-muted-foreground">
-                Nenhuma remessa B2B-0 (Coleta) encontrada
+                Nenhuma remessa de coleta encontrada
               </CardContent>
             </Card>
           ) : (
-            filterShipments(b2b0Shipments).map(renderShipmentCard)
+            filterShipments(coletaShipments).map(renderShipmentCard)
           )}
         </TabsContent>
 
         <TabsContent value="b2b2" className="mt-4 space-y-4">
-          {filterShipments(b2b2Shipments).length === 0 ? (
+          {filterShipments(entregaShipments).length === 0 ? (
             <Card className="border-border/50">
               <CardContent className="p-8 text-center text-muted-foreground">
-                Nenhuma remessa B2B-2 (Entrega) encontrada
+                Nenhuma remessa de entrega encontrada
               </CardContent>
             </Card>
           ) : (
-            filterShipments(b2b2Shipments).map(renderShipmentCard)
+            filterShipments(entregaShipments).map(renderShipmentCard)
           )}
         </TabsContent>
       </Tabs>
