@@ -40,6 +40,7 @@ import AdminClientes from "./pages/admin/AdminClientes";
 import AdminMotoristas from "./pages/admin/AdminMotoristas";
 import AdminFiliais from "./pages/admin/AdminFiliais";
 import AdminRemessas from "./pages/admin/AdminRemessas";
+import AdminRemessasExpresso from "./pages/admin/AdminRemessasExpresso";
 import AdminFaturamento from "./pages/admin/AdminFaturamento";
 import AdminClientesB2B from "./pages/admin/AdminClientesB2B";
 import AdminCadastroClienteB2B from "./pages/admin/AdminCadastroClienteB2B";
@@ -140,6 +141,7 @@ const App = () => (
                       <Route path="filiais" element={<AdminFiliais />} />
                       <Route path="faturamento" element={<AdminFaturamento />} />
                       <Route path="remessas" element={<AdminRemessas />} />
+                      <Route path="remessas-expresso" element={<AdminRemessasExpresso />} />
                       <Route path="rastreamento" element={<AdminRastreio />} />
                       <Route path="cte" element={<AdminCte />} />
                        <Route path="api-externa" element={<AdminApiExterna />} />

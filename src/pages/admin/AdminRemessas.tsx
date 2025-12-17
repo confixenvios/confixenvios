@@ -1084,6 +1084,10 @@ const AdminRemessas = () => {
   };
 
   const filteredShipments = shipments.filter(shipment => {
+    // Filtrar apenas remessas convencionais (excluir B2B-)
+    const isConventional = !shipment.tracking_code?.startsWith('B2B-');
+    if (!isConventional) return false;
+    
     const matchesSearch = (shipment.tracking_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           shipment.client_name.toLowerCase().includes(searchTerm.toLowerCase())) ?? false;
     const matchesStatus = statusFilter === "all" || shipment.status === statusFilter;
@@ -1110,9 +1114,9 @@ const AdminRemessas = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Gerenciar Remessas</h1>
+          <h1 className="text-3xl font-bold">Remessas Convencional</h1>
           <p className="text-muted-foreground">
-            Visualize e gerencie todas as remessas do sistema
+            Visualize e gerencie todas as remessas convencionais do sistema
           </p>
         </div>
         <div className="flex items-center space-x-2">
