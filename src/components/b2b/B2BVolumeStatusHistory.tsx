@@ -68,14 +68,29 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
     text: string | null; 
     fotoUrl: string | null;
     coletaData: { entregadorNome: string; entregadorDocumento: string; assinaturaUrl: string } | null;
-    entregaData: { recebedorNome: string; recebedorDocumento: string; assinaturaUrl: string; fotoUrl: string } | null;
+    entregaData: { recebedorNome: string; recebedorDocumento: string; assinaturaUrl: string; fotosUrls: string[] } | null;
   } => {
     if (!observacoes) return { text: null, fotoUrl: null, coletaData: null, entregaData: null };
     
     try {
       const parsed = JSON.parse(observacoes);
       
-      // Dados de entrega finalizada (com recebedor)
+      // Dados de entrega finalizada (com recebedor) - novo formato com fotos_urls array
+      if (parsed.recebedor_nome && parsed.assinatura_url && parsed.fotos_urls) {
+        return {
+          text: null,
+          fotoUrl: null,
+          coletaData: null,
+          entregaData: {
+            recebedorNome: parsed.recebedor_nome,
+            recebedorDocumento: parsed.recebedor_documento,
+            assinaturaUrl: parsed.assinatura_url,
+            fotosUrls: parsed.fotos_urls || []
+          }
+        };
+      }
+      
+      // Dados de entrega finalizada (com recebedor) - formato antigo com foto_url única
       if (parsed.recebedor_nome && parsed.assinatura_url && parsed.foto_url) {
         return {
           text: null,
@@ -85,7 +100,7 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
             recebedorNome: parsed.recebedor_nome,
             recebedorDocumento: parsed.recebedor_documento,
             assinaturaUrl: parsed.assinatura_url,
-            fotoUrl: parsed.foto_url
+            fotosUrls: [parsed.foto_url]
           }
         };
       }
@@ -234,26 +249,27 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
                   <p className="text-xs text-muted-foreground">
                     <span className="font-medium">Documento:</span> {parsedObs.entregaData.recebedorDocumento}
                   </p>
-                  <div className="flex flex-wrap gap-3 mt-1">
+                  <a 
+                    href={parsedObs.entregaData.assinaturaUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline mt-1"
+                  >
+                    <Image className="h-3 w-3" />
+                    Ver assinatura
+                  </a>
+                  {parsedObs.entregaData.fotosUrls.map((fotoUrl, idx) => (
                     <a 
-                      href={parsedObs.entregaData.assinaturaUrl} 
+                      key={idx}
+                      href={fotoUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline"
                     >
                       <Image className="h-3 w-3" />
-                      Ver assinatura
+                      Ver Foto ({idx + 1})
                     </a>
-                    <a 
-                      href={parsedObs.entregaData.fotoUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline"
-                    >
-                      <Image className="h-3 w-3" />
-                      Ver foto da entrega
-                    </a>
-                  </div>
+                  ))}
                 </div>
               )}
               
