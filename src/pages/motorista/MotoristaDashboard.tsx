@@ -652,19 +652,19 @@ const MotoristaDashboard = () => {
   // Menu items
   const menuItems = [
     { section: 'coletas', label: 'Coletas', icon: Truck },
-    { section: 'despache', label: 'Despache', icon: Send },
+    { section: 'despache', label: 'Expedição', icon: Send },
   ];
 
   const coletasSubItems = [
-    { tab: 'pendentes', label: 'Pendentes', count: pendentes.length },
+    { tab: 'pendentes', label: 'Aguardando Aceite Coleta', count: pendentes.length },
     { tab: 'aceitos', label: 'Aceitos', count: aceitos.length },
     { tab: 'coletados', label: 'Coletados', count: coletados.length },
     { tab: 'entregues_cd', label: 'Entregue ao CD', count: entreguesAoCd.length },
   ];
 
   const despachaSubItems = [
-    { tab: 'aguardando', label: 'Aguardando Despache', count: aguardandoExpedicao.length },
-    { tab: 'despachados', label: 'Despachados', count: despachados.length },
+    { tab: 'aguardando', label: 'Aguardando Aceite Expedição', count: aguardandoExpedicao.length },
+    { tab: 'despachados', label: 'Expedidos', count: despachados.length },
     { tab: 'concluidos', label: 'Concluídos', count: concluidos.length },
     { tab: 'devolucoes', label: 'Devoluções', count: devolucoes.length },
   ];
