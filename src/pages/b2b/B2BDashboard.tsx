@@ -6,18 +6,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Plus, Eye, Loader2, ChevronDown, History, MapPin, User, Phone, FileText, Printer, Download, Search
- } from 'lucide-react';
+import { Package, Plus, Eye, Loader2, ChevronDown, History, MapPin, User, Phone, FileText, Printer, Download, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import B2BStatusBadge from '@/components/b2b/B2BStatusBadge';
 import B2BVolumeStatusHistory from '@/components/b2b/B2BVolumeStatusHistory';
 import B2BLabelGenerator from '@/components/b2b/B2BLabelGenerator';
-import B2BAllLabelsGenerator from '@/components/b2b/B2BAllLabelsGenerator';
 
 interface B2BClient {
   id: string;
@@ -86,7 +84,7 @@ const B2BDashboard = () => {
   const [labelVolume, setLabelVolume] = useState<B2BVolume | null>(null);
   const [searchEti, setSearchEti] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'remessas' | 'volumes'>('remessas');
+  
 
   useEffect(() => {
     loadClientData();
@@ -286,19 +284,10 @@ const B2BDashboard = () => {
           
           {/* Filtros */}
           <div className="flex flex-col sm:flex-row gap-3 mt-4">
-            <Select value={viewMode} onValueChange={(v) => setViewMode(v as 'remessas' | 'volumes')}>
-              <SelectTrigger className="w-full sm:w-[140px]">
-                <SelectValue placeholder="Visualizar" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="remessas">Remessas</SelectItem>
-                <SelectItem value="volumes">Volumes</SelectItem>
-              </SelectContent>
-            </Select>
             <div className="relative flex-1 max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar pedido..."
+                placeholder="Buscar por ETI ou destinatário..."
                 value={searchEti}
                 onChange={(e) => setSearchEti(e.target.value)}
                 className="pl-9"
@@ -324,7 +313,7 @@ const B2BDashboard = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {shipments.length === 0 ? (
+          {volumes.length === 0 ? (
             <div className="text-center py-12">
               <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
               <p className="text-muted-foreground mb-4">Nenhum envio cadastrado ainda</p>
@@ -333,197 +322,89 @@ const B2BDashboard = () => {
                 Solicitar Primeira Coleta
               </Button>
             </div>
-          ) : viewMode === 'remessas' ? (
-            // Visualização por Remessas
-            filteredShipments.length === 0 ? (
-              <div className="text-center py-12">
-                <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground mb-4">Nenhuma remessa encontrada com os filtros aplicados</p>
-                <Button variant="outline" onClick={() => { setSearchEti(''); setStatusFilter('all'); }}>
-                  Limpar Filtros
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredShipments.map((shipment) => {
-                  const shipmentVolumes = getShipmentVolumes(shipment.id);
-                  const displayStatus = getShipmentDisplayStatus(shipment);
-                  return (
-                    <div
-                      key={shipment.id}
-                      className="p-4 border-0 rounded-xl shadow-md hover:shadow-lg transition-all bg-white overflow-hidden"
-                    >
-                      {/* Status bar on top */}
-                      <div className={`h-1 -mx-4 -mt-4 mb-4 ${displayStatus === 'CONCLUIDO' || displayStatus === 'ENTREGUE' ? 'bg-emerald-500' : displayStatus === 'DEVOLUCAO' ? 'bg-red-500' : 'bg-primary'}`} />
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-mono text-sm font-bold text-foreground">{shipment.tracking_code}</p>
-                          <Badge variant="outline" className="text-xs border-slate-200 text-muted-foreground">
-                            {shipment.total_volumes} volume(s)
-                          </Badge>
-                        </div>
-                        <Badge className={`text-xs font-medium border ${getStatusColor(displayStatus)}`}>
-                          {getStatusLabel(displayStatus)}
-                        </Badge>
-                      </div>
-                      
-                      <p className="text-sm text-foreground font-medium">
-                        {shipment.delivery_date 
-                          ? `Previsão de Entrega: ${format(new Date(shipment.delivery_date + 'T12:00:00'), 'dd/MM/yyyy')}`
-                          : 'Data de entrega não definida'}
-                      </p>
-                      <div className="flex items-center justify-between mt-2">
-                        <p className="text-xs font-semibold text-orange-600 dark:text-orange-400">
-                          ⚠️ Atenção: Por favor cole as etiquetas no produto
-                        </p>
-                        <B2BAllLabelsGenerator
-                          volumes={shipmentVolumes}
-                          shipment={{
-                            id: shipment.id,
-                            tracking_code: shipment.tracking_code,
-                            delivery_date: shipment.delivery_date,
-                            pickup_address: shipment.pickup_address
-                          }}
-                          companyName={client?.company_name}
-                          companyDocument={client?.cnpj}
-                          companyPhone={client?.phone}
-                          buttonVariant="outline"
-                          buttonSize="sm"
-                          buttonClassName="h-7 text-xs"
-                        />
-                      </div>
-
-                      {/* Volumes list */}
-                      <Collapsible className="mt-3">
-                        <CollapsibleTrigger asChild>
-                          <Button variant="ghost" size="sm" className="w-full justify-between p-2 h-8 text-xs">
-                            <span className="flex items-center gap-1">
-                              <Package className="h-3 w-3" />
-                              Ver {shipmentVolumes.length} Volume(s)
-                            </span>
-                            <ChevronDown className="h-3 w-3" />
-                          </Button>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="pt-2 border-t mt-2 space-y-2">
-                          {shipmentVolumes.map((volume) => (
-                            <div key={volume.id} className="p-3 bg-muted/50 rounded text-xs space-y-2">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-mono font-semibold text-sm">{volume.eti_code}</span>
-                                    <Badge variant="outline" className={`text-[10px] ${getStatusColor(volume.status)}`}>
-                                      {getStatusLabel(volume.status)}
-                                    </Badge>
-                                  </div>
-                                  <p className="text-muted-foreground">{volume.recipient_name}</p>
-                                  <p className="text-muted-foreground">
-                                    {shipment.delivery_date 
-                                      ? `Previsão de Entrega: ${format(new Date(shipment.delivery_date + 'T12:00:00'), 'dd/MM/yyyy')}`
-                                      : 'Previsão de Entrega não definida'}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 pt-1 border-t border-border/50">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-7 text-xs flex-1"
-                                  onClick={() => handleShowVolumeDetails(volume)}
-                                >
-                                  <Eye className="h-3 w-3 mr-1" />
-                                  Ver Detalhes
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </CollapsibleContent>
-                      </Collapsible>
-                      
-                      <div className="flex items-center gap-2 mt-3">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleShowDetails(shipment)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Ver Detalhes
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )
+          ) : filteredVolumes.length === 0 ? (
+            <div className="text-center py-12">
+              <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground mb-4">Nenhum volume encontrado com os filtros aplicados</p>
+              <Button variant="outline" onClick={() => { setSearchEti(''); setStatusFilter('all'); }}>
+                Limpar Filtros
+              </Button>
+            </div>
           ) : (
-            // Visualização por Volumes
-            filteredVolumes.length === 0 ? (
-              <div className="text-center py-12">
-                <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground mb-4">Nenhum volume encontrado com os filtros aplicados</p>
-                <Button variant="outline" onClick={() => { setSearchEti(''); setStatusFilter('all'); }}>
-                  Limpar Filtros
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredVolumes.map((volume) => {
-                  const volumeShipment = getVolumeShipment(volume);
-                  return (
-                    <div
-                      key={volume.id}
-                      className="p-4 border-0 rounded-xl shadow-md hover:shadow-lg transition-all bg-white overflow-hidden"
-                    >
-                      {/* Status bar on top */}
-                      <div className={`h-1 -mx-4 -mt-4 mb-4 ${volume.status === 'CONCLUIDO' || volume.status === 'ENTREGUE' ? 'bg-emerald-500' : volume.status === 'DEVOLUCAO' ? 'bg-red-500' : 'bg-primary'}`} />
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-sm font-bold text-foreground">{volume.eti_code}</span>
-                          {volumeShipment && (
-                            <Badge variant="secondary" className="text-xs font-mono bg-slate-100 text-slate-600">
-                              {volumeShipment.tracking_code}
-                            </Badge>
-                          )}
-                        </div>
-                        <Badge className={`text-xs font-medium border ${getStatusColor(volume.status)}`}>
-                          {getStatusLabel(volume.status)}
-                        </Badge>
-                      </div>
-                      
-                      <div className="space-y-1 text-sm">
-                        <p className="font-medium flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          {volume.recipient_name}
-                        </p>
-                        <p className="text-muted-foreground flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          {volume.recipient_phone}
-                        </p>
-                        <p className="text-muted-foreground flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {volume.recipient_street}, {volume.recipient_number} - {volume.recipient_neighborhood}, {volume.recipient_city}/{volume.recipient_state}
-                        </p>
-                        {volumeShipment?.delivery_date && (
-                          <p className="text-foreground font-medium">
-                            Previsão: {format(new Date(volumeShipment.delivery_date + 'T12:00:00'), 'dd/MM/yyyy')}
-                          </p>
+            <div className="space-y-3">
+              {filteredVolumes.map((volume) => {
+                const volumeShipment = getVolumeShipment(volume);
+                return (
+                  <div
+                    key={volume.id}
+                    className="p-4 border-0 rounded-xl shadow-md hover:shadow-lg transition-all bg-white overflow-hidden"
+                  >
+                    {/* Status bar on top */}
+                    <div className={`h-1 -mx-4 -mt-4 mb-4 ${volume.status === 'CONCLUIDO' || volume.status === 'ENTREGUE' ? 'bg-emerald-500' : volume.status === 'DEVOLUCAO' ? 'bg-red-500' : 'bg-primary'}`} />
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm font-bold text-foreground">{volume.eti_code}</span>
+                        {volumeShipment && (
+                          <Badge variant="secondary" className="text-xs font-mono bg-slate-100 text-slate-600">
+                            {volumeShipment.tracking_code}
+                          </Badge>
                         )}
                       </div>
-                      
-                      <div className="flex items-center gap-2 mt-3">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleShowVolumeDetails(volume)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Ver Detalhes
-                        </Button>
-                      </div>
+                      <Badge className={`text-xs font-medium border ${getStatusColor(volume.status)}`}>
+                        {getStatusLabel(volume.status)}
+                      </Badge>
                     </div>
-                  );
-                })}
-              </div>
-            )
+                    
+                    <div className="space-y-1 text-sm">
+                      <p className="font-medium flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        {volume.recipient_name}
+                      </p>
+                      <p className="text-muted-foreground flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        {volume.recipient_phone}
+                      </p>
+                      <p className="text-muted-foreground flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {volume.recipient_street}, {volume.recipient_number} - {volume.recipient_neighborhood}, {volume.recipient_city}/{volume.recipient_state}
+                      </p>
+                      {volumeShipment?.delivery_date && (
+                        <p className="text-foreground font-medium">
+                          Previsão: {format(new Date(volumeShipment.delivery_date + 'T12:00:00'), 'dd/MM/yyyy')}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Aviso de etiqueta */}
+                    <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                      <p className="text-xs font-semibold text-orange-700 flex items-center gap-1">
+                        ⚠️ Atenção: Por favor cole esta etiqueta no produto
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleShowVolumeDetails(volume)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver Detalhes
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handlePrintLabel(volume)}
+                        className="bg-primary hover:bg-primary/90"
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        Baixar Etiqueta
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </CardContent>
       </Card>
