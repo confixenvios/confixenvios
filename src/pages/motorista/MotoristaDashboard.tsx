@@ -929,20 +929,6 @@ const MotoristaDashboard = () => {
                 </Button>
               )}
               
-              {/* Botão Coletar individual para volumes aceitos */}
-              {showActions === 'collect' && (
-                <Button 
-                  size="sm"
-                  className="bg-red-600 hover:bg-red-700"
-                  onClick={() => {
-                    setCollectBatchVolumes([v]);
-                    setCollectBatchModalOpen(true);
-                  }}
-                >
-                  Coletar
-                </Button>
-              )}
-              
               {/* Botão Aceitar individual para volumes aguardando despache */}
               {showActions === 'bip' && (
                 <Button 
@@ -1130,7 +1116,7 @@ const MotoristaDashboard = () => {
               }}
             >
               <Package className="h-4 w-4 mr-2" />
-              Coletar Vários
+              Coletar
             </Button>
           )}
           
