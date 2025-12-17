@@ -656,7 +656,7 @@ const MotoristaDashboard = () => {
   ];
 
   const coletasSubItems = [
-    { tab: 'pendentes', label: 'Aguardando Aceite Coleta', count: pendentes.length },
+    { tab: 'pendentes', label: 'Aguardando Aceite', count: pendentes.length },
     { tab: 'aceitos', label: 'Aceitos', count: aceitos.length },
     { tab: 'coletados', label: 'Coletados', count: coletados.length },
     { tab: 'entregues_cd', label: 'Entregue ao CD', count: entreguesAoCd.length },
