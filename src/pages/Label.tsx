@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import InputMask from "react-input-mask";
 import Header from "@/components/Header";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -508,21 +509,12 @@ const Label = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <FormLabel htmlFor={`${type}-phone`}>Telefone *</FormLabel>
-            <InputMask
-              mask="(99) 99999-9999"
+            <PhoneInput
               value={data.phone}
               onChange={(e) => handleAddressChange(type, 'phone', e.target.value)}
-            >
-              {(inputProps: any) => (
-                <Input
-                  {...inputProps}
-                  id={`${type}-phone`}
-                  type="tel"
-                  placeholder="(00) 00000-0000"
-                  className="border-input-border focus:border-primary focus:ring-primary"
-                />
-              )}
-            </InputMask>
+              placeholder="(00) 0000-0000"
+              className="border-input-border focus:border-primary focus:ring-primary"
+            />
           </div>
           <div className="space-y-2">
             <FormLabel htmlFor={`${type}-email`}>E-mail *</FormLabel>

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { User, Plus, Edit2, Check, Trash2, Star } from "lucide-react";
 import InputMask from "react-input-mask";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -570,20 +571,12 @@ const SenderFormContent = ({ editingSender, isNewSender, onSave, onCancel, loadi
         {/* Telefone */}
         <div>
           <Label htmlFor="phone">Telefone *</Label>
-          <InputMask
-            mask="(99) 99999-9999"
+          <PhoneInput
             value={formData.phone}
             onChange={(e: any) => handleInputChange("phone", e.target.value)}
-          >
-            {(inputProps: any) => (
-              <Input
-                {...inputProps}
-                id="phone"
-                placeholder="(00) 00000-0000"
-                required
-              />
-            )}
-          </InputMask>
+            placeholder="(00) 0000-0000"
+            required
+          />
         </div>
 
         {/* Email */}

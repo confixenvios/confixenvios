@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { User, Plus, Edit2, Check, Trash2, Star } from "lucide-react";
 import InputMask from "react-input-mask";
 import { supabase } from "@/integrations/supabase/client";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { sanitizeTextInput } from "@/utils/inputValidation";
@@ -592,19 +593,12 @@ const AddressFormContent = ({ editingAddress, isNewAddress, onSave, onCancel, lo
           </div>
           <div className="space-y-2">
             <Label>Telefone *</Label>
-            <InputMask
-              mask="(99) 99999-9999"
+            <PhoneInput
               value={formData.phone}
               onChange={(e) => handleInputChange('phone', e.target.value)}
-            >
-              {(inputProps: any) => (
-                <Input
-                  {...inputProps}
-                  placeholder="(00) 00000-0000"
-                  required
-                />
-              )}
-            </InputMask>
+              placeholder="(00) 0000-0000"
+              required
+            />
           </div>
         </div>
         
