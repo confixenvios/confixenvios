@@ -125,17 +125,26 @@ const ClientDashboard = () => {
       {/* Email Confirmation Banner */}
       <EmailConfirmationBanner />
       
-      {/* Header */}
-      <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Visão geral das suas remessas e ações rápidas
-        </p>
+      {/* Welcome Header */}
+      <div className="bg-gradient-to-r from-primary to-red-600 rounded-xl p-6 text-white shadow-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold">
+              Bem-vindo{user?.email ? `, ${user.email.split('@')[0]}` : ''}! 👋
+            </h1>
+            <p className="text-white/80 mt-1">
+              Visão geral das suas remessas e ações rápidas
+            </p>
+          </div>
+          <div className="hidden md:block">
+            <Package className="w-16 h-16 text-white/20" />
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="border-border/50 shadow-card">
+        <Card className="border-t-4 border-t-primary shadow-md hover:shadow-lg transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -151,7 +160,7 @@ const ClientDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 shadow-card">
+        <Card className="border-t-4 border-t-warning shadow-md hover:shadow-lg transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -167,7 +176,7 @@ const ClientDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 shadow-card">
+        <Card className="border-t-4 border-t-green-500 shadow-md hover:shadow-lg transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -176,8 +185,8 @@ const ClientDashboard = () => {
                   {loading ? '...' : stats.deliveredShipments}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-success/10 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-success" />
+              <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-green-500" />
               </div>
             </div>
           </CardContent>
@@ -188,10 +197,10 @@ const ClientDashboard = () => {
       {/* Quick Access & Recent Shipments */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Access */}
-        <Card className="border-border/50 shadow-card">
+        <Card className="border-t-4 border-t-primary shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <ArrowRight className="w-5 h-5" />
+            <CardTitle className="flex items-center space-x-2 text-foreground">
+              <ArrowRight className="w-5 h-5 text-primary" />
               <span>Ações Rápidas</span>
             </CardTitle>
             <CardDescription>
@@ -199,28 +208,28 @@ const ClientDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button asChild className="w-full justify-start">
+            <Button asChild className="w-full justify-start bg-gradient-to-r from-primary to-red-600 hover:from-red-600 hover:to-red-700 shadow-md">
               <Link to="/cliente/cotacoes">
                 <Calculator className="w-4 h-4 mr-2" />
                 Nova Cotação
               </Link>
             </Button>
             
-            <Button asChild variant="outline" className="w-full justify-start">
+            <Button asChild variant="outline" className="w-full justify-start border-primary/30 hover:bg-primary/5 hover:border-primary">
               <Link to="/cliente/remessas">
                 <Package className="w-4 h-4 mr-2" />
                 Ver Minhas Remessas
               </Link>
             </Button>
             
-            <Button asChild variant="outline" className="w-full justify-start">
+            <Button asChild variant="outline" className="w-full justify-start border-primary/30 hover:bg-primary/5 hover:border-primary">
               <Link to="/cliente/etiquetas">
                 <FileText className="w-4 h-4 mr-2" />
                 Baixar Etiquetas
               </Link>
             </Button>
             
-            <Button asChild variant="outline" className="w-full justify-start">
+            <Button asChild variant="outline" className="w-full justify-start border-primary/30 hover:bg-primary/5 hover:border-primary">
               <Link to="/cliente/rastreamento">
                 <Search className="w-4 h-4 mr-2" />
                 Rastrear Remessa
@@ -230,14 +239,14 @@ const ClientDashboard = () => {
         </Card>
 
         {/* Recent Shipments */}
-        <Card className="border-border/50 shadow-card">
+        <Card className="border-t-4 border-t-primary shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex items-center justify-between text-foreground">
               <span className="flex items-center space-x-2">
-                <Package className="w-5 h-5" />
+                <Package className="w-5 h-5 text-primary" />
                 <span>Remessas Recentes</span>
               </span>
-              <Button variant="ghost" size="sm" asChild>
+              <Button variant="ghost" size="sm" asChild className="text-primary hover:text-primary hover:bg-primary/5">
                 <Link to="/cliente/remessas">
                   Ver todas
                   <ArrowRight className="w-4 h-4 ml-1" />
@@ -254,11 +263,11 @@ const ClientDashboard = () => {
               </div>
             ) : stats.recentShipments.length === 0 ? (
               <div className="text-center py-8">
-                <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <Package className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
                 <p className="text-muted-foreground mb-4">
                   Você ainda não possui remessas
                 </p>
-                <Button asChild size="sm">
+                <Button asChild size="sm" className="bg-gradient-to-r from-primary to-red-600 hover:from-red-600 hover:to-red-700">
                   <Link to="/">
                     Fazer primeira cotação
                   </Link>
