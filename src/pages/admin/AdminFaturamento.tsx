@@ -214,8 +214,8 @@ const AdminFaturamento = () => {
 
       console.log('📅 Período:', { startDateFilter, endDateFilter });
 
-      // Buscar shipments SEM tentar fazer join com profiles
-      let query = supabase
+      // Buscar shipments convencionais
+      let conventionalQuery = supabase
         .from('shipments')
         .select(`
           id,
@@ -233,50 +233,64 @@ const AdminFaturamento = () => {
         .lte('created_at', endDateFilter.toISOString())
         .or('payment_data.not.is.null,quote_data.not.is.null');
 
-      // Aplicar filtros
       if (selectedClient !== 'all') {
-        query = query.eq('user_id', selectedClient);
+        conventionalQuery = conventionalQuery.eq('user_id', selectedClient);
       }
 
-      const { data: shipments, error } = await query;
-      
-      if (error) {
-        console.error('❌ Erro na query:', error);
-        throw error;
-      }
+      const { data: conventionalShipments, error: convError } = await conventionalQuery;
+      if (convError) throw convError;
 
-      console.log('📦 Shipments encontrados:', shipments?.length);
+      // Buscar shipments B2B
+      let b2bQuery = supabase
+        .from('b2b_shipments')
+        .select(`
+          id,
+          tracking_code,
+          status,
+          created_at,
+          total_price,
+          payment_data,
+          b2b_client_id
+        `)
+        .gte('created_at', startDateFilter.toISOString())
+        .lte('created_at', endDateFilter.toISOString());
 
-      if (!shipments || shipments.length === 0) {
-        console.log('⚠️ Nenhum shipment encontrado');
-        setBillingData({
-          totalRevenue: 0,
-          totalShipments: 0,
-          averageValue: 0,
-          revenueByClient: [],
-          revenueByRegion: [],
-          revenueByPeriod: [],
-          shipmentDetails: []
-        });
-        return;
-      }
+      const { data: b2bShipments, error: b2bError } = await b2bQuery;
+      if (b2bError) throw b2bError;
 
-      // Buscar profiles dos usuários SEPARADAMENTE
-      const userIds = [...new Set(shipments.map(s => s.user_id).filter(Boolean))];
-      console.log('👥 User IDs únicos:', userIds);
-      
+      console.log('📦 Shipments convencionais:', conventionalShipments?.length);
+      console.log('📦 Shipments B2B:', b2bShipments?.length);
+
+      // Buscar profiles dos usuários convencionais
+      const userIds = [...new Set(conventionalShipments?.map(s => s.user_id).filter(Boolean) || [])];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, email')
-        .in('id', userIds);
+        .in('id', userIds.length > 0 ? userIds : ['00000000-0000-0000-0000-000000000000']);
 
-      console.log('👥 Profiles encontrados:', profiles?.length);
+      // Buscar dados dos clientes B2B
+      const b2bClientIds = [...new Set(b2bShipments?.map(s => s.b2b_client_id).filter(Boolean) || [])];
+      const { data: b2bClients } = await supabase
+        .from('b2b_clients')
+        .select('id, company_name, email, user_id')
+        .in('id', b2bClientIds.length > 0 ? b2bClientIds : ['00000000-0000-0000-0000-000000000000']);
 
-      // Filtrar por região se necessário
-      let filteredShipments = shipments;
+      // Filtrar B2B por cliente se necessário
+      let filteredB2B = b2bShipments || [];
+      if (selectedClient !== 'all') {
+        const b2bClientForUser = b2bClients?.find(c => c.user_id === selectedClient);
+        if (b2bClientForUser) {
+          filteredB2B = filteredB2B.filter(s => s.b2b_client_id === b2bClientForUser.id);
+        } else {
+          filteredB2B = [];
+        }
+      }
+
+      // Filtrar convencionais por região
+      let filteredConventional = conventionalShipments || [];
       if (selectedRegion !== 'all') {
         const [cityFilter, stateFilter] = selectedRegion.split(' - ');
-        filteredShipments = shipments.filter(shipment => {
+        filteredConventional = filteredConventional.filter(shipment => {
           const senderMatch = shipment.sender_address?.city === cityFilter && 
                              shipment.sender_address?.state === stateFilter;
           const recipientMatch = shipment.recipient_address?.city === cityFilter && 
@@ -285,52 +299,57 @@ const AdminFaturamento = () => {
         });
       }
 
-      console.log('🔍 Shipments após filtros:', filteredShipments.length);
-
       // Calcular receita total
       let totalRevenue = 0;
-      let shipmentsProcessed = 0;
 
-      filteredShipments.forEach((shipment, index) => {
-        console.log(`💰 Processando shipment ${index + 1}:`, shipment.id);
+      // Receita convencional
+      filteredConventional.forEach(shipment => {
         const value = calculateShipmentValue(shipment);
-        if (value > 0) {
-          totalRevenue += value;
-          shipmentsProcessed++;
-          console.log(`✅ Valor adicionado: R$ ${value} (Total: R$ ${totalRevenue})`);
-        } else {
-          console.log('❌ Nenhum valor encontrado para este shipment');
+        if (value > 0) totalRevenue += value;
+      });
+
+      // Receita B2B
+      filteredB2B.forEach(shipment => {
+        if (shipment.total_price && shipment.total_price > 0) {
+          totalRevenue += Number(shipment.total_price);
         }
       });
 
-      console.log('💰 RESULTADO FINAL:');
-      console.log('💰 Receita total:', totalRevenue);
-      console.log('💰 Shipments com valor:', shipmentsProcessed);
-
-      const totalShipments = filteredShipments.length;
+      const totalShipments = filteredConventional.length + filteredB2B.length;
       const averageValue = totalShipments > 0 ? totalRevenue / totalShipments : 0;
 
-      // Processar dados por cliente
+      console.log('💰 Receita total:', totalRevenue);
+
+      // Processar dados por cliente (convencional + B2B)
       const clientRevenue = new Map();
-      filteredShipments.forEach(shipment => {
+      
+      filteredConventional.forEach(shipment => {
         const profile = profiles?.find(p => p.id === shipment.user_id);
         const clientKey = shipment.user_id;
         const clientName = profile?.first_name && profile?.last_name 
           ? `${profile.first_name} ${profile.last_name}`
           : profile?.first_name || profile?.email || 'Cliente';
         const clientEmail = profile?.email || '';
-        
         const value = calculateShipmentValue(shipment);
 
         if (!clientRevenue.has(clientKey)) {
-          clientRevenue.set(clientKey, {
-            client_name: clientName,
-            client_email: clientEmail,
-            total_value: 0,
-            shipment_count: 0
-          });
+          clientRevenue.set(clientKey, { client_name: clientName, client_email: clientEmail, total_value: 0, shipment_count: 0 });
         }
-        
+        const current = clientRevenue.get(clientKey);
+        current.total_value += value;
+        current.shipment_count += 1;
+      });
+
+      filteredB2B.forEach(shipment => {
+        const client = b2bClients?.find(c => c.id === shipment.b2b_client_id);
+        const clientKey = `b2b_${shipment.b2b_client_id}`;
+        const clientName = client?.company_name || 'Cliente B2B';
+        const clientEmail = client?.email || '';
+        const value = Number(shipment.total_price) || 0;
+
+        if (!clientRevenue.has(clientKey)) {
+          clientRevenue.set(clientKey, { client_name: `${clientName} (B2B)`, client_email: clientEmail, total_value: 0, shipment_count: 0 });
+        }
         const current = clientRevenue.get(clientKey);
         current.total_value += value;
         current.shipment_count += 1;
@@ -340,20 +359,17 @@ const AdminFaturamento = () => {
         .sort((a, b) => b.total_value - a.total_value)
         .slice(0, 10);
 
-      // Processar dados por região
+      // Processar dados por região (só convencional tem endereço)
       const regionRevenue = new Map();
-      filteredShipments.forEach(shipment => {
-        const regions = new Set();
-        
+      filteredConventional.forEach(shipment => {
+        const regions = new Set<string>();
         if (shipment.sender_address?.city && shipment.sender_address?.state) {
           regions.add(`${shipment.sender_address.city} - ${shipment.sender_address.state}`);
         }
         if (shipment.recipient_address?.city && shipment.recipient_address?.state) {
           regions.add(`${shipment.recipient_address.city} - ${shipment.recipient_address.state}`);
         }
-
         const value = calculateShipmentValue(shipment);
-
         regions.forEach(region => {
           if (!regionRevenue.has(region)) {
             regionRevenue.set(region, { region, total_value: 0, shipment_count: 0 });
@@ -368,64 +384,40 @@ const AdminFaturamento = () => {
         .sort((a, b) => b.total_value - a.total_value)
         .slice(0, 10);
 
-      // Processar dados por período
+      // Processar dados por período (convencional + B2B)
       const periodRevenue = new Map();
-      filteredShipments.forEach(shipment => {
-        const date = new Date(shipment.created_at);
+      const processForPeriod = (date: Date, value: number) => {
         let periodKey: string;
-
         switch (dateRange) {
-          case 'daily':
-            periodKey = date.toISOString().split('T')[0];
-            break;
-          case 'monthly':
-            periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            break;
-          case 'quarterly':
-            const quarter = Math.floor(date.getMonth() / 3) + 1;
-            periodKey = `${date.getFullYear()}-Q${quarter}`;
-            break;
-          case 'yearly':
-            periodKey = date.getFullYear().toString();
-            break;
-          default:
-            periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          case 'daily': periodKey = date.toISOString().split('T')[0]; break;
+          case 'monthly': periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; break;
+          case 'quarterly': periodKey = `${date.getFullYear()}-Q${Math.floor(date.getMonth() / 3) + 1}`; break;
+          case 'yearly': periodKey = date.getFullYear().toString(); break;
+          default: periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         }
-
-        const value = calculateShipmentValue(shipment);
-
         if (!periodRevenue.has(periodKey)) {
-          periodRevenue.set(periodKey, {
-            period: periodKey,
-            total_value: 0,
-            shipment_count: 0
-          });
+          periodRevenue.set(periodKey, { period: periodKey, total_value: 0, shipment_count: 0 });
         }
-
         const current = periodRevenue.get(periodKey);
         current.total_value += value;
         current.shipment_count += 1;
-      });
+      };
+
+      filteredConventional.forEach(s => processForPeriod(new Date(s.created_at), calculateShipmentValue(s)));
+      filteredB2B.forEach(s => processForPeriod(new Date(s.created_at), Number(s.total_price) || 0));
 
       const revenueByPeriod = Array.from(periodRevenue.values())
         .sort((a, b) => a.period.localeCompare(b.period));
 
-      // Detalhes dos envios
-      const shipmentDetails = filteredShipments.map(shipment => {
+      // Detalhes dos envios (convencional + B2B)
+      const conventionalDetails = filteredConventional.map(shipment => {
         const profile = profiles?.find(p => p.id === shipment.user_id);
-        const clientName = profile?.first_name && profile?.last_name 
-          ? `${profile.first_name} ${profile.last_name}`
-          : profile?.first_name || profile?.email || 'Cliente';
-        const clientEmail = profile?.email || '';
-        
-        const value = calculateShipmentValue(shipment);
-
         return {
           id: shipment.id,
           tracking_code: shipment.tracking_code,
-          client_name: clientName,
-          client_email: clientEmail,
-          value: value,
+          client_name: profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : profile?.email || 'Cliente',
+          client_email: profile?.email || '',
+          value: calculateShipmentValue(shipment),
           status: shipment.status,
           created_at: shipment.created_at,
           origin_city: shipment.sender_address?.city || 'N/A',
@@ -433,7 +425,27 @@ const AdminFaturamento = () => {
           destination_city: shipment.recipient_address?.city || 'N/A',
           destination_state: shipment.recipient_address?.state || 'N/A'
         };
-      }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      });
+
+      const b2bDetails = filteredB2B.map(shipment => {
+        const client = b2bClients?.find(c => c.id === shipment.b2b_client_id);
+        return {
+          id: shipment.id,
+          tracking_code: shipment.tracking_code,
+          client_name: `${client?.company_name || 'Cliente B2B'} (B2B)`,
+          client_email: client?.email || '',
+          value: Number(shipment.total_price) || 0,
+          status: shipment.status,
+          created_at: shipment.created_at,
+          origin_city: 'B2B',
+          origin_state: '-',
+          destination_city: 'B2B',
+          destination_state: '-'
+        };
+      });
+
+      const shipmentDetails = [...conventionalDetails, ...b2bDetails]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       setBillingData({
         totalRevenue,
