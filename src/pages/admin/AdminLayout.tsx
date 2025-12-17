@@ -45,7 +45,6 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const navigation = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Clientes', href: '/admin/clientes', icon: Users },
-    { name: 'Clientes Expresso', href: '/admin/clientes-b2b', icon: Building2 },
     { name: 'Motoristas', href: '/admin/motoristas', icon: Truck },
     { name: 'CD - Usuários', href: '/admin/cd-users', icon: Users },
     { name: 'Filiais', href: '/admin/filiais', icon: Building2 },
