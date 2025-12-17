@@ -1,31 +1,27 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { 
   LayoutDashboard, 
   Users, 
   Package, 
   Webhook,
-  History,
   LogOut,
   Menu,
-  X,
   Shield,
   Puzzle,
-  Database,
   FileText,
   DollarSign,
   Truck,
   Building2,
   BarChart3,
   Key,
-  Bot,
   Search
 } from "lucide-react";
 import { NavLink, useLocation } from 'react-router-dom';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import confixLogo from '@/assets/logo-confix-envios.png';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -34,20 +30,7 @@ interface AdminLayoutProps {
 const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const getInitials = () => {
-    if (profile?.first_name && profile?.last_name) {
-      return `${profile.first_name.charAt(0)}${profile.last_name.charAt(0)}`.toUpperCase();
-    }
-    if (profile?.first_name) {
-      return profile.first_name.charAt(0).toUpperCase();
-    }
-    if (user?.email) {
-      return user.email.charAt(0).toUpperCase();
-    }
-    return 'A';
-  };
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const getDisplayName = () => {
     if (profile?.first_name && profile?.last_name) {
@@ -56,7 +39,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     if (profile?.first_name) {
       return profile.first_name;
     }
-    return user?.email || 'Admin';
+    return user?.email?.split('@')[0] || 'Admin';
   };
 
   const navigation = [
@@ -64,7 +47,6 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'Clientes', href: '/admin/clientes', icon: Users },
     { name: 'Clientes Expresso', href: '/admin/clientes-b2b', icon: Building2 },
     { name: 'Motoristas', href: '/admin/motoristas', icon: Truck },
-    
     { name: 'CD - Usuários', href: '/admin/cd-users', icon: Users },
     { name: 'Filiais', href: '/admin/filiais', icon: Building2 },
     { name: 'Faturamento', href: '/admin/faturamento', icon: DollarSign },
@@ -86,110 +68,100 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     return location.pathname.startsWith(path);
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div className={cn(
-        "fixed top-0 left-0 z-50 h-full w-64 bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out lg:translate-x-0",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        {/* Sidebar Header */}
-        <div className="flex items-center justify-between h-16 px-6 border-b border-sidebar-border">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Shield className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-lg font-bold text-sidebar-foreground">Confix Admin</span>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <X className="w-4 h-4" />
-          </Button>
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+      {/* Header do Sidebar com Banner */}
+      <div className="p-4 bg-gradient-to-r from-primary via-primary to-red-700">
+        <div className="flex items-center gap-3">
+          <img src={confixLogo} alt="Confix Envios" className="h-6 brightness-0 invert" />
         </div>
+        <div className="mt-2">
+          <span className="text-xs text-white/80 font-medium">Confix Admin</span>
+          <p className="text-sm text-white font-medium truncate">Bem vindo, {getDisplayName()}</p>
+        </div>
+      </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-2">
+      {/* Menu Items */}
+      <div className="flex-1 py-4 px-3 overflow-y-auto">
+        <p className="text-xs font-medium text-muted-foreground mb-3 px-2">Menu</p>
+        <nav className="space-y-1">
           {navigation.map((item) => (
             <NavLink
               key={item.name}
               to={item.href}
+              onClick={() => setMenuOpen(false)}
               className={cn(
-                "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all",
                 isActive(item.href)
-                  ? "bg-primary text-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  ? "bg-primary text-white shadow-md"
+                  : "text-foreground hover:bg-slate-100"
               )}
             >
-              <item.icon className="w-5 h-5" />
-              <span>{item.name}</span>
+              <item.icon className="h-4 w-4" />
+              <span className="text-sm font-medium">{item.name}</span>
             </NavLink>
           ))}
         </nav>
-
-        {/* User Section */}
-        <div className="border-t border-sidebar-border p-4">
-          <div className="flex items-center space-x-3 mb-3">
-            <Avatar className="w-10 h-10">
-              <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                {getInitials()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium text-sidebar-foreground truncate">
-                  {getDisplayName()}
-                </span>
-                <Badge variant="secondary" className="text-xs">Admin</Badge>
-              </div>
-              <p className="text-xs text-sidebar-foreground/60 truncate">
-                {user?.email}
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={signOut}
-            className="w-full justify-start text-sidebar-foreground/60 hover:text-destructive"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Sair
-          </Button>
-        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="lg:pl-64">
-        {/* Mobile Header */}
-        <div className="lg:hidden flex items-center justify-between h-16 px-4 border-b border-border bg-card">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="w-5 h-5" />
-          </Button>
-          <div className="flex items-center space-x-2">
-            <Shield className="w-5 h-5 text-primary" />
-            <span className="font-bold">Confix Admin</span>
-          </div>
-          <div className="w-10" /> {/* Spacer */}
+      {/* User Section & Logout */}
+      <div className="p-3 border-t">
+        <div className="px-2 py-2 mb-2">
+          <p className="text-sm font-medium text-foreground truncate">{getDisplayName()}</p>
+          <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={signOut}
+          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Sair
+        </Button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen flex bg-gradient-to-br from-slate-50 via-white to-slate-100">
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex w-64 flex-col bg-white border-r shadow-sm">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile Header & Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Mobile Header */}
+        <header className="sticky top-0 z-40 bg-gradient-to-r from-primary via-primary to-red-700 shadow-lg lg:hidden">
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-3">
+              <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="p-0 w-72">
+                  <SidebarContent />
+                </SheetContent>
+              </Sheet>
+              <img src={confixLogo} alt="Confix Envios" className="h-6 brightness-0 invert" />
+            </div>
+            <span className="text-sm text-white/90 truncate max-w-[180px]">Bem vindo, {getDisplayName()}</span>
+          </div>
+        </header>
+
+        {/* Desktop Header */}
+        <header className="hidden lg:flex sticky top-0 z-40 bg-white border-b shadow-sm h-14 items-center px-6">
+          <div className="flex items-center gap-3">
+            <Shield className="h-5 w-5 text-primary" />
+            <span className="font-semibold text-foreground">Painel Administrativo</span>
+          </div>
+        </header>
 
         {/* Page Content */}
-        <main className="min-h-screen">
+        <main className="flex-1 overflow-auto">
           {children}
         </main>
       </div>
