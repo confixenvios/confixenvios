@@ -1290,21 +1290,6 @@ const AdminRemessas = () => {
                               <h3 className="font-semibold text-base">
                                 {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
                               </h3>
-                              {/* Badge B2B-0 ou B2B-2 */}
-                              {isB2BExpresso && (
-                                <Badge 
-                                  variant="outline" 
-                                  className={
-                                    shipment.status === 'B2B_COLETA_FINALIZADA' || shipment.status === 'ENTREGUE'
-                                      ? "bg-purple-100 text-purple-700 border-purple-300"
-                                      : "bg-blue-100 text-blue-700 border-blue-300"
-                                  }
-                                >
-                                  {shipment.status === 'B2B_COLETA_FINALIZADA' || shipment.status === 'ENTREGUE' 
-                                    ? "B2B-2" 
-                                    : "B2B-0"}
-                                </Badge>
-                              )}
                             </div>
                             <div className="flex items-center text-xs text-muted-foreground mt-1">
                               <CalendarIcon className="w-3 h-3 mr-1" />
