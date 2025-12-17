@@ -181,31 +181,32 @@ const ActiveClients = () => {
       // Então simplesmente usamos todos os perfis
       const filteredProfiles = profilesData;
 
-      // Para cada cliente, buscar estatísticas detalhadas de envios
+      // Para cada cliente, buscar estatísticas detalhadas de envios (convencionais + B2B)
       const clientsWithStats = await Promise.all(
         filteredProfiles.map(async (profile) => {
-          // Contar envios totais
-          const { count: shipmentCount } = await supabase
+          // ========== REMESSAS CONVENCIONAIS ==========
+          // Contar envios totais convencionais
+          const { count: conventionalShipmentCount } = await supabase
             .from('shipments')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', profile.id);
 
-          // Contar envios bem-sucedidos
-          const { count: successfulCount } = await supabase
+          // Contar envios bem-sucedidos convencionais
+          const { count: conventionalSuccessfulCount } = await supabase
             .from('shipments')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', profile.id)
-            .in('status', ['DELIVERED', 'PAGO_AGUARDANDO_ETIQUETA', 'PAYMENT_CONFIRMED']);
+            .in('status', ['DELIVERED', 'PAGO_AGUARDANDO_ETIQUETA', 'PAYMENT_CONFIRMED', 'ENTREGUE', 'ENTREGA_FINALIZADA']);
 
-          // Contar envios pendentes
-          const { count: pendingCount } = await supabase
+          // Contar envios pendentes convencionais
+          const { count: conventionalPendingCount } = await supabase
             .from('shipments')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', profile.id)
-            .in('status', ['PENDING_LABEL', 'PENDING_PAYMENT', 'PENDING_DOCUMENT']);
+            .in('status', ['PENDING_LABEL', 'PENDING_PAYMENT', 'PENDING_DOCUMENT', 'PENDENTE']);
 
-          // Buscar último envio
-          const { data: lastShipment } = await supabase
+          // Buscar último envio convencional
+          const { data: lastConventionalShipment } = await supabase
             .from('shipments')
             .select('created_at')
             .eq('user_id', profile.id)
@@ -213,7 +214,78 @@ const ActiveClients = () => {
             .limit(1)
             .single();
 
-          // Buscar envios recentes com endereços para histórico completo
+          // ========== REMESSAS B2B ==========
+          // Buscar b2b_client vinculado ao user_id
+          const { data: b2bClient } = await supabase
+            .from('b2b_clients')
+            .select('id')
+            .eq('user_id', profile.id)
+            .single();
+
+          let b2bShipmentCount = 0;
+          let b2bSuccessfulCount = 0;
+          let b2bPendingCount = 0;
+          let lastB2BShipment: { created_at: string } | null = null;
+          let b2bTotalValue = 0;
+
+          if (b2bClient) {
+            // Contar envios B2B totais
+            const { count: b2bCount } = await supabase
+              .from('b2b_shipments')
+              .select('*', { count: 'exact', head: true })
+              .eq('b2b_client_id', b2bClient.id);
+            b2bShipmentCount = b2bCount || 0;
+
+            // Contar envios B2B bem-sucedidos (ENTREGUE, CONCLUIDO)
+            const { count: b2bSuccessCount } = await supabase
+              .from('b2b_shipments')
+              .select('*', { count: 'exact', head: true })
+              .eq('b2b_client_id', b2bClient.id)
+              .in('status', ['ENTREGUE', 'CONCLUIDO', 'PAGO']);
+            b2bSuccessfulCount = b2bSuccessCount || 0;
+
+            // Contar envios B2B pendentes
+            const { count: b2bPendingCount_ } = await supabase
+              .from('b2b_shipments')
+              .select('*', { count: 'exact', head: true })
+              .eq('b2b_client_id', b2bClient.id)
+              .in('status', ['PENDENTE', 'AGUARDANDO_PAGAMENTO', 'AGUARDANDO_ACEITE_COLETA']);
+            b2bPendingCount = b2bPendingCount_ || 0;
+
+            // Buscar último envio B2B
+            const { data: lastB2B } = await supabase
+              .from('b2b_shipments')
+              .select('created_at')
+              .eq('b2b_client_id', b2bClient.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+            lastB2BShipment = lastB2B;
+
+            // Calcular valor total B2B
+            const { data: b2bShipmentsValue } = await supabase
+              .from('b2b_shipments')
+              .select('total_price')
+              .eq('b2b_client_id', b2bClient.id);
+            b2bTotalValue = (b2bShipmentsValue || []).reduce((acc, s) => acc + (Number(s.total_price) || 0), 0);
+          }
+
+          // ========== COMBINAR ESTATÍSTICAS ==========
+          const totalShipmentCount = (conventionalShipmentCount || 0) + b2bShipmentCount;
+          const totalSuccessfulCount = (conventionalSuccessfulCount || 0) + b2bSuccessfulCount;
+          const totalPendingCount = (conventionalPendingCount || 0) + b2bPendingCount;
+
+          // Determinar último envio (o mais recente entre convencional e B2B)
+          let lastShipmentDate: string | null = null;
+          if (lastConventionalShipment?.created_at && lastB2BShipment?.created_at) {
+            lastShipmentDate = new Date(lastConventionalShipment.created_at) > new Date(lastB2BShipment.created_at) 
+              ? lastConventionalShipment.created_at 
+              : lastB2BShipment.created_at;
+          } else {
+            lastShipmentDate = lastConventionalShipment?.created_at || lastB2BShipment?.created_at || null;
+          }
+
+          // Buscar envios recentes convencionais com endereços para histórico completo
           const { data: recentShipments } = await supabase
             .from('shipments')
             .select(`
@@ -266,11 +338,11 @@ const ActiveClients = () => {
             ...profile,
             document: profile.document || null,
             updated_at: profile.updated_at || profile.created_at,
-            shipment_count: shipmentCount || 0,
-            successful_shipments: successfulCount || 0,
-            pending_shipments: pendingCount || 0,
-            last_shipment: lastShipment?.created_at || null,
-            total_value: 0, // Removido cálculo do valor total
+            shipment_count: totalShipmentCount,
+            successful_shipments: totalSuccessfulCount,
+            pending_shipments: totalPendingCount,
+            last_shipment: lastShipmentDate,
+            total_value: b2bTotalValue,
             recent_shipments: recentShipments || [],
             addresses_used: uniqueAddresses
           };
