@@ -663,7 +663,7 @@ const MotoristaDashboard = () => {
   ];
 
   const despachaSubItems = [
-    { tab: 'aguardando', label: 'Aguardando Aceite Expedição', count: aguardandoExpedicao.length },
+    { tab: 'aguardando', label: 'Aguardando Aceite', count: aguardandoExpedicao.length },
     { tab: 'despachados', label: 'Expedidos', count: despachados.length },
     { tab: 'concluidos', label: 'Concluídos', count: concluidos.length },
     { tab: 'devolucoes', label: 'Devoluções', count: devolucoes.length },
