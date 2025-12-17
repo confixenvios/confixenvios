@@ -1285,7 +1285,7 @@ const MotoristaDashboard = () => {
               placeholder="Buscar pedido"
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              className="pl-9 font-mono bg-white/10 border-white/20 text-white placeholder:text-white/60 focus:bg-white focus:text-foreground focus:placeholder:text-muted-foreground transition-all"
+              className="pl-9 font-mono bg-white/10 border-white/60 text-white placeholder:text-white/70 focus:bg-white focus:text-foreground focus:placeholder:text-muted-foreground focus:border-white transition-all"
             />
           </div>
         </div>
