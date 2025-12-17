@@ -342,14 +342,7 @@ const B2BDashboard = () => {
                     {/* Status bar on top */}
                     <div className={`h-1 -mx-4 -mt-4 mb-4 ${volume.status === 'CONCLUIDO' || volume.status === 'ENTREGUE' ? 'bg-emerald-500' : volume.status === 'DEVOLUCAO' ? 'bg-red-500' : 'bg-primary'}`} />
                     <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-sm font-bold text-foreground">{volume.eti_code}</span>
-                        {volumeShipment && (
-                          <Badge variant="secondary" className="text-xs font-mono bg-slate-100 text-slate-600">
-                            {volumeShipment.tracking_code}
-                          </Badge>
-                        )}
-                      </div>
+                      <span className="font-mono text-sm font-bold text-foreground">{volume.eti_code}</span>
                       <Badge className={`text-xs font-medium border ${getStatusColor(volume.status)}`}>
                         {getStatusLabel(volume.status)}
                       </Badge>
@@ -506,6 +499,14 @@ const B2BDashboard = () => {
                   {getStatusLabel(selectedVolume.status)}
                 </Badge>
               </div>
+
+              {/* Código do Pedido */}
+              {getVolumeShipment(selectedVolume) && (
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-sm text-muted-foreground">Código do Pedido</p>
+                  <p className="font-mono font-semibold text-slate-700">{getVolumeShipment(selectedVolume)?.tracking_code}</p>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
