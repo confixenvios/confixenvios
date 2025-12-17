@@ -10,11 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, User, Camera, AlertTriangle, Menu, ClipboardList, Send, History, X, Search } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, User, Camera, AlertTriangle, Menu, ClipboardList, Send, History, X, Search, PenTool } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { SignaturePad } from '@/components/motorista/SignaturePad';
 
 interface Motorista {
   id: string;
@@ -120,6 +121,10 @@ const MotoristaDashboard = () => {
   const [collectBatchEtiInput, setCollectBatchEtiInput] = useState('');
   const [collectBatchVolumes, setCollectBatchVolumes] = useState<B2BVolume[]>([]);
   const [collectingBatch, setCollectingBatch] = useState(false);
+  const [collectDelivererName, setCollectDelivererName] = useState('');
+  const [collectDelivererDocument, setCollectDelivererDocument] = useState('');
+  const [collectSignature, setCollectSignature] = useState<string | null>(null);
+  const [signaturePadOpen, setSignaturePadOpen] = useState(false);
   
   // Aceitar despache individual ou todos
   const [acceptingDespache, setAcceptingDespache] = useState(false);
@@ -526,8 +531,51 @@ const MotoristaDashboard = () => {
   const handleConfirmCollectBatch = async () => {
     if (collectBatchVolumes.length === 0 || !motorista) return;
     
+    // Validar campos obrigatórios
+    if (!collectDelivererName.trim()) {
+      toast.error('Nome de quem entregou é obrigatório');
+      return;
+    }
+    if (!collectDelivererDocument.trim()) {
+      toast.error('Documento de quem entregou é obrigatório');
+      return;
+    }
+    if (!collectSignature) {
+      toast.error('Assinatura é obrigatória');
+      return;
+    }
+    
     setCollectingBatch(true);
     try {
+      // Upload da assinatura para o storage
+      let signatureUrl = null;
+      if (collectSignature) {
+        const signatureBlob = await fetch(collectSignature).then(r => r.blob());
+        const signatureFileName = `b2b-coletas/assinaturas/${Date.now()}_${motorista.id}.png`;
+        const { error: uploadError } = await supabase.storage
+          .from('shipment-photos')
+          .upload(signatureFileName, signatureBlob);
+
+        if (uploadError) {
+          console.error('Erro ao fazer upload da assinatura:', uploadError);
+          throw uploadError;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('shipment-photos')
+          .getPublicUrl(signatureFileName);
+        
+        signatureUrl = urlData.publicUrl;
+      }
+
+      // Dados da coleta que serão salvos em cada volume
+      const collectData = {
+        entregador_nome: collectDelivererName.trim(),
+        entregador_documento: collectDelivererDocument.trim(),
+        assinatura_url: signatureUrl,
+        coletado_em: new Date().toISOString()
+      };
+
       for (const volume of collectBatchVolumes) {
         const { error } = await supabase
           .from('b2b_volumes')
@@ -541,15 +589,23 @@ const MotoristaDashboard = () => {
           status: 'COLETADO',
           motorista_id: motorista.id,
           motorista_nome: motorista.nome,
-          observacoes: 'Volume coletado pelo motorista'
+          observacoes: JSON.stringify(collectData)
         });
       }
 
       toast.success(`${collectBatchVolumes.length} volume(s) coletado(s)!`);
+      
+      // Limpar todos os campos
       setCollectBatchModalOpen(false);
       setCollectBatchVolumes([]);
+      setCollectBatchEtiInput('');
+      setCollectDelivererName('');
+      setCollectDelivererDocument('');
+      setCollectSignature(null);
+      
       await loadVolumes();
     } catch (error) {
+      console.error('Erro ao coletar volumes:', error);
       toast.error('Erro ao coletar volumes');
     } finally {
       setCollectingBatch(false);
@@ -1115,23 +1171,36 @@ const MotoristaDashboard = () => {
       </Dialog>
 
       {/* Modal Coletar em Lote */}
-      <Dialog open={collectBatchModalOpen} onOpenChange={setCollectBatchModalOpen}>
-        <DialogContent className="max-w-md">
+      <Dialog open={collectBatchModalOpen} onOpenChange={(open) => {
+        if (!open) {
+          setCollectBatchModalOpen(false);
+          setCollectBatchVolumes([]);
+          setCollectBatchEtiInput('');
+          setCollectDelivererName('');
+          setCollectDelivererDocument('');
+          setCollectSignature(null);
+        } else {
+          setCollectBatchModalOpen(true);
+        }
+      }}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-5 w-5 text-red-600" />
-              Coletar Volumes
+              Coleta
             </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
+            {/* Etiqueta input */}
             <div className="space-y-2">
-              <Label>Bipe o código de barras da etiqueta para confirmar</Label>
+              <Label>Etiqueta *</Label>
               <Input
                 type="password"
                 value={collectBatchEtiInput}
                 onChange={(e) => setCollectBatchEtiInput(e.target.value)}
                 onKeyDown={handleCollectBatchEtiKeyDown}
+                placeholder="Bipe o código"
                 className="font-mono text-center text-lg"
                 autoFocus
               />
@@ -1141,7 +1210,7 @@ const MotoristaDashboard = () => {
             {collectBatchVolumes.length > 0 && (
               <div className="space-y-2">
                 <Label>Volumes adicionados ({collectBatchVolumes.length})</Label>
-                <ScrollArea className="h-40 border rounded p-2">
+                <ScrollArea className="h-24 border rounded p-2">
                   {collectBatchVolumes.map(v => (
                     <div key={v.id} className="flex items-center justify-between py-1 border-b last:border-0">
                       <div>
@@ -1161,7 +1230,76 @@ const MotoristaDashboard = () => {
               </div>
             )}
 
-            <div className="flex gap-2">
+            {/* Nome de quem entregou */}
+            <div className="space-y-2">
+              <Label>Nome de quem entregou *</Label>
+              <Input
+                value={collectDelivererName}
+                onChange={(e) => setCollectDelivererName(e.target.value)}
+                placeholder="Nome completo"
+              />
+            </div>
+
+            {/* Documento de quem entregou */}
+            <div className="space-y-2">
+              <Label>Documento de quem entregou *</Label>
+              <Input
+                value={collectDelivererDocument}
+                onChange={(e) => {
+                  // Aceitar apenas números
+                  const value = e.target.value.replace(/\D/g, '');
+                  setCollectDelivererDocument(value);
+                }}
+                placeholder="CPF ou RG (apenas números)"
+                maxLength={14}
+              />
+            </div>
+
+            {/* Local para assinar */}
+            <div className="space-y-2">
+              <Label>Assinatura *</Label>
+              {collectSignature ? (
+                <div className="border rounded-md p-2 bg-white">
+                  <div className="relative">
+                    <img 
+                      src={collectSignature} 
+                      alt="Assinatura" 
+                      className="w-full h-24 object-contain rounded"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-1 right-1"
+                      onClick={() => setCollectSignature(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-2"
+                    onClick={() => setSignaturePadOpen(true)}
+                  >
+                    <PenTool className="h-4 w-4 mr-2" />
+                    Refazer Assinatura
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="w-full h-20 border-dashed"
+                  onClick={() => setSignaturePadOpen(true)}
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <PenTool className="h-6 w-6 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Toque para assinar</span>
+                  </div>
+                </Button>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-2">
               <Button
                 variant="outline"
                 className="flex-1"
@@ -1169,6 +1307,9 @@ const MotoristaDashboard = () => {
                   setCollectBatchModalOpen(false);
                   setCollectBatchVolumes([]);
                   setCollectBatchEtiInput('');
+                  setCollectDelivererName('');
+                  setCollectDelivererDocument('');
+                  setCollectSignature(null);
                 }}
               >
                 Cancelar
@@ -1176,7 +1317,13 @@ const MotoristaDashboard = () => {
               <Button
                 className="flex-1 bg-red-600 hover:bg-red-700"
                 onClick={handleConfirmCollectBatch}
-                disabled={collectingBatch || collectBatchVolumes.length === 0}
+                disabled={
+                  collectingBatch || 
+                  collectBatchVolumes.length === 0 ||
+                  !collectDelivererName.trim() ||
+                  !collectDelivererDocument.trim() ||
+                  !collectSignature
+                }
               >
                 {collectingBatch ? 'Coletando...' : `Confirmar (${collectBatchVolumes.length})`}
               </Button>
@@ -1184,6 +1331,17 @@ const MotoristaDashboard = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Signature Pad Modal */}
+      <SignaturePad
+        isOpen={signaturePadOpen}
+        onClose={() => setSignaturePadOpen(false)}
+        onSave={(signatureDataUrl) => {
+          setCollectSignature(signatureDataUrl);
+          setSignaturePadOpen(false);
+        }}
+        title="Assinatura de Coleta"
+      />
 
       {/* Modal Finalizar Entrega */}
       <Dialog open={finalizeModalOpen} onOpenChange={setFinalizeModalOpen}>
