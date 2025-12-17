@@ -268,14 +268,17 @@ const B2BDashboard = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <Card>
-        <CardHeader>
+      <Card className="border-0 shadow-md">
+        <CardHeader className="pb-4">
           <div className="flex justify-between items-center flex-wrap gap-4">
             <div>
-              <CardTitle>Envios Recentes</CardTitle>
+              <CardTitle className="text-xl">Envios Recentes</CardTitle>
               <CardDescription>Suas últimas solicitações de coleta</CardDescription>
             </div>
-            <Button onClick={() => navigate('/b2b-expresso/nova-remessa')}>
+            <Button 
+              onClick={() => navigate('/b2b-expresso/nova-remessa')}
+              className="bg-gradient-to-r from-primary to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg shadow-primary/20"
+            >
               <Plus className="mr-2 h-4 w-4" />
               Novo Envio
             </Button>
@@ -344,20 +347,23 @@ const B2BDashboard = () => {
               <div className="space-y-4">
                 {filteredShipments.map((shipment) => {
                   const shipmentVolumes = getShipmentVolumes(shipment.id);
+                  const displayStatus = getShipmentDisplayStatus(shipment);
                   return (
                     <div
                       key={shipment.id}
-                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                      className="p-4 border-0 rounded-xl shadow-md hover:shadow-lg transition-all bg-white overflow-hidden"
                     >
+                      {/* Status bar on top */}
+                      <div className={`h-1 -mx-4 -mt-4 mb-4 ${displayStatus === 'CONCLUIDO' || displayStatus === 'ENTREGUE' ? 'bg-emerald-500' : displayStatus === 'DEVOLUCAO' ? 'bg-red-500' : 'bg-primary'}`} />
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-mono text-sm font-semibold">{shipment.tracking_code}</p>
-                          <Badge variant="outline" className="text-xs">
+                          <p className="font-mono text-sm font-bold text-foreground">{shipment.tracking_code}</p>
+                          <Badge variant="outline" className="text-xs border-slate-200 text-muted-foreground">
                             {shipment.total_volumes} volume(s)
                           </Badge>
                         </div>
-                        <Badge variant="outline" className={`text-xs ${getStatusColor(getShipmentDisplayStatus(shipment))}`}>
-                          {getStatusLabel(getShipmentDisplayStatus(shipment))}
+                        <Badge className={`text-xs font-medium border ${getStatusColor(displayStatus)}`}>
+                          {getStatusLabel(displayStatus)}
                         </Badge>
                       </div>
                       
