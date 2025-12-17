@@ -235,7 +235,7 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
                     className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline mt-1"
                   >
                     <Image className="h-3 w-3" />
-                    Ver assinatura
+                    Ver Assinatura
                   </a>
                 </div>
               )}
