@@ -2,20 +2,10 @@ import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Package, Plus, BarChart3, LogOut, MapPin, Truck } from 'lucide-react';
+import { Package, Plus, BarChart3, LogOut, MapPin, Truck, Menu, X } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-} from '@/components/ui/sidebar';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import confixLogo from '@/assets/logo-confix-envios.png';
 
 interface B2BClient {
   company_name: string;
@@ -25,6 +15,7 @@ const B2BLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [client, setClient] = useState<B2BClient | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     loadClient();
@@ -72,65 +63,103 @@ const B2BLayout = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <Sidebar className="border-r">
-          <SidebarContent>
-            <div className="p-4 border-b">
-              <div className="flex items-center gap-2 mb-1">
-                <Package className="h-5 w-5 text-primary" />
-                <span className="font-bold text-sm">CONFIX ENVIOS</span>
-              </div>
-              <span className="text-xs text-primary font-medium">B2B Express</span>
-              {client && (
-                <p className="text-xs text-muted-foreground truncate mt-1">{client.company_name}</p>
-              )}
-            </div>
-
-            <SidebarGroup>
-              <SidebarGroupLabel>Menu</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                        <NavLink to={item.url}>
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
-            <div className="mt-auto p-4 border-t">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="w-full justify-start"
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
-              </Button>
-            </div>
-          </SidebarContent>
-        </Sidebar>
-
-        <div className="flex-1 flex flex-col">
-          <header className="h-12 flex items-center border-b bg-card px-4">
-            <SidebarTrigger />
-          </header>
-
-          <main className="flex-1 overflow-auto">
-            <Outlet />
-          </main>
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+      {/* Header do Sidebar */}
+      <div className="p-4 bg-gradient-to-r from-primary via-primary to-red-700">
+        <div className="flex items-center gap-3">
+          <img src={confixLogo} alt="Confix Envios" className="h-6 brightness-0 invert" />
+        </div>
+        <div className="mt-2">
+          <span className="text-xs text-white/80 font-medium">B2B Express</span>
+          {client && (
+            <p className="text-sm text-white font-medium truncate">{client.company_name}</p>
+          )}
         </div>
       </div>
-    </SidebarProvider>
+
+      {/* Menu Items */}
+      <div className="flex-1 py-4 px-3">
+        <p className="text-xs font-medium text-muted-foreground mb-3 px-2">Menu</p>
+        <nav className="space-y-1">
+          {menuItems.map((item) => (
+            <NavLink
+              key={item.title}
+              to={item.url}
+              onClick={() => setMenuOpen(false)}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                isActive(item.url)
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-foreground hover:bg-slate-100'
+              }`}
+            >
+              <item.icon className="h-4 w-4" />
+              <span className="text-sm font-medium">{item.title}</span>
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+
+      {/* Logout */}
+      <div className="p-3 border-t">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleLogout}
+          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Sair
+        </Button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen flex bg-gradient-to-br from-slate-50 via-white to-slate-100">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex w-64 flex-col bg-white border-r shadow-sm">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile Header & Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <header className="sticky top-0 z-40 bg-gradient-to-r from-primary via-primary to-red-700 shadow-lg md:hidden">
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-3">
+              <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="p-0 w-72">
+                  <SidebarContent />
+                </SheetContent>
+              </Sheet>
+              <img src={confixLogo} alt="Confix Envios" className="h-6 brightness-0 invert" />
+            </div>
+            {client && (
+              <span className="text-sm text-white/90 truncate max-w-[150px]">{client.company_name}</span>
+            )}
+          </div>
+        </header>
+
+        {/* Desktop Header */}
+        <header className="hidden md:flex sticky top-0 z-40 bg-white border-b shadow-sm h-14 items-center px-6">
+          <div className="flex items-center gap-3">
+            <Package className="h-5 w-5 text-primary" />
+            <span className="font-semibold text-foreground">Painel B2B Express</span>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-auto">
+          <Outlet />
+        </main>
+      </div>
+    </div>
   );
 };
 
