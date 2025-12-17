@@ -905,6 +905,18 @@ const MotoristaDashboard = () => {
           {/* Botões de ação */}
           <div className="flex justify-between items-center mt-3">
             <div className="flex gap-2">
+              {/* Botão Ver sempre primeiro (esquerda) */}
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedVolume(v);
+                  setShowDetailsModal(true);
+                }}
+              >
+                Ver
+              </Button>
+
               {showActions === 'accept' && (
                 <Button 
                   size="sm"
@@ -956,17 +968,6 @@ const MotoristaDashboard = () => {
                   Finalizar
                 </Button>
               )}
-
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedVolume(v);
-                  setShowDetailsModal(true);
-                }}
-              >
-                Ver
-              </Button>
             </div>
 
             {/* Ocorrência (para todos exceto pendentes, coletados e concluidos) - alinhado à direita */}
