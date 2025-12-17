@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import B2BVolumeStatusHistory from '@/components/b2b/B2BVolumeStatusHistory';
 
 interface CdUser {
   id: string;
@@ -1040,84 +1041,9 @@ const CdDashboard = () => {
                   <History className="h-4 w-4" />
                   Histórico Completo
                 </h4>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {(selectedVolume.status_history || []).length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Sem histórico</p>
-                  ) : (
-                    (selectedVolume.status_history || []).map((h, idx) => (
-                      <div 
-                        key={idx} 
-                        className={`text-sm p-2 rounded border ${h.is_alert ? 'bg-red-50 border-red-200' : 'bg-muted/30'}`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <span className="font-medium">{STATUS_CONFIG[h.status]?.label || h.status}</span>
-                            {h.motorista_nome && (
-                              <span className="text-muted-foreground ml-2">- {h.motorista_nome}</span>
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(h.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
-                          </span>
-                        </div>
-                        {h.observacoes && (() => {
-                          try {
-                            const parsed = JSON.parse(h.observacoes);
-                            
-                            // Dados de coleta com assinatura
-                            if (parsed.entregador_nome && parsed.assinatura_url) {
-                              return (
-                                <div className="mt-2 space-y-2 bg-blue-50 p-2 rounded border border-blue-200">
-                                  <p className="text-blue-700 font-medium text-xs">Dados da Coleta</p>
-                                  <div className="text-xs space-y-1">
-                                    <p><span className="text-muted-foreground">Entregador:</span> <span className="font-medium">{parsed.entregador_nome}</span></p>
-                                    <p><span className="text-muted-foreground">Documento:</span> <span className="font-medium">{parsed.entregador_documento}</span></p>
-                                  </div>
-                                  <div className="mt-2">
-                                    <p className="text-xs text-muted-foreground mb-1">Assinatura:</p>
-                                    <a 
-                                      href={parsed.assinatura_url} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="block"
-                                    >
-                                      <img 
-                                        src={parsed.assinatura_url} 
-                                        alt="Assinatura" 
-                                        className="max-h-16 rounded border bg-white"
-                                      />
-                                    </a>
-                                  </div>
-                                </div>
-                              );
-                            }
-                            
-                            // Foto de entrega
-                            if (parsed.foto_url) {
-                              return (
-                                <div className="mt-1">
-                                  <p className="text-green-600 font-medium">Entrega Finalizada</p>
-                                  <a 
-                                    href={parsed.foto_url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-blue-500 hover:underline text-sm"
-                                  >
-                                    Ver foto da entrega
-                                  </a>
-                                </div>
-                              );
-                            }
-                            
-                            return <p className="text-muted-foreground mt-1">{parsed.mensagem || h.observacoes}</p>;
-                          } catch {
-                            return <p className="text-muted-foreground mt-1">{h.observacoes}</p>;
-                          }
-                        })()}
-                      </div>
-                    ))
-                  )}
-                </div>
+                <ScrollArea className="max-h-60">
+                  <B2BVolumeStatusHistory volumeId={selectedVolume.id} />
+                </ScrollArea>
               </div>
             </div>
           )}
