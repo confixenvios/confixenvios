@@ -471,18 +471,20 @@ const B2BDashboard = () => {
                   return (
                     <div
                       key={volume.id}
-                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                      className="p-4 border-0 rounded-xl shadow-md hover:shadow-lg transition-all bg-white overflow-hidden"
                     >
+                      {/* Status bar on top */}
+                      <div className={`h-1 -mx-4 -mt-4 mb-4 ${volume.status === 'CONCLUIDO' || volume.status === 'ENTREGUE' ? 'bg-emerald-500' : volume.status === 'DEVOLUCAO' ? 'bg-red-500' : 'bg-primary'}`} />
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-sm font-semibold">{volume.eti_code}</span>
+                          <span className="font-mono text-sm font-bold text-foreground">{volume.eti_code}</span>
                           {volumeShipment && (
-                            <Badge variant="secondary" className="text-xs font-mono">
+                            <Badge variant="secondary" className="text-xs font-mono bg-slate-100 text-slate-600">
                               {volumeShipment.tracking_code}
                             </Badge>
                           )}
                         </div>
-                        <Badge variant="outline" className={`text-xs ${getStatusColor(volume.status)}`}>
+                        <Badge className={`text-xs font-medium border ${getStatusColor(volume.status)}`}>
                           {getStatusLabel(volume.status)}
                         </Badge>
                       </div>

@@ -293,12 +293,12 @@ const B2BEnderecos = () => {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Endereços de Entrega</h1>
+          <h1 className="text-2xl font-bold text-foreground">Endereços de Entrega</h1>
           <p className="text-muted-foreground">Gerencie seus endereços para entregas rápidas</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()}>
+            <Button onClick={() => handleOpenDialog()} className="bg-gradient-to-r from-primary to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg shadow-primary/20">
               <Plus className="mr-2 h-4 w-4" />
               Novo Endereço
             </Button>
@@ -465,7 +465,8 @@ const B2BEnderecos = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {addresses.map((address) => (
-            <Card key={address.id} className={address.is_default ? 'border-primary' : ''}>
+            <Card key={address.id} className={`shadow-md hover:shadow-lg transition-all border-0 overflow-hidden ${address.is_default ? 'ring-2 ring-primary' : ''}`}>
+              <div className={`h-1 ${address.is_default ? 'bg-primary' : 'bg-slate-200'}`} />
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -473,7 +474,7 @@ const B2BEnderecos = () => {
                     {address.name}
                   </CardTitle>
                   {address.is_default && (
-                    <Badge variant="default" className="text-xs">
+                    <Badge className="text-xs bg-primary text-white">
                       <Star className="h-3 w-3 mr-1" />
                       Padrão
                     </Badge>

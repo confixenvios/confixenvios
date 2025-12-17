@@ -133,20 +133,24 @@ const B2BRelatorios = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Relatórios</h1>
+          <h1 className="text-2xl font-bold text-foreground">Relatórios</h1>
           <p className="text-muted-foreground">Visualize e exporte seus envios</p>
         </div>
-        <Button onClick={exportToExcel} disabled={filteredShipments.length === 0}>
+        <Button 
+          onClick={exportToExcel} 
+          disabled={filteredShipments.length === 0}
+          className="bg-gradient-to-r from-primary to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg shadow-primary/20"
+        >
           <FileDown className="mr-2 h-4 w-4" />
           Exportar Excel
         </Button>
       </div>
 
-      <Card>
+      <Card className="border-0 shadow-md">
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center flex-wrap gap-4">
             <div>
-              <CardTitle>Todos os Envios</CardTitle>
+              <CardTitle className="text-xl">Todos os Envios</CardTitle>
               <CardDescription>
                 {filteredShipments.length} envio(s) encontrado(s)
               </CardDescription>
@@ -158,7 +162,7 @@ const B2BRelatorios = () => {
                   placeholder="Buscar por código..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
+                  className="pl-8 border-primary/30 focus:border-primary"
                 />
               </div>
             </div>
@@ -173,17 +177,18 @@ const B2BRelatorios = () => {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {filteredShipments.map((shipment) => (
                 <div
                   key={shipment.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                  className="p-4 border-0 rounded-xl shadow-sm hover:shadow-md transition-all bg-white overflow-hidden"
                 >
+                  <div className={`h-1 -mx-4 -mt-4 mb-4 ${shipment.status === 'CONCLUIDO' || shipment.status === 'ENTREGUE' ? 'bg-emerald-500' : shipment.status === 'DEVOLUCAO' ? 'bg-red-500' : 'bg-primary'}`} />
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="font-mono text-sm font-semibold">{shipment.tracking_code}</p>
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <p className="font-mono text-sm font-bold text-foreground">{shipment.tracking_code}</p>
                       {getStatusBadge(shipment.status)}
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs border-slate-200 text-muted-foreground">
                         {shipment.total_volumes} volume(s)
                       </Badge>
                     </div>
