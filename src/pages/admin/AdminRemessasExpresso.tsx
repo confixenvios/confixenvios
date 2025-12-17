@@ -340,7 +340,6 @@ const AdminRemessasExpresso = () => {
             <div>
               <label className="text-sm font-medium text-muted-foreground mb-2 block">&nbsp;</label>
               <Button variant="outline" onClick={clearFilters} className="w-full">
-                <X className="h-4 w-4 mr-2" />
                 Limpar Filtros
               </Button>
             </div>
