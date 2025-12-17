@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, Download, Send, RotateCcw, User, ChevronDown, History, Warehouse, AlertTriangle, X } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, Download, Send, RotateCcw, User, ChevronDown, History, Warehouse, AlertTriangle, X, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -99,6 +99,7 @@ const CdDashboard = () => {
   // Abas principais
   const [mainTab, setMainTab] = useState('coletas');
   const [subTab, setSubTab] = useState('pendentes');
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Modal Receber Volume
   const [receiveModalOpen, setReceiveModalOpen] = useState(false);
@@ -235,15 +236,37 @@ const CdDashboard = () => {
     navigate('/cd/auth');
   };
 
-  // Filtros por status
-  const pendentes = volumes.filter(v => v.status === 'AGUARDANDO_ACEITE_COLETA');
-  const aceitos = volumes.filter(v => v.status === 'COLETA_ACEITA');
-  const coletados = volumes.filter(v => v.status === 'COLETADO');
-  const emTriagem = volumes.filter(v => v.status === 'EM_TRIAGEM');
-  const aguardandoExpedicao = volumes.filter(v => v.status === 'AGUARDANDO_ACEITE_EXPEDICAO');
-  const despachados = volumes.filter(v => v.status === 'EXPEDIDO');
-  const concluidos = volumes.filter(v => v.status === 'CONCLUIDO');
-  const devolucoes = volumes.filter(v => v.status === 'DEVOLUCAO');
+  // Função de filtro por busca
+  const filterBySearch = (volumeList: B2BVolume[]) => {
+    if (!searchTerm.trim()) return volumeList;
+    const term = searchTerm.toLowerCase().trim();
+    return volumeList.filter(v => {
+      // ETI code
+      if (v.eti_code?.toLowerCase().includes(term)) return true;
+      // Tracking code (B2B-XXXXX)
+      if (v.shipment?.tracking_code?.toLowerCase().includes(term)) return true;
+      // Recipient name
+      if (v.recipient_name?.toLowerCase().includes(term)) return true;
+      // Recipient city/state
+      if (v.recipient_city?.toLowerCase().includes(term)) return true;
+      if (v.recipient_state?.toLowerCase().includes(term)) return true;
+      // Recipient phone
+      if (v.recipient_phone?.includes(term)) return true;
+      // ETI number only (e.g., "0020" matches "ETI-0020")
+      if (v.eti_code?.includes(term.replace(/\D/g, '').padStart(4, '0'))) return true;
+      return false;
+    });
+  };
+
+  // Filtros por status (com busca aplicada)
+  const pendentes = filterBySearch(volumes.filter(v => v.status === 'AGUARDANDO_ACEITE_COLETA'));
+  const aceitos = filterBySearch(volumes.filter(v => v.status === 'COLETA_ACEITA'));
+  const coletados = filterBySearch(volumes.filter(v => v.status === 'COLETADO'));
+  const emTriagem = filterBySearch(volumes.filter(v => v.status === 'EM_TRIAGEM'));
+  const aguardandoExpedicao = filterBySearch(volumes.filter(v => v.status === 'AGUARDANDO_ACEITE_EXPEDICAO'));
+  const despachados = filterBySearch(volumes.filter(v => v.status === 'EXPEDIDO'));
+  const concluidos = filterBySearch(volumes.filter(v => v.status === 'CONCLUIDO'));
+  const devolucoes = filterBySearch(volumes.filter(v => v.status === 'DEVOLUCAO'));
 
   // Parsear código ETI
   const parseEtiCode = (input: string): string => {
@@ -665,6 +688,34 @@ const CdDashboard = () => {
             <RotateCcw className="h-5 w-5 mr-2" />
             Devolver Volume
           </Button>
+        </div>
+
+        {/* Campo de Busca */}
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por ETI, código da remessa, destinatário, cidade..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-white border-slate-200 focus:border-primary"
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 hover:bg-slate-100"
+                onClick={() => setSearchTerm('')}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          {searchTerm && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Resultados para "{searchTerm}": {pendentes.length + aceitos.length + coletados.length + emTriagem.length + aguardandoExpedicao.length + despachados.length + concluidos.length + devolucoes.length} volumes encontrados
+            </p>
+          )}
         </div>
 
         {/* Abas principais */}
