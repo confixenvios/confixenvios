@@ -1187,7 +1187,7 @@ const MotoristaDashboard = () => {
                     <img src={confixLogo} alt="Confix Envios" className="h-8" />
                   </div>
                   <div className="mt-3 p-3 bg-gradient-to-r from-primary/10 to-red-50 rounded-lg">
-                    <p className="text-sm font-medium text-foreground">{motorista?.nome}</p>
+                    <p className="text-sm font-medium text-foreground">Bem vindo, {motorista?.nome}</p>
                     <p className="text-xs text-muted-foreground">Motorista</p>
                   </div>
                 </SheetHeader>
