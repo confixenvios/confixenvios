@@ -64,22 +64,42 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
     return configs[status] || { label: status, dotColor: 'bg-gray-500', badgeClass: 'bg-gray-100 text-gray-800 border-gray-300' };
   };
 
-  // Parseia observações JSON para extrair mensagem e foto
-  const parseObservacoes = (observacoes: string | null): { text: string | null; fotoUrl: string | null } => {
-    if (!observacoes) return { text: null, fotoUrl: null };
+  // Parseia observações JSON para extrair mensagem, foto e dados de coleta
+  const parseObservacoes = (observacoes: string | null): { 
+    text: string | null; 
+    fotoUrl: string | null;
+    coletaData: { entregadorNome: string; entregadorDocumento: string; assinaturaUrl: string } | null;
+  } => {
+    if (!observacoes) return { text: null, fotoUrl: null, coletaData: null };
     
     try {
       const parsed = JSON.parse(observacoes);
+      
+      // Dados de coleta com assinatura
+      if (parsed.entregador_nome && parsed.assinatura_url) {
+        return {
+          text: null,
+          fotoUrl: null,
+          coletaData: {
+            entregadorNome: parsed.entregador_nome,
+            entregadorDocumento: parsed.entregador_documento,
+            assinaturaUrl: parsed.assinatura_url
+          }
+        };
+      }
+      
+      // Foto de entrega
       if (parsed.mensagem || parsed.foto_url) {
         return {
           text: parsed.mensagem || null,
-          fotoUrl: parsed.foto_url || null
+          fotoUrl: parsed.foto_url || null,
+          coletaData: null
         };
       }
     } catch {
       // Não é JSON, retorna como texto normal
     }
-    return { text: observacoes, fotoUrl: null };
+    return { text: observacoes, fotoUrl: null, coletaData: null };
   };
 
   if (loading) {
@@ -130,6 +150,31 @@ const B2BVolumeStatusHistory = ({ volumeId }: B2BVolumeStatusHistoryProps) => {
                 </p>
               )}
               
+              {parsedObs.coletaData && (
+                <div className="mt-2 space-y-2 bg-blue-50 p-2 rounded border border-blue-200">
+                  <p className="text-blue-700 font-medium text-xs">Dados da Coleta</p>
+                  <div className="text-xs space-y-1">
+                    <p><span className="text-muted-foreground">Entregador:</span> <span className="font-medium">{parsedObs.coletaData.entregadorNome}</span></p>
+                    <p><span className="text-muted-foreground">Documento:</span> <span className="font-medium">{parsedObs.coletaData.entregadorDocumento}</span></p>
+                  </div>
+                  <div className="mt-2">
+                    <p className="text-xs text-muted-foreground mb-1">Assinatura:</p>
+                    <a 
+                      href={parsedObs.coletaData.assinaturaUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <img 
+                        src={parsedObs.coletaData.assinaturaUrl} 
+                        alt="Assinatura" 
+                        className="max-h-12 rounded border bg-white"
+                      />
+                    </a>
+                  </div>
+                </div>
+              )}
+
               {parsedObs.text && (
                 <p className="text-xs text-muted-foreground mt-1 italic">
                   {parsedObs.text}

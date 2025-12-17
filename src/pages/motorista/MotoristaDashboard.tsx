@@ -1592,6 +1592,36 @@ const MotoristaDashboard = () => {
                         {h.observacoes && (() => {
                           try {
                             const parsed = JSON.parse(h.observacoes);
+                            
+                            // Dados de coleta com assinatura
+                            if (parsed.entregador_nome && parsed.assinatura_url) {
+                              return (
+                                <div className="mt-2 space-y-2 bg-blue-50 p-2 rounded border border-blue-200">
+                                  <p className="text-blue-700 font-medium text-xs">Dados da Coleta</p>
+                                  <div className="text-xs space-y-1">
+                                    <p><span className="text-muted-foreground">Entregador:</span> <span className="font-medium">{parsed.entregador_nome}</span></p>
+                                    <p><span className="text-muted-foreground">Documento:</span> <span className="font-medium">{parsed.entregador_documento}</span></p>
+                                  </div>
+                                  <div className="mt-2">
+                                    <p className="text-xs text-muted-foreground mb-1">Assinatura:</p>
+                                    <a 
+                                      href={parsed.assinatura_url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="block"
+                                    >
+                                      <img 
+                                        src={parsed.assinatura_url} 
+                                        alt="Assinatura" 
+                                        className="max-h-16 rounded border bg-white"
+                                      />
+                                    </a>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            
+                            // Foto de entrega
                             if (parsed.foto_url) {
                               return (
                                 <div className="mt-1">
@@ -1607,6 +1637,7 @@ const MotoristaDashboard = () => {
                                 </div>
                               );
                             }
+                            
                             return <p className="text-muted-foreground mt-1">{parsed.mensagem || h.observacoes}</p>;
                           } catch {
                             return <p className="text-muted-foreground mt-1">{h.observacoes}</p>;
