@@ -167,10 +167,7 @@ const Header = () => {
               }}
             >
               <User className="h-8 w-8" />
-              <div className="text-center">
-                <div className="font-semibold text-lg">Convencional</div>
-                <div className="text-xs opacity-90">Acesso para clientes e usuários</div>
-              </div>
+              <div className="font-semibold text-lg">Convencional</div>
             </Button>
 
             <Button
@@ -182,10 +179,7 @@ const Header = () => {
               }}
             >
               <Building2 className="h-8 w-8" />
-              <div className="text-center">
-                <div className="font-semibold text-lg">Expresso</div>
-                <div className="text-xs opacity-90">Acesso para envios expresso</div>
-              </div>
+              <div className="font-semibold text-lg">Expresso</div>
             </Button>
 
             <Button
@@ -197,10 +191,7 @@ const Header = () => {
               }}
             >
               <Truck className="h-8 w-8" />
-              <div className="text-center">
-                <div className="font-semibold text-lg">Motorista</div>
-                <div className="text-xs opacity-90">Acesso exclusivo para motoristas</div>
-              </div>
+              <div className="font-semibold text-lg">Motorista</div>
             </Button>
           </div>
         </DialogContent>
