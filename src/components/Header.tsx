@@ -1,4 +1,4 @@
-import { Package, User, LogIn, Building2 } from "lucide-react";
+import { Package, User, LogIn, Building2, Truck } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
@@ -186,6 +186,22 @@ const Header = () => {
               <div className="text-center">
                 <div className="font-semibold text-lg text-primary">B2B Expresso</div>
                 <div className="text-xs opacity-70">Acesso exclusivo para clientes B2B</div>
+              </div>
+            </Button>
+
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-auto py-6 flex flex-col gap-2 border-2 border-primary hover:bg-primary/10"
+              onClick={() => {
+                setLoginModalOpen(false);
+                navigate('/motorista');
+              }}
+            >
+              <Truck className="h-8 w-8 text-primary" />
+              <div className="text-center">
+                <div className="font-semibold text-lg text-primary">Motorista</div>
+                <div className="text-xs opacity-70">Acesso exclusivo para motoristas</div>
               </div>
             </Button>
           </div>
