@@ -35,11 +35,13 @@ const Index = () => {
       <Header />
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden h-[70vh] min-h-[500px] max-h-[700px]">
         <img 
           src={heroTruckConfix} 
           alt="Caminhão Confix Envios" 
-          className="w-full h-auto"
+          className="absolute inset-0 w-full h-full object-cover object-right"
+          loading="eager"
+          fetchPriority="high"
         />
         <div className="absolute inset-0 flex flex-col items-center justify-start pt-8 sm:pt-12 md:pt-16 px-4">
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-8 md:mb-12 leading-tight font-normal text-center">
