@@ -1301,9 +1301,10 @@ const MotoristaDashboard = () => {
         )}
       </header>
 
-      <main className="container mx-auto px-4 py-6">
-        {/* Home Dashboard - Tela inicial */}
-        {showHomeDashboard ? (
+      {/* Main content area */}
+      {showHomeDashboard ? (
+        <main className="container mx-auto px-4 py-6">
+          {/* Home Dashboard - Tela inicial */}
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <h2 className="text-2xl font-bold text-foreground mb-8 text-center">
               Selecione uma opção
@@ -1346,10 +1347,70 @@ const MotoristaDashboard = () => {
               </Card>
             </div>
           </div>
-        ) : (
-          <>
-            {/* Título da seção */}
-            <div className="mb-6 flex items-center justify-between">
+        </main>
+      ) : (
+        <div className="flex min-h-[calc(100vh-120px)]">
+          {/* Sidebar fixa à esquerda */}
+          <aside className="w-56 bg-white border-r shadow-sm flex-shrink-0 hidden md:block">
+            <div className="p-4 border-b">
+              <h3 className="font-semibold text-foreground flex items-center gap-2">
+                {activeSection === 'coletas' ? (
+                  <>
+                    <div className="w-2 h-5 bg-gradient-to-b from-primary to-red-600 rounded-full" />
+                    Coletas
+                  </>
+                ) : (
+                  <>
+                    <div className="w-2 h-5 bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-full" />
+                    Expedição
+                  </>
+                )}
+              </h3>
+            </div>
+            <nav className="p-2 space-y-1">
+              {(activeSection === 'coletas' ? coletasSubItems : despachaSubItems).map(sub => (
+                <Button
+                  key={sub.tab}
+                  variant={activeTab === sub.tab ? "default" : "ghost"}
+                  size="sm"
+                  className={`w-full justify-between transition-all ${
+                    activeTab === sub.tab 
+                      ? activeSection === 'coletas' 
+                        ? 'bg-primary text-white shadow-md' 
+                        : 'bg-emerald-600 text-white shadow-md'
+                      : 'hover:bg-muted/50'
+                  }`}
+                  onClick={() => setActiveTab(sub.tab)}
+                >
+                  <span className="text-left truncate">{sub.label}</span>
+                  <Badge 
+                    variant="outline" 
+                    className={`ml-2 flex-shrink-0 ${activeTab === sub.tab ? 'border-white/50 text-white bg-white/20' : 'bg-muted'}`}
+                  >
+                    {sub.count}
+                  </Badge>
+                </Button>
+              ))}
+            </nav>
+            
+            {/* Botão voltar para início */}
+            <div className="p-3 border-t mt-auto absolute bottom-0 left-0 right-0 w-56">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="w-full justify-start text-muted-foreground hover:text-foreground"
+                onClick={() => setShowHomeDashboard(true)}
+              >
+                <Home className="h-4 w-4 mr-2" />
+                Voltar ao Início
+              </Button>
+            </div>
+          </aside>
+
+          {/* Conteúdo principal */}
+          <main className="flex-1 p-4 md:p-6 overflow-auto">
+            {/* Título da seção - visível apenas em mobile */}
+            <div className="mb-6 flex items-center justify-between md:hidden">
               <div>
                 <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
                   {activeSection === 'coletas' ? (
@@ -1365,6 +1426,22 @@ const MotoristaDashboard = () => {
                   )}
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1 ml-4">
+                  {activeTab === 'pendentes' && 'Volumes disponíveis para coleta'}
+                  {activeTab === 'aceitos' && 'Volumes aceitos - aguardando coleta'}
+                  {activeTab === 'coletados' && 'Volumes coletados - a caminho do CD'}
+                  {activeTab === 'entregues_cd' && 'Histórico de volumes entregues ao CD'}
+                  {activeTab === 'aguardando' && 'Volumes separados - aceite para sair'}
+                  {activeTab === 'despachados' && 'Volumes em rota - finalize a entrega'}
+                  {activeTab === 'concluidos' && 'Entregas concluídas'}
+                  {activeTab === 'devolucoes' && 'Volumes devolvidos'}
+                </p>
+              </div>
+            </div>
+
+            {/* Título e descrição - visível em desktop */}
+            <div className="mb-6 hidden md:flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">
                   {activeTab === 'pendentes' && 'Volumes disponíveis para coleta'}
                   {activeTab === 'aceitos' && 'Volumes aceitos - aguardando coleta'}
                   {activeTab === 'coletados' && 'Volumes coletados - a caminho do CD'}
@@ -1417,6 +1494,46 @@ const MotoristaDashboard = () => {
               )}
             </div>
 
+            {/* Botões de ação mobile */}
+            <div className="mb-4 flex justify-end md:hidden">
+              {activeSection === 'coletas' && activeTab === 'aceitos' && aceitos.length > 0 && (
+                <Button
+                  className="bg-gradient-to-r from-primary to-red-600 hover:from-primary/90 hover:to-red-700 shadow-lg shadow-primary/20 transition-all"
+                  onClick={() => {
+                    setCollectBatchVolumes([]);
+                    setCollectBatchModalOpen(true);
+                  }}
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Coletar
+                </Button>
+              )}
+              
+              {activeSection === 'despache' && activeTab === 'aguardando' && aguardandoExpedicao.length > 0 && (
+                <Button
+                  className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 shadow-lg shadow-indigo-500/20 transition-all"
+                  onClick={handleAcceptAllDespache}
+                  disabled={acceptingAllDespache}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  {acceptingAllDespache ? 'Aceitando...' : 'Aceitar Todos'}
+                </Button>
+              )}
+              
+              {activeSection === 'despache' && activeTab === 'despachados' && despachados.length > 0 && (
+                <Button
+                  className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 shadow-lg shadow-emerald-500/20 transition-all"
+                  onClick={() => {
+                    setFinalizeBatchVolumes([]);
+                    setFinalizeBatchModalOpen(true);
+                  }}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Finalizar
+                </Button>
+              )}
+            </div>
+
             {/* Conteúdo */}
             {activeSection === 'coletas' && (
               <>
@@ -1435,9 +1552,9 @@ const MotoristaDashboard = () => {
                 {activeTab === 'devolucoes' && renderVolumeList(devolucoes, 'Nenhuma devolução')}
               </>
             )}
-          </>
-        )}
-      </main>
+          </main>
+        </div>
+      )}
 
       {/* Modal Aceitar */}
       <Dialog open={acceptModalOpen} onOpenChange={setAcceptModalOpen}>
