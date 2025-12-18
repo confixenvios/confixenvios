@@ -916,9 +916,8 @@ const MotoristaDashboard = () => {
     }
   };
 
-  // Menu items
+  // Menu items (sem Início - movido para header)
   const menuItems = [
-    { section: 'home', label: 'Início', icon: Home },
     { section: 'coletas', label: 'Coletas', icon: Truck },
     { section: 'despache', label: 'Expedição', icon: Send },
   ];
@@ -1197,28 +1196,23 @@ const MotoristaDashboard = () => {
                   {menuItems.map(item => (
                     <div key={item.section}>
                       <Button
-                        variant={(item.section === 'home' && showHomeDashboard) || (item.section !== 'home' && activeSection === item.section && !showHomeDashboard) ? "default" : "ghost"}
+                        variant={activeSection === item.section && !showHomeDashboard ? "default" : "ghost"}
                         className={`w-full justify-start mb-1 transition-all ${
-                          (item.section === 'home' && showHomeDashboard) || (item.section !== 'home' && activeSection === item.section && !showHomeDashboard)
+                          activeSection === item.section && !showHomeDashboard
                             ? 'bg-primary text-white shadow-md' 
                             : 'hover:bg-primary/10'
                         }`}
                         onClick={() => {
-                          if (item.section === 'home') {
-                            setShowHomeDashboard(true);
-                            setMenuOpen(false);
-                          } else {
-                            setShowHomeDashboard(false);
-                            setActiveSection(item.section);
-                            setActiveTab(item.section === 'coletas' ? 'pendentes' : 'aguardando');
-                          }
+                          setShowHomeDashboard(false);
+                          setActiveSection(item.section);
+                          setActiveTab(item.section === 'coletas' ? 'pendentes' : 'aguardando');
                         }}
                       >
                         <item.icon className="h-4 w-4 mr-2" />
                         {item.label}
                       </Button>
                       
-                      {item.section !== 'home' && activeSection === item.section && !showHomeDashboard && (
+                      {activeSection === item.section && !showHomeDashboard && (
                         <div className="pl-6 space-y-1 animate-fade-in">
                           {(item.section === 'coletas' ? coletasSubItems : despachaSubItems).map(sub => (
                             <Button
@@ -1249,18 +1243,6 @@ const MotoristaDashboard = () => {
                     </div>
                   ))}
                 </nav>
-                
-                {/* Logout no menu */}
-                <div className="absolute bottom-6 left-4 right-4">
-                  <Button 
-                    variant="outline" 
-                    className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-                    onClick={handleLogout}
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sair
-                  </Button>
-                </div>
               </SheetContent>
             </Sheet>
             
@@ -1273,7 +1255,18 @@ const MotoristaDashboard = () => {
             </div>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex items-center gap-1">
+            {!showHomeDashboard && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowHomeDashboard(true)}
+                className="text-white hover:bg-white/20"
+              >
+                <Home className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Início</span>
+              </Button>
+            )}
             <Button 
               variant="ghost" 
               size="sm" 
@@ -1281,6 +1274,15 @@ const MotoristaDashboard = () => {
               className="text-white hover:bg-white/20"
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleLogout}
+              className="text-white hover:bg-white/20"
+            >
+              <LogOut className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Sair</span>
             </Button>
           </div>
         </div>
@@ -1392,19 +1394,6 @@ const MotoristaDashboard = () => {
                 </Button>
               ))}
             </nav>
-            
-            {/* Botão voltar para início */}
-            <div className="p-3 border-t mt-auto absolute bottom-0 left-0 right-0 w-56">
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="w-full justify-start text-muted-foreground hover:text-foreground"
-                onClick={() => setShowHomeDashboard(true)}
-              >
-                <Home className="h-4 w-4 mr-2" />
-                Voltar ao Início
-              </Button>
-            </div>
           </aside>
 
           {/* Conteúdo principal */}
