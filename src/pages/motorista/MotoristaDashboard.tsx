@@ -973,9 +973,11 @@ const MotoristaDashboard = () => {
                 )}
               </div>
             </div>
-            <Badge className={`${statusConfig.bgColor} ${statusConfig.color} border text-xs font-medium`}>
-              {statusConfig.label}
-            </Badge>
+            {v.status !== 'CONCLUIDO' && (
+              <Badge className={`${statusConfig.bgColor} ${statusConfig.color} border text-xs font-medium`}>
+                {statusConfig.label}
+              </Badge>
+            )}
           </div>
           
           {/* Para PENDENTE: mostrar apenas ETI + bairro + peso + tipo veículo */}
@@ -1353,7 +1355,7 @@ const MotoristaDashboard = () => {
                   {activeTab === 'pendentes' && 'Volumes disponíveis para coleta'}
                   {activeTab === 'aceitos' && 'Volumes aceitos - aguardando coleta'}
                   {activeTab === 'coletados' && 'Volumes coletados - a caminho do CD'}
-                  {activeTab === 'entregues_cd' && 'Histórico de volumes entregues ao CD'}
+                  {activeTab === 'entregues_cd' && ''}
                   {activeTab === 'aguardando' && 'Volumes separados - aceite para sair'}
                   {activeTab === 'despachados' && 'Volumes em rota - finalize a entrega'}
                   {activeTab === 'concluidos' && 'Entregas concluídas'}
@@ -1369,7 +1371,7 @@ const MotoristaDashboard = () => {
                   {activeTab === 'pendentes' && 'Volumes disponíveis para coleta'}
                   {activeTab === 'aceitos' && 'Volumes aceitos - aguardando coleta'}
                   {activeTab === 'coletados' && 'Volumes coletados - a caminho do CD'}
-                  {activeTab === 'entregues_cd' && 'Histórico de volumes entregues ao CD'}
+                  {activeTab === 'entregues_cd' && ''}
                   {activeTab === 'aguardando' && 'Volumes separados - aceite para sair'}
                   {activeTab === 'despachados' && 'Volumes em rota - finalize a entrega'}
                   {activeTab === 'concluidos' && 'Entregas concluídas'}
