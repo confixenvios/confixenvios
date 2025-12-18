@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Package, Plus, BarChart3, LogOut, MapPin, Truck, Menu, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { Plus, BarChart3, LogOut, MapPin, Truck, Menu, Package } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import confixLogo from '@/assets/confix-logo-black.png';
 import PendingApprovalBanner from '@/components/PendingApprovalBanner';
@@ -19,7 +18,6 @@ const B2BLayout = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isPendingApproval, setIsPendingApproval] = useState(false);
-  const [noB2BAccess, setNoB2BAccess] = useState(false);
 
   useEffect(() => {
     loadClient();
@@ -33,10 +31,10 @@ const B2BLayout = () => {
         return;
       }
 
-      // Check profile status and B2B access
+      // Check profile status
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('status, is_b2b')
+        .select('status, first_name, last_name, email, phone, document')
         .eq('id', user.id)
         .single();
 
@@ -46,28 +44,42 @@ const B2BLayout = () => {
           setLoading(false);
           return;
         }
-        
-        if (!profileData.is_b2b) {
-          setNoB2BAccess(true);
-          setLoading(false);
-          return;
-        }
       }
 
-      const { data: clientData, error } = await supabase
+      // Check if b2b_clients record exists
+      let { data: clientData } = await supabase
         .from('b2b_clients')
         .select('company_name')
         .eq('user_id', user.id)
         .single();
 
-      if (error || !clientData) {
-        // No B2B client record - redirect to regular client area
-        toast.error('Você não tem acesso ao B2B Express');
-        navigate('/cliente/dashboard');
-        return;
+      // If no b2b_clients record exists, create one automatically
+      if (!clientData && profileData) {
+        const companyName = profileData.first_name && profileData.last_name 
+          ? `${profileData.first_name} ${profileData.last_name}`
+          : profileData.first_name || user.email?.split('@')[0] || 'Cliente';
+        
+        const { data: newClient, error: createError } = await supabase
+          .from('b2b_clients')
+          .insert({
+            user_id: user.id,
+            company_name: companyName,
+            email: profileData.email || user.email || '',
+            phone: profileData.phone || '',
+            cnpj: profileData.document || '',
+            is_active: true
+          })
+          .select('company_name')
+          .single();
+
+        if (!createError && newClient) {
+          clientData = newClient;
+        }
       }
 
-      setClient(clientData);
+      if (clientData) {
+        setClient(clientData);
+      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -103,24 +115,6 @@ const B2BLayout = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
         <PendingApprovalBanner type="b2b" />
-      </div>
-    );
-  }
-
-  // Show no B2B access message
-  if (noB2BAccess) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100">
-        <div className="max-w-md mx-4 text-center">
-          <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Acesso B2B Não Habilitado</h2>
-          <p className="text-muted-foreground mb-4">
-            Sua conta não possui acesso ao B2B Express. Entre em contato com o suporte para habilitar.
-          </p>
-          <Button onClick={() => navigate('/cliente/dashboard')}>
-            Ir para Área do Cliente
-          </Button>
-        </div>
       </div>
     );
   }
