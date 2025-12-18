@@ -82,17 +82,23 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
   'DEVOLUCAO': { label: 'Devolução', color: 'text-red-700', bgColor: 'bg-red-50 border-red-200', iconBg: 'bg-red-500' },
 };
 
-// Tipos de ocorrência
-const OCCURRENCE_TYPES = [
+// Tipos de ocorrência para falha na coleta
+const OCCURRENCE_TYPES_COLETA = [
+  'Endereço não encontrado',
+  'Avaria no volume',
+  'Embalagem inadequada',
+  'Etiqueta pendente',
+  'Outros'
+];
+
+// Tipos de ocorrência para entrega
+const OCCURRENCE_TYPES_ENTREGA = [
   'Endereço não encontrado',
   'Recusa de recebimento',
   'Avaria no volume',
-  'Embalagem inadequada',
-  'Extravio parcial',
+  'Destinatário ausente',
   'Problema de acesso',
-  'Horário inadequado',
-  'Documentação pendente',
-  'Outro'
+  'Outros'
 ];
 
 const MotoristaDashboard = () => {
@@ -2158,7 +2164,7 @@ const MotoristaDashboard = () => {
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {OCCURRENCE_TYPES.map(type => (
+                    {(occurrenceVolume.status === 'COLETA_ACEITA' ? OCCURRENCE_TYPES_COLETA : OCCURRENCE_TYPES_ENTREGA).map(type => (
                       <SelectItem key={type} value={type}>{type}</SelectItem>
                     ))}
                   </SelectContent>
