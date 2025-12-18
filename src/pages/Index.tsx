@@ -68,17 +68,17 @@ const Index = () => {
           </div>
 
           {/* Blocos de Serviços */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-3xl mx-auto w-full">
+          <div className="grid grid-cols-2 gap-2 sm:gap-4 max-w-3xl mx-auto w-full">
             {/* Expresso GYN */}
-            <Card className="text-center p-3 sm:p-4 hover:shadow-lg transition-shadow flex flex-col">
-              <CardHeader className="flex-1 pb-1 sm:pb-2 p-2 sm:p-4">
-                <CardTitle className="text-base sm:text-lg mb-1 sm:mb-2 text-primary">Expresso</CardTitle>
-                <p className="text-xs sm:text-sm text-muted-foreground">Coleta e entrega no mesmo dia em Goiânia e Região</p>
+            <Card className="text-center p-2 sm:p-4 hover:shadow-lg transition-shadow flex flex-col">
+              <CardHeader className="flex-1 pb-1 sm:pb-2 p-1 sm:p-4">
+                <CardTitle className="text-sm sm:text-lg mb-1 text-primary">Expresso</CardTitle>
+                <p className="text-[10px] sm:text-sm text-muted-foreground leading-tight">Coleta e entrega no mesmo dia em Goiânia e Região</p>
               </CardHeader>
-              <CardContent className="pt-1 sm:pt-2 p-2 sm:p-4">
-                <Button size="default" className="w-full" asChild>
+              <CardContent className="pt-1 sm:pt-2 p-1 sm:p-4">
+                <Button size="sm" className="w-full text-xs sm:text-sm" asChild>
                   <Link to="/b2b-expresso">
-                    <Zap className="mr-2 h-4 w-4" />
+                    <Zap className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                     Cotar
                   </Link>
                 </Button>
@@ -86,15 +86,15 @@ const Index = () => {
             </Card>
 
             {/* Nacional */}
-            <Card className="text-center p-3 sm:p-4 hover:shadow-lg transition-shadow border-primary/20 flex flex-col">
-              <CardHeader className="flex-1 pb-1 sm:pb-2 p-2 sm:p-4">
-                <CardTitle className="text-base sm:text-lg mb-1 sm:mb-2 text-primary">Nacional</CardTitle>
-                <p className="text-xs sm:text-sm text-muted-foreground">Perfil de mercadorias de e-commerce, coletamos e enviamos</p>
+            <Card className="text-center p-2 sm:p-4 hover:shadow-lg transition-shadow border-primary/20 flex flex-col">
+              <CardHeader className="flex-1 pb-1 sm:pb-2 p-1 sm:p-4">
+                <CardTitle className="text-sm sm:text-lg mb-1 text-primary">Nacional</CardTitle>
+                <p className="text-[10px] sm:text-sm text-muted-foreground leading-tight">Perfil de mercadorias de e-commerce, coletamos e enviamos</p>
               </CardHeader>
-              <CardContent className="pt-1 sm:pt-2 p-2 sm:p-4">
-                <Button size="default" className="w-full" asChild>
+              <CardContent className="pt-1 sm:pt-2 p-1 sm:p-4">
+                <Button size="sm" className="w-full text-xs sm:text-sm" asChild>
                   <Link to="/cotacao">
-                    <Package className="mr-2 h-4 w-4" />
+                    <Package className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                     Cotar
                   </Link>
                 </Button>
