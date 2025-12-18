@@ -106,7 +106,7 @@ const B2BNovaRemessa = () => {
   });
 
   // Calcula o valor total do frete
-  // Regra: R$15 por endereço único + R$1 por kg acima de 5kg
+  // Regra: R$15 por endereço único + R$1 por kg acima de 5kg + R$5 por pacote a partir do 4º
   const calculateTotal = () => {
     const basePricePerAddress = 15;
     
@@ -127,7 +127,14 @@ const B2BNovaRemessa = () => {
       weightExtra = Math.ceil(totalWeight - 5);
     }
     
-    return baseTotal + weightExtra;
+    // Adicional de pacotes: R$5 por pacote a partir do 4º
+    const volumeCount = parseInt(formData.volume_count) || 1;
+    let volumeExtra = 0;
+    if (volumeCount > 3) {
+      volumeExtra = (volumeCount - 3) * 5;
+    }
+    
+    return baseTotal + weightExtra + volumeExtra;
   };
 
   const totalWeight = formData.volume_weights.map(w => parseFloat(w) || 0).reduce((sum, w) => sum + w, 0);
