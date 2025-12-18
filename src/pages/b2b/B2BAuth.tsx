@@ -112,9 +112,11 @@ const B2BAuth = () => {
             <img src={confixLogo} alt="Confix Envios" className="h-12" />
           </div>
           
-          <Card className="border-0 shadow-xl">
-            <CardHeader className="space-y-1 text-center pb-4">
-              <CardTitle className="text-2xl font-bold">Envios Expresso</CardTitle>
+          <Card className="border-0 shadow-xl overflow-hidden">
+            {/* Red accent bar at top */}
+            <div className="h-1.5 bg-gradient-to-r from-primary to-red-600" />
+            <CardHeader className="space-y-1 text-center pb-4 pt-6">
+              <CardTitle className="text-2xl font-bold text-primary">Envios Expresso</CardTitle>
               <CardDescription>
                 Faça login para acessar o painel de envios expresso
               </CardDescription>
