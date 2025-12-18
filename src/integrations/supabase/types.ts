@@ -1336,8 +1336,10 @@ export type Database = {
           first_name: string | null
           id: string
           inscricao_estadual: string | null
+          is_b2b: boolean
           last_name: string | null
           phone: string | null
+          status: string
           tipo_cliente: string | null
           updated_at: string | null
         }
@@ -1348,8 +1350,10 @@ export type Database = {
           first_name?: string | null
           id: string
           inscricao_estadual?: string | null
+          is_b2b?: boolean
           last_name?: string | null
           phone?: string | null
+          status?: string
           tipo_cliente?: string | null
           updated_at?: string | null
         }
@@ -1360,8 +1364,10 @@ export type Database = {
           first_name?: string | null
           id?: string
           inscricao_estadual?: string | null
+          is_b2b?: boolean
           last_name?: string | null
           phone?: string | null
+          status?: string
           tipo_cliente?: string | null
           updated_at?: string | null
         }

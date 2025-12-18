@@ -6,6 +6,7 @@ import { Package, Plus, BarChart3, LogOut, MapPin, Truck, Menu, X } from 'lucide
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import confixLogo from '@/assets/confix-logo-black.png';
+import PendingApprovalBanner from '@/components/PendingApprovalBanner';
 
 interface B2BClient {
   company_name: string;
@@ -16,6 +17,9 @@ const B2BLayout = () => {
   const location = useLocation();
   const [client, setClient] = useState<B2BClient | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isPendingApproval, setIsPendingApproval] = useState(false);
+  const [noB2BAccess, setNoB2BAccess] = useState(false);
 
   useEffect(() => {
     loadClient();
@@ -29,6 +33,27 @@ const B2BLayout = () => {
         return;
       }
 
+      // Check profile status and B2B access
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('status, is_b2b')
+        .eq('id', user.id)
+        .single();
+
+      if (profileData) {
+        if (profileData.status !== 'aprovado') {
+          setIsPendingApproval(true);
+          setLoading(false);
+          return;
+        }
+        
+        if (!profileData.is_b2b) {
+          setNoB2BAccess(true);
+          setLoading(false);
+          return;
+        }
+      }
+
       const { data: clientData, error } = await supabase
         .from('b2b_clients')
         .select('company_name')
@@ -36,15 +61,17 @@ const B2BLayout = () => {
         .single();
 
       if (error || !clientData) {
-        toast.error('Cliente não encontrado');
-        await supabase.auth.signOut();
-        navigate('/b2b-expresso');
+        // No B2B client record - redirect to regular client area
+        toast.error('Você não tem acesso ao B2B Express');
+        navigate('/cliente/dashboard');
         return;
       }
 
       setClient(clientData);
     } catch (error) {
       console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -62,6 +89,41 @@ const B2BLayout = () => {
   ];
 
   const isActive = (path: string) => location.pathname === path;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Show pending approval banner
+  if (isPendingApproval) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
+        <PendingApprovalBanner type="b2b" />
+      </div>
+    );
+  }
+
+  // Show no B2B access message
+  if (noB2BAccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100">
+        <div className="max-w-md mx-4 text-center">
+          <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Acesso B2B Não Habilitado</h2>
+          <p className="text-muted-foreground mb-4">
+            Sua conta não possui acesso ao B2B Express. Entre em contato com o suporte para habilitar.
+          </p>
+          <Button onClick={() => navigate('/cliente/dashboard')}>
+            Ir para Área do Cliente
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
