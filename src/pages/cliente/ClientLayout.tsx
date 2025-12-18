@@ -11,7 +11,8 @@ import {
   User,
   LogOut,
   Menu,
-  Calculator
+  Calculator,
+  Car
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -212,7 +213,7 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
             onClick={() => navigate('/b2b-expresso/dashboard')}
             className="flex items-center gap-2"
           >
-            <Package2 className="h-4 w-4" />
+            <Car className="h-4 w-4" />
             <span>Ir para Expresso</span>
           </Button>
         </header>
