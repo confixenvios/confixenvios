@@ -74,7 +74,7 @@ const B2BAuth = () => {
             <img src={confixLogo} alt="Confix Envios" className="h-16" />
           </div>
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-white mb-4">B2B Express</h1>
+            <h1 className="text-4xl font-bold text-white mb-4">Envios Expresso</h1>
             <p className="text-white/80 text-lg max-w-md">
               Soluções logísticas para sua empresa com agilidade e segurança
             </p>
@@ -119,7 +119,7 @@ const B2BAuth = () => {
                   <Package className="h-6 w-6 text-primary" />
                 </div>
               </div>
-              <CardTitle className="text-2xl font-bold">B2B Express</CardTitle>
+              <CardTitle className="text-2xl font-bold">Envios Expresso</CardTitle>
               <CardDescription>
                 Faça login para acessar o painel de remessas
               </CardDescription>
