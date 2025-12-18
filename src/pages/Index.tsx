@@ -14,7 +14,7 @@ import netshoesLogo from "@/assets/clients/netshoes-logo.png";
 import avodahLogo from "@/assets/clients/avodah-logo.png";
 import magaluLogo from "@/assets/clients/magalu-logo.png";
 import deliveryProfessional from "@/assets/delivery-professional.webp";
-import heroBackground from "@/assets/hero-background.jpg";
+import heroTruckConfix from "@/assets/hero-truck-confix.png";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -36,13 +36,13 @@ const Index = () => {
       
       {/* Hero Section */}
       <section className="relative py-12 sm:py-16 md:py-20 px-2 sm:px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-60" style={{ backgroundImage: `url(${heroBackground})` }}></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-background/30 to-background/50"></div>
-        <div className="absolute inset-0 bg-gradient-glow opacity-30"></div>
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${heroTruckConfix})` }}></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/50 to-background/60"></div>
         
         <div className="container mx-auto text-center relative">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-12 leading-tight text-primary">
-            Coletamos e Entregamos em todo Brasil
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-12 leading-tight font-bold">
+            <span style={{ color: '#000000' }}>Coletamos e Entregamos em todo </span>
+            <span className="text-primary">Brasil</span>
           </h1>
           
           {/* Benefícios principais */}
