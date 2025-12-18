@@ -1176,82 +1176,10 @@ const MotoristaDashboard = () => {
       <header className="sticky top-0 z-40 bg-gradient-to-r from-primary via-primary to-red-700 shadow-lg">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-72 border-r-0">
-                <SheetHeader className="border-b pb-4">
-                  <div className="flex items-center gap-3">
-                    <img src={confixLogo} alt="Confix Envios" className="h-8" />
-                  </div>
-                  <div className="mt-3 p-3 bg-gradient-to-r from-primary/10 to-red-50 rounded-lg">
-                    <p className="text-sm font-medium text-foreground">Bem vindo, {motorista?.nome}</p>
-                    <p className="text-xs text-muted-foreground">Motorista</p>
-                  </div>
-                </SheetHeader>
-                <nav className="mt-6 space-y-2">
-                  {menuItems.map(item => (
-                    <div key={item.section}>
-                      <Button
-                        variant={activeSection === item.section && !showHomeDashboard ? "default" : "ghost"}
-                        className={`w-full justify-start mb-1 transition-all ${
-                          activeSection === item.section && !showHomeDashboard
-                            ? 'bg-primary text-white shadow-md' 
-                            : 'hover:bg-primary/10'
-                        }`}
-                        onClick={() => {
-                          setShowHomeDashboard(false);
-                          setActiveSection(item.section);
-                          setActiveTab(item.section === 'coletas' ? 'pendentes' : 'aguardando');
-                        }}
-                      >
-                        <item.icon className="h-4 w-4 mr-2" />
-                        {item.label}
-                      </Button>
-                      
-                      {activeSection === item.section && !showHomeDashboard && (
-                        <div className="pl-6 space-y-1 animate-fade-in">
-                          {(item.section === 'coletas' ? coletasSubItems : despachaSubItems).map(sub => (
-                            <Button
-                              key={sub.tab}
-                              variant={activeTab === sub.tab ? "default" : "ghost"}
-                              size="sm"
-                              className={`w-full justify-between transition-all ${
-                                activeTab === sub.tab 
-                                  ? 'bg-primary/90 text-white' 
-                                  : 'hover:bg-primary/10'
-                              }`}
-                              onClick={() => {
-                                setActiveTab(sub.tab);
-                                setMenuOpen(false);
-                              }}
-                            >
-                              {sub.label}
-                              <Badge 
-                                variant="outline" 
-                                className={`ml-2 ${activeTab === sub.tab ? 'border-white/50 text-white' : ''}`}
-                              >
-                                {sub.count}
-                              </Badge>
-                            </Button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </nav>
-              </SheetContent>
-            </Sheet>
-            
-            <div className="flex items-center gap-3">
-              <img src={confixLogo} alt="Confix Envios" className="h-7 brightness-0 invert" />
-              <div className="hidden sm:block">
-                <p className="text-xs text-white/70">Olá,</p>
-                <p className="text-sm font-medium text-white">{motorista?.nome}</p>
-              </div>
+            <img src={confixLogo} alt="Confix Envios" className="h-7 brightness-0 invert" />
+            <div className="hidden sm:block">
+              <p className="text-xs text-white/70">Olá,</p>
+              <p className="text-sm font-medium text-white">{motorista?.nome}</p>
             </div>
           </div>
           
