@@ -258,6 +258,43 @@ const B2BNovaRemessa = () => {
     setLoading(true);
 
     try {
+      // Validar preço no servidor antes de prosseguir (segurança)
+      const uniqueAddressCount = new Set(formData.volume_addresses.filter(a => a && a !== '')).size || 1;
+      
+      const pricingValidation = await supabase.functions.invoke('validate-b2b-pricing', {
+        body: {
+          volume_count: parseInt(formData.volume_count) || 1,
+          volume_weights: formData.volume_weights.map(w => parseFloat(w) || 0),
+          unique_address_count: uniqueAddressCount,
+          client_price: totalPrice
+        }
+      });
+
+      if (pricingValidation.error) {
+        console.error('Pricing validation error:', pricingValidation.error);
+        toast.error('Erro ao validar precificação. Tente novamente.');
+        setLoading(false);
+        return;
+      }
+
+      const validatedPrice = pricingValidation.data;
+
+      if (!validatedPrice.success) {
+        toast.error(validatedPrice.error || 'Erro na validação do preço');
+        setLoading(false);
+        return;
+      }
+
+      // Se o preço foi manipulado, usar o preço calculado pelo servidor
+      const finalPrice = validatedPrice.is_valid === false 
+        ? validatedPrice.calculated_price 
+        : totalPrice;
+
+      if (validatedPrice.is_valid === false) {
+        console.warn('Price was recalculated server-side:', validatedPrice);
+        toast.warning('Preço ajustado pelo servidor para garantir segurança.');
+      }
+
       // Preparar dados dos endereços selecionados
       const selectedAddresses = formData.volume_addresses.map(id => 
         addresses.find(a => a.id === id)
@@ -266,10 +303,12 @@ const B2BNovaRemessa = () => {
       // Encontrar endereço de coleta selecionado
       const selectedPickupAddress = pickupAddresses.find(a => a.id === formData.pickup_address_id);
 
-      // Navegar para tela de pagamento PIX
+      // Navegar para tela de pagamento PIX com preço validado
       navigate('/b2b-expresso/pix-pagamento', {
         state: {
-          amount: totalPrice,
+          amount: finalPrice,
+          serverValidatedPrice: validatedPrice.calculated_price,
+          priceBreakdown: validatedPrice.breakdown,
           shipmentData: {
             clientId: client.id,
             clientName: client.company_name,
@@ -288,6 +327,7 @@ const B2BNovaRemessa = () => {
         }
       });
     } catch (error: any) {
+      console.error('Submit error:', error);
       toast.error(error.message || 'Erro ao processar solicitação');
       setLoading(false);
     }
