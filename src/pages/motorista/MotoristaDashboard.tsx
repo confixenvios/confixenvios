@@ -1177,7 +1177,7 @@ const MotoristaDashboard = () => {
         <div className="container mx-auto px-4 py-2 flex items-center">
           {/* Esquerda: Logo + Saudação */}
           <div className="flex items-center gap-3 flex-1">
-            <img src={confixLogo} alt="Confix Envios" className="h-7 brightness-0 invert" />
+            <img src={confixLogo} alt="Confix Envios" className="h-7" />
             <div>
               <p className="text-xs text-white/70">Olá,</p>
               <p className="text-sm font-medium text-white">{motorista?.nome}</p>
@@ -1224,7 +1224,7 @@ const MotoristaDashboard = () => {
       {/* Campo de busca - fora do header para manter altura consistente */}
       {!showHomeDashboard && (
         <div className="bg-gradient-to-r from-primary via-primary to-red-700 px-4 pb-3 flex justify-center">
-          <div className="relative w-full max-w-md">
+          <div className="relative w-48 sm:w-56">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
             <Input
               placeholder="Buscar pedido"
