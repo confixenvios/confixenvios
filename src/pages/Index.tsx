@@ -40,8 +40,8 @@ const Index = () => {
         
         <div className="container mx-auto text-center relative">
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-12 leading-tight font-bold">
-            <span style={{ color: '#000000' }}>Coletamos e Entregamos em todo o </span>
-            <span className="text-primary">Brasil</span>
+            <span style={{ color: '#000000', textShadow: '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.7)' }}>Coletamos e Entregamos em todo o </span>
+            <span className="text-primary" style={{ textShadow: '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.8)' }}>Brasil</span>
           </h1>
           
           {/* Benefícios principais em mini cards */}
