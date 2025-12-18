@@ -6,6 +6,7 @@ import { Plus, BarChart3, LogOut, MapPin, Truck, Menu, Package } from 'lucide-re
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import confixLogo from '@/assets/confix-logo-black.png';
 import PendingApprovalBanner from '@/components/PendingApprovalBanner';
+import PanelSwitcher from '@/components/PanelSwitcher';
 
 interface B2BClient {
   company_name: string;
@@ -200,18 +201,27 @@ const B2BLayout = () => {
                 <img src={confixLogo} alt="Confix Envios" className="h-5" />
               </div>
             </div>
-            {client && (
-              <span className="text-sm text-white/90 truncate max-w-[180px]">Bem vindo, {client.company_name}</span>
-            )}
+            <div className="flex items-center gap-2">
+              <PanelSwitcher />
+            </div>
           </div>
         </header>
 
         {/* Desktop Header */}
-        <header className="hidden md:flex sticky top-0 z-40 bg-white border-b shadow-sm h-14 items-center px-6">
+        <header className="hidden md:flex sticky top-0 z-40 bg-white border-b shadow-sm h-14 items-center px-6 justify-between">
           <div className="flex items-center gap-3">
             <Package className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-foreground">Painel B2B Express</span>
+            <span className="font-semibold text-foreground">Painel B2B Express - Envios Expresso</span>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/cliente/dashboard')}
+            className="flex items-center gap-2"
+          >
+            <Truck className="h-4 w-4" />
+            <span>Ir para Convencional</span>
+          </Button>
         </header>
 
         {/* Main Content */}
