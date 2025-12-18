@@ -1351,33 +1351,10 @@ const MotoristaDashboard = () => {
                     </>
                   )}
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1 ml-4">
-                  {activeTab === 'pendentes' && 'Volumes disponíveis para coleta'}
-                  {activeTab === 'aceitos' && 'Volumes aceitos - aguardando coleta'}
-                  {activeTab === 'coletados' && 'Volumes coletados - a caminho do CD'}
-                  {activeTab === 'entregues_cd' && ''}
-                  {activeTab === 'aguardando' && 'Volumes separados - aceite para sair'}
-                  {activeTab === 'despachados' && 'Volumes em rota - finalize a entrega'}
-                  {activeTab === 'concluidos' && 'Entregas concluídas'}
-                  {activeTab === 'devolucoes' && 'Volumes devolvidos'}
-                </p>
               </div>
             </div>
 
-            {/* Título e descrição - visível em desktop */}
-            <div className="mb-6 hidden md:flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  {activeTab === 'pendentes' && 'Volumes disponíveis para coleta'}
-                  {activeTab === 'aceitos' && 'Volumes aceitos - aguardando coleta'}
-                  {activeTab === 'coletados' && 'Volumes coletados - a caminho do CD'}
-                  {activeTab === 'entregues_cd' && ''}
-                  {activeTab === 'aguardando' && 'Volumes separados - aceite para sair'}
-                  {activeTab === 'despachados' && 'Volumes em rota - finalize a entrega'}
-                  {activeTab === 'concluidos' && 'Entregas concluídas'}
-                  {activeTab === 'devolucoes' && 'Volumes devolvidos'}
-                </p>
-              </div>
+            <div className="mb-6 hidden md:flex items-center justify-end">
               
               {/* Botão Coletar Vários para seção Coletas na aba aceitos */}
               {activeSection === 'coletas' && activeTab === 'aceitos' && aceitos.length > 0 && (
