@@ -68,7 +68,7 @@ const Index = () => {
           </div>
 
           {/* Blocos de Serviços */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-4 max-w-md mx-auto w-full mt-4 sm:mt-6 md:mt-10">
+          <div className="grid grid-cols-2 gap-2 sm:gap-4 max-w-md mx-auto w-full mt-8 sm:mt-6 md:mt-10">
             {/* Expresso Local */}
             <Card className="text-center p-3 sm:p-4 hover:shadow-lg transition-shadow flex flex-col">
               <CardHeader className="pb-2 sm:pb-3 p-2 sm:p-4">
