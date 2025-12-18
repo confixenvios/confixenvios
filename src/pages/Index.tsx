@@ -35,45 +35,45 @@ const Index = () => {
       <Header />
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden h-[70vh] min-h-[500px] max-h-[700px]">
+      <section className="relative overflow-hidden min-h-[60vh] md:h-[70vh] md:min-h-[500px] md:max-h-[700px]">
         <img 
           src={heroTruckConfix} 
           alt="Caminhão Confix Envios" 
-          className="absolute inset-0 w-full h-full object-cover object-right"
+          className="absolute inset-0 w-full h-full object-cover object-center md:object-right"
           loading="eager"
           fetchPriority="high"
         />
-        <div className="absolute inset-0 flex flex-col items-center justify-start pt-8 sm:pt-12 md:pt-16 px-4">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-8 md:mb-12 leading-tight font-normal text-center">
+        <div className="relative flex flex-col items-center justify-start pt-6 sm:pt-8 md:pt-16 px-4 pb-6">
+          <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl mb-4 sm:mb-6 md:mb-12 leading-tight font-normal text-center">
             <span style={{ color: '#000000', textShadow: '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.7)' }}>Coletamos e Entregamos em todo o </span>
             <span className="text-primary" style={{ textShadow: '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.8)' }}>Brasil</span>
           </h1>
           
           {/* Benefícios principais em mini cards */}
-          <div className="flex flex-wrap justify-center gap-4 mb-8 md:mb-12">
-            <div className="bg-white/90 backdrop-blur-sm rounded-lg px-6 py-3 shadow-md flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-primary" />
-              <span className="text-base font-medium" style={{ color: '#000000' }}>Menor preço</span>
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-4 sm:mb-6 md:mb-12">
+            <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 sm:px-6 py-2 sm:py-3 shadow-md flex items-center gap-1 sm:gap-2">
+              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              <span className="text-sm sm:text-base font-medium" style={{ color: '#000000' }}>Menor preço</span>
             </div>
-            <div className="bg-white/90 backdrop-blur-sm rounded-lg px-6 py-3 shadow-md flex items-center gap-2">
-              <Clock className="w-5 h-5 text-primary" />
-              <span className="text-base font-medium" style={{ color: '#000000' }}>Menor prazo</span>
+            <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 sm:px-6 py-2 sm:py-3 shadow-md flex items-center gap-1 sm:gap-2">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              <span className="text-sm sm:text-base font-medium" style={{ color: '#000000' }}>Menor prazo</span>
             </div>
-            <div className="bg-white/90 backdrop-blur-sm rounded-lg px-6 py-3 shadow-md flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" />
-              <span className="text-base font-medium" style={{ color: '#000000' }}>Maior Agilidade</span>
+            <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 sm:px-6 py-2 sm:py-3 shadow-md flex items-center gap-1 sm:gap-2">
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              <span className="text-sm sm:text-base font-medium" style={{ color: '#000000' }}>Maior Agilidade</span>
             </div>
           </div>
 
           {/* Blocos de Serviços */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-3xl mx-auto w-full">
             {/* Expresso GYN */}
-            <Card className="text-center p-4 hover:shadow-lg transition-shadow flex flex-col">
-              <CardHeader className="flex-1 pb-2">
-                <CardTitle className="text-lg mb-2 text-primary">Expresso</CardTitle>
-                <p className="text-sm text-muted-foreground">Coleta e entrega no mesmo dia em Goiânia e Região</p>
+            <Card className="text-center p-3 sm:p-4 hover:shadow-lg transition-shadow flex flex-col">
+              <CardHeader className="flex-1 pb-1 sm:pb-2 p-2 sm:p-4">
+                <CardTitle className="text-base sm:text-lg mb-1 sm:mb-2 text-primary">Expresso</CardTitle>
+                <p className="text-xs sm:text-sm text-muted-foreground">Coleta e entrega no mesmo dia em Goiânia e Região</p>
               </CardHeader>
-              <CardContent className="pt-2">
+              <CardContent className="pt-1 sm:pt-2 p-2 sm:p-4">
                 <Button size="default" className="w-full" asChild>
                   <Link to="/b2b-expresso">
                     <Zap className="mr-2 h-4 w-4" />
@@ -84,12 +84,12 @@ const Index = () => {
             </Card>
 
             {/* Nacional */}
-            <Card className="text-center p-4 hover:shadow-lg transition-shadow border-primary/20 flex flex-col">
-              <CardHeader className="flex-1 pb-2">
-                <CardTitle className="text-lg mb-2 text-primary">Nacional</CardTitle>
-                <p className="text-sm text-muted-foreground">Perfil de mercadorias de e-commerce, coletamos e enviamos</p>
+            <Card className="text-center p-3 sm:p-4 hover:shadow-lg transition-shadow border-primary/20 flex flex-col">
+              <CardHeader className="flex-1 pb-1 sm:pb-2 p-2 sm:p-4">
+                <CardTitle className="text-base sm:text-lg mb-1 sm:mb-2 text-primary">Nacional</CardTitle>
+                <p className="text-xs sm:text-sm text-muted-foreground">Perfil de mercadorias de e-commerce, coletamos e enviamos</p>
               </CardHeader>
-              <CardContent className="pt-2">
+              <CardContent className="pt-1 sm:pt-2 p-2 sm:p-4">
                 <Button size="default" className="w-full" asChild>
                   <Link to="/cotacao">
                     <Package className="mr-2 h-4 w-4" />
