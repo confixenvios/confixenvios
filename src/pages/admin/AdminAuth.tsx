@@ -165,14 +165,11 @@ const AdminAuth = () => {
             <img src={confixLogo} alt="Confix Envios" className="h-12" />
           </div>
           
-          <Card className="border-0 shadow-xl">
-            <CardHeader className="text-center pb-4">
-              <div className="flex justify-center mb-2">
-                <div className="p-3 bg-primary/10 rounded-full">
-                  <Shield className="h-6 w-6 text-primary" />
-                </div>
-              </div>
-              <CardTitle className="text-2xl font-bold">Acesso Administrativo</CardTitle>
+          <Card className="border-0 shadow-xl overflow-hidden">
+            {/* Red accent bar at top */}
+            <div className="h-1.5 bg-gradient-to-r from-primary to-red-600" />
+            <CardHeader className="text-center pb-4 pt-6">
+              <CardTitle className="text-2xl font-bold text-primary">Acesso Administrativo</CardTitle>
               <CardDescription>
                 Login exclusivo para administradores do sistema
               </CardDescription>
