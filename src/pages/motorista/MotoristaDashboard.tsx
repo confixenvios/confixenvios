@@ -1145,15 +1145,14 @@ const MotoristaDashboard = () => {
     );
   };
 
-  const renderVolumeList = (volumeList: B2BVolume[], emptyMessage: string, actions: 'accept' | 'collect' | 'bip' | 'finalize' | 'none' = 'none') => {
+  const renderVolumeList = (volumeList: B2BVolume[], _emptyMessage: string, actions: 'accept' | 'collect' | 'bip' | 'finalize' | 'none' = 'none') => {
     if (volumeList.length === 0) {
       return (
         <Card className="border-0 shadow-sm bg-white/80">
           <CardContent className="p-12 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto rounded-full bg-slate-100 flex items-center justify-center">
               <Package className="h-8 w-8 text-slate-400" />
             </div>
-            <p className="text-muted-foreground">{emptyMessage}</p>
           </CardContent>
         </Card>
       );
