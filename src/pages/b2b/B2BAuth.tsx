@@ -119,7 +119,7 @@ const B2BAuth = () => {
               <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary">
                 <Package className="h-6 w-6 text-primary-foreground" />
               </div>
-              <CardTitle className="text-2xl font-bold text-primary">Envios Expresso</CardTitle>
+              <CardTitle className="text-2xl text-primary">Envios Expresso</CardTitle>
               <CardDescription>
                 Faça login para acessar o painel de envios expresso
               </CardDescription>
