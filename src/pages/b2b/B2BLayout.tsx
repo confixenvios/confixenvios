@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, BarChart3, LogOut, MapPin, Truck, Menu, Car } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import confixLogo from '@/assets/confix-logo-black.png';
-import PendingApprovalBanner from '@/components/PendingApprovalBanner';
+
 import PanelSwitcher from '@/components/PanelSwitcher';
 
 interface B2BClient {
@@ -18,7 +18,7 @@ const B2BLayout = () => {
   const [client, setClient] = useState<B2BClient | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [isPendingApproval, setIsPendingApproval] = useState(false);
+  
 
   useEffect(() => {
     loadClient();
@@ -39,13 +39,6 @@ const B2BLayout = () => {
         .eq('id', user.id)
         .single();
 
-      if (profileData) {
-        if (profileData.status !== 'aprovado') {
-          setIsPendingApproval(true);
-          setLoading(false);
-          return;
-        }
-      }
 
       // Check if b2b_clients record exists
       let { data: clientData } = await supabase
@@ -111,14 +104,6 @@ const B2BLayout = () => {
     );
   }
 
-  // Show pending approval banner
-  if (isPendingApproval) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
-        <PendingApprovalBanner type="b2b" />
-      </div>
-    );
-  }
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">

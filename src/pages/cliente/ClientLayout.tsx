@@ -18,7 +18,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { supabase } from '@/integrations/supabase/client';
 import confixLogo from '@/assets/confix-logo-black.png';
-import PendingApprovalBanner from '@/components/PendingApprovalBanner';
+
 import PanelSwitcher from '@/components/PanelSwitcher';
 
 interface ClientLayoutProps {
@@ -31,7 +31,7 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
-  const [isPendingApproval, setIsPendingApproval] = useState(false);
+  
 
   // Check if user is admin and redirect, also check approval status
   useEffect(() => {
@@ -53,17 +53,6 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
         // User is admin, redirect to admin panel
         navigate('/admin', { replace: true });
         return;
-      }
-
-      // Check approval status from profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('status')
-        .eq('id', user.id)
-        .single();
-
-      if (profileData && profileData.status !== 'aprovado') {
-        setIsPendingApproval(true);
       }
 
       setCheckingAdmin(false);
@@ -167,9 +156,6 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-slate-50 via-white to-slate-100">
-      {/* Pending Approval Overlay */}
-      {isPendingApproval && <PendingApprovalBanner type="client" />}
-
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-64 flex-col bg-white border-r shadow-sm">
         <SidebarContent />
