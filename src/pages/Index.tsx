@@ -394,7 +394,7 @@ const Index = () => {
             </div>
 
             {/* Contato */}
-            <div>
+            <div className="md:ml-auto">
               <h4 className="font-semibold mb-4">Contato</h4>
               <div className="space-y-2 text-base">
                 <div className="flex items-center gap-2">
