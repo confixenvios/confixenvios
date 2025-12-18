@@ -168,8 +168,8 @@ const Header = () => {
             >
               <User className="h-8 w-8" />
               <div className="text-center">
-                <div className="font-semibold text-lg">Login Normal</div>
-                <div className="text-xs opacity-90">Acesso para clientes e usuários gerais</div>
+                <div className="font-semibold text-lg">Convencional</div>
+                <div className="text-xs opacity-90">Acesso para clientes e usuários</div>
               </div>
             </Button>
 
@@ -183,8 +183,8 @@ const Header = () => {
             >
               <Building2 className="h-8 w-8" />
               <div className="text-center">
-                <div className="font-semibold text-lg">B2B Expresso</div>
-                <div className="text-xs opacity-90">Acesso exclusivo para clientes B2B</div>
+                <div className="font-semibold text-lg">Expresso</div>
+                <div className="text-xs opacity-90">Acesso para envios expresso</div>
               </div>
             </Button>
 
