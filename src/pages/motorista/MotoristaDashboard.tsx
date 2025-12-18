@@ -359,7 +359,7 @@ const MotoristaDashboard = () => {
 
   // Filtros - Despache
   const aguardandoExpedicao = filterBySearch(volumes.filter(v => v.status === 'AGUARDANDO_ACEITE_EXPEDICAO' && v.motorista_entrega_id === motorista?.id));
-  const despachados = filterBySearch(volumes.filter(v => v.status === 'EXPEDIDO' && v.motorista_entrega_id === motorista?.id));
+  const expedidos = filterBySearch(volumes.filter(v => v.status === 'EXPEDIDO' && v.motorista_entrega_id === motorista?.id));
   const concluidos = filterBySearch(volumes.filter(v => v.status === 'CONCLUIDO' && v.motorista_entrega_id === motorista?.id));
   const devolucoes = filterBySearch(volumes.filter(v => {
     if (v.status !== 'DEVOLUCAO') return false;
@@ -753,10 +753,10 @@ const MotoristaDashboard = () => {
         return;
       }
       
-      // Verificar se existe nos volumes despachados
-      const volume = despachados.find(v => v.eti_code === inputEti);
+      // Verificar se existe nos volumes expedidos
+      const volume = expedidos.find(v => v.eti_code === inputEti);
       if (!volume) {
-        toast.error('Volume não encontrado ou não está despachado');
+        toast.error('Volume não encontrado ou não está expedido');
         setFinalizeBatchEtiInput('');
         return;
       }
@@ -937,7 +937,7 @@ const MotoristaDashboard = () => {
 
   const despachaSubItems = [
     { tab: 'aguardando', label: 'Aguardando Aceite', count: aguardandoExpedicao.length },
-    { tab: 'despachados', label: 'Expedidos', count: despachados.length },
+    { tab: 'expedidos', label: 'Expedidos', count: expedidos.length },
     { tab: 'concluidos', label: 'Concluídos', count: concluidos.length },
     { tab: 'devolucoes', label: 'Devoluções', count: devolucoes.length },
   ];
@@ -1281,7 +1281,7 @@ const MotoristaDashboard = () => {
                     <Send className="h-5 w-5 text-indigo-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-foreground">{despachados.length}</p>
+                    <p className="text-2xl font-bold text-foreground">{expedidos.length}</p>
                     <p className="text-xs text-muted-foreground">Em Rota</p>
                   </div>
                 </div>
@@ -1352,7 +1352,7 @@ const MotoristaDashboard = () => {
                     <h3 className="text-3xl font-bold text-foreground mb-2">Expedição</h3>
                     <p className="text-muted-foreground text-center mb-4">Entregue volumes aos destinatários</p>
                     <div className="flex items-center gap-2 text-emerald-600 font-medium">
-                      <span>{aguardandoExpedicao.length + despachados.length} volumes</span>
+                      <span>{aguardandoExpedicao.length + expedidos.length} volumes</span>
                       <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:translate-x-1 transition-transform">
                         <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -1529,8 +1529,8 @@ const MotoristaDashboard = () => {
                 </Button>
               )}
               
-              {/* Botão Finalizar para seção Despache na aba despachados */}
-              {activeSection === 'despache' && activeTab === 'despachados' && despachados.length > 0 && (
+              {/* Botão Finalizar para seção Despache na aba expedidos */}
+              {activeSection === 'despache' && activeTab === 'expedidos' && expedidos.length > 0 && (
                 <Button
                   className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 shadow-lg shadow-emerald-500/20 transition-all"
                   onClick={() => {
@@ -1570,7 +1570,7 @@ const MotoristaDashboard = () => {
                 </Button>
               )}
               
-              {activeSection === 'despache' && activeTab === 'despachados' && despachados.length > 0 && (
+              {activeSection === 'despache' && activeTab === 'expedidos' && expedidos.length > 0 && (
                 <Button
                   className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 shadow-lg shadow-emerald-500/20 transition-all"
                   onClick={() => {
@@ -1610,7 +1610,7 @@ const MotoristaDashboard = () => {
             {activeSection === 'despache' && (
               <>
                 {activeTab === 'aguardando' && renderVolumeList(aguardandoExpedicao, 'Nenhum volume aguardando despache', 'bip')}
-                {activeTab === 'despachados' && renderVolumeList(despachados, 'Nenhum volume despachado')}
+                {activeTab === 'expedidos' && renderVolumeList(expedidos, 'Nenhum volume expedido')}
                 {activeTab === 'concluidos' && renderVolumeList(concluidos, 'Nenhuma entrega concluída')}
                 {activeTab === 'devolucoes' && renderVolumeList(devolucoes, 'Nenhuma devolução')}
               </>
