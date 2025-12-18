@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Plus, BarChart3, LogOut, MapPin, Truck, Menu, Package } from 'lucide-react';
+import { Plus, BarChart3, LogOut, MapPin, Truck, Menu, Car } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import confixLogo from '@/assets/confix-logo-black.png';
 import PendingApprovalBanner from '@/components/PendingApprovalBanner';
@@ -210,7 +210,7 @@ const B2BLayout = () => {
         {/* Desktop Header */}
         <header className="hidden md:flex sticky top-0 z-40 bg-white border-b shadow-sm h-14 items-center px-6 justify-between">
           <div className="flex items-center gap-3">
-            <Package className="h-5 w-5 text-primary" />
+            <Car className="h-5 w-5 text-primary" />
             <span className="font-semibold text-foreground">Painel B2B Express - Envios Expresso</span>
           </div>
           <Button

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Package, Truck } from "lucide-react";
+import { Car, Truck } from "lucide-react";
 
 const PanelSwitcher = () => {
   const navigate = useNavigate();
@@ -30,7 +30,7 @@ const PanelSwitcher = () => {
         </>
       ) : (
         <>
-          <Package className="h-4 w-4" />
+          <Car className="h-4 w-4" />
           <span className="hidden sm:inline">Expresso</span>
         </>
       )}
