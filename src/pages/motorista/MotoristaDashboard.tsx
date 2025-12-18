@@ -1323,7 +1323,7 @@ const MotoristaDashboard = () => {
           {/* Conteúdo principal */}
           <main className="flex-1 p-4 md:p-6 overflow-auto">
             {/* Título da seção - visível apenas em mobile */}
-            <div className="mb-6 flex items-center justify-between md:hidden">
+            <div className="mb-4 flex items-center justify-between md:hidden">
               <div>
                 <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
                   {activeSection === 'coletas' ? (
@@ -1334,7 +1334,7 @@ const MotoristaDashboard = () => {
                   ) : (
                     <>
                       <div className="w-2 h-8 bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-full" />
-                      Despache
+                      Expedição
                     </>
                   )}
                 </h2>
@@ -1347,6 +1347,35 @@ const MotoristaDashboard = () => {
               >
                 🏠 Início
               </Button>
+            </div>
+
+            {/* Menu de navegação mobile */}
+            <div className="mb-4 md:hidden overflow-x-auto">
+              <div className="flex gap-2 pb-2">
+                {(activeSection === 'coletas' ? coletasSubItems : despachaSubItems).map(sub => (
+                  <Button
+                    key={sub.tab}
+                    variant={activeTab === sub.tab ? "default" : "outline"}
+                    size="sm"
+                    className={`flex-shrink-0 whitespace-nowrap ${
+                      activeTab === sub.tab 
+                        ? activeSection === 'coletas' 
+                          ? 'bg-primary text-white shadow-md hover:bg-primary/90' 
+                          : 'bg-emerald-600 text-white shadow-md hover:bg-emerald-700'
+                        : 'text-foreground hover:bg-slate-100'
+                    }`}
+                    onClick={() => setActiveTab(sub.tab)}
+                  >
+                    {sub.label}
+                    <Badge 
+                      variant="outline" 
+                      className={`ml-2 ${activeTab === sub.tab ? 'border-white/50 text-white bg-white/20' : 'bg-muted'}`}
+                    >
+                      {sub.count}
+                    </Badge>
+                  </Button>
+                ))}
+              </div>
             </div>
 
             <div className="mb-6 hidden md:flex items-center justify-end">
