@@ -114,14 +114,9 @@ const B2BAuth = () => {
           
           <Card className="border-0 shadow-xl">
             <CardHeader className="space-y-1 text-center pb-4">
-              <div className="flex justify-center mb-2">
-                <div className="p-3 bg-primary/10 rounded-full">
-                  <Package className="h-6 w-6 text-primary" />
-                </div>
-              </div>
               <CardTitle className="text-2xl font-bold">Envios Expresso</CardTitle>
               <CardDescription>
-                Faça login para acessar o painel de remessas
+                Faça login para acessar o painel de envios expresso
               </CardDescription>
             </CardHeader>
             <CardContent>
