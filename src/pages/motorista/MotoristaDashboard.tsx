@@ -1177,7 +1177,7 @@ const MotoristaDashboard = () => {
         <div className="container mx-auto px-4 py-2 flex items-center">
           {/* Esquerda: Logo + Saudação */}
           <div className="flex items-center gap-3 flex-1">
-            <img src={confixLogo} alt="Confix Envios" className="h-7 brightness-0 invert" />
+            <img src={confixLogo} alt="Confix Envios" className="h-7" />
             <div>
               <p className="text-xs text-white/70">Olá,</p>
               <p className="text-sm font-medium text-white">{motorista?.nome}</p>
