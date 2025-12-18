@@ -13,6 +13,7 @@ import logoConfixEnvios from '@/assets/confix-logo-black.png';
 import { formatDocument, validateDocument, getDocumentType } from "@/utils/documentValidation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -413,16 +414,14 @@ const Auth = () => {
                     
                     <div className="space-y-2">
                       <Label htmlFor="signup-phone">WhatsApp *</Label>
-                      <Input
-                        id="signup-phone"
-                        type="tel"
-                        placeholder="(11) 99999-9999"
+                      <PhoneInput
                         value={signupData.phone}
                         onChange={(e) => setSignupData(prev => ({
                           ...prev,
                           phone: e.target.value
                         }))}
-                        disabled={isLoading}
+                        placeholder="(11) 99999-9999"
+                        required
                       />
                     </div>
                     
