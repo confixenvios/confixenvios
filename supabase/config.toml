@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.carrier-label-webhook]
 verify_jwt = false
+
+[functions.validate-b2b-pricing]
+verify_jwt = false
