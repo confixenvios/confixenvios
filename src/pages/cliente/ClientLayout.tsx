@@ -17,6 +17,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { supabase } from '@/integrations/supabase/client';
 import confixLogo from '@/assets/confix-logo-black.png';
+import PendingApprovalBanner from '@/components/PendingApprovalBanner';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -28,31 +29,45 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
+  const [isPendingApproval, setIsPendingApproval] = useState(false);
 
-  // Check if user is admin and redirect
+  // Check if user is admin and redirect, also check approval status
   useEffect(() => {
-    const checkAdminRole = async () => {
+    const checkUserStatus = async () => {
       if (!user) {
         setCheckingAdmin(false);
         return;
       }
 
-      const { data } = await supabase
+      // Check if user is admin
+      const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
         .eq('role', 'admin')
         .maybeSingle();
 
-      if (data) {
+      if (roleData) {
         // User is admin, redirect to admin panel
         navigate('/admin', { replace: true });
-      } else {
-        setCheckingAdmin(false);
+        return;
       }
+
+      // Check approval status from profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('status')
+        .eq('id', user.id)
+        .single();
+
+      if (profileData && profileData.status !== 'aprovado') {
+        setIsPendingApproval(true);
+      }
+
+      setCheckingAdmin(false);
     };
 
-    checkAdminRole();
+    checkUserStatus();
   }, [user, navigate]);
 
   // Show loading while checking admin status
@@ -150,6 +165,9 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-slate-50 via-white to-slate-100">
+      {/* Pending Approval Overlay */}
+      {isPendingApproval && <PendingApprovalBanner type="client" />}
+
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-64 flex-col bg-white border-r shadow-sm">
         <SidebarContent />
