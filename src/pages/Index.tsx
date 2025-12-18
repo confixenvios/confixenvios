@@ -361,9 +361,9 @@ const Index = () => {
       {/* Footer */}
       <footer id="contato" className="bg-primary text-primary-foreground py-16">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Logo e descrição */}
-            <div className="col-span-1 md:col-span-2">
+            <div>
               <h3 className="text-2xl font-bold mb-4">Confix Envios</h3>
               <p className="text-primary-foreground/80 mb-6 text-base">
                 Coletamos e enviamos para todo o Brasil
@@ -382,9 +382,9 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Sede */}
-            <div>
-              <h4 className="font-semibold mb-4">Sede</h4>
+            {/* Endereço */}
+            <div className="text-center">
+              <h4 className="font-semibold mb-4">Endereço</h4>
               <p className="text-base text-primary-foreground/80">
                 Av. primeira avenida s/n Qd. 5 B Lt.1 e 3<br />
                 Cidade vera cruz Condomínio Empresarial Village<br />
@@ -394,14 +394,14 @@ const Index = () => {
             </div>
 
             {/* Contato */}
-            <div>
+            <div className="text-right md:text-right">
               <h4 className="font-semibold mb-4">Contato</h4>
               <div className="space-y-2 text-base">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 justify-end">
                   <Phone className="h-4 w-4" />
                   <span>+55 62 9873-3276</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 justify-end">
                   <Mail className="h-4 w-4" />
                   <span>confix@grupoconfix.com</span>
                 </div>
