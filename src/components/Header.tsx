@@ -1,4 +1,4 @@
-import { Package, User, LogIn, Building2, Truck } from "lucide-react";
+import { Package, User, LogIn, Building2, Truck, Menu, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
@@ -19,6 +19,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { LayoutDashboard, Shield, RefreshCw, LogOut } from 'lucide-react';
 import logoConfixEnvios from '@/assets/confix-logo-black.png';
 
@@ -26,16 +31,52 @@ const Header = () => {
   const { user, loading, signOut, isAdmin, refreshUserData } = useAuth();
   const navigate = useNavigate();
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navLinks = [
+    { href: '#servicos', label: 'Serviços' },
+    { href: '#diferencial', label: 'Diferencial' },
+    { href: '#quemsomos', label: 'Sobre' },
+    { href: '#contato', label: 'Contato' },
+  ];
+
+  const handleNavClick = (href: string) => {
+    const id = href.replace('#', '');
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    setMobileMenuOpen(false);
+  };
 
   return (
     <header className="border-b border-border bg-white sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3">
         <div className="flex items-center justify-between">
+          {/* Mobile Menu Button */}
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild className="md:hidden">
+              <Button variant="ghost" size="icon" className="mr-2">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64">
+              <nav className="flex flex-col gap-4 mt-8">
+                {navLinks.map((link) => (
+                  <button
+                    key={link.href}
+                    onClick={() => handleNavClick(link.href)}
+                    className="text-left text-lg font-medium hover:text-primary transition-colors py-2"
+                  >
+                    {link.label}
+                  </button>
+                ))}
+              </nav>
+            </SheetContent>
+          </Sheet>
+
           <Link to="/" className="flex items-center space-x-2 group">
             <img 
               src={logoConfixEnvios} 
               alt="Confix Envios" 
-              className="h-12 sm:h-14 md:h-16 w-auto group-hover:scale-105 transition-transform duration-200"
+              className="h-10 sm:h-12 md:h-14 w-auto group-hover:scale-105 transition-transform duration-200"
             />
           </Link>
           
