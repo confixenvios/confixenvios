@@ -44,19 +44,19 @@ const Index = () => {
             <span className="text-primary">Brasil</span>
           </h1>
           
-          {/* Benefícios principais */}
-          <div className="flex flex-wrap justify-center gap-6 mb-12">
-            <div className="flex items-center gap-2">
+          {/* Benefícios principais em mini cards */}
+          <div className="flex flex-wrap justify-center gap-4 mb-12">
+            <div className="bg-white/90 backdrop-blur-sm rounded-lg px-6 py-3 shadow-md flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-primary" />
-              <span className="text-lg font-medium">Menor preço</span>
+              <span className="text-base font-medium" style={{ color: '#000000' }}>Menor preço</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="bg-white/90 backdrop-blur-sm rounded-lg px-6 py-3 shadow-md flex items-center gap-2">
               <Clock className="w-5 h-5 text-primary" />
-              <span className="text-lg font-medium">Menor prazo</span>
+              <span className="text-base font-medium" style={{ color: '#000000' }}>Menor prazo</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="bg-white/90 backdrop-blur-sm rounded-lg px-6 py-3 shadow-md flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-primary" />
-              <span className="text-lg font-medium">Maior Agilidade</span>
+              <span className="text-base font-medium" style={{ color: '#000000' }}>Maior Agilidade</span>
             </div>
           </div>
 
