@@ -29,20 +29,20 @@ const Header = () => {
 
   return (
     <header className="border-b border-border bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
-      <div className="container mx-auto px-2 sm:px-4 py-1 sm:py-2">
+      <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-2 group">
             <img 
               src={logoConfixEnvios} 
               alt="Confix Envios" 
-              className="h-10 sm:h-12 md:h-14 w-auto group-hover:scale-105 transition-transform duration-200"
+              className="h-12 sm:h-14 md:h-16 w-auto group-hover:scale-105 transition-transform duration-200"
             />
           </Link>
           
           <nav className="hidden md:flex items-center justify-center flex-1 space-x-8">
             <Link 
               to="#servicos" 
-              className="text-slate-700 hover:text-primary transition-colors text-base font-medium"
+              className="text-slate-900 hover:text-primary transition-colors text-base font-medium"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('servicos')?.scrollIntoView({ behavior: 'smooth' });
@@ -52,7 +52,7 @@ const Header = () => {
             </Link>
             <Link 
               to="#diferencial" 
-              className="text-slate-700 hover:text-primary transition-colors text-base font-medium"
+              className="text-slate-900 hover:text-primary transition-colors text-base font-medium"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('diferencial')?.scrollIntoView({ behavior: 'smooth' });
@@ -62,7 +62,7 @@ const Header = () => {
             </Link>
             <Link 
               to="#quemsomos" 
-              className="text-slate-700 hover:text-primary transition-colors text-base font-medium"
+              className="text-slate-900 hover:text-primary transition-colors text-base font-medium"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('quemsomos')?.scrollIntoView({ behavior: 'smooth' });
@@ -72,7 +72,7 @@ const Header = () => {
             </Link>
             <Link 
               to="#contato" 
-              className="text-slate-700 hover:text-primary transition-colors text-base font-medium"
+              className="text-slate-900 hover:text-primary transition-colors text-base font-medium"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('contato')?.scrollIntoView({ behavior: 'smooth' });
