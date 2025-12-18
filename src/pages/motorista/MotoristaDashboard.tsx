@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, User, Camera, AlertTriangle, Menu, ClipboardList, Send, History, X, Search, PenTool } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, User, Camera, AlertTriangle, Menu, ClipboardList, Send, History, X, Search, PenTool, Home } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -104,6 +104,7 @@ const MotoristaDashboard = () => {
   
   // Menu state
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showHomeDashboard, setShowHomeDashboard] = useState(true);
   const [activeSection, setActiveSection] = useState('coletas');
   const [activeTab, setActiveTab] = useState('pendentes');
   
@@ -917,6 +918,7 @@ const MotoristaDashboard = () => {
 
   // Menu items
   const menuItems = [
+    { section: 'home', label: 'Início', icon: Home },
     { section: 'coletas', label: 'Coletas', icon: Truck },
     { section: 'despache', label: 'Expedição', icon: Send },
   ];
@@ -1195,22 +1197,28 @@ const MotoristaDashboard = () => {
                   {menuItems.map(item => (
                     <div key={item.section}>
                       <Button
-                        variant={activeSection === item.section ? "default" : "ghost"}
+                        variant={(item.section === 'home' && showHomeDashboard) || (item.section !== 'home' && activeSection === item.section && !showHomeDashboard) ? "default" : "ghost"}
                         className={`w-full justify-start mb-1 transition-all ${
-                          activeSection === item.section 
+                          (item.section === 'home' && showHomeDashboard) || (item.section !== 'home' && activeSection === item.section && !showHomeDashboard)
                             ? 'bg-primary text-white shadow-md' 
                             : 'hover:bg-primary/10'
                         }`}
                         onClick={() => {
-                          setActiveSection(item.section);
-                          setActiveTab(item.section === 'coletas' ? 'pendentes' : 'aguardando');
+                          if (item.section === 'home') {
+                            setShowHomeDashboard(true);
+                            setMenuOpen(false);
+                          } else {
+                            setShowHomeDashboard(false);
+                            setActiveSection(item.section);
+                            setActiveTab(item.section === 'coletas' ? 'pendentes' : 'aguardando');
+                          }
                         }}
                       >
                         <item.icon className="h-4 w-4 mr-2" />
                         {item.label}
                       </Button>
                       
-                      {activeSection === item.section && (
+                      {item.section !== 'home' && activeSection === item.section && !showHomeDashboard && (
                         <div className="pl-6 space-y-1 animate-fade-in">
                           {(item.section === 'coletas' ? coletasSubItems : despachaSubItems).map(sub => (
                             <Button
@@ -1277,106 +1285,162 @@ const MotoristaDashboard = () => {
           </div>
         </div>
         
-        {/* Campo de busca */}
-        <div className="px-4 pb-3 flex justify-center">
-          <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
-            <Input
-              placeholder="Buscar pedido"
-              value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
-              className="pl-9 font-mono bg-white/10 border-white text-white placeholder:text-white/70 focus:bg-white focus:text-foreground focus:placeholder:text-muted-foreground focus:border-white transition-all"
-            />
+        {/* Campo de busca - ocultar na tela inicial */}
+        {!showHomeDashboard && (
+          <div className="px-4 pb-3 flex justify-center">
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
+              <Input
+                placeholder="Buscar pedido"
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                className="pl-9 font-mono bg-white/10 border-white text-white placeholder:text-white/70 focus:bg-white focus:text-foreground focus:placeholder:text-muted-foreground focus:border-white transition-all"
+              />
+            </div>
           </div>
-        </div>
+        )}
       </header>
 
       <main className="container mx-auto px-4 py-6">
-        {/* Título da seção */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              {activeSection === 'coletas' ? (
-                <>
-                  <div className="w-2 h-8 bg-gradient-to-b from-primary to-red-600 rounded-full" />
-                  Coletas
-                </>
-              ) : (
-                <>
-                  <div className="w-2 h-8 bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-full" />
-                  Despache
-                </>
-              )}
+        {/* Home Dashboard - Tela inicial */}
+        {showHomeDashboard ? (
+          <div className="flex flex-col items-center justify-center min-h-[60vh]">
+            <h2 className="text-2xl font-bold text-foreground mb-8 text-center">
+              Selecione uma opção
             </h2>
-            <p className="text-sm text-muted-foreground mt-1 ml-4">
-              {activeTab === 'pendentes' && 'Volumes disponíveis para coleta'}
-              {activeTab === 'aceitos' && 'Volumes aceitos - aguardando coleta'}
-              {activeTab === 'coletados' && 'Volumes coletados - a caminho do CD'}
-              {activeTab === 'entregues_cd' && 'Histórico de volumes entregues ao CD'}
-              {activeTab === 'aguardando' && 'Volumes separados - aceite para sair'}
-              {activeTab === 'despachados' && 'Volumes em rota - finalize a entrega'}
-              {activeTab === 'concluidos' && 'Entregas concluídas'}
-              {activeTab === 'devolucoes' && 'Volumes devolvidos'}
-            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-2xl">
+              {/* Card Coletas */}
+              <Card 
+                className="cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] border-2 border-transparent hover:border-primary/30"
+                onClick={() => {
+                  setShowHomeDashboard(false);
+                  setActiveSection('coletas');
+                  setActiveTab('pendentes');
+                }}
+              >
+                <CardContent className="p-8 flex flex-col items-center justify-center min-h-[200px]">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-red-100 flex items-center justify-center mb-4">
+                    <ClipboardList className="h-10 w-10 text-primary" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-foreground">Coletas</h3>
+                  <p className="text-muted-foreground mt-2 text-center">Gerencie suas coletas</p>
+                  <Badge className="mt-4 bg-primary/10 text-primary hover:bg-primary/20">
+                    {pendentes.length + aceitos.length + coletados.length} volumes
+                  </Badge>
+                </CardContent>
+              </Card>
+
+              {/* Card Expedição */}
+              <Card 
+                className="cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] border-2 border-transparent hover:border-emerald-500/30"
+                onClick={() => {
+                  setShowHomeDashboard(false);
+                  setActiveSection('despache');
+                  setActiveTab('aguardando');
+                }}
+              >
+                <CardContent className="p-8 flex flex-col items-center justify-center min-h-[200px]">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-100 flex items-center justify-center mb-4">
+                    <Send className="h-10 w-10 text-emerald-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-foreground">Expedição</h3>
+                  <p className="text-muted-foreground mt-2 text-center">Gerencie suas entregas</p>
+                  <Badge className="mt-4 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20">
+                    {aguardandoExpedicao.length + despachados.length} volumes
+                  </Badge>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-          
-          {/* Botão Coletar Vários para seção Coletas na aba aceitos */}
-          {activeSection === 'coletas' && activeTab === 'aceitos' && aceitos.length > 0 && (
-            <Button
-              className="bg-gradient-to-r from-primary to-red-600 hover:from-primary/90 hover:to-red-700 shadow-lg shadow-primary/20 transition-all hover:shadow-primary/30"
-              onClick={() => {
-                setCollectBatchVolumes([]);
-                setCollectBatchModalOpen(true);
-              }}
-            >
-              <Package className="h-4 w-4 mr-2" />
-              Coletar
-            </Button>
-          )}
-          
-          {/* Botão Aceitar Todos para seção Despache na aba aguardando */}
-          {activeSection === 'despache' && activeTab === 'aguardando' && aguardandoExpedicao.length > 0 && (
-            <Button
-              className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 shadow-lg shadow-indigo-500/20 transition-all"
-              onClick={handleAcceptAllDespache}
-              disabled={acceptingAllDespache}
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              {acceptingAllDespache ? 'Aceitando...' : 'Aceitar Todos'}
-            </Button>
-          )}
-          
-          {/* Botão Finalizar para seção Despache na aba despachados */}
-          {activeSection === 'despache' && activeTab === 'despachados' && despachados.length > 0 && (
-            <Button
-              className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 shadow-lg shadow-emerald-500/20 transition-all"
-              onClick={() => {
-                setFinalizeBatchVolumes([]);
-                setFinalizeBatchModalOpen(true);
-              }}
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Finalizar
-            </Button>
-          )}
-        </div>
-
-        {/* Conteúdo */}
-        {activeSection === 'coletas' && (
+        ) : (
           <>
-            {activeTab === 'pendentes' && renderVolumeList(pendentes, 'Nenhum volume pendente', 'accept')}
-            {activeTab === 'aceitos' && renderVolumeList(aceitos, 'Nenhum volume aceito', 'collect')}
-            {activeTab === 'coletados' && renderVolumeList(coletados, 'Nenhum volume coletado')}
-            {activeTab === 'entregues_cd' && renderVolumeList(entreguesAoCd, 'Nenhum volume entregue ao CD')}
-          </>
-        )}
+            {/* Título da seção */}
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                  {activeSection === 'coletas' ? (
+                    <>
+                      <div className="w-2 h-8 bg-gradient-to-b from-primary to-red-600 rounded-full" />
+                      Coletas
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-8 bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-full" />
+                      Despache
+                    </>
+                  )}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1 ml-4">
+                  {activeTab === 'pendentes' && 'Volumes disponíveis para coleta'}
+                  {activeTab === 'aceitos' && 'Volumes aceitos - aguardando coleta'}
+                  {activeTab === 'coletados' && 'Volumes coletados - a caminho do CD'}
+                  {activeTab === 'entregues_cd' && 'Histórico de volumes entregues ao CD'}
+                  {activeTab === 'aguardando' && 'Volumes separados - aceite para sair'}
+                  {activeTab === 'despachados' && 'Volumes em rota - finalize a entrega'}
+                  {activeTab === 'concluidos' && 'Entregas concluídas'}
+                  {activeTab === 'devolucoes' && 'Volumes devolvidos'}
+                </p>
+              </div>
+              
+              {/* Botão Coletar Vários para seção Coletas na aba aceitos */}
+              {activeSection === 'coletas' && activeTab === 'aceitos' && aceitos.length > 0 && (
+                <Button
+                  className="bg-gradient-to-r from-primary to-red-600 hover:from-primary/90 hover:to-red-700 shadow-lg shadow-primary/20 transition-all hover:shadow-primary/30"
+                  onClick={() => {
+                    setCollectBatchVolumes([]);
+                    setCollectBatchModalOpen(true);
+                  }}
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Coletar
+                </Button>
+              )}
+              
+              {/* Botão Aceitar Todos para seção Despache na aba aguardando */}
+              {activeSection === 'despache' && activeTab === 'aguardando' && aguardandoExpedicao.length > 0 && (
+                <Button
+                  className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 shadow-lg shadow-indigo-500/20 transition-all"
+                  onClick={handleAcceptAllDespache}
+                  disabled={acceptingAllDespache}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  {acceptingAllDespache ? 'Aceitando...' : 'Aceitar Todos'}
+                </Button>
+              )}
+              
+              {/* Botão Finalizar para seção Despache na aba despachados */}
+              {activeSection === 'despache' && activeTab === 'despachados' && despachados.length > 0 && (
+                <Button
+                  className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 shadow-lg shadow-emerald-500/20 transition-all"
+                  onClick={() => {
+                    setFinalizeBatchVolumes([]);
+                    setFinalizeBatchModalOpen(true);
+                  }}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Finalizar
+                </Button>
+              )}
+            </div>
 
-        {activeSection === 'despache' && (
-          <>
-            {activeTab === 'aguardando' && renderVolumeList(aguardandoExpedicao, 'Nenhum volume aguardando despache', 'bip')}
-            {activeTab === 'despachados' && renderVolumeList(despachados, 'Nenhum volume despachado')}
-            {activeTab === 'concluidos' && renderVolumeList(concluidos, 'Nenhuma entrega concluída')}
-            {activeTab === 'devolucoes' && renderVolumeList(devolucoes, 'Nenhuma devolução')}
+            {/* Conteúdo */}
+            {activeSection === 'coletas' && (
+              <>
+                {activeTab === 'pendentes' && renderVolumeList(pendentes, 'Nenhum volume pendente', 'accept')}
+                {activeTab === 'aceitos' && renderVolumeList(aceitos, 'Nenhum volume aceito', 'collect')}
+                {activeTab === 'coletados' && renderVolumeList(coletados, 'Nenhum volume coletado')}
+                {activeTab === 'entregues_cd' && renderVolumeList(entreguesAoCd, 'Nenhum volume entregue ao CD')}
+              </>
+            )}
+
+            {activeSection === 'despache' && (
+              <>
+                {activeTab === 'aguardando' && renderVolumeList(aguardandoExpedicao, 'Nenhum volume aguardando despache', 'bip')}
+                {activeTab === 'despachados' && renderVolumeList(despachados, 'Nenhum volume despachado')}
+                {activeTab === 'concluidos' && renderVolumeList(concluidos, 'Nenhuma entrega concluída')}
+                {activeTab === 'devolucoes' && renderVolumeList(devolucoes, 'Nenhuma devolução')}
+              </>
+            )}
           </>
         )}
       </main>
