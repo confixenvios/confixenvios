@@ -29,13 +29,13 @@ const Header = () => {
 
   return (
     <header className="border-b border-border bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
-      <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-4">
+      <div className="container mx-auto px-2 sm:px-4 py-1 sm:py-2">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-2 group">
             <img 
               src={logoConfixEnvios} 
               alt="Confix Envios" 
-              className="h-16 sm:h-20 md:h-24 w-auto group-hover:scale-105 transition-transform duration-200"
+              className="h-10 sm:h-12 md:h-14 w-auto group-hover:scale-105 transition-transform duration-200"
             />
           </Link>
           
