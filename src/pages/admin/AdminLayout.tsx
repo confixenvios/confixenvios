@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { NavLink, useLocation } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import confixLogo from '@/assets/logo-confix-envios.png';
+import confixLogo from '@/assets/confix-logo-black.png';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -77,7 +77,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       {/* Header do Sidebar com Banner */}
       <div className="p-4 bg-gradient-to-r from-primary via-primary to-red-700">
         <div className="flex items-center gap-3">
-          <img src={confixLogo} alt="Confix Envios" className="h-6 brightness-0 invert" />
+          <img src={confixLogo} alt="Confix Envios" className="h-6" />
         </div>
         <div className="mt-2">
           <span className="text-xs text-white/80 font-medium">Confix Admin</span>
@@ -150,7 +150,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                   <SidebarContent />
                 </SheetContent>
               </Sheet>
-              <img src={confixLogo} alt="Confix Envios" className="h-6 brightness-0 invert" />
+              <img src={confixLogo} alt="Confix Envios" className="h-6" />
             </div>
             <span className="text-sm text-white/90 truncate max-w-[180px]">Bem vindo, {getDisplayName()}</span>
           </div>

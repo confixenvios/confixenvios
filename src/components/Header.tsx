@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { LayoutDashboard, Shield, RefreshCw, LogOut } from 'lucide-react';
-import logoConfixEnvios from '@/assets/logo-confix-envios.png';
+import logoConfixEnvios from '@/assets/confix-logo-black.png';
 
 const Header = () => {
   const { user, loading, signOut, isAdmin, refreshUserData } = useAuth();

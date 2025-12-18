@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, LogIn, UserPlus, ArrowLeft, Mail, FileText, Building, User, Package, Truck, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import logoConfixEnvios from '@/assets/logo-confix-envios.png';
+import logoConfixEnvios from '@/assets/confix-logo-black.png';
 import { formatDocument, validateDocument, getDocumentType } from "@/utils/documentValidation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -242,7 +242,7 @@ const Auth = () => {
         </div>
         
         <div className="relative z-10 flex flex-col items-center justify-center w-full p-12">
-          <img src={logoConfixEnvios} alt="Confix Envios" className="h-20 mb-8 brightness-0 invert" />
+          <img src={logoConfixEnvios} alt="Confix Envios" className="h-20 mb-8" />
           <div className="text-center">
             <h1 className="text-4xl font-bold text-white mb-4">Área do Cliente</h1>
             <p className="text-white/80 text-lg max-w-md">

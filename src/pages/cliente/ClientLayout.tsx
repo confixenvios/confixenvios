@@ -16,7 +16,7 @@ import {
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { supabase } from '@/integrations/supabase/client';
-import confixLogo from '@/assets/logo-confix-envios.png';
+import confixLogo from '@/assets/confix-logo-black.png';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -96,7 +96,7 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
       {/* Header do Sidebar com Banner */}
       <div className="p-4 bg-gradient-to-r from-primary via-primary to-red-700">
         <div className="flex items-center gap-3">
-          <img src={confixLogo} alt="Confix Envios" className="h-6 brightness-0 invert" />
+          <img src={confixLogo} alt="Confix Envios" className="h-6" />
         </div>
         <div className="mt-2">
           <span className="text-xs text-white/80 font-medium">Confix Cliente</span>
@@ -169,7 +169,7 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
                   <SidebarContent />
                 </SheetContent>
               </Sheet>
-              <img src={confixLogo} alt="Confix Envios" className="h-6 brightness-0 invert" />
+              <img src={confixLogo} alt="Confix Envios" className="h-6" />
             </div>
             <span className="text-sm text-white/90 truncate max-w-[180px]">Bem vindo, {getDisplayName()}</span>
           </div>

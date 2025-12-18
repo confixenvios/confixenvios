@@ -16,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import B2BVolumeStatusHistory from '@/components/b2b/B2BVolumeStatusHistory';
-import confixLogo from '@/assets/logo-confix-envios.png';
+import confixLogo from '@/assets/confix-logo-black.png';
 
 interface CdUser {
   id: string;
@@ -631,7 +631,7 @@ const CdDashboard = () => {
       <header className="sticky top-0 z-40 bg-gradient-to-r from-primary via-primary to-red-700 shadow-lg">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <img src={confixLogo} alt="Confix Envios" className="h-7 brightness-0 invert" />
+            <img src={confixLogo} alt="Confix Envios" className="h-7" />
             <div className="h-8 w-px bg-white/30" />
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">

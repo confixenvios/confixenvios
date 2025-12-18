@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Shield, ArrowLeft, Mail, Lock, Settings, BarChart3, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import confixLogo from '@/assets/logo-confix-envios.png';
+import confixLogo from '@/assets/confix-logo-black.png';
 
 const AdminAuth = () => {
   const navigate = useNavigate();
@@ -114,7 +114,7 @@ const AdminAuth = () => {
         </div>
         
         <div className="relative z-10 flex flex-col items-center justify-center w-full p-12">
-          <img src={confixLogo} alt="Confix Envios" className="h-20 mb-8 brightness-0 invert" />
+          <img src={confixLogo} alt="Confix Envios" className="h-20 mb-8" />
           <div className="text-center">
             <h1 className="text-4xl font-bold text-white mb-4">Painel Administrativo</h1>
             <p className="text-white/80 text-lg max-w-md">
