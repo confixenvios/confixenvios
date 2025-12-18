@@ -1188,18 +1188,8 @@ const MotoristaDashboard = () => {
             </div>
           </div>
           
-          {/* Centro: Ícone Home (só aparece fora da tela inicial) */}
+          {/* Centro: Espaçamento */}
           <div className="flex-1 flex justify-center">
-            {!showHomeDashboard && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowHomeDashboard(true)}
-                className="text-white hover:bg-white/20"
-              >
-                <Home className="h-5 w-5" />
-              </Button>
-            )}
           </div>
           
           {/* Direita: Refresh + Sair */}
@@ -1317,6 +1307,18 @@ const MotoristaDashboard = () => {
                 </Button>
               ))}
             </nav>
+            
+            {/* Botão Voltar ao início */}
+            <div className="p-2 border-t mt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start hover:bg-muted/50"
+                onClick={() => setShowHomeDashboard(true)}
+              >
+                🏠 Voltar ao início
+              </Button>
+            </div>
           </aside>
 
           {/* Conteúdo principal */}
@@ -1338,6 +1340,14 @@ const MotoristaDashboard = () => {
                   )}
                 </h2>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="hover:bg-muted/50"
+                onClick={() => setShowHomeDashboard(true)}
+              >
+                🏠 Início
+              </Button>
             </div>
 
             <div className="mb-6 hidden md:flex items-center justify-end">
