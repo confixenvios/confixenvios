@@ -42,7 +42,7 @@ const Header = () => {
           <nav className="hidden md:flex items-center justify-center flex-1 space-x-8">
             <Link 
               to="#servicos" 
-              className="hover:text-primary transition-colors text-lg font-medium"
+              className="text-[#1a202c] hover:text-primary transition-colors text-lg font-semibold"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('servicos')?.scrollIntoView({ behavior: 'smooth' });
@@ -52,7 +52,7 @@ const Header = () => {
             </Link>
             <Link 
               to="#diferencial" 
-              className="hover:text-primary transition-colors text-lg font-medium"
+              className="text-[#1a202c] hover:text-primary transition-colors text-lg font-semibold"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('diferencial')?.scrollIntoView({ behavior: 'smooth' });
@@ -62,7 +62,7 @@ const Header = () => {
             </Link>
             <Link 
               to="#quemsomos" 
-              className="hover:text-primary transition-colors text-lg font-medium"
+              className="text-[#1a202c] hover:text-primary transition-colors text-lg font-semibold"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('quemsomos')?.scrollIntoView({ behavior: 'smooth' });
@@ -72,7 +72,7 @@ const Header = () => {
             </Link>
             <Link 
               to="#contato" 
-              className="hover:text-primary transition-colors text-lg font-medium"
+              className="text-[#1a202c] hover:text-primary transition-colors text-lg font-semibold"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('contato')?.scrollIntoView({ behavior: 'smooth' });
