@@ -211,7 +211,7 @@ const B2BLayout = () => {
         <header className="hidden md:flex sticky top-0 z-40 bg-white border-b shadow-sm h-14 items-center px-6 justify-between">
           <div className="flex items-center gap-3">
             <Car className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-foreground">Painel B2B Express - Envios Expresso</span>
+            <span className="font-semibold text-foreground">Painel de Envios Expresso</span>
           </div>
           <Button
             variant="outline"

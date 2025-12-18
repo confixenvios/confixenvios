@@ -205,7 +205,7 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
         <header className="hidden lg:flex sticky top-0 z-40 bg-white border-b shadow-sm h-14 items-center px-6 justify-between">
           <div className="flex items-center gap-3">
             <Truck className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-foreground">Painel Cliente - Envios Convencionais</span>
+            <span className="font-semibold text-foreground">Painel de Envios Convencional</span>
           </div>
           <Button
             variant="outline"
