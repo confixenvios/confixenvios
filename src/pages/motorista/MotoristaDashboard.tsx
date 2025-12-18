@@ -1291,9 +1291,9 @@ const MotoristaDashboard = () => {
                   className={`w-full justify-between transition-all ${
                     activeTab === sub.tab 
                       ? activeSection === 'coletas' 
-                        ? 'bg-primary text-white shadow-md' 
-                        : 'bg-emerald-600 text-white shadow-md'
-                      : 'hover:bg-muted/50'
+                        ? 'bg-primary text-white shadow-md hover:bg-primary/90' 
+                        : 'bg-emerald-600 text-white shadow-md hover:bg-emerald-700'
+                      : 'text-foreground hover:bg-slate-100 hover:text-foreground'
                   }`}
                   onClick={() => setActiveTab(sub.tab)}
                 >
@@ -1313,7 +1313,7 @@ const MotoristaDashboard = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full justify-start hover:bg-muted/50"
+                className="w-full justify-start text-foreground hover:bg-slate-100 hover:text-foreground"
                 onClick={() => setShowHomeDashboard(true)}
               >
                 🏠 Voltar ao início
