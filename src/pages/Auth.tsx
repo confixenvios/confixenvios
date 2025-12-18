@@ -289,9 +289,9 @@ const Auth = () => {
             {/* Red accent bar at top */}
             <div className="h-1.5 bg-gradient-to-r from-primary to-red-600" />
             <CardHeader className="space-y-1 text-center pb-4 pt-6">
-              <CardTitle className="text-2xl font-bold text-primary">Área do Cliente</CardTitle>
+              <CardTitle className="text-2xl font-bold text-primary">Convencional</CardTitle>
               <CardDescription>
-                Faça login ou crie sua conta para continuar
+                Faça login para acessar o painel de envios convencionais
               </CardDescription>
             </CardHeader>
             <CardContent>
