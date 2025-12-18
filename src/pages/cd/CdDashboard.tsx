@@ -631,7 +631,9 @@ const CdDashboard = () => {
       <header className="sticky top-0 z-40 bg-gradient-to-r from-primary via-primary to-red-700 shadow-lg">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <img src={confixLogo} alt="Confix Envios" className="h-7" />
+            <div className="bg-white rounded-lg p-1">
+              <img src={confixLogo} alt="Confix Envios" className="h-6" />
+            </div>
             <div className="h-8 w-px bg-white/30" />
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">

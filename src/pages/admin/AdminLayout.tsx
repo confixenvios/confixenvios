@@ -77,7 +77,9 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       {/* Header do Sidebar com Banner */}
       <div className="p-4 bg-gradient-to-r from-primary via-primary to-red-700">
         <div className="flex items-center gap-3">
-          <img src={confixLogo} alt="Confix Envios" className="h-6" />
+          <div className="bg-white rounded-lg p-1">
+            <img src={confixLogo} alt="Confix Envios" className="h-5" />
+          </div>
         </div>
         <div className="mt-2">
           <span className="text-xs text-white/80 font-medium">Confix Admin</span>
@@ -150,7 +152,9 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                   <SidebarContent />
                 </SheetContent>
               </Sheet>
-              <img src={confixLogo} alt="Confix Envios" className="h-6" />
+              <div className="bg-white rounded-lg p-1">
+                <img src={confixLogo} alt="Confix Envios" className="h-5" />
+              </div>
             </div>
             <span className="text-sm text-white/90 truncate max-w-[180px]">Bem vindo, {getDisplayName()}</span>
           </div>
