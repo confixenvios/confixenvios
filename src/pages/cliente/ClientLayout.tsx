@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -13,8 +13,9 @@ import {
   Menu,
   Calculator
 } from "lucide-react";
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { supabase } from '@/integrations/supabase/client';
 import confixLogo from '@/assets/logo-confix-envios.png';
 
 interface ClientLayoutProps {
@@ -24,7 +25,44 @@ interface ClientLayoutProps {
 const ClientLayout = ({ children }: ClientLayoutProps) => {
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
+
+  // Check if user is admin and redirect
+  useEffect(() => {
+    const checkAdminRole = async () => {
+      if (!user) {
+        setCheckingAdmin(false);
+        return;
+      }
+
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (data) {
+        // User is admin, redirect to admin panel
+        navigate('/admin', { replace: true });
+      } else {
+        setCheckingAdmin(false);
+      }
+    };
+
+    checkAdminRole();
+  }, [user, navigate]);
+
+  // Show loading while checking admin status
+  if (checkingAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const getDisplayName = () => {
     if (profile?.first_name && profile?.last_name) {
