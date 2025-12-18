@@ -51,50 +51,46 @@ const Index = () => {
             <span className="text-primary" style={{ textShadow: '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.8)' }}>Brasil</span>
           </h1>
           
-          {/* Benefícios principais em mini cards */}
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-4 sm:mb-6 md:mb-12">
-            <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 sm:px-6 py-2 sm:py-3 shadow-md flex items-center gap-1 sm:gap-2">
-              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-              <span className="text-sm sm:text-base font-medium" style={{ color: '#000000' }}>Menor preço</span>
+          {/* Benefícios principais em mini badges */}
+          <div className="flex flex-wrap justify-center gap-1 sm:gap-2 mb-4 sm:mb-6 md:mb-10">
+            <div className="bg-white/70 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 text-[10px] sm:text-xs flex items-center gap-1">
+              <DollarSign className="w-3 h-3 text-primary" />
+              <span style={{ color: '#333' }}>Menor preço</span>
             </div>
-            <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 sm:px-6 py-2 sm:py-3 shadow-md flex items-center gap-1 sm:gap-2">
-              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-              <span className="text-sm sm:text-base font-medium" style={{ color: '#000000' }}>Menor prazo</span>
+            <div className="bg-white/70 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 text-[10px] sm:text-xs flex items-center gap-1">
+              <Clock className="w-3 h-3 text-primary" />
+              <span style={{ color: '#333' }}>Menor prazo</span>
             </div>
-            <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 sm:px-6 py-2 sm:py-3 shadow-md flex items-center gap-1 sm:gap-2">
-              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-              <span className="text-sm sm:text-base font-medium" style={{ color: '#000000' }}>Maior Agilidade</span>
+            <div className="bg-white/70 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 text-[10px] sm:text-xs flex items-center gap-1">
+              <TrendingUp className="w-3 h-3 text-primary" />
+              <span style={{ color: '#333' }}>Maior Agilidade</span>
             </div>
           </div>
 
           {/* Blocos de Serviços */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-4 max-w-3xl mx-auto w-full">
-            {/* Expresso GYN */}
-            <Card className="text-center p-2 sm:p-4 hover:shadow-lg transition-shadow flex flex-col">
-              <CardHeader className="flex-1 pb-1 sm:pb-2 p-1 sm:p-4">
-                <CardTitle className="text-sm sm:text-lg mb-1 text-primary">Expresso</CardTitle>
-                <p className="text-[10px] sm:text-sm text-muted-foreground leading-tight">Coleta e entrega no mesmo dia em Goiânia e Região</p>
+          <div className="grid grid-cols-2 gap-2 sm:gap-4 max-w-md mx-auto w-full">
+            {/* Expresso Local */}
+            <Card className="text-center p-3 sm:p-4 hover:shadow-lg transition-shadow flex flex-col">
+              <CardHeader className="pb-2 sm:pb-3 p-2 sm:p-4">
+                <CardTitle className="text-sm sm:text-lg text-primary">Expresso Local</CardTitle>
               </CardHeader>
-              <CardContent className="pt-1 sm:pt-2 p-1 sm:p-4">
+              <CardContent className="pt-0 p-2 sm:p-4">
                 <Button size="sm" className="w-full text-xs sm:text-sm" asChild>
                   <Link to="/b2b-expresso">
-                    <Zap className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                     Cotar
                   </Link>
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Nacional */}
-            <Card className="text-center p-2 sm:p-4 hover:shadow-lg transition-shadow border-primary/20 flex flex-col">
-              <CardHeader className="flex-1 pb-1 sm:pb-2 p-1 sm:p-4">
-                <CardTitle className="text-sm sm:text-lg mb-1 text-primary">Nacional</CardTitle>
-                <p className="text-[10px] sm:text-sm text-muted-foreground leading-tight">Perfil de mercadorias de e-commerce, coletamos e enviamos</p>
+            {/* Envio Nacional */}
+            <Card className="text-center p-3 sm:p-4 hover:shadow-lg transition-shadow flex flex-col">
+              <CardHeader className="pb-2 sm:pb-3 p-2 sm:p-4">
+                <CardTitle className="text-sm sm:text-lg text-primary">Envio Nacional</CardTitle>
               </CardHeader>
-              <CardContent className="pt-1 sm:pt-2 p-1 sm:p-4">
+              <CardContent className="pt-0 p-2 sm:p-4">
                 <Button size="sm" className="w-full text-xs sm:text-sm" asChild>
                   <Link to="/cotacao">
-                    <Package className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                     Cotar
                   </Link>
                 </Button>
