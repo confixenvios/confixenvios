@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, User, Camera, AlertTriangle, Menu, ClipboardList, Send, History, X, Search, PenTool, Home } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, User, Camera, AlertTriangle, Menu, ClipboardList, Send, History, X, Search, PenTool, Home, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -1242,6 +1242,7 @@ const MotoristaDashboard = () => {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-3 md:grid-cols-5 gap-3 mb-10 max-w-5xl mx-auto">
+              {/* Aguardando Aceite de Coleta */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
@@ -1249,10 +1250,11 @@ const MotoristaDashboard = () => {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-foreground">{pendentes.length}</p>
-                    <p className="text-xs text-muted-foreground">Pendentes</p>
+                    <p className="text-xs text-muted-foreground leading-tight">Aguardando Aceite</p>
                   </div>
                 </div>
               </div>
+              {/* Coletas Aceitas */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
@@ -1260,32 +1262,23 @@ const MotoristaDashboard = () => {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-foreground">{aceitos.length}</p>
-                    <p className="text-xs text-muted-foreground">Aceitos</p>
+                    <p className="text-xs text-muted-foreground leading-tight">Coletas Aceitas</p>
                   </div>
                 </div>
               </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
-                    <Truck className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">{coletados.length}</p>
-                    <p className="text-xs text-muted-foreground">Coletados</p>
-                  </div>
-                </div>
-              </div>
+              {/* Em Rota (Coletados + Expedidos) */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
-                    <Send className="h-5 w-5 text-indigo-600" />
+                    <Truck className="h-5 w-5 text-indigo-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-foreground">{expedidos.length}</p>
+                    <p className="text-2xl font-bold text-foreground">{coletados.length + expedidos.length}</p>
                     <p className="text-xs text-muted-foreground">Em Rota</p>
                   </div>
                 </div>
               </div>
+              {/* Concluídos */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
@@ -1294,6 +1287,18 @@ const MotoristaDashboard = () => {
                   <div>
                     <p className="text-2xl font-bold text-foreground">{concluidos.length}</p>
                     <p className="text-xs text-muted-foreground">Concluídos</p>
+                  </div>
+                </div>
+              </div>
+              {/* Devoluções */}
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+                    <RotateCcw className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{devolucoes.length}</p>
+                    <p className="text-xs text-muted-foreground">Devoluções</p>
                   </div>
                 </div>
               </div>
