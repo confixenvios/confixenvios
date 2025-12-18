@@ -62,7 +62,7 @@ const Index = () => {
           </div>
 
           {/* Blocos de Serviços */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {/* Expresso GYN */}
             <Card className="text-center p-6 hover:shadow-lg transition-shadow flex flex-col">
               <CardHeader className="flex-1">
@@ -90,26 +90,6 @@ const Index = () => {
                   <Link to="/cotacao">
                     <Package className="mr-2 h-4 w-4" />
                     Fazer Cotação
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Fracionado */}
-            <Card className="text-center p-6 hover:shadow-lg transition-shadow flex flex-col">
-              <CardHeader className="flex-1">
-                <CardTitle className="text-xl mb-3">Fracionado</CardTitle>
-                <p className="text-muted-foreground mb-4">GO / BA / SP / MT</p>
-              </CardHeader>
-              <CardContent>
-                <Button 
-                  size="lg" 
-                  className="w-full"
-                  asChild
-                >
-                  <Link to="/cotacao">
-                    <Package className="mr-2 h-4 w-4" />
-                    Cotar Fracionado
                   </Link>
                 </Button>
               </CardContent>
