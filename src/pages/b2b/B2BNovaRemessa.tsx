@@ -558,7 +558,7 @@ const B2BNovaRemessa = () => {
 
   const getStepTitle = (step: number) => {
     switch (step) {
-      case 1: return 'Onde buscar?';
+      case 1: return 'Onde coletar?';
       case 2: return 'Detalhes do Envio';
       case 3: return 'Volumes';
       case 4: return 'Veículo';
