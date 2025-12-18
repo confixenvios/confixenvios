@@ -41,8 +41,8 @@ const Index = () => {
         <div className="absolute inset-0 bg-gradient-glow opacity-30"></div>
         
         <div className="container mx-auto text-center relative">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-12 leading-tight text-foreground">
-            Coletamos e Entregamos em todo <span className="bg-gradient-primary bg-clip-text text-transparent">Brasil</span>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-12 leading-tight text-primary">
+            Coletamos e Entregamos em todo Brasil
           </h1>
           
           {/* Benefícios principais */}
@@ -66,30 +66,30 @@ const Index = () => {
             {/* Expresso GYN */}
             <Card className="text-center p-6 hover:shadow-lg transition-shadow flex flex-col">
               <CardHeader className="flex-1">
-                <CardTitle className="text-xl mb-3">Expresso</CardTitle>
+                <CardTitle className="text-xl mb-3 text-primary">Expresso</CardTitle>
                 <p className="text-muted-foreground mb-4">Coleta e entrega no mesmo dia em Goiânia e Região</p>
               </CardHeader>
               <CardContent>
                 <Button size="lg" className="w-full" asChild>
                   <Link to="/b2b-expresso">
                     <Zap className="mr-2 h-4 w-4" />
-                    Envios Expresso
+                    Cotar
                   </Link>
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Envio Nacional */}
+            {/* Nacional */}
             <Card className="text-center p-6 hover:shadow-lg transition-shadow border-primary/20 flex flex-col">
               <CardHeader className="flex-1">
-                <CardTitle className="text-xl mb-3 text-primary">Envio Nacional</CardTitle>
+                <CardTitle className="text-xl mb-3 text-primary">Nacional</CardTitle>
                 <p className="text-muted-foreground mb-4">Perfil de mercadorias de e-commerce, coletamos e enviamos</p>
               </CardHeader>
               <CardContent>
                 <Button size="lg" className="w-full" asChild>
                   <Link to="/cotacao">
                     <Package className="mr-2 h-4 w-4" />
-                    Fazer Cotação
+                    Cotar
                   </Link>
                 </Button>
               </CardContent>

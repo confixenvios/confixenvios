@@ -42,7 +42,7 @@ const Header = () => {
           <nav className="flex items-center space-x-2 sm:space-x-6">
             <Link 
               to="#quemsomos" 
-              className="text-muted-foreground hover:text-foreground transition-colors font-medium text-lg sm:text-xl hidden md:block"
+              className="text-foreground hover:text-primary transition-colors text-lg sm:text-xl hidden md:block"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('quemsomos')?.scrollIntoView({ behavior: 'smooth' });
@@ -52,7 +52,7 @@ const Header = () => {
             </Link>
             <Link 
               to="#servicos" 
-              className="text-muted-foreground hover:text-foreground transition-colors font-medium text-lg sm:text-xl hidden md:block"
+              className="text-foreground hover:text-primary transition-colors text-lg sm:text-xl hidden md:block"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('servicos')?.scrollIntoView({ behavior: 'smooth' });
@@ -62,7 +62,7 @@ const Header = () => {
             </Link>
             <Link 
               to="#diferencial" 
-              className="text-muted-foreground hover:text-foreground transition-colors font-medium text-lg sm:text-xl hidden lg:block"
+              className="text-foreground hover:text-primary transition-colors text-lg sm:text-xl hidden lg:block"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('diferencial')?.scrollIntoView({ behavior: 'smooth' });
@@ -72,7 +72,7 @@ const Header = () => {
             </Link>
             <Link 
               to="#contato" 
-              className="text-muted-foreground hover:text-foreground transition-colors font-medium text-lg sm:text-xl hidden lg:block"
+              className="text-foreground hover:text-primary transition-colors text-lg sm:text-xl hidden lg:block"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('contato')?.scrollIntoView({ behavior: 'smooth' });
