@@ -289,6 +289,9 @@ const Auth = () => {
             {/* Red accent bar at top */}
             <div className="h-1.5 bg-gradient-to-r from-primary to-red-600" />
             <CardHeader className="space-y-1 text-center pb-4 pt-6">
+              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary">
+                <User className="h-6 w-6 text-primary-foreground" />
+              </div>
               <CardTitle className="text-2xl font-bold text-primary">Área do Cliente</CardTitle>
               <CardDescription>
                 Faça login ou crie sua conta para continuar
