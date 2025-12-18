@@ -61,15 +61,15 @@ const Index = () => {
           </div>
 
           {/* Blocos de Serviços */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
             {/* Expresso GYN */}
-            <Card className="text-center p-6 hover:shadow-lg transition-shadow flex flex-col">
-              <CardHeader className="flex-1">
-                <CardTitle className="text-xl mb-3 text-primary">Expresso</CardTitle>
-                <p className="text-muted-foreground mb-4">Coleta e entrega no mesmo dia em Goiânia e Região</p>
+            <Card className="text-center p-4 hover:shadow-lg transition-shadow flex flex-col">
+              <CardHeader className="flex-1 pb-2">
+                <CardTitle className="text-lg mb-2 text-primary">Expresso</CardTitle>
+                <p className="text-sm text-muted-foreground">Coleta e entrega no mesmo dia em Goiânia e Região</p>
               </CardHeader>
-              <CardContent>
-                <Button size="lg" className="w-full" asChild>
+              <CardContent className="pt-2">
+                <Button size="default" className="w-full" asChild>
                   <Link to="/b2b-expresso">
                     <Zap className="mr-2 h-4 w-4" />
                     Cotar
@@ -79,13 +79,13 @@ const Index = () => {
             </Card>
 
             {/* Nacional */}
-            <Card className="text-center p-6 hover:shadow-lg transition-shadow border-primary/20 flex flex-col">
-              <CardHeader className="flex-1">
-                <CardTitle className="text-xl mb-3 text-primary">Nacional</CardTitle>
-                <p className="text-muted-foreground mb-4">Perfil de mercadorias de e-commerce, coletamos e enviamos</p>
+            <Card className="text-center p-4 hover:shadow-lg transition-shadow border-primary/20 flex flex-col">
+              <CardHeader className="flex-1 pb-2">
+                <CardTitle className="text-lg mb-2 text-primary">Nacional</CardTitle>
+                <p className="text-sm text-muted-foreground">Perfil de mercadorias de e-commerce, coletamos e enviamos</p>
               </CardHeader>
-              <CardContent>
-                <Button size="lg" className="w-full" asChild>
+              <CardContent className="pt-2">
+                <Button size="default" className="w-full" asChild>
                   <Link to="/cotacao">
                     <Package className="mr-2 h-4 w-4" />
                     Cotar
