@@ -1225,20 +1225,6 @@ const MotoristaDashboard = () => {
         </div>
       </header>
       
-      {/* Campo de busca - fora do header para manter altura consistente */}
-      {!showHomeDashboard && (
-        <div className="bg-gradient-to-r from-primary via-primary to-red-700 px-4 pb-3 flex justify-center">
-          <div className="relative w-48 sm:w-56">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
-            <Input
-              placeholder="Buscar pedido"
-              value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
-              className="pl-9 font-mono bg-white/10 border-white text-white placeholder:text-white/70 focus:bg-white focus:text-foreground focus:placeholder:text-muted-foreground focus:border-white transition-all"
-            />
-          </div>
-        </div>
-      )}
 
       {/* Main content area */}
       {showHomeDashboard ? (
@@ -1435,6 +1421,19 @@ const MotoristaDashboard = () => {
                   Finalizar
                 </Button>
               )}
+            </div>
+
+            {/* Campo de busca - cabeçalho interno */}
+            <div className="mb-4">
+              <div className="relative w-full max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar pedido"
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                  className="pl-9 font-mono border-border"
+                />
+              </div>
             </div>
 
             {/* Conteúdo */}
