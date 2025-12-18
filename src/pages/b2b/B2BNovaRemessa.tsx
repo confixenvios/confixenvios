@@ -613,7 +613,7 @@ const B2BNovaRemessa = () => {
         {currentStep === 1 && (
           <div className="space-y-6 animate-in fade-in duration-300">
             <p className="text-muted-foreground text-center">
-              Selecione o local onde vamos buscar seus volumes
+              Selecione o local onde vamos coletar seus volumes
             </p>
 
             {pickupAddresses.length === 0 ? (
