@@ -394,14 +394,14 @@ const Index = () => {
             </div>
 
             {/* Contato */}
-            <div className="text-right md:text-right">
+            <div>
               <h4 className="font-semibold mb-4">Contato</h4>
               <div className="space-y-2 text-base">
-                <div className="flex items-center gap-2 justify-end">
+                <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
                   <span>+55 62 9873-3276</span>
                 </div>
-                <div className="flex items-center gap-2 justify-end">
+                <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4" />
                   <span>confix@grupoconfix.com</span>
                 </div>
