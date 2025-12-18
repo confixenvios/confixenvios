@@ -38,7 +38,6 @@ interface ClientData {
   created_at: string;
   updated_at: string;
   status: string;
-  is_b2b: boolean;
   shipment_count: number;
   last_shipment: string | null;
   total_value: number;
@@ -179,8 +178,7 @@ const ActiveClients = () => {
           inscricao_estadual,
           created_at,
           updated_at,
-          status,
-          is_b2b
+          status
         `)
         .order('created_at', { ascending: false });
 
@@ -348,7 +346,6 @@ const ActiveClients = () => {
             document: profile.document || null,
             updated_at: profile.updated_at || profile.created_at,
             status: profile.status || 'pendente',
-            is_b2b: profile.is_b2b || false,
             shipment_count: totalShipmentCount,
             successful_shipments: totalSuccessfulCount,
             pending_shipments: totalPendingCount,
