@@ -215,7 +215,7 @@ const Header = () => {
               }}
             >
               <User className="h-8 w-8" />
-              <div className="font-semibold text-lg">Convencional</div>
+              <div className="font-semibold text-lg">Envio Nacional</div>
             </Button>
 
             <Button
@@ -227,7 +227,7 @@ const Header = () => {
               }}
             >
               <Building2 className="h-8 w-8" />
-              <div className="font-semibold text-lg">Expresso</div>
+              <div className="font-semibold text-lg">Expresso Local</div>
             </Button>
 
             <Button
