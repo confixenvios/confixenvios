@@ -1172,18 +1172,20 @@ const MotoristaDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
-      {/* Header - Confix Brand */}
+      {/* Header - Confix Brand - altura fixa */}
       <header className="sticky top-0 z-40 bg-gradient-to-r from-primary via-primary to-red-700 shadow-lg">
-        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-3">
+        <div className="container mx-auto px-4 py-2 flex items-center">
+          {/* Esquerda: Logo + Saudação */}
+          <div className="flex items-center gap-3 flex-1">
             <img src={confixLogo} alt="Confix Envios" className="h-7 brightness-0 invert" />
-            <div className="hidden sm:block">
+            <div>
               <p className="text-xs text-white/70">Olá,</p>
               <p className="text-sm font-medium text-white">{motorista?.nome}</p>
             </div>
           </div>
           
-          <div className="flex items-center gap-1">
+          {/* Centro: Ícone Home (só aparece fora da tela inicial) */}
+          <div className="flex-1 flex justify-center">
             {!showHomeDashboard && (
               <Button 
                 variant="ghost" 
@@ -1191,10 +1193,13 @@ const MotoristaDashboard = () => {
                 onClick={() => setShowHomeDashboard(true)}
                 className="text-white hover:bg-white/20"
               >
-                <Home className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Início</span>
+                <Home className="h-5 w-5" />
               </Button>
             )}
+          </div>
+          
+          {/* Direita: Refresh + Sair */}
+          <div className="flex items-center gap-1 flex-1 justify-end">
             <Button 
               variant="ghost" 
               size="sm" 
@@ -1214,22 +1219,22 @@ const MotoristaDashboard = () => {
             </Button>
           </div>
         </div>
-        
-        {/* Campo de busca - ocultar na tela inicial */}
-        {!showHomeDashboard && (
-          <div className="px-4 pb-3 flex justify-center">
-            <div className="relative w-full max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
-              <Input
-                placeholder="Buscar pedido"
-                value={searchFilter}
-                onChange={(e) => setSearchFilter(e.target.value)}
-                className="pl-9 font-mono bg-white/10 border-white text-white placeholder:text-white/70 focus:bg-white focus:text-foreground focus:placeholder:text-muted-foreground focus:border-white transition-all"
-              />
-            </div>
-          </div>
-        )}
       </header>
+      
+      {/* Campo de busca - fora do header para manter altura consistente */}
+      {!showHomeDashboard && (
+        <div className="bg-gradient-to-r from-primary via-primary to-red-700 px-4 pb-3 flex justify-center">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
+            <Input
+              placeholder="Buscar pedido"
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              className="pl-9 font-mono bg-white/10 border-white text-white placeholder:text-white/70 focus:bg-white focus:text-foreground focus:placeholder:text-muted-foreground focus:border-white transition-all"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Main content area */}
       {showHomeDashboard ? (
