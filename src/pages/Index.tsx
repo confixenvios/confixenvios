@@ -40,7 +40,7 @@ const Index = () => {
         
         <div className="container mx-auto text-center relative">
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-12 leading-tight font-bold">
-            <span style={{ color: '#000000' }}>Coletamos e Entregamos em todo </span>
+            <span style={{ color: '#000000' }}>Coletamos e Entregamos em todo o </span>
             <span className="text-primary">Brasil</span>
           </h1>
           
