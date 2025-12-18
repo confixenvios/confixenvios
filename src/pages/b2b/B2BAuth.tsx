@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, ArrowLeft, Mail, Lock, Package } from 'lucide-react';
 import { toast } from 'sonner';
-import confixLogo from '@/assets/logo-confix-envios.png';
+import confixLogo from '@/assets/confix-logo-black.png';
 
 const B2BAuth = () => {
   const navigate = useNavigate();
@@ -70,7 +70,7 @@ const B2BAuth = () => {
         </div>
         
         <div className="relative z-10 flex flex-col items-center justify-center w-full p-12">
-          <img src={confixLogo} alt="Confix Envios" className="h-20 mb-8 brightness-0 invert" />
+          <img src={confixLogo} alt="Confix Envios" className="h-20 mb-8" />
           <div className="text-center">
             <h1 className="text-4xl font-bold text-white mb-4">B2B Express</h1>
             <p className="text-white/80 text-lg max-w-md">
