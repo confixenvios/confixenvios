@@ -68,7 +68,7 @@ const ActiveClients = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
-  const [filterBy, setFilterBy] = useState<'all' | 'active' | 'inactive' | 'pending' | 'b2b'>('all');
+  const [filterBy, setFilterBy] = useState<'all' | 'approved' | 'inactive' | 'pending'>('all');
   const [deletingClient, setDeletingClient] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -398,61 +398,31 @@ const ActiveClients = () => {
     }
   };
 
-  const handleToggleB2B = async (clientId: string, enableB2B: boolean) => {
+  const handleToggleActive = async (clientId: string, activate: boolean) => {
     try {
+      const newStatus = activate ? 'aprovado' : 'inativo';
       const { error } = await supabase
         .from('profiles')
-        .update({ is_b2b: enableB2B })
+        .update({ status: newStatus })
         .eq('id', clientId);
 
       if (error) throw error;
 
-      // If enabling B2B, also create/update b2b_clients record
-      if (enableB2B) {
-        const client = clients.find(c => c.id === clientId);
-        if (client) {
-          // Check if b2b_clients record exists
-          const { data: existingB2B } = await supabase
-            .from('b2b_clients')
-            .select('id')
-            .eq('user_id', clientId)
-            .single();
-
-          if (!existingB2B) {
-            // Create new b2b_clients record
-            await supabase.from('b2b_clients').insert({
-              user_id: clientId,
-              company_name: getClientName(client),
-              email: client.email || '',
-              phone: client.phone || '',
-              cnpj: client.document || '',
-              is_active: true
-            });
-          } else {
-            // Update existing record
-            await supabase
-              .from('b2b_clients')
-              .update({ is_active: true })
-              .eq('user_id', clientId);
-          }
-        }
-      }
-
       setClients(prev => prev.map(client => 
-        client.id === clientId ? { ...client, is_b2b: enableB2B } : client
+        client.id === clientId ? { ...client, status: newStatus } : client
       ));
 
       toast({
-        title: enableB2B ? "B2B habilitado" : "B2B desabilitado",
-        description: enableB2B 
-          ? "O cliente agora tem acesso ao B2B Express."
-          : "O acesso B2B foi removido do cliente.",
+        title: activate ? "Cliente ativado" : "Cliente inativado",
+        description: activate 
+          ? "O cliente agora pode acessar a plataforma."
+          : "O acesso do cliente foi desativado.",
       });
     } catch (error) {
-      console.error('Error toggling B2B:', error);
+      console.error('Error toggling client status:', error);
       toast({
-        title: "Erro ao atualizar B2B",
-        description: "Ocorreu um erro ao tentar atualizar o acesso B2B.",
+        title: "Erro ao atualizar status",
+        description: "Ocorreu um erro ao tentar atualizar o status do cliente.",
         variant: "destructive",
       });
     }
@@ -507,17 +477,14 @@ const ActiveClients = () => {
       client.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const clientStatus = getClientStatus(client);
     let matchesFilter = true;
     
     if (filterBy === 'pending') {
       matchesFilter = client.status === 'pendente';
-    } else if (filterBy === 'b2b') {
-      matchesFilter = client.is_b2b === true;
-    } else if (filterBy === 'active') {
-      matchesFilter = clientStatus !== 'Inativo' && client.status === 'aprovado';
+    } else if (filterBy === 'approved') {
+      matchesFilter = client.status === 'aprovado';
     } else if (filterBy === 'inactive') {
-      matchesFilter = clientStatus === 'Inativo';
+      matchesFilter = client.status === 'inativo' || client.status === 'rejeitado';
     }
 
     return matchesSearch && matchesFilter;
@@ -590,18 +557,11 @@ const ActiveClients = () => {
                 Pendentes {pendingApprovals > 0 && `(${pendingApprovals})`}
               </Button>
               <Button
-                variant={filterBy === 'active' ? 'default' : 'outline'}
+                variant={filterBy === 'approved' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setFilterBy('active')}
+                onClick={() => setFilterBy('approved')}
               >
                 Aprovados
-              </Button>
-              <Button
-                variant={filterBy === 'b2b' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilterBy('b2b')}
-              >
-                B2B
               </Button>
               <Button
                 variant={filterBy === 'inactive' ? 'default' : 'outline'}
@@ -646,9 +606,9 @@ const ActiveClients = () => {
                           {getClientStatus(client)}
                         </Badge>
                       )}
-                      {client.is_b2b && (
-                        <Badge variant="outline" className="text-xs border-emerald-500 text-emerald-600">
-                          B2B
+                      {(client.status === 'inativo' || client.status === 'rejeitado') && (
+                        <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground">
+                          {client.status === 'rejeitado' ? 'Rejeitado' : 'Inativo'}
                         </Badge>
                       )}
                       {isMasterUser(client) && (
@@ -688,7 +648,7 @@ const ActiveClients = () => {
 
                 <div className="flex items-center space-x-2 flex-wrap gap-2">
                   {/* Approval Buttons */}
-                  {client.status === 'pendente' && (
+                  {client.status === 'pendente' && !isMasterUser(client) && (
                     <>
                       <Button
                         variant="default"
@@ -709,14 +669,24 @@ const ActiveClients = () => {
                     </>
                   )}
 
-                  {/* B2B Toggle */}
+                  {/* Activate/Deactivate Toggle */}
                   {client.status === 'aprovado' && !isMasterUser(client) && (
                     <Button
-                      variant={client.is_b2b ? "outline" : "secondary"}
+                      variant="outline"
                       size="sm"
-                      onClick={() => handleToggleB2B(client.id, !client.is_b2b)}
+                      onClick={() => handleToggleActive(client.id, false)}
                     >
-                      {client.is_b2b ? 'Remover B2B' : 'Habilitar B2B'}
+                      Inativar
+                    </Button>
+                  )}
+                  
+                  {(client.status === 'inativo' || client.status === 'rejeitado') && !isMasterUser(client) && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => handleToggleActive(client.id, true)}
+                    >
+                      Ativar
                     </Button>
                   )}
 
