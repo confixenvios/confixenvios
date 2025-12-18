@@ -18,6 +18,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { supabase } from '@/integrations/supabase/client';
 import confixLogo from '@/assets/confix-logo-black.png';
 import PendingApprovalBanner from '@/components/PendingApprovalBanner';
+import PanelSwitcher from '@/components/PanelSwitcher';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -193,16 +194,27 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
                 <img src={confixLogo} alt="Confix Envios" className="h-5" />
               </div>
             </div>
-            <span className="text-sm text-white/90 truncate max-w-[180px]">Bem vindo, {getDisplayName()}</span>
+            <div className="flex items-center gap-2">
+              <PanelSwitcher />
+            </div>
           </div>
         </header>
 
         {/* Desktop Header */}
-        <header className="hidden lg:flex sticky top-0 z-40 bg-white border-b shadow-sm h-14 items-center px-6">
+        <header className="hidden lg:flex sticky top-0 z-40 bg-white border-b shadow-sm h-14 items-center px-6 justify-between">
           <div className="flex items-center gap-3">
             <Truck className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-foreground">Painel Cliente</span>
+            <span className="font-semibold text-foreground">Painel Cliente - Envios Convencionais</span>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/b2b-expresso/dashboard')}
+            className="flex items-center gap-2"
+          >
+            <Package2 className="h-4 w-4" />
+            <span>Ir para Expresso</span>
+          </Button>
         </header>
 
         {/* Page Content */}
