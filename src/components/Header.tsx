@@ -39,10 +39,10 @@ const Header = () => {
             />
           </Link>
           
-          <nav className="flex items-center space-x-2 sm:space-x-6">
+          <nav className="hidden md:flex items-center justify-center flex-1 space-x-8">
             <Link 
               to="#servicos" 
-              className="text-black hover:text-primary transition-colors text-lg sm:text-xl hidden md:block"
+              className="text-slate-700 hover:text-primary transition-colors text-base font-medium"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('servicos')?.scrollIntoView({ behavior: 'smooth' });
@@ -52,7 +52,7 @@ const Header = () => {
             </Link>
             <Link 
               to="#diferencial" 
-              className="text-black hover:text-primary transition-colors text-lg sm:text-xl hidden md:block"
+              className="text-slate-700 hover:text-primary transition-colors text-base font-medium"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('diferencial')?.scrollIntoView({ behavior: 'smooth' });
@@ -62,7 +62,7 @@ const Header = () => {
             </Link>
             <Link 
               to="#quemsomos" 
-              className="text-black hover:text-primary transition-colors text-lg sm:text-xl hidden lg:block"
+              className="text-slate-700 hover:text-primary transition-colors text-base font-medium"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('quemsomos')?.scrollIntoView({ behavior: 'smooth' });
@@ -72,7 +72,7 @@ const Header = () => {
             </Link>
             <Link 
               to="#contato" 
-              className="text-black hover:text-primary transition-colors text-lg sm:text-xl hidden lg:block"
+              className="text-slate-700 hover:text-primary transition-colors text-base font-medium"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('contato')?.scrollIntoView({ behavior: 'smooth' });
@@ -80,6 +80,9 @@ const Header = () => {
             >
               Contato
             </Link>
+          </nav>
+          
+          <div className="flex items-center space-x-2 sm:space-x-4">
             
             {!loading && (
               <>
@@ -144,7 +147,7 @@ const Header = () => {
                 )}
               </>
             )}
-          </nav>
+          </div>
         </div>
       </div>
 
