@@ -1311,7 +1311,7 @@ const MotoristaDashboard = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-2xl">
               {/* Card Coletas */}
               <Card 
-                className="cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] border-2 border-transparent hover:border-primary/30"
+                className="cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] border-2 border-primary/30 hover:border-primary/50"
                 onClick={() => {
                   setShowHomeDashboard(false);
                   setActiveSection('coletas');
@@ -1324,15 +1324,12 @@ const MotoristaDashboard = () => {
                   </div>
                   <h3 className="text-2xl font-bold text-foreground">Coletas</h3>
                   <p className="text-muted-foreground mt-2 text-center">Gerencie suas coletas</p>
-                  <Badge className="mt-4 bg-primary/10 text-primary hover:bg-primary/20">
-                    {pendentes.length + aceitos.length + coletados.length} volumes
-                  </Badge>
                 </CardContent>
               </Card>
 
               {/* Card Expedição */}
               <Card 
-                className="cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] border-2 border-transparent hover:border-emerald-500/30"
+                className="cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] border-2 border-emerald-500/30 hover:border-emerald-500/50"
                 onClick={() => {
                   setShowHomeDashboard(false);
                   setActiveSection('despache');
@@ -1345,9 +1342,6 @@ const MotoristaDashboard = () => {
                   </div>
                   <h3 className="text-2xl font-bold text-foreground">Expedição</h3>
                   <p className="text-muted-foreground mt-2 text-center">Gerencie suas entregas</p>
-                  <Badge className="mt-4 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20">
-                    {aguardandoExpedicao.length + despachados.length} volumes
-                  </Badge>
                 </CardContent>
               </Card>
             </div>
