@@ -37,7 +37,6 @@ const Index = () => {
       {/* Hero Section */}
       <section className="relative py-12 sm:py-16 md:py-20 px-2 sm:px-4 overflow-hidden">
         <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${heroTruckConfix})` }}></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/50 to-background/60"></div>
         
         <div className="container mx-auto text-center relative">
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-12 leading-tight font-bold">
