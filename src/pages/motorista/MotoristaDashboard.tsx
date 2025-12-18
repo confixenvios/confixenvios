@@ -1223,48 +1223,154 @@ const MotoristaDashboard = () => {
 
       {/* Main content area */}
       {showHomeDashboard ? (
-        <main className="container mx-auto px-4 py-6">
-          {/* Home Dashboard - Tela inicial */}
-          <div className="flex flex-col items-center justify-center min-h-[60vh]">
-            <h2 className="text-2xl font-bold text-foreground mb-8 text-center">
-              Selecione uma opção
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-2xl">
+        <main className="min-h-[calc(100vh-80px)] bg-gradient-to-br from-slate-50 via-white to-slate-100">
+          {/* Hero section with stats */}
+          <div className="container mx-auto px-4 py-8">
+            {/* Welcome section */}
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
+                <Truck className="h-4 w-4" />
+                <span>Painel do Motorista</span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
+                Olá, {motorista?.nome?.split(' ')[0] || 'Motorista'}! 👋
+              </h1>
+              <p className="text-muted-foreground text-lg">
+                Escolha uma opção para começar seu trabalho
+              </p>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 max-w-4xl mx-auto">
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                    <Package className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{pendentes.length}</p>
+                    <p className="text-xs text-muted-foreground">Pendentes</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                    <ClipboardList className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{aceitos.length}</p>
+                    <p className="text-xs text-muted-foreground">Aceitos</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
+                    <Send className="h-5 w-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{despachados.length}</p>
+                    <p className="text-xs text-muted-foreground">Em Rota</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                    <CheckCircle className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{concluidos.length}</p>
+                    <p className="text-xs text-muted-foreground">Concluídos</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Action Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
               {/* Card Coletas */}
-              <Card 
-                className="cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] border-2 border-primary/30 hover:border-primary/50"
+              <div 
+                className="group relative cursor-pointer"
                 onClick={() => {
                   setShowHomeDashboard(false);
                   setActiveSection('coletas');
                   setActiveTab('pendentes');
                 }}
               >
-                <CardContent className="p-8 flex flex-col items-center justify-center min-h-[200px]">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-red-100 flex items-center justify-center mb-4">
-                    <ClipboardList className="h-10 w-10 text-primary" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-foreground">Coletas</h3>
-                  <p className="text-muted-foreground mt-2 text-center">Gerencie suas coletas</p>
-                </CardContent>
-              </Card>
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-red-500/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-70 transition-all duration-500" />
+                <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 rounded-3xl bg-white group-hover:-translate-y-1">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-red-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-primary/10 to-red-500/10 rounded-full translate-y-1/2 -translate-x-1/2" />
+                  <CardContent className="relative p-8 flex flex-col items-center justify-center min-h-[280px]">
+                    <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary to-red-600 flex items-center justify-center mb-6 shadow-lg shadow-primary/30 group-hover:scale-110 transition-transform duration-300">
+                      <ClipboardList className="h-12 w-12 text-white" />
+                    </div>
+                    <h3 className="text-3xl font-bold text-foreground mb-2">Coletas</h3>
+                    <p className="text-muted-foreground text-center mb-4">Aceite e colete volumes dos clientes</p>
+                    <div className="flex items-center gap-2 text-primary font-medium">
+                      <span>{pendentes.length + aceitos.length + coletados.length} volumes</span>
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center group-hover:translate-x-1 transition-transform">
+                        <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* Card Expedição */}
-              <Card 
-                className="cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] border-2 border-emerald-500/30 hover:border-emerald-500/50"
+              <div 
+                className="group relative cursor-pointer"
                 onClick={() => {
                   setShowHomeDashboard(false);
                   setActiveSection('despache');
                   setActiveTab('aguardando');
                 }}
               >
-                <CardContent className="p-8 flex flex-col items-center justify-center min-h-[200px]">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-100 flex items-center justify-center mb-4">
-                    <Send className="h-10 w-10 text-emerald-600" />
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-green-500/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-70 transition-all duration-500" />
+                <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 rounded-3xl bg-white group-hover:-translate-y-1">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/10 to-green-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-emerald-500/10 to-green-500/10 rounded-full translate-y-1/2 -translate-x-1/2" />
+                  <CardContent className="relative p-8 flex flex-col items-center justify-center min-h-[280px]">
+                    <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-300">
+                      <Send className="h-12 w-12 text-white" />
+                    </div>
+                    <h3 className="text-3xl font-bold text-foreground mb-2">Expedição</h3>
+                    <p className="text-muted-foreground text-center mb-4">Entregue volumes aos destinatários</p>
+                    <div className="flex items-center gap-2 text-emerald-600 font-medium">
+                      <span>{aguardandoExpedicao.length + despachados.length} volumes</span>
+                      <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:translate-x-1 transition-transform">
+                        <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Quick Tips */}
+            <div className="mt-10 max-w-4xl mx-auto">
+              <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-2xl p-6 border border-slate-200">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                   </div>
-                  <h3 className="text-2xl font-bold text-foreground">Expedição</h3>
-                  <p className="text-muted-foreground mt-2 text-center">Gerencie suas entregas</p>
-                </CardContent>
-              </Card>
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-1">Dica rápida</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Use o leitor de código de barras para bipar as etiquetas rapidamente. 
+                      Você pode coletar ou entregar múltiplos volumes de uma só vez!
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </main>
