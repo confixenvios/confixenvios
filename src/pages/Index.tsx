@@ -35,17 +35,20 @@ const Index = () => {
       <Header />
       
       {/* Hero Section */}
-      <section className="relative py-12 sm:py-16 md:py-20 px-2 sm:px-4 overflow-hidden min-h-[500px]">
-        <div className="absolute inset-0 bg-cover bg-bottom bg-no-repeat" style={{ backgroundImage: `url(${heroTruckConfix})` }}></div>
-        
-        <div className="container mx-auto text-center relative">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-12 leading-tight font-normal">
+      <section className="relative overflow-hidden">
+        <img 
+          src={heroTruckConfix} 
+          alt="Caminhão Confix Envios" 
+          className="w-full h-auto"
+        />
+        <div className="absolute inset-0 flex flex-col items-center justify-start pt-8 sm:pt-12 md:pt-16 px-4">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-8 md:mb-12 leading-tight font-normal text-center">
             <span style={{ color: '#000000', textShadow: '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.7)' }}>Coletamos e Entregamos em todo o </span>
             <span className="text-primary" style={{ textShadow: '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.8)' }}>Brasil</span>
           </h1>
           
           {/* Benefícios principais em mini cards */}
-          <div className="flex flex-wrap justify-center gap-4 mb-12">
+          <div className="flex flex-wrap justify-center gap-4 mb-8 md:mb-12">
             <div className="bg-white/90 backdrop-blur-sm rounded-lg px-6 py-3 shadow-md flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-primary" />
               <span className="text-base font-medium" style={{ color: '#000000' }}>Menor preço</span>
@@ -61,7 +64,7 @@ const Index = () => {
           </div>
 
           {/* Blocos de Serviços */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto w-full">
             {/* Expresso GYN */}
             <Card className="text-center p-4 hover:shadow-lg transition-shadow flex flex-col">
               <CardHeader className="flex-1 pb-2">
