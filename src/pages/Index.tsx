@@ -35,15 +35,17 @@ const Index = () => {
       <Header />
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden min-h-[60vh] md:h-[70vh] md:min-h-[500px] md:max-h-[700px]">
-        <img 
-          src={heroTruckConfix} 
-          alt="Caminhão Confix Envios" 
-          className="absolute inset-0 w-full h-full object-cover object-center md:object-right"
-          loading="eager"
-          fetchPriority="high"
-        />
-        <div className="relative flex flex-col items-center justify-start pt-6 sm:pt-8 md:pt-16 px-4 pb-6">
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-amber-100 to-amber-200">
+          <img 
+            src={heroTruckConfix} 
+            alt="Caminhão Confix Envios" 
+            className="w-full h-full object-cover object-center md:object-right"
+            loading="eager"
+            fetchPriority="high"
+          />
+        </div>
+        <div className="relative flex flex-col items-center justify-start pt-6 sm:pt-8 md:pt-16 px-4 pb-6 min-h-[50vh] md:min-h-[70vh]">
           <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl mb-4 sm:mb-6 md:mb-12 leading-tight font-normal text-center">
             <span style={{ color: '#000000', textShadow: '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.7)' }}>Coletamos e Entregamos em todo o </span>
             <span className="text-primary" style={{ textShadow: '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.8)' }}>Brasil</span>
