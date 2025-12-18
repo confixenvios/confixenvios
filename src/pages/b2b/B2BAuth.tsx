@@ -116,7 +116,7 @@ const B2BAuth = () => {
             {/* Red accent bar at top */}
             <div className="h-1.5 bg-gradient-to-r from-primary to-red-600" />
             <CardHeader className="space-y-1 text-center pb-4 pt-6">
-              <CardTitle className="text-2xl font-bold text-primary">Envios Expresso</CardTitle>
+              <CardTitle className="text-2xl font-bold text-primary">Painel de envios expresso</CardTitle>
               <CardDescription>
                 Faça login para acessar o painel de envios expresso
               </CardDescription>
