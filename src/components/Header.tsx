@@ -41,16 +41,6 @@ const Header = () => {
           
           <nav className="flex items-center space-x-2 sm:space-x-6">
             <Link 
-              to="#quemsomos" 
-              className="text-black hover:text-primary transition-colors text-lg sm:text-xl hidden md:block"
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById('quemsomos')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-            >
-              Quem Somos
-            </Link>
-            <Link 
               to="#servicos" 
               className="text-black hover:text-primary transition-colors text-lg sm:text-xl hidden md:block"
               onClick={(e) => {
@@ -58,17 +48,27 @@ const Header = () => {
                 document.getElementById('servicos')?.scrollIntoView({ behavior: 'smooth' });
               }}
             >
-              Nossos Serviços
+              Serviços
             </Link>
             <Link 
               to="#diferencial" 
-              className="text-black hover:text-primary transition-colors text-lg sm:text-xl hidden lg:block"
+              className="text-black hover:text-primary transition-colors text-lg sm:text-xl hidden md:block"
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById('diferencial')?.scrollIntoView({ behavior: 'smooth' });
               }}
             >
-              Nosso Diferencial
+              Diferencial
+            </Link>
+            <Link 
+              to="#quemsomos" 
+              className="text-black hover:text-primary transition-colors text-lg sm:text-xl hidden lg:block"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('quemsomos')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              Sobre
             </Link>
             <Link 
               to="#contato" 
@@ -78,7 +78,7 @@ const Header = () => {
                 document.getElementById('contato')?.scrollIntoView({ behavior: 'smooth' });
               }}
             >
-              Fale com a gente
+              Contato
             </Link>
             
             {!loading && (
