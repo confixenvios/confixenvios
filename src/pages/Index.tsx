@@ -111,7 +111,7 @@ const Index = () => {
           </p>
           
           <div className="overflow-hidden">
-            <div className="flex animate-marquee hover:pause-marquee">
+            <div className="flex animate-marquee-fast md:animate-marquee hover:pause-marquee">
               {/* First set of logos */}
               <div className="flex shrink-0 gap-16 items-center pr-16">
                 <div className="h-16 flex items-center justify-center px-4">
