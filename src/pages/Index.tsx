@@ -280,7 +280,7 @@ const Index = () => {
               </p>
               
               <div className="flex justify-center md:justify-start">
-                <Button asChild>
+                <Button asChild className="px-6">
                   <Link to="/cotacao">
                     <Package className="mr-2 h-4 w-4" />
                     COTAR FRETE
@@ -352,7 +352,7 @@ const Index = () => {
             </div>
           </div>
           
-          <Button asChild>
+          <Button asChild className="px-6">
             <Link to="/cotacao">
               <Package className="mr-2 h-4 w-4" />
               COTAR FRETE
