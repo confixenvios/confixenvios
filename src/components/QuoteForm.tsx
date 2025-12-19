@@ -1321,35 +1321,37 @@ const QuoteForm = () => {
 
   const renderStepIndicator = () => (
     <div className="mb-6 sm:mb-8">
-      <div className="flex items-center justify-center">
-        <div className="flex items-center space-x-2 sm:space-x-4 lg:space-x-6">
-          {steps.map((step, index) => (
-            <div key={step.number} className="flex items-center">
-              <div
-                className={`flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-2 px-2 sm:px-3 py-2 sm:py-3 rounded-lg transition-all duration-300 ${
-                  currentStep === step.number
-                    ? "bg-primary text-primary-foreground shadow-lg"
-                    : currentStep > step.number
-                      ? "bg-success text-success-foreground"
-                      : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {currentStep > step.number ? (
-                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-                ) : (
-                  <step.icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                )}
-                <span className="font-medium text-xs sm:text-sm text-center">{step.title}</span>
-              </div>
-              {index < steps.length - 1 && (
+      <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible">
+        <div className="flex items-center justify-start sm:justify-center min-w-max sm:min-w-0">
+          <div className="flex items-center gap-1 sm:gap-4 lg:gap-6">
+            {steps.map((step, index) => (
+              <div key={step.number} className="flex items-center">
                 <div
-                  className={`hidden sm:block w-6 lg:w-12 h-0.5 mx-2 transition-all duration-300 ${
-                    currentStep > step.number ? "bg-success" : "bg-muted"
+                  className={`flex flex-col items-center gap-0.5 px-2 py-1.5 sm:px-3 sm:py-3 sm:flex-row sm:gap-2 rounded-lg transition-all duration-300 whitespace-nowrap ${
+                    currentStep === step.number
+                      ? "bg-primary text-primary-foreground shadow-lg"
+                      : currentStep > step.number
+                        ? "bg-success text-success-foreground"
+                        : "bg-muted text-muted-foreground"
                   }`}
-                />
-              )}
-            </div>
-          ))}
+                >
+                  {currentStep > step.number ? (
+                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                  ) : (
+                    <step.icon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                  )}
+                  <span className="font-medium text-[10px] sm:text-sm text-center leading-tight">{step.title}</span>
+                </div>
+                {index < steps.length - 1 && (
+                  <div
+                    className={`hidden sm:block w-6 lg:w-12 h-0.5 mx-2 transition-all duration-300 ${
+                      currentStep > step.number ? "bg-success" : "bg-muted"
+                    }`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
