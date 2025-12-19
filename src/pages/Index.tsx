@@ -279,12 +279,14 @@ const Index = () => {
                 Last Mile, First Mile Ecommerce.
               </p>
               
-              <Button asChild>
-                <Link to="/cotacao">
-                  <Package className="mr-2 h-4 w-4" />
-                  COTAR FRETE
-                </Link>
-              </Button>
+              <div className="flex justify-center md:justify-start">
+                <Button asChild>
+                  <Link to="/cotacao">
+                    <Package className="mr-2 h-4 w-4" />
+                    COTAR FRETE
+                  </Link>
+                </Button>
+              </div>
             </div>
             
             <div className="flex justify-center">
