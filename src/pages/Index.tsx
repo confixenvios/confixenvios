@@ -365,14 +365,14 @@ const Index = () => {
       {/* Footer */}
       <footer id="contato" className="bg-primary text-primary-foreground py-16">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col items-center text-center md:grid md:grid-cols-3 md:text-left md:items-start gap-8">
+          <div className="flex flex-col items-center gap-8 md:grid md:grid-cols-3 md:items-start">
             {/* Logo e descrição */}
-            <div className="flex flex-col items-center md:items-start">
+            <div className="flex flex-col items-center text-center md:items-start md:text-left">
               <h3 className="text-2xl font-bold mb-4">Confix Envios</h3>
               <p className="text-primary-foreground/80 mb-6 text-base">
                 Coletamos e enviamos para todo o Brasil
               </p>
-              <div className="flex gap-4 justify-center md:justify-start">
+              <div className="flex gap-4">
                 <Button variant="ghost" size="sm" asChild>
                   <a href="https://www.facebook.com/confixenvios/" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
                     <Facebook className="h-5 w-5" />
@@ -387,7 +387,7 @@ const Index = () => {
             </div>
 
             {/* Endereço */}
-            <div className="text-center">
+            <div className="flex flex-col items-center text-center">
               <h4 className="font-semibold mb-4">Endereço</h4>
               <p className="text-base text-primary-foreground/80">
                 Av. primeira avenida s/n Qd. 5 B Lt.1 e 3<br />
@@ -398,14 +398,14 @@ const Index = () => {
             </div>
 
             {/* Contato */}
-            <div className="flex flex-col items-center md:items-start md:ml-auto">
+            <div className="flex flex-col items-center text-center md:items-start md:text-left md:ml-auto">
               <h4 className="font-semibold mb-4">Contato</h4>
               <div className="space-y-2 text-base">
-                <div className="flex items-center gap-2 justify-center md:justify-start">
+                <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
                   <span>+55 62 9873-3276</span>
                 </div>
-                <div className="flex items-center gap-2 justify-center md:justify-start">
+                <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4" />
                   <span>confix@grupoconfix.com</span>
                 </div>
