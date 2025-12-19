@@ -56,38 +56,47 @@ const B2BLabelGenerator = ({
 }: B2BLabelGeneratorProps) => {
   const labelRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!labelRef.current) return;
     
-    const printContent = labelRef.current.innerHTML;
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    try {
+      const canvas = await html2canvas(labelRef.current, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+      });
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Etiqueta ${volume.eti_code}</title>
-          <style>
-            body { margin: 0; padding: 10px; font-family: Arial, sans-serif; }
-            .label { border: 2px solid #000; padding: 8px; width: 280px; }
-            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 6px; }
-            .section { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed #ccc; }
-            .section-title { font-weight: bold; font-size: 8px; text-transform: uppercase; margin-bottom: 2px; color: #666; }
-            .info-row { font-size: 9px; margin: 1px 0; }
-            .info-row strong { font-weight: 600; }
-            .eti-code { font-size: 22px; font-weight: bold; text-align: center; margin: 8px 0; }
-            .barcode { text-align: center; margin: 8px 0; }
-            .weight { text-align: center; font-size: 14px; font-weight: bold; margin-top: 6px; }
-          </style>
-        </head>
-        <body>
-          ${printContent}
-          <script>window.print(); window.close();</script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+      const imgData = canvas.toDataURL('image/png');
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) return;
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Etiqueta ${volume.eti_code}</title>
+            <style>
+              @page { size: 80mm 110mm; margin: 0; }
+              body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: flex-start; }
+              img { max-width: 80mm; height: auto; }
+            </style>
+          </head>
+          <body>
+            <img src="${imgData}" />
+            <script>
+              window.onload = function() { 
+                setTimeout(function() { 
+                  window.print(); 
+                  window.close(); 
+                }, 100); 
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    } catch (error) {
+      console.error('Erro ao imprimir:', error);
+    }
   };
 
   const handleDownloadPDF = async () => {
