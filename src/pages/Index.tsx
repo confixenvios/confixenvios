@@ -352,7 +352,7 @@ const Index = () => {
             </div>
           </div>
           
-          <Button size="lg" asChild>
+          <Button asChild>
             <Link to="/cotacao">
               <Package className="mr-2 h-4 w-4" />
               COTAR FRETE
