@@ -75,9 +75,26 @@ const B2BLabelGenerator = ({
           <head>
             <title>Etiqueta ${volume.eti_code}</title>
             <style>
-              @page { size: 80mm 110mm; margin: 0; }
-              body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: flex-start; }
-              img { max-width: 80mm; height: auto; }
+              @page { 
+                size: A4; 
+                margin: 10mm; 
+              }
+              * { 
+                margin: 0; 
+                padding: 0; 
+                box-sizing: border-box; 
+              }
+              body { 
+                display: flex; 
+                justify-content: center; 
+                align-items: flex-start;
+                padding-top: 5mm;
+              }
+              img { 
+                width: 80mm; 
+                height: auto; 
+                max-height: 110mm;
+              }
             </style>
           </head>
           <body>
