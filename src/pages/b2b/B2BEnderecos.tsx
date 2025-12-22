@@ -9,6 +9,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Plus, Loader2, Pencil, Trash2, Star } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  sanitizeName,
+  formatCep,
+  sanitizeCep,
+  sanitizeStreet,
+  sanitizeNumber,
+  sanitizeComplement,
+  sanitizeNeighborhood,
+  sanitizeCity,
+  sanitizeState,
+  sanitizeReference,
+  sanitizeContactName,
+  formatPhone,
+  sanitizePhone,
+  formatDocument,
+  sanitizeDocument
+} from '@/utils/addressFieldValidation';
 
 interface B2BClient {
   id: string;
@@ -165,26 +182,22 @@ const B2BEnderecos = () => {
   };
 
   const handleCepChange = (value: string) => {
-    const formatted = value
-      .replace(/\D/g, '')
-      .replace(/(\d{5})(\d)/, '$1-$2')
-      .slice(0, 9);
-    
+    const formatted = formatCep(value);
     setFormData(prev => ({ ...prev, cep: formatted }));
     
-    if (formatted.length === 9) {
+    if (sanitizeCep(value).length === 8) {
       handleCepSearch(formatted);
     }
   };
 
   const handlePhoneChange = (value: string) => {
-    const formatted = value
-      .replace(/\D/g, '')
-      .replace(/(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d{5})(\d)/, '$1-$2')
-      .slice(0, 15);
-    
+    const formatted = formatPhone(value);
     setFormData(prev => ({ ...prev, recipient_phone: formatted }));
+  };
+
+  const handleDocumentChange = (value: string) => {
+    const formatted = formatDocument(value);
+    setFormData(prev => ({ ...prev, recipient_document: formatted }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -315,8 +328,9 @@ const B2BEnderecos = () => {
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: sanitizeName(e.target.value) }))}
                   placeholder="Ex: Casa, Escritório, Cliente X"
+                  maxLength={40}
                   required
                 />
               </div>
@@ -327,7 +341,8 @@ const B2BEnderecos = () => {
                   <Input
                     id="recipient_name"
                     value={formData.recipient_name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, recipient_name: e.target.value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, recipient_name: sanitizeContactName(e.target.value) }))}
+                    maxLength={40}
                     required
                   />
                 </div>
@@ -338,6 +353,7 @@ const B2BEnderecos = () => {
                     value={formData.recipient_phone}
                     onChange={(e) => handlePhoneChange(e.target.value)}
                     placeholder="(00) 00000-0000"
+                    maxLength={15}
                     required
                   />
                 </div>
@@ -348,7 +364,9 @@ const B2BEnderecos = () => {
                 <Input
                   id="recipient_document"
                   value={formData.recipient_document}
-                  onChange={(e) => setFormData(prev => ({ ...prev, recipient_document: e.target.value }))}
+                  onChange={(e) => handleDocumentChange(e.target.value)}
+                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                  maxLength={18}
                 />
               </div>
 
@@ -369,7 +387,8 @@ const B2BEnderecos = () => {
                   <Input
                     id="street"
                     value={formData.street}
-                    onChange={(e) => setFormData(prev => ({ ...prev, street: e.target.value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, street: sanitizeStreet(e.target.value) }))}
+                    maxLength={40}
                     required
                   />
                 </div>
@@ -381,7 +400,8 @@ const B2BEnderecos = () => {
                   <Input
                     id="number"
                     value={formData.number}
-                    onChange={(e) => setFormData(prev => ({ ...prev, number: e.target.value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, number: sanitizeNumber(e.target.value) }))}
+                    maxLength={6}
                     required
                   />
                 </div>
@@ -390,7 +410,8 @@ const B2BEnderecos = () => {
                   <Input
                     id="complement"
                     value={formData.complement}
-                    onChange={(e) => setFormData(prev => ({ ...prev, complement: e.target.value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, complement: sanitizeComplement(e.target.value) }))}
+                    maxLength={40}
                   />
                 </div>
               </div>
@@ -401,7 +422,8 @@ const B2BEnderecos = () => {
                   <Input
                     id="neighborhood"
                     value={formData.neighborhood}
-                    onChange={(e) => setFormData(prev => ({ ...prev, neighborhood: e.target.value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, neighborhood: sanitizeNeighborhood(e.target.value) }))}
+                    maxLength={40}
                     required
                   />
                 </div>
@@ -410,7 +432,8 @@ const B2BEnderecos = () => {
                   <Input
                     id="city"
                     value={formData.city}
-                    onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, city: sanitizeCity(e.target.value) }))}
+                    maxLength={40}
                     required
                   />
                 </div>
@@ -419,7 +442,7 @@ const B2BEnderecos = () => {
                   <Input
                     id="state"
                     value={formData.state}
-                    onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, state: sanitizeState(e.target.value) }))}
                     maxLength={2}
                     required
                   />
@@ -431,8 +454,9 @@ const B2BEnderecos = () => {
                 <Input
                   id="reference"
                   value={formData.reference}
-                  onChange={(e) => setFormData(prev => ({ ...prev, reference: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, reference: sanitizeReference(e.target.value) }))}
                   placeholder="Próximo a..."
+                  maxLength={40}
                 />
               </div>
 
