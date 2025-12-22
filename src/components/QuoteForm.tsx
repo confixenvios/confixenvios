@@ -421,9 +421,19 @@ const QuoteForm = () => {
   };
 
   const updateVolume = (id: string, field: keyof Volume, value: string) => {
+    let sanitizedValue = sanitizeTextInput(value);
+    
+    // Limitar peso a 3 casas decimais
+    if (field === "weight" && sanitizedValue.includes(".")) {
+      const parts = sanitizedValue.split(".");
+      if (parts[1] && parts[1].length > 3) {
+        sanitizedValue = parts[0] + "." + parts[1].slice(0, 3);
+      }
+    }
+    
     setFormData((prev) => ({
       ...prev,
-      volumes: prev.volumes.map((v) => (v.id === id ? { ...v, [field]: sanitizeTextInput(value) } : v)),
+      volumes: prev.volumes.map((v) => (v.id === id ? { ...v, [field]: sanitizedValue } : v)),
     }));
   };
 
