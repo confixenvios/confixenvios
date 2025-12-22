@@ -155,9 +155,10 @@ const MotoristaRegistro = () => {
                   id="nome"
                   type="text"
                   value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value.replace(/[^a-zA-ZÀ-ÿ\s]/g, '').slice(0, 60) })}
                   className="pl-10"
                   placeholder="Seu nome completo"
+                  maxLength={60}
                   required
                 />
               </div>
@@ -226,10 +227,11 @@ const MotoristaRegistro = () => {
                   id="senha"
                   type="password"
                   value={formData.senha}
-                  onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, senha: e.target.value.slice(0, 50) })}
                   className="pl-10"
                   placeholder="Digite sua senha"
                   minLength={6}
+                  maxLength={50}
                   required
                 />
               </div>
@@ -243,10 +245,11 @@ const MotoristaRegistro = () => {
                   id="confirmarSenha"
                   type="password"
                   value={formData.confirmarSenha}
-                  onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value.slice(0, 50) })}
                   className="pl-10"
                   placeholder="Confirme sua senha"
                   minLength={6}
+                  maxLength={50}
                   required
                 />
               </div>

@@ -19,6 +19,39 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 
+// Funções de sanitização
+const sanitizeName = (value: string): string => {
+  return value.replace(/[^a-zA-ZÀ-ÿ\s]/g, '').slice(0, 40);
+};
+
+const formatPhone = (value: string): string => {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+};
+
+const formatDocument = (value: string): string => {
+  const digits = value.replace(/\D/g, '').slice(0, 14);
+  if (digits.length <= 11) {
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+  } else {
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+    if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
+    if (digits.length <= 12) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
+    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+  }
+};
+
+const sanitizeInscricaoEstadual = (value: string): string => {
+  return value.replace(/\D/g, '').slice(0, 15);
+};
+
 const ClientConta = () => {
   const { user, profile, userRole, updatePassword, refreshUserData } = useAuth();
   const { toast } = useToast();
@@ -189,8 +222,9 @@ const ClientConta = () => {
                           value={profileData.first_name}
                           onChange={(e) => setProfileData(prev => ({
                             ...prev,
-                            first_name: e.target.value
+                            first_name: sanitizeName(e.target.value)
                           }))}
+                          maxLength={40}
                           disabled={isUpdatingProfile}
                         />
                       </div>
@@ -202,8 +236,9 @@ const ClientConta = () => {
                           value={profileData.last_name}
                           onChange={(e) => setProfileData(prev => ({
                             ...prev,
-                            last_name: e.target.value
+                            last_name: sanitizeName(e.target.value)
                           }))}
+                          maxLength={40}
                           disabled={isUpdatingProfile}
                         />
                       </div>
@@ -217,8 +252,9 @@ const ClientConta = () => {
                         value={profileData.phone}
                         onChange={(e) => setProfileData(prev => ({
                           ...prev,
-                          phone: e.target.value
+                          phone: formatPhone(e.target.value)
                         }))}
+                        maxLength={15}
                         disabled={isUpdatingProfile}
                       />
                     </div>
@@ -231,8 +267,9 @@ const ClientConta = () => {
                         value={profileData.document}
                         onChange={(e) => setProfileData(prev => ({
                           ...prev,
-                          document: e.target.value
+                          document: formatDocument(e.target.value)
                         }))}
+                        maxLength={18}
                         disabled={isUpdatingProfile}
                       />
                     </div>
@@ -245,8 +282,9 @@ const ClientConta = () => {
                         value={profileData.inscricao_estadual}
                         onChange={(e) => setProfileData(prev => ({
                           ...prev,
-                          inscricao_estadual: e.target.value
+                          inscricao_estadual: sanitizeInscricaoEstadual(e.target.value)
                         }))}
+                        maxLength={15}
                         disabled={isUpdatingProfile}
                       />
                     </div>
