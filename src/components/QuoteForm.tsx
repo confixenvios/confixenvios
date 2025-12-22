@@ -1593,7 +1593,13 @@ const QuoteForm = () => {
                                 value={volume.weight}
                                 onChange={(e) => {
                                   // Permitir apenas números e ponto
-                                  const value = e.target.value.replace(/[^0-9.]/g, "");
+                                  let value = e.target.value.replace(/[^0-9.]/g, "");
+                                  
+                                  // Se o valor anterior era "0." e agora é "0", limpar completamente
+                                  if (volume.weight === "0." && value === "0") {
+                                    value = "";
+                                  }
+                                  
                                   updateVolume(volume.id, "weight", value, volume.weight);
                                 }}
                                 className="h-12"
