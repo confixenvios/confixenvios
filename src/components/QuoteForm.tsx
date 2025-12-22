@@ -1678,7 +1678,7 @@ const QuoteForm = () => {
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">Peso Total Declarado</p>
-                          <p className="text-2xl font-bold">{calculateTotalWeight().toFixed(2)} kg</p>
+                          <p className="text-2xl font-bold">{calculateTotalWeight().toFixed(3)} kg</p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">Peso Total Cubado</p>
