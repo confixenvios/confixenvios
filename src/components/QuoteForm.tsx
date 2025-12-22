@@ -390,9 +390,16 @@ const QuoteForm = () => {
           if (profile) {
             console.log("📋 Perfil do cliente carregado:", profile);
             
-            // Determinar tipo de documento
-            const docLength = profile.document?.replace(/\D/g, "").length || 0;
-            const docType = docLength > 11 ? 'cnpj' : 'cpf';
+            // Determinar tipo de documento PRIMEIRO (baseado no tipo_cliente ou tamanho do documento)
+            let docType: 'cpf' | 'cnpj' = 'cpf';
+            if (profile.tipo_cliente === 'pj') {
+              docType = 'cnpj';
+            } else if (profile.document) {
+              const docLength = profile.document.replace(/\D/g, "").length;
+              docType = docLength > 11 ? 'cnpj' : 'cpf';
+            }
+            
+            // Definir o tipo de documento antes de preencher os dados
             setSenderDocType(docType);
             
             // Preencher dados do remetente com os dados do perfil
@@ -666,6 +673,9 @@ const QuoteForm = () => {
     } else if (field === "cep") {
       // Only numbers and dash for CEP
       sanitizedValue = value.replace(/[^0-9\-]/g, "").substring(0, 9);
+    } else if (field === "number") {
+      // Only numbers for address number
+      sanitizedValue = value.replace(/[^0-9]/g, "").substring(0, 10);
     } else if (field === "inscricaoEstadual") {
       // Only numbers for Inscrição Estadual
       sanitizedValue = value.replace(/[^0-9]/g, "").substring(0, 15);
