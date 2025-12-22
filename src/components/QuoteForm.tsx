@@ -423,8 +423,14 @@ const QuoteForm = () => {
   const updateVolume = (id: string, field: keyof Volume, value: string) => {
     let sanitizedValue = sanitizeTextInput(value);
     
-    // Limitar peso a 4 dígitos no total (ex: 99.99, 9.999, 999.9, 9999)
+    // Para o campo peso, auto-inserir ponto quando começar com 0
     if (field === "weight") {
+      // Se o valor for exatamente "0", adicionar ponto automaticamente
+      if (sanitizedValue === "0") {
+        sanitizedValue = "0.";
+      }
+      
+      // Limitar peso a 4 dígitos no total (ex: 99.99, 9.999, 999.9, 9999)
       const digitsOnly = sanitizedValue.replace(/\D/g, "");
       if (digitsOnly.length > 4) {
         return; // Não permite mais de 4 dígitos
