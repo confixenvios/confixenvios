@@ -150,9 +150,9 @@ const B2BLayout = () => {
           variant="ghost"
           size="sm"
           onClick={handleLogout}
-          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
         >
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut className="mr-2 h-4 w-4 transition-transform duration-200 group-hover:rotate-12" />
           Sair
         </Button>
       </div>
