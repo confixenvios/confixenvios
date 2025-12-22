@@ -370,6 +370,50 @@ const QuoteForm = () => {
     }
   }, [quoteData]);
 
+  // Carregar dados do perfil do cliente quando chegar no Step 3
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (currentStep === 3 && user) {
+        try {
+          // Buscar perfil do usuário
+          const { data: profile, error } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .single();
+
+          if (error) {
+            console.log("Erro ao buscar perfil:", error);
+            return;
+          }
+
+          if (profile) {
+            console.log("📋 Perfil do cliente carregado:", profile);
+            
+            // Determinar tipo de documento
+            const docLength = profile.document?.replace(/\D/g, "").length || 0;
+            const docType = docLength > 11 ? 'cnpj' : 'cpf';
+            setSenderDocType(docType);
+            
+            // Preencher dados do remetente com os dados do perfil
+            setSenderData(prev => ({
+              ...prev,
+              name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || prev.name,
+              document: profile.document || prev.document,
+              phone: profile.phone || prev.phone,
+              email: profile.email || user.email || prev.email,
+              inscricaoEstadual: profile.inscricao_estadual || prev.inscricaoEstadual,
+            }));
+          }
+        } catch (error) {
+          console.error("Erro ao carregar perfil do cliente:", error);
+        }
+      }
+    };
+
+    loadUserProfile();
+  }, [currentStep, user]);
+
   const steps = [
     { number: 1, title: "Calcular Frete", icon: Calculator },
     { number: 2, title: "Opções de Coleta", icon: Truck },
@@ -622,6 +666,9 @@ const QuoteForm = () => {
     } else if (field === "cep") {
       // Only numbers and dash for CEP
       sanitizedValue = value.replace(/[^0-9\-]/g, "").substring(0, 9);
+    } else if (field === "inscricaoEstadual") {
+      // Only numbers for Inscrição Estadual
+      sanitizedValue = value.replace(/[^0-9]/g, "").substring(0, 15);
     } else if (shouldPreserveSpaces) {
       // Remove dangerous chars but keep spaces for names/addresses
       sanitizedValue = value.replace(/[<>\"'&\x00-\x1f\x7f-\x9f]/g, "").substring(0, 100);
