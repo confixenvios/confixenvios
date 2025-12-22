@@ -204,6 +204,26 @@ const checkIfCapital = (cep: string, state: string): boolean => {
   return ranges.some(([min, max]) => cepNum >= min && cepNum <= max);
 };
 
+// CEPs de destino bloqueados (não atendidos)
+const BLOCKED_CEP_RANGES: [number, number][] = [
+  [74000000, 74899999],
+  [74900000, 74999999],
+  [75000000, 75159999],
+  [75170000, 75174999],
+  [75250000, 75264999],
+  [75340000, 75344999],
+  [75345000, 75349999],
+  [75380000, 75394799],
+];
+
+const isBlockedDestinyCep = (cep: string): boolean => {
+  const cleanCep = cep.replace(/\D/g, "");
+  if (cleanCep.length !== 8) return false;
+  
+  const cepNum = parseInt(cleanCep, 10);
+  return BLOCKED_CEP_RANGES.some(([min, max]) => cepNum >= min && cepNum <= max);
+};
+
 interface Volume {
   id: string;
   weight: string;
@@ -249,6 +269,7 @@ const QuoteForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [blockedCepError, setBlockedCepError] = useState<string | null>(null);
 
   // Step 1: Cotação
   const [formData, setFormData] = useState<QuoteFormData>({
@@ -484,6 +505,17 @@ const QuoteForm = () => {
   const handleInputChange = (field: keyof QuoteFormData, value: string) => {
     // Sanitize input and validate financial data
     const sanitizedValue = sanitizeTextInput(value);
+    
+    // Validar CEP de destino bloqueado
+    if (field === "destinyCep") {
+      const cleanCep = sanitizedValue.replace(/\D/g, "");
+      if (cleanCep.length === 8 && isBlockedDestinyCep(cleanCep)) {
+        setBlockedCepError("CEP não atendido");
+      } else {
+        setBlockedCepError(null);
+      }
+    }
+    
     setFormData((prev) => ({ ...prev, [field]: sanitizedValue }));
   };
 
@@ -1299,6 +1331,11 @@ const QuoteForm = () => {
       return false;
     }
 
+    // Validar CEP bloqueado
+    if (blockedCepError) {
+      return false;
+    }
+
     // Validar que todos os volumes estão preenchidos
     return formData.volumes.every(
       (volume) => volume.weight && volume.length && volume.width && volume.height && volume.merchandiseType,
@@ -1423,10 +1460,18 @@ const QuoteForm = () => {
                           id="destiny-cep"
                           type="text"
                           placeholder="00000-000"
-                          className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
+                          className={`border-input-border focus:border-primary focus:ring-primary h-14 text-lg ${
+                            blockedCepError ? "border-destructive focus:border-destructive focus:ring-destructive" : ""
+                          }`}
                         />
                       )}
                     </InputMask>
+                    {blockedCepError && (
+                      <p className="text-sm text-destructive font-medium flex items-center gap-1">
+                        <AlertTriangle className="h-4 w-4" />
+                        {blockedCepError}
+                      </p>
+                    )}
                   </div>
                 </div>
 
