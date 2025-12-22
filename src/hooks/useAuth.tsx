@@ -25,7 +25,7 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, firstName?: string, lastName?: string, phone?: string, document?: string, inscricaoEstadual?: string) => Promise<{ error: any; needsConfirmation?: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signOut: () => Promise<void>;
+  signOut: (redirectTo?: string) => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
   updatePassword: (password: string) => Promise<{ error: any }>;
   isAdmin: boolean;
@@ -223,7 +223,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error };
   };
 
-  const signOut = async () => {
+  const signOut = async (redirectTo?: string) => {
     try {
       // Clear anonymous session
       SessionManager.clearSession();
@@ -247,8 +247,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('Error signing out:', error);
       // Even if signOut fails, we still want to clear local state
     } finally {
-      // Force navigation to home page
-      window.location.href = '/';
+      // Force navigation to specified page or default to auth page
+      window.location.href = redirectTo || '/auth';
     }
   };
 
