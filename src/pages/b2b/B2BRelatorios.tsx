@@ -161,8 +161,9 @@ const B2BRelatorios = () => {
                 <Input
                   placeholder="Buscar por código..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => setSearchTerm(e.target.value.replace(/[^a-zA-Z0-9\-]/g, '').slice(0, 30))}
                   className="pl-8 border-primary/30 focus:border-primary"
+                  maxLength={30}
                 />
               </div>
             </div>

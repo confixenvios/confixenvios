@@ -361,11 +361,56 @@ const RecipientFormContent = ({
     inscricaoEstadual: recipient?.inscricao_estadual || ""
   });
 
+  // Funções de sanitização específicas
+  const sanitizeName = (value: string) => value.replace(/[^a-zA-ZÀ-ÿ\s]/g, '').slice(0, 60);
+  const sanitizeDocument = (value: string) => value.replace(/[^0-9.\-/]/g, '').slice(0, 18);
+  const sanitizeEmail = (value: string) => value.replace(/[^a-zA-Z0-9@._\-+]/g, '').slice(0, 100);
+  const sanitizeStreet = (value: string) => value.replace(/[^a-zA-ZÀ-ÿ0-9\s.,\-]/g, '').slice(0, 60);
+  const sanitizeNeighborhood = (value: string) => value.replace(/[^a-zA-ZÀ-ÿ0-9\s.,\-]/g, '').slice(0, 40);
+  const sanitizeCity = (value: string) => value.replace(/[^a-zA-ZÀ-ÿ\s\-]/g, '').slice(0, 40);
+  const sanitizeState = (value: string) => value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 2);
+  const sanitizeNumber = (value: string) => value.replace(/[^a-zA-Z0-9\s]/g, '').slice(0, 10);
+  const sanitizeComplement = (value: string) => value.replace(/[^a-zA-ZÀ-ÿ0-9\s.,\-/]/g, '').slice(0, 40);
+  const sanitizeInscricaoEstadual = (value: string) => value.replace(/\D/g, '').slice(0, 15);
+
   const handleInputChange = (field: keyof AddressData, value: string) => {
-    const shouldPreserveSpaces = field === 'name' || field === 'street' || field === 'neighborhood' || field === 'city';
-    const sanitizedValue = shouldPreserveSpaces 
-      ? value.replace(/[<>\"'&]/g, '').substring(0, 500)
-      : sanitizeTextInput(value);
+    let sanitizedValue = value;
+    
+    switch (field) {
+      case 'name':
+        sanitizedValue = sanitizeName(value);
+        break;
+      case 'document':
+        sanitizedValue = sanitizeDocument(value);
+        break;
+      case 'email':
+        sanitizedValue = sanitizeEmail(value);
+        break;
+      case 'street':
+        sanitizedValue = sanitizeStreet(value);
+        break;
+      case 'neighborhood':
+        sanitizedValue = sanitizeNeighborhood(value);
+        break;
+      case 'city':
+        sanitizedValue = sanitizeCity(value);
+        break;
+      case 'state':
+        sanitizedValue = sanitizeState(value);
+        break;
+      case 'number':
+        sanitizedValue = sanitizeNumber(value);
+        break;
+      case 'complement':
+      case 'reference':
+        sanitizedValue = sanitizeComplement(value);
+        break;
+      case 'inscricaoEstadual':
+        sanitizedValue = sanitizeInscricaoEstadual(value);
+        break;
+      default:
+        sanitizedValue = sanitizeTextInput(value);
+    }
     
     setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
   };
@@ -387,6 +432,7 @@ const RecipientFormContent = ({
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
             placeholder="Nome completo"
+            maxLength={60}
           />
         </div>
         
@@ -397,6 +443,7 @@ const RecipientFormContent = ({
               value={formData.document}
               onChange={(e) => handleInputChange('document', e.target.value)}
               placeholder="CPF ou CNPJ"
+              maxLength={18}
             />
           </div>
           <div className="space-y-2">
@@ -416,6 +463,7 @@ const RecipientFormContent = ({
             value={formData.email}
             onChange={(e) => handleInputChange('email', e.target.value)}
             placeholder="email@exemplo.com"
+            maxLength={100}
           />
         </div>
 
@@ -425,6 +473,7 @@ const RecipientFormContent = ({
             value={formData.inscricaoEstadual || ""}
             onChange={(e) => handleInputChange('inscricaoEstadual', e.target.value)}
             placeholder="123456789"
+            maxLength={15}
           />
         </div>
         
@@ -450,6 +499,7 @@ const RecipientFormContent = ({
               value={formData.number}
               onChange={(e) => handleInputChange('number', e.target.value)}
               placeholder="123"
+              maxLength={10}
             />
           </div>
         </div>
@@ -460,6 +510,7 @@ const RecipientFormContent = ({
             value={formData.street}
             onChange={(e) => handleInputChange('street', e.target.value)}
             placeholder="Rua, Avenida..."
+            maxLength={60}
           />
         </div>
         
@@ -470,6 +521,7 @@ const RecipientFormContent = ({
               value={formData.neighborhood}
               onChange={(e) => handleInputChange('neighborhood', e.target.value)}
               placeholder="Bairro"
+              maxLength={40}
             />
           </div>
           <div className="space-y-2">
@@ -479,6 +531,7 @@ const RecipientFormContent = ({
               onChange={(e) => handleInputChange('complement', e.target.value)}
               placeholder="Apto, Bloco..."
               required
+              maxLength={40}
             />
           </div>
         </div>
@@ -490,6 +543,7 @@ const RecipientFormContent = ({
               value={formData.city}
               onChange={(e) => handleInputChange('city', e.target.value)}
               placeholder="Cidade"
+              maxLength={40}
             />
           </div>
           <div className="space-y-2">
@@ -509,6 +563,7 @@ const RecipientFormContent = ({
             value={formData.reference}
             onChange={(e) => handleInputChange('reference', e.target.value)}
             placeholder="Ponto de referência"
+            maxLength={40}
           />
         </div>
       </div>

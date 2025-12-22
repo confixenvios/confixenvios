@@ -530,8 +530,54 @@ const SenderFormContent = ({ editingSender, isNewSender, onSave, onCancel, loadi
     onSave(formData);
   };
 
+  // Funções de sanitização
+  const sanitizeName = (value: string) => value.replace(/[^a-zA-ZÀ-ÿ\s]/g, '').slice(0, 60);
+  const sanitizeEmail = (value: string) => value.replace(/[^a-zA-Z0-9@._\-+]/g, '').slice(0, 100);
+  const sanitizeStreet = (value: string) => value.replace(/[^a-zA-ZÀ-ÿ0-9\s.,\-]/g, '').slice(0, 60);
+  const sanitizeNeighborhood = (value: string) => value.replace(/[^a-zA-ZÀ-ÿ0-9\s.,\-]/g, '').slice(0, 40);
+  const sanitizeCity = (value: string) => value.replace(/[^a-zA-ZÀ-ÿ\s\-]/g, '').slice(0, 40);
+  const sanitizeState = (value: string) => value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 2);
+  const sanitizeNumber = (value: string) => value.replace(/[^a-zA-Z0-9\s]/g, '').slice(0, 10);
+  const sanitizeComplement = (value: string) => value.replace(/[^a-zA-ZÀ-ÿ0-9\s.,\-/]/g, '').slice(0, 40);
+  const sanitizeInscricaoEstadual = (value: string) => value.replace(/\D/g, '').slice(0, 15);
+
   const handleInputChange = (field: keyof AddressData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    let sanitizedValue = value;
+    
+    switch (field) {
+      case 'name':
+        sanitizedValue = sanitizeName(value);
+        break;
+      case 'email':
+        sanitizedValue = sanitizeEmail(value);
+        break;
+      case 'street':
+        sanitizedValue = sanitizeStreet(value);
+        break;
+      case 'neighborhood':
+        sanitizedValue = sanitizeNeighborhood(value);
+        break;
+      case 'city':
+        sanitizedValue = sanitizeCity(value);
+        break;
+      case 'state':
+        sanitizedValue = sanitizeState(value);
+        break;
+      case 'number':
+        sanitizedValue = sanitizeNumber(value);
+        break;
+      case 'complement':
+      case 'reference':
+        sanitizedValue = sanitizeComplement(value);
+        break;
+      case 'inscricaoEstadual':
+        sanitizedValue = sanitizeInscricaoEstadual(value);
+        break;
+      default:
+        sanitizedValue = value;
+    }
+    
+    setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
   };
 
   return (
@@ -544,6 +590,7 @@ const SenderFormContent = ({ editingSender, isNewSender, onSave, onCancel, loadi
             id="name"
             value={formData.name}
             onChange={(e) => handleInputChange("name", e.target.value)}
+            maxLength={60}
             placeholder="Nome do remetente"
             required
           />
@@ -588,6 +635,7 @@ const SenderFormContent = ({ editingSender, isNewSender, onSave, onCancel, loadi
             value={formData.email}
             onChange={(e) => handleInputChange("email", e.target.value)}
             placeholder="email@exemplo.com"
+            maxLength={100}
             required
           />
         </div>
@@ -599,6 +647,7 @@ const SenderFormContent = ({ editingSender, isNewSender, onSave, onCancel, loadi
             id="inscricaoEstadual"
             value={formData.inscricaoEstadual || ""}
             onChange={(e) => handleInputChange("inscricaoEstadual", e.target.value)}
+            maxLength={15}
             placeholder="123456789"
           />
         </div>
@@ -630,6 +679,7 @@ const SenderFormContent = ({ editingSender, isNewSender, onSave, onCancel, loadi
             value={formData.state}
             onChange={(e) => handleInputChange("state", e.target.value)}
             placeholder="Ex: GO"
+            maxLength={2}
             required
           />
         </div>
@@ -642,6 +692,7 @@ const SenderFormContent = ({ editingSender, isNewSender, onSave, onCancel, loadi
             value={formData.city}
             onChange={(e) => handleInputChange("city", e.target.value)}
             placeholder="Nome da cidade"
+            maxLength={40}
             required
           />
         </div>
@@ -654,6 +705,7 @@ const SenderFormContent = ({ editingSender, isNewSender, onSave, onCancel, loadi
             value={formData.neighborhood}
             onChange={(e) => handleInputChange("neighborhood", e.target.value)}
             placeholder="Nome do bairro"
+            maxLength={40}
             required
           />
         </div>
@@ -666,6 +718,7 @@ const SenderFormContent = ({ editingSender, isNewSender, onSave, onCancel, loadi
             value={formData.street}
             onChange={(e) => handleInputChange("street", e.target.value)}
             placeholder="Nome da rua ou avenida"
+            maxLength={60}
             required
           />
         </div>
@@ -678,6 +731,7 @@ const SenderFormContent = ({ editingSender, isNewSender, onSave, onCancel, loadi
             value={formData.number}
             onChange={(e) => handleInputChange("number", e.target.value)}
             placeholder="123"
+            maxLength={10}
             required
           />
         </div>
@@ -690,6 +744,7 @@ const SenderFormContent = ({ editingSender, isNewSender, onSave, onCancel, loadi
             value={formData.complement}
             onChange={(e) => handleInputChange("complement", e.target.value)}
             placeholder="Apto, bloco, etc."
+            maxLength={40}
             required
           />
         </div>
