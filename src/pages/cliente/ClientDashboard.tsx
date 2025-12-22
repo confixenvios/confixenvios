@@ -205,21 +205,21 @@ const ClientDashboard = () => {
               </Link>
             </Button>
             
-            <Button asChild variant="outline" className="w-full justify-start border-primary/30 hover:bg-primary/5 hover:border-primary">
+            <Button asChild variant="outline" className="w-full justify-start border-primary/30 hover:bg-primary/5 hover:border-primary hover:text-primary">
               <Link to="/cliente/remessas">
                 <Package className="w-4 h-4 mr-2" />
                 Ver Minhas Remessas
               </Link>
             </Button>
             
-            <Button asChild variant="outline" className="w-full justify-start border-primary/30 hover:bg-primary/5 hover:border-primary">
+            <Button asChild variant="outline" className="w-full justify-start border-primary/30 hover:bg-primary/5 hover:border-primary hover:text-primary">
               <Link to="/cliente/etiquetas">
                 <FileText className="w-4 h-4 mr-2" />
                 Baixar Etiquetas
               </Link>
             </Button>
             
-            <Button asChild variant="outline" className="w-full justify-start border-primary/30 hover:bg-primary/5 hover:border-primary">
+            <Button asChild variant="outline" className="w-full justify-start border-primary/30 hover:bg-primary/5 hover:border-primary hover:text-primary">
               <Link to="/cliente/rastreamento">
                 <Search className="w-4 h-4 mr-2" />
                 Rastrear Remessa
