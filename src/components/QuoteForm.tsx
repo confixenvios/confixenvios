@@ -420,13 +420,15 @@ const QuoteForm = () => {
     }));
   };
 
-  const updateVolume = (id: string, field: keyof Volume, value: string) => {
+  const updateVolume = (id: string, field: keyof Volume, value: string, previousValue?: string) => {
     let sanitizedValue = sanitizeTextInput(value);
     
-    // Para o campo peso, auto-inserir ponto quando começar com 0
+    // Para o campo peso
     if (field === "weight") {
-      // Se o valor for exatamente "0", adicionar ponto automaticamente
-      if (sanitizedValue === "0") {
+      // Auto-inserir ponto apenas quando o usuário digita "0" em campo vazio (não no backspace)
+      // Detectar se é digitação nova: valor anterior era vazio ou undefined
+      const isTypingZeroFromEmpty = sanitizedValue === "0" && (!previousValue || previousValue === "");
+      if (isTypingZeroFromEmpty) {
         sanitizedValue = "0.";
       }
       
@@ -1592,7 +1594,7 @@ const QuoteForm = () => {
                                 onChange={(e) => {
                                   // Permitir apenas números e ponto
                                   const value = e.target.value.replace(/[^0-9.]/g, "");
-                                  updateVolume(volume.id, "weight", value);
+                                  updateVolume(volume.id, "weight", value, volume.weight);
                                 }}
                                 className="h-12"
                               />
