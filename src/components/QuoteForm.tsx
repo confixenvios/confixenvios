@@ -2179,6 +2179,7 @@ const QuoteForm = () => {
                             value={senderData.name}
                             onChange={(e) => handleAddressChange("sender", "name", e.target.value)}
                             placeholder="Nome completo"
+                            maxLength={40}
                             className="h-12"
                           />
                         </div>
@@ -2219,6 +2220,7 @@ const QuoteForm = () => {
                               value={senderData.inscricaoEstadual || ''}
                               onChange={(e) => handleAddressChange("sender", "inscricaoEstadual", e.target.value)}
                               placeholder="Inscrição Estadual"
+                              maxLength={15}
                               className="h-12"
                             />
                           </div>
@@ -2231,6 +2233,7 @@ const QuoteForm = () => {
                             value={senderData.email}
                             onChange={(e) => handleAddressChange("sender", "email", e.target.value)}
                             placeholder="email@exemplo.com"
+                            maxLength={100}
                             className="h-12"
                           />
                         </div>
@@ -2254,6 +2257,7 @@ const QuoteForm = () => {
                               value={senderData.number}
                               onChange={(e) => handleAddressChange("sender", "number", e.target.value)}
                               placeholder="123"
+                              maxLength={6}
                               className="h-12"
                             />
                           </div>
@@ -2265,6 +2269,7 @@ const QuoteForm = () => {
                             value={senderData.street}
                             onChange={(e) => handleAddressChange("sender", "street", e.target.value)}
                             placeholder="Rua, Avenida..."
+                            maxLength={40}
                             className="h-12"
                           />
                         </div>
@@ -2276,6 +2281,7 @@ const QuoteForm = () => {
                               value={senderData.neighborhood}
                               onChange={(e) => handleAddressChange("sender", "neighborhood", e.target.value)}
                               placeholder="Bairro"
+                              maxLength={40}
                               className="h-12"
                             />
                           </div>
@@ -2285,6 +2291,7 @@ const QuoteForm = () => {
                               value={senderData.complement}
                               onChange={(e) => handleAddressChange("sender", "complement", e.target.value)}
                               placeholder="Apto, Bloco..."
+                              maxLength={40}
                               className="h-12"
                             />
                           </div>
@@ -2297,6 +2304,7 @@ const QuoteForm = () => {
                               value={senderData.city}
                               onChange={(e) => handleAddressChange("sender", "city", e.target.value)}
                               placeholder="Cidade"
+                              maxLength={40}
                               className="h-12"
                             />
                           </div>
@@ -2408,6 +2416,7 @@ const QuoteForm = () => {
                             value={recipientData.name}
                             onChange={(e) => handleAddressChange("recipient", "name", e.target.value)}
                             placeholder="Nome completo"
+                            maxLength={40}
                             className="h-12"
                           />
                         </div>
@@ -2448,6 +2457,7 @@ const QuoteForm = () => {
                               value={recipientData.inscricaoEstadual || ''}
                               onChange={(e) => handleAddressChange("recipient", "inscricaoEstadual", e.target.value)}
                               placeholder="Inscrição Estadual"
+                              maxLength={15}
                               className="h-12"
                             />
                           </div>
@@ -2460,6 +2470,7 @@ const QuoteForm = () => {
                             value={recipientData.email}
                             onChange={(e) => handleAddressChange("recipient", "email", e.target.value)}
                             placeholder="email@exemplo.com"
+                            maxLength={100}
                             className="h-12"
                           />
                         </div>
@@ -2483,6 +2494,7 @@ const QuoteForm = () => {
                               value={recipientData.number}
                               onChange={(e) => handleAddressChange("recipient", "number", e.target.value)}
                               placeholder="123"
+                              maxLength={6}
                               className="h-12"
                             />
                           </div>
@@ -2494,6 +2506,7 @@ const QuoteForm = () => {
                             value={recipientData.street}
                             onChange={(e) => handleAddressChange("recipient", "street", e.target.value)}
                             placeholder="Rua, Avenida..."
+                            maxLength={40}
                             className="h-12"
                           />
                         </div>
@@ -2505,6 +2518,7 @@ const QuoteForm = () => {
                               value={recipientData.neighborhood}
                               onChange={(e) => handleAddressChange("recipient", "neighborhood", e.target.value)}
                               placeholder="Bairro"
+                              maxLength={40}
                               className="h-12"
                             />
                           </div>
@@ -2514,6 +2528,7 @@ const QuoteForm = () => {
                               value={recipientData.complement}
                               onChange={(e) => handleAddressChange("recipient", "complement", e.target.value)}
                               placeholder="Apto, Bloco..."
+                              maxLength={40}
                               className="h-12"
                             />
                           </div>
@@ -2526,6 +2541,7 @@ const QuoteForm = () => {
                               value={recipientData.city}
                               onChange={(e) => handleAddressChange("recipient", "city", e.target.value)}
                               placeholder="Cidade"
+                              maxLength={40}
                               className="h-12"
                             />
                           </div>
