@@ -277,7 +277,7 @@ const ClientEtiquetas = () => {
             </div>
             <div className="w-full sm:w-48">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors">
+                <SelectTrigger className="border border-border shadow-sm hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors">
                   <SelectValue placeholder="Status da etiqueta" />
                 </SelectTrigger>
                 <SelectContent>
