@@ -308,7 +308,7 @@ const ClientRemessas = () => {
               <div>
                 <label className="text-sm font-medium text-foreground mb-2 block">Status</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-11">
+                  <SelectTrigger className="h-11 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors">
                     <SelectValue placeholder="Filtrar por status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -326,7 +326,7 @@ const ClientRemessas = () => {
                 <Button
                   variant="outline"
                   onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-                  className="w-full h-11 justify-start"
+                  className="w-full h-11 justify-start hover:bg-primary hover:text-primary-foreground hover:border-primary"
                 >
                   <ArrowUpDown className="w-4 h-4 mr-2" />
                   {sortOrder === 'desc' ? 'Mais recente' : 'Mais antigo'}
