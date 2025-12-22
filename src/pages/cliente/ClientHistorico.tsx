@@ -507,7 +507,7 @@ const ClientHistorico = () => {
               <div>
                 <label className="text-sm font-medium text-foreground mb-2 block">Status</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-11">
+                  <SelectTrigger className="h-11 border border-border shadow-sm hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors">
                     <SelectValue placeholder="Status da remessa" />
                   </SelectTrigger>
                   <SelectContent className="z-50 bg-popover border border-border shadow-xl">
