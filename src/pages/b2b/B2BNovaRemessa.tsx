@@ -10,6 +10,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Package, Loader2, Truck, Car, Bike, MapPin, Plus, AlertCircle, ChevronLeft, ChevronRight, Check, Calendar, Scale } from 'lucide-react';
 import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
+import {
+  sanitizeName,
+  formatCep,
+  sanitizeCep,
+  sanitizeStreet,
+  sanitizeNumber,
+  sanitizeComplement,
+  sanitizeNeighborhood,
+  sanitizeCity,
+  sanitizeState,
+  sanitizeReference,
+  sanitizeContactName,
+  formatPhone,
+  sanitizeDocument,
+  formatDocument
+} from '@/utils/addressFieldValidation';
 
 interface B2BClient {
   id: string;
@@ -394,28 +410,52 @@ const B2BNovaRemessa = () => {
     }
   };
 
-  const formatDocument = (value: string): string => {
-    return value.replace(/\D/g, '').slice(0, 14);
-  };
-
   const handleNewAddressChange = (field: string, value: string) => {
-    if (field === 'recipient_phone') {
-      const formattedPhone = formatPhone(value);
-      setNewAddress(prev => ({ ...prev, [field]: formattedPhone }));
-      return;
+    let sanitizedValue = value;
+    
+    switch (field) {
+      case 'name':
+        sanitizedValue = sanitizeName(value);
+        break;
+      case 'recipient_name':
+        sanitizedValue = sanitizeContactName(value);
+        break;
+      case 'recipient_phone':
+        sanitizedValue = formatPhone(value);
+        break;
+      case 'recipient_document':
+        sanitizedValue = formatDocument(value);
+        break;
+      case 'cep':
+        sanitizedValue = formatCep(value);
+        if (sanitizeCep(value).length === 8) {
+          handleCepLookup(value);
+        }
+        break;
+      case 'street':
+        sanitizedValue = sanitizeStreet(value);
+        break;
+      case 'number':
+        sanitizedValue = sanitizeNumber(value);
+        break;
+      case 'complement':
+        sanitizedValue = sanitizeComplement(value);
+        break;
+      case 'neighborhood':
+        sanitizedValue = sanitizeNeighborhood(value);
+        break;
+      case 'city':
+        sanitizedValue = sanitizeCity(value);
+        break;
+      case 'state':
+        sanitizedValue = sanitizeState(value);
+        break;
+      case 'reference':
+        sanitizedValue = sanitizeReference(value);
+        break;
     }
     
-    if (field === 'recipient_document') {
-      const formattedDocument = formatDocument(value);
-      setNewAddress(prev => ({ ...prev, [field]: formattedDocument }));
-      return;
-    }
-    
-    setNewAddress(prev => ({ ...prev, [field]: value }));
-    
-    if (field === 'cep' && value.replace(/\D/g, '').length === 8) {
-      handleCepLookup(value);
-    }
+    setNewAddress(prev => ({ ...prev, [field]: sanitizedValue }));
   };
 
   const resetNewAddress = () => {
@@ -488,17 +528,48 @@ const B2BNovaRemessa = () => {
   };
 
   const handleNewPickupAddressChange = (field: string, value: string) => {
-    if (field === 'contact_phone') {
-      const formattedPhone = formatPhone(value);
-      setNewPickupAddress(prev => ({ ...prev, [field]: formattedPhone }));
-      return;
+    let sanitizedValue = value;
+    
+    switch (field) {
+      case 'name':
+        sanitizedValue = sanitizeName(value);
+        break;
+      case 'contact_name':
+        sanitizedValue = sanitizeContactName(value);
+        break;
+      case 'contact_phone':
+        sanitizedValue = formatPhone(value);
+        break;
+      case 'cep':
+        sanitizedValue = formatCep(value);
+        if (sanitizeCep(value).length === 8) {
+          handlePickupCepLookup(value);
+        }
+        break;
+      case 'street':
+        sanitizedValue = sanitizeStreet(value);
+        break;
+      case 'number':
+        sanitizedValue = sanitizeNumber(value);
+        break;
+      case 'complement':
+        sanitizedValue = sanitizeComplement(value);
+        break;
+      case 'neighborhood':
+        sanitizedValue = sanitizeNeighborhood(value);
+        break;
+      case 'city':
+        sanitizedValue = sanitizeCity(value);
+        break;
+      case 'state':
+        sanitizedValue = sanitizeState(value);
+        break;
+      case 'reference':
+        sanitizedValue = sanitizeReference(value);
+        break;
     }
     
-    setNewPickupAddress(prev => ({ ...prev, [field]: value }));
-    
-    if (field === 'cep' && value.replace(/\D/g, '').length === 8) {
-      handlePickupCepLookup(value);
-    }
+    setNewPickupAddress(prev => ({ ...prev, [field]: sanitizedValue }));
   };
 
   const handleSaveNewPickupAddress = async () => {
@@ -1058,6 +1129,7 @@ const B2BNovaRemessa = () => {
                 value={newAddress.name}
                 onChange={(e) => handleNewAddressChange('name', e.target.value)}
                 placeholder="Ex: Casa do João, Escritório Centro"
+                maxLength={40}
               />
             </div>
 
@@ -1069,6 +1141,7 @@ const B2BNovaRemessa = () => {
                   value={newAddress.recipient_name}
                   onChange={(e) => handleNewAddressChange('recipient_name', e.target.value)}
                   placeholder="Nome completo"
+                  maxLength={40}
                 />
               </div>
               <div className="space-y-2">
@@ -1078,6 +1151,7 @@ const B2BNovaRemessa = () => {
                   value={newAddress.recipient_phone}
                   onChange={(e) => handleNewAddressChange('recipient_phone', e.target.value)}
                   placeholder="(00) 00000-0000"
+                  maxLength={15}
                 />
               </div>
             </div>
@@ -1088,8 +1162,8 @@ const B2BNovaRemessa = () => {
                 id="addr_recipient_document"
                 value={newAddress.recipient_document}
                 onChange={(e) => handleNewAddressChange('recipient_document', e.target.value)}
-                placeholder="Somente números"
-                maxLength={14}
+                placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                maxLength={18}
               />
             </div>
 
@@ -1128,6 +1202,7 @@ const B2BNovaRemessa = () => {
                 value={newAddress.street}
                 onChange={(e) => handleNewAddressChange('street', e.target.value)}
                 placeholder="Nome da rua"
+                maxLength={40}
               />
             </div>
 
@@ -1139,6 +1214,7 @@ const B2BNovaRemessa = () => {
                   value={newAddress.number}
                   onChange={(e) => handleNewAddressChange('number', e.target.value)}
                   placeholder="Número"
+                  maxLength={6}
                 />
               </div>
               <div className="space-y-2">
@@ -1148,6 +1224,7 @@ const B2BNovaRemessa = () => {
                   value={newAddress.complement}
                   onChange={(e) => handleNewAddressChange('complement', e.target.value)}
                   placeholder="Apto, Bloco, etc."
+                  maxLength={40}
                 />
               </div>
             </div>
@@ -1159,6 +1236,7 @@ const B2BNovaRemessa = () => {
                 value={newAddress.neighborhood}
                 onChange={(e) => handleNewAddressChange('neighborhood', e.target.value)}
                 placeholder="Bairro"
+                maxLength={40}
               />
             </div>
 
@@ -1169,6 +1247,7 @@ const B2BNovaRemessa = () => {
                 value={newAddress.city}
                 onChange={(e) => handleNewAddressChange('city', e.target.value)}
                 placeholder="Cidade"
+                maxLength={40}
               />
             </div>
 
@@ -1179,6 +1258,7 @@ const B2BNovaRemessa = () => {
                 value={newAddress.reference}
                 onChange={(e) => handleNewAddressChange('reference', e.target.value)}
                 placeholder="Ponto de referência"
+                maxLength={40}
               />
             </div>
 
@@ -1238,6 +1318,7 @@ const B2BNovaRemessa = () => {
                 value={newPickupAddress.name}
                 onChange={(e) => handleNewPickupAddressChange('name', e.target.value)}
                 placeholder="Ex: Sede, Filial Centro"
+                maxLength={40}
               />
             </div>
 
@@ -1249,6 +1330,7 @@ const B2BNovaRemessa = () => {
                   value={newPickupAddress.contact_name}
                   onChange={(e) => handleNewPickupAddressChange('contact_name', e.target.value)}
                   placeholder="Nome do responsável"
+                  maxLength={40}
                 />
               </div>
               <div className="space-y-2">
@@ -1258,6 +1340,7 @@ const B2BNovaRemessa = () => {
                   value={newPickupAddress.contact_phone}
                   onChange={(e) => handleNewPickupAddressChange('contact_phone', e.target.value)}
                   placeholder="(00) 00000-0000"
+                  maxLength={15}
                 />
               </div>
             </div>
@@ -1297,6 +1380,7 @@ const B2BNovaRemessa = () => {
                 value={newPickupAddress.street}
                 onChange={(e) => handleNewPickupAddressChange('street', e.target.value)}
                 placeholder="Nome da rua"
+                maxLength={40}
               />
             </div>
 
@@ -1308,6 +1392,7 @@ const B2BNovaRemessa = () => {
                   value={newPickupAddress.number}
                   onChange={(e) => handleNewPickupAddressChange('number', e.target.value)}
                   placeholder="Número"
+                  maxLength={6}
                 />
               </div>
               <div className="space-y-2">
@@ -1317,6 +1402,7 @@ const B2BNovaRemessa = () => {
                   value={newPickupAddress.complement}
                   onChange={(e) => handleNewPickupAddressChange('complement', e.target.value)}
                   placeholder="Apto, Bloco, etc."
+                  maxLength={40}
                 />
               </div>
             </div>
@@ -1328,6 +1414,7 @@ const B2BNovaRemessa = () => {
                 value={newPickupAddress.neighborhood}
                 onChange={(e) => handleNewPickupAddressChange('neighborhood', e.target.value)}
                 placeholder="Bairro"
+                maxLength={40}
               />
             </div>
 
@@ -1338,6 +1425,7 @@ const B2BNovaRemessa = () => {
                 value={newPickupAddress.city}
                 onChange={(e) => handleNewPickupAddressChange('city', e.target.value)}
                 placeholder="Cidade"
+                maxLength={40}
               />
             </div>
 
@@ -1348,6 +1436,7 @@ const B2BNovaRemessa = () => {
                 value={newPickupAddress.reference}
                 onChange={(e) => handleNewPickupAddressChange('reference', e.target.value)}
                 placeholder="Ponto de referência"
+                maxLength={40}
               />
             </div>
 
