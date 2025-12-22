@@ -308,7 +308,7 @@ const ClientRemessas = () => {
               <div>
                 <label className="text-sm font-medium text-foreground mb-2 block">Status</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-11 border border-input hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors">
+                  <SelectTrigger className="h-11 border border-border shadow-sm hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors">
                     <SelectValue placeholder="Filtrar por status" />
                   </SelectTrigger>
                   <SelectContent>
