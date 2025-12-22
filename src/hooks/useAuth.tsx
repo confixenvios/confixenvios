@@ -243,12 +243,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // Try to sign out from Supabase (may fail if session doesn't exist)
       await supabase.auth.signOut({ scope: 'global' });
+      
+      // Navigate to specified page or default to auth page
+      // Using window.location.replace to avoid adding to history and prevent back button issues
+      window.location.replace(redirectTo || '/auth');
     } catch (error) {
       console.error('Error signing out:', error);
-      // Even if signOut fails, we still want to clear local state
-    } finally {
-      // Force navigation to specified page or default to auth page
-      window.location.href = redirectTo || '/auth';
+      // Even if signOut fails, we still want to navigate
+      window.location.replace(redirectTo || '/auth');
     }
   };
 
