@@ -294,7 +294,7 @@ const B2BDashboard = () => {
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px] border border-border shadow-sm hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors">
                 <SelectValue placeholder="Filtrar por status" />
               </SelectTrigger>
               <SelectContent>
