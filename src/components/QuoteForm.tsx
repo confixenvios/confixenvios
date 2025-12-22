@@ -423,11 +423,11 @@ const QuoteForm = () => {
   const updateVolume = (id: string, field: keyof Volume, value: string) => {
     let sanitizedValue = sanitizeTextInput(value);
     
-    // Limitar peso a 3 casas decimais
-    if (field === "weight" && sanitizedValue.includes(".")) {
-      const parts = sanitizedValue.split(".");
-      if (parts[1] && parts[1].length > 3) {
-        sanitizedValue = parts[0] + "." + parts[1].slice(0, 3);
+    // Limitar peso a 4 dígitos no total (ex: 99.99, 9.999, 999.9, 9999)
+    if (field === "weight") {
+      const digitsOnly = sanitizedValue.replace(/\D/g, "");
+      if (digitsOnly.length > 4) {
+        return; // Não permite mais de 4 dígitos
       }
     }
     
