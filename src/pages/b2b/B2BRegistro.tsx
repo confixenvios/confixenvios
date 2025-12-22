@@ -8,6 +8,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Package, Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
+// Sanitização para nome da empresa: letras, números, espaços e alguns caracteres especiais
+const sanitizeCompanyName = (value: string): string => {
+  return value
+    .replace(/[^a-zA-ZÀ-ÿ0-9\s.,\-&]/g, '')
+    .slice(0, 60);
+};
+
+// Sanitização para email
+const sanitizeEmail = (value: string): string => {
+  return value.slice(0, 100);
+};
+
+// Sanitização para senha
+const sanitizePassword = (value: string): string => {
+  return value.slice(0, 50);
+};
+
 const B2BRegistro = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -54,12 +71,30 @@ const B2BRegistro = () => {
   };
 
   const handleChange = (field: string, value: string) => {
-    if (field === 'document') {
-      value = formatDocument(value);
-    } else if (field === 'phone') {
-      value = formatPhone(value);
+    let sanitizedValue = value;
+    
+    switch (field) {
+      case 'companyName':
+        sanitizedValue = sanitizeCompanyName(value);
+        break;
+      case 'document':
+        sanitizedValue = formatDocument(value);
+        break;
+      case 'phone':
+        sanitizedValue = formatPhone(value);
+        break;
+      case 'email':
+        sanitizedValue = sanitizeEmail(value);
+        break;
+      case 'password':
+      case 'confirmPassword':
+        sanitizedValue = sanitizePassword(value);
+        break;
+      default:
+        sanitizedValue = value;
     }
-    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
   };
 
   const validateForm = () => {
@@ -175,6 +210,7 @@ const B2BRegistro = () => {
                   placeholder="Minha Empresa LTDA"
                   value={formData.companyName}
                   onChange={(e) => handleChange('companyName', e.target.value)}
+                  maxLength={60}
                   required
                   disabled={loading}
                 />
@@ -201,6 +237,7 @@ const B2BRegistro = () => {
                   placeholder="contato@empresa.com"
                   value={formData.email}
                   onChange={(e) => handleChange('email', e.target.value)}
+                  maxLength={100}
                   required
                   disabled={loading}
                 />
@@ -227,6 +264,7 @@ const B2BRegistro = () => {
                   placeholder="Mínimo 6 caracteres"
                   value={formData.password}
                   onChange={(e) => handleChange('password', e.target.value)}
+                  maxLength={50}
                   required
                   disabled={loading}
                 />
@@ -240,6 +278,7 @@ const B2BRegistro = () => {
                   placeholder="Repita a senha"
                   value={formData.confirmPassword}
                   onChange={(e) => handleChange('confirmPassword', e.target.value)}
+                  maxLength={50}
                   required
                   disabled={loading}
                 />

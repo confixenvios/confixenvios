@@ -112,8 +112,9 @@ const CdRegistro = () => {
                   type="text"
                   placeholder="Seu nome completo"
                   value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value.replace(/[^a-zA-ZÀ-ÿ\s]/g, '').slice(0, 60) })}
                   className="pl-10"
+                  maxLength={60}
                   required
                 />
               </div>
@@ -162,8 +163,9 @@ const CdRegistro = () => {
                   type="email"
                   placeholder="seu@email.com"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value.slice(0, 100) })}
                   className="pl-10"
+                  maxLength={100}
                   required
                 />
               </div>
@@ -178,8 +180,9 @@ const CdRegistro = () => {
                   type="password"
                   placeholder="Mínimo 6 caracteres"
                   value={formData.senha}
-                  onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, senha: e.target.value.slice(0, 50) })}
                   className="pl-10"
+                  maxLength={50}
                   required
                 />
               </div>
@@ -194,8 +197,9 @@ const CdRegistro = () => {
                   type="password"
                   placeholder="Confirme sua senha"
                   value={formData.confirmarSenha}
-                  onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value.slice(0, 50) })}
                   className="pl-10"
+                  maxLength={50}
                   required
                 />
               </div>
