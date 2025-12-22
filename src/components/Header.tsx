@@ -173,7 +173,7 @@ const Header = () => {
                           Atualizar Dados
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={signOut} className="text-destructive">
+                        <DropdownMenuItem onClick={() => signOut()} className="text-destructive">
                           <LogOut className="mr-2 h-4 w-4" />
                           Sair
                         </DropdownMenuItem>

@@ -119,7 +119,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         <Button
           variant="ghost"
           size="sm"
-          onClick={signOut}
+          onClick={() => signOut('/admin/auth')}
           className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
         >
           <LogOut className="mr-2 h-4 w-4" />
