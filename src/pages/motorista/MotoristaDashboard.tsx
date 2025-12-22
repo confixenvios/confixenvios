@@ -925,7 +925,7 @@ const MotoristaDashboard = () => {
   // Menu items (sem Início - movido para header)
   const menuItems = [
     { section: 'coletas', label: 'Coletas', icon: Truck },
-    { section: 'despache', label: 'Expedição', icon: Send },
+    { section: 'despache', label: 'Entregas', icon: Send },
   ];
 
   const coletasSubItems = [
@@ -1354,7 +1354,7 @@ const MotoristaDashboard = () => {
                     <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-300">
                       <Send className="h-12 w-12 text-white" />
                     </div>
-                    <h3 className="text-3xl font-bold text-foreground mb-2">Expedição</h3>
+                    <h3 className="text-3xl font-bold text-foreground mb-2">Entregas</h3>
                     <p className="text-muted-foreground text-center mb-4">Entregue volumes aos destinatários</p>
                     <div className="flex items-center gap-2 text-emerald-600 font-medium">
                       <span>{aguardandoExpedicao.length + expedidos.length} volumes</span>
@@ -1404,7 +1404,7 @@ const MotoristaDashboard = () => {
                 ) : (
                   <>
                     <div className="w-2 h-5 bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-full" />
-                    Expedição
+                    Entregas
                   </>
                 )}
               </h3>
@@ -1462,7 +1462,7 @@ const MotoristaDashboard = () => {
                   ) : (
                     <>
                       <div className="w-2 h-8 bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-full" />
-                      Expedição
+                      Entregas
                     </>
                   )}
                 </h2>
