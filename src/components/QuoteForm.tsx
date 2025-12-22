@@ -1585,11 +1585,15 @@ const QuoteForm = () => {
                             <div className="space-y-2">
                               <Label className="text-sm font-medium">Peso (kg)</Label>
                               <Input
-                                type="number"
-                                step="0.1"
+                                type="text"
+                                inputMode="decimal"
                                 placeholder="0.5"
                                 value={volume.weight}
-                                onChange={(e) => updateVolume(volume.id, "weight", e.target.value)}
+                                onChange={(e) => {
+                                  // Permitir apenas números e ponto
+                                  const value = e.target.value.replace(/[^0-9.]/g, "");
+                                  updateVolume(volume.id, "weight", value);
+                                }}
                                 className="h-12"
                               />
                             </div>
