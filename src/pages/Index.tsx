@@ -309,16 +309,16 @@ const Index = () => {
                 
                 {cotarMenuOpen && (
                   <div className="absolute top-full left-1/2 -translate-x-1/2 md:left-0 md:translate-x-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
-                    <button
-                      onClick={() => {
-                        navigate('/cotacao');
-                        setCotarMenuOpen(false);
-                      }}
+                    <a
+                      href="https://confixenvios.com.br/auth"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setCotarMenuOpen(false)}
                       className="w-full px-4 py-3 text-left hover:bg-gray-100 rounded-t-lg flex items-center gap-2 text-foreground"
                     >
                       <Globe className="h-4 w-4 text-primary" />
                       Cotar Nacional
-                    </button>
+                    </a>
                     <a
                       href="https://confixenvios.com.br/b2b-expresso"
                       target="_blank"
@@ -409,16 +409,16 @@ const Index = () => {
             
             {cotarMenuOpen2 && (
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-white rounded-lg shadow-lg border z-50">
-                <button
-                  onClick={() => {
-                    navigate('/cotacao');
-                    setCotarMenuOpen2(false);
-                  }}
+                <a
+                  href="https://confixenvios.com.br/auth"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setCotarMenuOpen2(false)}
                   className="w-full px-4 py-3 text-left hover:bg-gray-100 rounded-t-lg flex items-center gap-2 text-foreground"
                 >
                   <Globe className="h-4 w-4 text-primary" />
                   Cotar Nacional
-                </button>
+                </a>
                 <a
                   href="https://confixenvios.com.br/b2b-expresso"
                   target="_blank"
