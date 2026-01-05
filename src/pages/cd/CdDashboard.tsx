@@ -565,19 +565,40 @@ const CdDashboard = () => {
                 <History className="h-3 w-3" />
                 Histórico recente
               </p>
-              <div className="space-y-1">
-                {recentHistory.map((h, idx) => (
-                  <div key={idx} className={`text-xs p-1.5 rounded ${h.is_alert ? 'bg-red-50 text-red-700' : 'bg-muted/50'}`}>
-                    <div className="flex justify-between">
-                      <span className="font-medium">{STATUS_CONFIG[h.status]?.label || h.status}</span>
-                      <span className="text-muted-foreground">
-                        {format(new Date(h.created_at), 'dd/MM HH:mm')}
-                      </span>
-                    </div>
-                    {h.observacoes && <p className="text-muted-foreground truncate">{h.observacoes}</p>}
-                  </div>
-                ))}
-              </div>
+              <ScrollArea className="max-h-32">
+                <div className="space-y-1 pr-2">
+                  {recentHistory.map((h, idx) => {
+                    // Formatar observações - se for JSON com dados de entrega, exibir de forma amigável
+                    const formatObservacoes = (obs: string | null) => {
+                      if (!obs) return null;
+                      try {
+                        const parsed = JSON.parse(obs);
+                        // Se tem recebedor_nome, é dados de conclusão de entrega
+                        if (parsed.recebedor_nome) {
+                          return `Recebido por: ${parsed.recebedor_nome}`;
+                        }
+                        return null; // Não mostrar JSON raw
+                      } catch {
+                        // Não é JSON, mostrar texto normal
+                        return obs;
+                      }
+                    };
+                    const formattedObs = formatObservacoes(h.observacoes);
+                    
+                    return (
+                      <div key={idx} className={`text-xs p-1.5 rounded ${h.is_alert ? 'bg-red-50 text-red-700' : 'bg-muted/50'}`}>
+                        <div className="flex justify-between">
+                          <span className="font-medium">{STATUS_CONFIG[h.status]?.label || h.status}</span>
+                          <span className="text-muted-foreground">
+                            {format(new Date(h.created_at), 'dd/MM HH:mm')}
+                          </span>
+                        </div>
+                        {formattedObs && <p className="text-muted-foreground">{formattedObs}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
             </div>
           )}
 
