@@ -1758,9 +1758,9 @@ const MotoristaDashboard = () => {
               />
             </div>
 
-            {/* Documento de quem entregou */}
+            {/* Documento */}
             <div className="space-y-2">
-              <Label>Documento de quem entregou *</Label>
+              <Label>Documento *</Label>
               <Input
                 value={collectDelivererDocument}
                 onChange={(e) => {
@@ -1768,7 +1768,7 @@ const MotoristaDashboard = () => {
                   const value = e.target.value.replace(/\D/g, '');
                   setCollectDelivererDocument(value);
                 }}
-                placeholder="CPF ou RG (apenas números)"
+                placeholder="CPF ou CNPJ ou RG"
                 maxLength={14}
               />
             </div>
@@ -2108,7 +2108,7 @@ const MotoristaDashboard = () => {
                   const value = e.target.value.replace(/\D/g, '');
                   setFinalizeBatchReceiverDocument(value);
                 }}
-                placeholder="CPF ou RG (apenas números)"
+                placeholder="CPF ou CNPJ ou RG"
                 maxLength={14}
               />
             </div>
