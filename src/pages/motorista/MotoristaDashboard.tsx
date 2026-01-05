@@ -99,6 +99,14 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
   'DEVOLUCAO': { label: 'Devolução', color: 'text-red-700', bgColor: 'bg-red-50 border-red-200', iconBg: 'bg-red-500' },
 };
 
+// Helper para verificar se é devolução ao expedidor
+const isDevolucaoAoExpedidor = (volume: B2BVolume): boolean => {
+  const history = volume.status_history || [];
+  return history.some(h => 
+    h.observacoes?.toLowerCase().includes('devolução ao expedidor')
+  );
+};
+
 // Tipos de ocorrência para falha na coleta
 const OCCURRENCE_TYPES_COLETA = [
   'Endereço não encontrado',
@@ -978,6 +986,7 @@ const MotoristaDashboard = () => {
     const isPendente = v.status === 'AGUARDANDO_ACEITE_COLETA';
     const isAceito = v.status === 'COLETA_ACEITA';
     const isColetado = v.status === 'COLETADO';
+    const isReturnToSender = isDevolucaoAoExpedidor(v);
 
     return (
       <Card key={v.id} className="mb-4 overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-white">
@@ -1055,6 +1064,51 @@ const MotoristaDashboard = () => {
                   </p>
                 )}
               </div>
+            </>
+          ) : isReturnToSender ? (
+            /* Para DEVOLUÇÃO AO EXPEDIDOR: mostrar endereço de coleta como destino */
+            <>
+              {/* Badge indicando devolução ao expedidor */}
+              <div className="mb-2">
+                <Badge className="bg-orange-100 text-orange-800 border-orange-300 text-xs">
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                  Devolução ao Expedidor
+                </Badge>
+              </div>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p className="flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  {v.shipment?.pickup_address?.name || 'Expedidor'}
+                </p>
+                <p className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {v.shipment?.pickup_address ? 
+                    `${v.shipment.pickup_address.street}, ${v.shipment.pickup_address.number} - ${v.shipment.pickup_address.city}/${v.shipment.pickup_address.state}` 
+                    : 'Endereço não disponível'}
+                </p>
+                <p className="flex items-center gap-1">
+                  <Package className="h-3 w-3" />
+                  {v.weight} kg
+                </p>
+              </div>
+
+              {/* Histórico recente */}
+              {recentHistory.length > 0 && (
+                <div className="mt-3 pt-2 border-t">
+                  <p className="text-xs font-medium mb-1 flex items-center gap-1">
+                    <History className="h-3 w-3" />
+                    Histórico
+                  </p>
+                  {recentHistory.map((h, idx) => (
+                    <div key={idx} className={`text-xs p-1 rounded mb-1 ${h.is_alert ? 'bg-red-50 text-red-700' : 'bg-muted/50'}`}>
+                      <span className="font-medium">{STATUS_CONFIG[h.status]?.label || h.status}</span>
+                      <span className="text-muted-foreground ml-2">
+                        {format(new Date(h.created_at), 'dd/MM HH:mm')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           ) : (
             /* Para outros status: mostrar detalhes completos do destinatário */
@@ -2376,39 +2430,67 @@ const MotoristaDashboard = () => {
                     <p>CEP: 74934-600</p>
                   </div>
                 </div>
+              ) : isDevolucaoAoExpedidor(selectedVolume) ? (
+                /* Para DEVOLUÇÃO AO EXPEDIDOR: mostrar endereço de coleta como destino */
+                <>
+                  {/* Badge indicando devolução */}
+                  <div className="border-t pt-4">
+                    <div className="mb-3">
+                      <Badge className="bg-orange-100 text-orange-800 border-orange-300">
+                        <RotateCcw className="h-3 w-3 mr-1" />
+                        Devolução ao Expedidor
+                      </Badge>
+                    </div>
+                    <h4 className="font-semibold mb-2">Destino (Expedidor)</h4>
+                    {selectedVolume.shipment?.pickup_address && (
+                      <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
+                        <p className="font-medium">{selectedVolume.shipment.pickup_address.name}</p>
+                        <p>{selectedVolume.shipment.pickup_address.contact_name} - <PhoneLink phone={selectedVolume.shipment.pickup_address.contact_phone} /></p>
+                        <p>{selectedVolume.shipment.pickup_address.street}, {selectedVolume.shipment.pickup_address.number}</p>
+                        <p>{selectedVolume.shipment.pickup_address.neighborhood}</p>
+                        <p>{selectedVolume.shipment.pickup_address.city}/{selectedVolume.shipment.pickup_address.state}</p>
+                      </div>
+                    )}
+                  </div>
+                </>
               ) : selectedVolume.status !== 'AGUARDANDO_ACEITE_COLETA' && (
                 /* Para outros status (não AGUARDANDO_ACEITE_COLETA, COLETA_ACEITA, COLETADO): mostra destinatário real */
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-2">Destinatário</h4>
-                  <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
-                    <p className="font-medium">{selectedVolume.recipient_name}</p>
-                    <p><PhoneLink phone={selectedVolume.recipient_phone} /></p>
-                    <p>{selectedVolume.recipient_street}, {selectedVolume.recipient_number}</p>
-                    {selectedVolume.recipient_complement && <p>{selectedVolume.recipient_complement}</p>}
-                    <p>{selectedVolume.recipient_neighborhood}</p>
-                    <p>{selectedVolume.recipient_city}/{selectedVolume.recipient_state}</p>
-                    <p>CEP: {selectedVolume.recipient_cep}</p>
+                <>
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-2">Destinatário</h4>
+                    <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
+                      <p className="font-medium">{selectedVolume.recipient_name}</p>
+                      <p><PhoneLink phone={selectedVolume.recipient_phone} /></p>
+                      <p>{selectedVolume.recipient_street}, {selectedVolume.recipient_number}</p>
+                      {selectedVolume.recipient_complement && <p>{selectedVolume.recipient_complement}</p>}
+                      <p>{selectedVolume.recipient_neighborhood}</p>
+                      <p>{selectedVolume.recipient_city}/{selectedVolume.recipient_state}</p>
+                      <p>CEP: {selectedVolume.recipient_cep}</p>
+                    </div>
                   </div>
-                </div>
+
+                  {/* Endereço de Coleta - simplificado para Pendentes, completo para outros */}
+                  {selectedVolume.shipment?.pickup_address && (
+                    <div className="border-t pt-4">
+                      <h4 className="font-semibold mb-2">Endereço de Coleta</h4>
+                      <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
+                        <p className="font-medium">{selectedVolume.shipment.pickup_address.name}</p>
+                        <p>{selectedVolume.shipment.pickup_address.contact_name} - <PhoneLink phone={selectedVolume.shipment.pickup_address.contact_phone} /></p>
+                        <p>{selectedVolume.shipment.pickup_address.street}, {selectedVolume.shipment.pickup_address.number}</p>
+                        <p>{selectedVolume.shipment.pickup_address.neighborhood} - {selectedVolume.shipment.pickup_address.city}/{selectedVolume.shipment.pickup_address.state}</p>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
-              {/* Endereço de Coleta - simplificado para Pendentes, completo para outros */}
-              {selectedVolume.shipment?.pickup_address && (
+              {/* Endereço de Coleta para Aguardando Aceite */}
+              {selectedVolume.status === 'AGUARDANDO_ACEITE_COLETA' && selectedVolume.shipment?.pickup_address && (
                 <div className="border-t pt-4">
                   <h4 className="font-semibold mb-2">Endereço de Coleta</h4>
                   <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
                     <p className="font-medium">{selectedVolume.shipment.pickup_address.name}</p>
-                    {selectedVolume.status === 'AGUARDANDO_ACEITE_COLETA' ? (
-                      <>
-                        <p>{selectedVolume.shipment.pickup_address.neighborhood}</p>
-                      </>
-                    ) : (
-                      <>
-                        <p>{selectedVolume.shipment.pickup_address.contact_name} - <PhoneLink phone={selectedVolume.shipment.pickup_address.contact_phone} /></p>
-                        <p>{selectedVolume.shipment.pickup_address.street}, {selectedVolume.shipment.pickup_address.number}</p>
-                        <p>{selectedVolume.shipment.pickup_address.neighborhood} - {selectedVolume.shipment.pickup_address.city}/{selectedVolume.shipment.pickup_address.state}</p>
-                      </>
-                    )}
+                    <p>{selectedVolume.shipment.pickup_address.neighborhood}</p>
                   </div>
                 </div>
               )}
