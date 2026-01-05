@@ -232,20 +232,22 @@ const B2BDashboard = () => {
     });
   }, [shipments, volumes, searchEti, statusFilter]);
 
-  // Filtra volumes individuais
+  // Filtra volumes individuais e ordena por eti_code crescente
   const filteredVolumes = useMemo(() => {
-    return volumes.filter(volume => {
-      // Filtro por ETI ou nome do destinatário
-      const searchLower = searchEti.toLowerCase();
-      const matchesSearch = searchEti === '' || 
-        volume.eti_code.toLowerCase().includes(searchLower) ||
-        volume.recipient_name.toLowerCase().includes(searchLower);
-      
-      // Filtro por status
-      const matchesStatus = statusFilter === 'all' || volume.status === statusFilter;
-      
-      return matchesSearch && matchesStatus;
-    });
+    return volumes
+      .filter(volume => {
+        // Filtro por ETI ou nome do destinatário
+        const searchLower = searchEti.toLowerCase();
+        const matchesSearch = searchEti === '' || 
+          volume.eti_code.toLowerCase().includes(searchLower) ||
+          volume.recipient_name.toLowerCase().includes(searchLower);
+        
+        // Filtro por status
+        const matchesStatus = statusFilter === 'all' || volume.status === statusFilter;
+        
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => a.eti_code.localeCompare(b.eti_code, undefined, { numeric: true }));
   }, [volumes, searchEti, statusFilter]);
 
   // Busca a remessa de um volume
