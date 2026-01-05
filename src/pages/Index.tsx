@@ -308,7 +308,7 @@ const Index = () => {
                 </Button>
                 
                 {cotarMenuOpen && (
-                  <div className="absolute top-full left-0 md:left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 md:left-0 md:translate-x-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
                     <button
                       onClick={() => {
                         navigate('/cotacao');
