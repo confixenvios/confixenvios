@@ -148,8 +148,8 @@ const B2BPixPayment = () => {
       if (data?.success && data.isPaid) {
         setPaymentStatus('PAID');
         // Remessa B2B é criada automaticamente pela edge function check-pix-status
-        navigate('/b2b-expresso/dashboard', {
-          state: { paymentSuccess: true }
+        navigate('/b2b-expresso/pix-sucesso', {
+          state: { paymentId: paymentIntent.paymentId }
         });
       }
       
@@ -192,8 +192,8 @@ const B2BPixPayment = () => {
           description: "PIX processado com sucesso. Redirecionando..."
         });
         // Remessa B2B é criada automaticamente pela edge function check-pix-status
-        navigate('/b2b-expresso/dashboard', {
-          state: { paymentSuccess: true }
+        navigate('/b2b-expresso/pix-sucesso', {
+          state: { paymentId: paymentIntent.paymentId }
         });
       } else {
         toast({
@@ -228,8 +228,8 @@ const B2BPixPayment = () => {
           title: "Pagamento confirmado!",
           description: "Sua solicitação foi registrada com sucesso."
         });
-        navigate('/b2b-expresso/dashboard', {
-          state: { paymentSuccess: true }
+        navigate('/b2b-expresso/pix-sucesso', {
+          state: { paymentId: paymentIntent.paymentId }
         });
       } else {
         toast({
