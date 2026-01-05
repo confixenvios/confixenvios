@@ -1087,77 +1087,77 @@ const CdDashboard = () => {
 
       {/* Modal de Detalhes */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Detalhes do Volume</DialogTitle>
           </DialogHeader>
           {selectedVolume && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Código ETI</p>
-                  <p className="font-mono text-2xl font-bold">{selectedVolume.eti_code}</p>
+            <ScrollArea className="flex-1 -mr-4 pr-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Código ETI</p>
+                    <p className="font-mono text-2xl font-bold">{selectedVolume.eti_code}</p>
+                  </div>
+                  <Badge className={`${STATUS_CONFIG[selectedVolume.status]?.bgColor} ${STATUS_CONFIG[selectedVolume.status]?.color} border`}>
+                    {STATUS_CONFIG[selectedVolume.status]?.label}
+                  </Badge>
                 </div>
-                <Badge className={`${STATUS_CONFIG[selectedVolume.status]?.bgColor} ${STATUS_CONFIG[selectedVolume.status]?.color} border`}>
-                  {STATUS_CONFIG[selectedVolume.status]?.label}
-                </Badge>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Tracking</p>
-                  <p className="font-medium">{selectedVolume.shipment?.tracking_code || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Peso</p>
-                  <p className="font-medium">{selectedVolume.weight} kg</p>
-                </div>
-              </div>
-
-              {/* Endereço de Coleta (Remetente) */}
-              {selectedVolume.shipment?.pickup_address && (
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-2 flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Endereço de Coleta
-                  </h4>
-                  <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
-                    <p className="font-medium">{selectedVolume.shipment.pickup_address.name}</p>
-                    <p>{selectedVolume.shipment.pickup_address.contact_name} - {selectedVolume.shipment.pickup_address.contact_phone}</p>
-                    <p>{selectedVolume.shipment.pickup_address.street}, {selectedVolume.shipment.pickup_address.number}</p>
-                    {selectedVolume.shipment.pickup_address.complement && <p>{selectedVolume.shipment.pickup_address.complement}</p>}
-                    <p>{selectedVolume.shipment.pickup_address.neighborhood}</p>
-                    <p>{selectedVolume.shipment.pickup_address.city}/{selectedVolume.shipment.pickup_address.state} - {selectedVolume.shipment.pickup_address.cep}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Tracking</p>
+                    <p className="font-medium">{selectedVolume.shipment?.tracking_code || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Peso</p>
+                    <p className="font-medium">{selectedVolume.weight} kg</p>
                   </div>
                 </div>
-              )}
 
-              <div className="border-t pt-4">
-                <h4 className="font-semibold mb-2 flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Destinatário
-                </h4>
-                <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
-                  <p className="font-medium">{selectedVolume.recipient_name}</p>
-                  <p>{selectedVolume.recipient_phone}</p>
-                  <p>{selectedVolume.recipient_street}, {selectedVolume.recipient_number}</p>
-                  {selectedVolume.recipient_complement && <p>{selectedVolume.recipient_complement}</p>}
-                  <p>{selectedVolume.recipient_neighborhood}</p>
-                  <p>{selectedVolume.recipient_city}/{selectedVolume.recipient_state} - {selectedVolume.recipient_cep}</p>
+                {/* Endereço de Coleta (Remetente) */}
+                {selectedVolume.shipment?.pickup_address && (
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Endereço de Coleta
+                    </h4>
+                    <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
+                      <p className="font-medium">{selectedVolume.shipment.pickup_address.name}</p>
+                      <p>{selectedVolume.shipment.pickup_address.contact_name} - {selectedVolume.shipment.pickup_address.contact_phone}</p>
+                      <p>{selectedVolume.shipment.pickup_address.street}, {selectedVolume.shipment.pickup_address.number}</p>
+                      {selectedVolume.shipment.pickup_address.complement && <p>{selectedVolume.shipment.pickup_address.complement}</p>}
+                      <p>{selectedVolume.shipment.pickup_address.neighborhood}</p>
+                      <p>{selectedVolume.shipment.pickup_address.city}/{selectedVolume.shipment.pickup_address.state} - {selectedVolume.shipment.pickup_address.cep}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Destinatário
+                  </h4>
+                  <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
+                    <p className="font-medium">{selectedVolume.recipient_name}</p>
+                    <p>{selectedVolume.recipient_phone}</p>
+                    <p>{selectedVolume.recipient_street}, {selectedVolume.recipient_number}</p>
+                    {selectedVolume.recipient_complement && <p>{selectedVolume.recipient_complement}</p>}
+                    <p>{selectedVolume.recipient_neighborhood}</p>
+                    <p>{selectedVolume.recipient_city}/{selectedVolume.recipient_state} - {selectedVolume.recipient_cep}</p>
+                  </div>
+                </div>
+
+                {/* Histórico completo */}
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    Histórico Completo
+                  </h4>
+                  <B2BVolumeStatusHistory volumeId={selectedVolume.id} />
                 </div>
               </div>
-
-              {/* Histórico completo */}
-              <div className="border-t pt-4">
-                <h4 className="font-semibold mb-2 flex items-center gap-2">
-                  <History className="h-4 w-4" />
-                  Histórico Completo
-                </h4>
-                <ScrollArea className="h-48 -mr-4 pr-4">
-                  <B2BVolumeStatusHistory volumeId={selectedVolume.id} />
-                </ScrollArea>
-              </div>
-            </div>
+            </ScrollArea>
           )}
         </DialogContent>
       </Dialog>
