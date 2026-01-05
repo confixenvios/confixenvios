@@ -2401,7 +2401,6 @@ const MotoristaDashboard = () => {
                     {selectedVolume.status === 'AGUARDANDO_ACEITE_COLETA' ? (
                       <>
                         <p>{selectedVolume.shipment.pickup_address.neighborhood}</p>
-                        <p><PhoneLink phone={selectedVolume.shipment.pickup_address.contact_phone} /></p>
                       </>
                     ) : (
                       <>
