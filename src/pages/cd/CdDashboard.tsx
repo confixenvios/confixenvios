@@ -1087,13 +1087,13 @@ const CdDashboard = () => {
 
       {/* Modal de Detalhes */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[85vh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
             <DialogTitle>Detalhes do Volume</DialogTitle>
           </DialogHeader>
           {selectedVolume && (
-            <ScrollArea className="flex-1 -mr-4 pr-4">
-              <div className="space-y-4">
+            <ScrollArea className="flex-1 h-[calc(85vh-100px)]">
+              <div className="space-y-4 px-6 pb-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Código ETI</p>
