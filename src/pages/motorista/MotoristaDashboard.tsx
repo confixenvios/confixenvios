@@ -1723,11 +1723,11 @@ const MotoristaDashboard = () => {
                 value={collectBatchEtiInput}
                 onChange={(e) => setCollectBatchEtiInput(e.target.value)}
                 onKeyDown={handleCollectBatchEtiKeyDown}
-                placeholder="Bipe o código"
+                placeholder=""
                 className="font-mono text-center text-lg"
                 autoFocus
               />
-              <p className="text-xs text-muted-foreground">Bipe e pressione Enter para adicionar</p>
+              <p className="text-xs text-muted-foreground">Digite/Bipe e pressione Enter para adicionar</p>
             </div>
 
             {collectBatchVolumes.length > 0 && (
