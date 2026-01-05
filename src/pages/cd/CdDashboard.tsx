@@ -126,11 +126,6 @@ const CdDashboard = () => {
   const [selectedVolume, setSelectedVolume] = useState<B2BVolume | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-  // Modal Reenviar para Recebidos (de devolução)
-  const [resendToReceivedModalOpen, setResendToReceivedModalOpen] = useState(false);
-  const [resendingToReceived, setResendingToReceived] = useState(false);
-  const [volumeToResend, setVolumeToResend] = useState<B2BVolume | null>(null);
-
   // Modal Devolver ao Expedidor
   const [returnToSenderModalOpen, setReturnToSenderModalOpen] = useState(false);
   const [returnToSenderMotoristaId, setReturnToSenderMotoristaId] = useState('');
@@ -278,7 +273,7 @@ const CdDashboard = () => {
   const aguardandoExpedicao = filterBySearch(volumes.filter(v => v.status === 'AGUARDANDO_ACEITE_EXPEDICAO'));
   const despachados = filterBySearch(volumes.filter(v => v.status === 'EXPEDIDO'));
   const concluidos = filterBySearch(volumes.filter(v => v.status === 'CONCLUIDO'));
-  const devolucoes = filterBySearch(volumes.filter(v => v.status === 'DEVOLUCAO'));
+  
 
   // Parsear código ETI
   const parseEtiCode = (input: string): string => {
@@ -476,14 +471,7 @@ const CdDashboard = () => {
       const motoristaNome = motoristas.find(m => m.id === returnMotoristaId)?.nome;
 
       for (const volume of returnedVolumes) {
-        await supabase
-          .from('b2b_volumes')
-          .update({ 
-            status: 'DEVOLUCAO',
-            motorista_entrega_id: null
-          })
-          .eq('id', volume.id);
-
+        // Registra histórico de DEVOLUCAO primeiro
         await supabase.from('b2b_status_history').insert({
           volume_id: volume.id,
           status: 'DEVOLUCAO',
@@ -492,9 +480,26 @@ const CdDashboard = () => {
           observacoes: `Devolvido por ${motoristaNome} - Registrado por ${cdUser?.nome}`,
           is_alert: true
         });
+
+        // Atualiza o volume para EM_TRIAGEM (vai direto pro "No CD")
+        await supabase
+          .from('b2b_volumes')
+          .update({ 
+            status: 'EM_TRIAGEM',
+            motorista_entrega_id: null
+          })
+          .eq('id', volume.id);
+
+        // Registra histórico de EM_TRIAGEM
+        await supabase.from('b2b_status_history').insert({
+          volume_id: volume.id,
+          status: 'EM_TRIAGEM',
+          observacoes: `Devolução recebida no CD por ${cdUser?.nome}`,
+          is_alert: false
+        });
       }
 
-      toast.success(`${returnedVolumes.length} volume(s) devolvido(s)`);
+      toast.success(`${returnedVolumes.length} volume(s) devolvido(s) e já disponível(is) no CD`);
       setReturnModalOpen(false);
       setReturnedVolumes([]);
       setReturnMotoristaId('');
@@ -503,38 +508,6 @@ const CdDashboard = () => {
       toast.error('Erro ao devolver volumes');
     } finally {
       setReturning(false);
-    }
-  };
-
-  // ==================== REENVIAR PARA RECEBIDOS ====================
-  const handleResendToReceived = async () => {
-    if (!volumeToResend) return;
-    setResendingToReceived(true);
-
-    try {
-      await supabase
-        .from('b2b_volumes')
-        .update({ 
-          status: 'EM_TRIAGEM',
-          motorista_entrega_id: null
-        })
-        .eq('id', volumeToResend.id);
-
-      await supabase.from('b2b_status_history').insert({
-        volume_id: volumeToResend.id,
-        status: 'EM_TRIAGEM',
-        observacoes: `Reenviado para triagem por ${cdUser?.nome}`,
-        is_alert: false
-      });
-
-      toast.success(`Volume ${volumeToResend.eti_code} reenviado para Recebidos`);
-      setResendToReceivedModalOpen(false);
-      setVolumeToResend(null);
-      await loadVolumes();
-    } catch (error) {
-      toast.error('Erro ao reenviar volume');
-    } finally {
-      setResendingToReceived(false);
     }
   };
 
@@ -584,7 +557,7 @@ const CdDashboard = () => {
   };
 
   // Renderizar card de volume
-  const renderVolumeCard = (v: B2BVolume, showActions?: { resendToReceived?: boolean; returnToSender?: boolean }) => {
+  const renderVolumeCard = (v: B2BVolume, showActions?: { returnToSender?: boolean }) => {
     const statusConfig = STATUS_CONFIG[v.status] || { label: v.status, color: 'text-gray-700', bgColor: 'bg-gray-100', cardBorder: 'border-gray-200', cardBg: 'bg-white', iconBg: 'bg-gray-500' };
     const recentHistory = (v.status_history || []).slice(0, 2);
     const hasDevolucaoHistory = (v.status_history || []).some(h => h.status === 'DEVOLUCAO');
@@ -721,22 +694,6 @@ const CdDashboard = () => {
               Ver Detalhes
             </Button>
 
-            {/* Botão Reenviar para Recebidos (só em Devoluções) */}
-            {showActions?.resendToReceived && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full border-amber-300 text-amber-700 hover:bg-amber-50 hover:border-amber-400"
-                onClick={() => {
-                  setVolumeToResend(v);
-                  setResendToReceivedModalOpen(true);
-                }}
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Reenviar para Recebidos
-              </Button>
-            )}
-
             {/* Botão Devolver ao Expedidor (só em Recebidos com histórico de devolução) */}
             {showActions?.returnToSender && hasDevolucaoHistory && (
               <Button
@@ -760,7 +717,7 @@ const CdDashboard = () => {
   };
 
   // Render lista de volumes
-  const renderVolumeList = (volumeList: B2BVolume[], emptyMessage: string, showActions?: { resendToReceived?: boolean; returnToSender?: boolean }) => {
+  const renderVolumeList = (volumeList: B2BVolume[], emptyMessage: string, showActions?: { returnToSender?: boolean }) => {
     if (volumeList.length === 0) {
       return (
         <Card className="border-0 shadow-sm bg-white/80">
@@ -877,28 +834,25 @@ const CdDashboard = () => {
           </div>
           {searchTerm && (
             <p className="text-xs text-muted-foreground mt-1">
-              Resultados para "{searchTerm}": {pendentes.length + aceitos.length + coletados.length + emTriagem.length + aguardandoExpedicao.length + despachados.length + concluidos.length + devolucoes.length} volumes encontrados
+              Resultados para "{searchTerm}": {pendentes.length + aceitos.length + coletados.length + emTriagem.length + aguardandoExpedicao.length + despachados.length + concluidos.length} volumes encontrados
             </p>
           )}
         </div>
 
         {/* Abas principais */}
         <Tabs value={mainTab} onValueChange={(v) => { setMainTab(v); setSubTab(''); }}>
-          <TabsList className="grid w-full grid-cols-5 bg-white shadow-sm border-0 p-1 h-auto">
+          <TabsList className="grid w-full grid-cols-4 bg-white shadow-sm border-0 p-1 h-auto">
             <TabsTrigger value="coletas" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5">
               Coletas ({pendentes.length + aceitos.length + coletados.length})
             </TabsTrigger>
             <TabsTrigger value="recepcao" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5">
-              Recebidos ({emTriagem.length})
+              No CD ({emTriagem.length})
             </TabsTrigger>
             <TabsTrigger value="operacao" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5">
               Expedidos ({aguardandoExpedicao.length})
             </TabsTrigger>
             <TabsTrigger value="entregas" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5">
               Entregas ({despachados.length + concluidos.length})
-            </TabsTrigger>
-            <TabsTrigger value="devolucoes" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5">
-              Devoluções ({devolucoes.length})
             </TabsTrigger>
           </TabsList>
 
@@ -922,13 +876,13 @@ const CdDashboard = () => {
             </Tabs>
           </TabsContent>
 
-          {/* Recepção */}
+          {/* No CD */}
           <TabsContent value="recepcao" className="mt-6">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-1.5 h-6 bg-purple-500 rounded-full" />
-              <p className="text-sm text-muted-foreground">Volumes em triagem no CD</p>
+              <p className="text-sm text-muted-foreground">Volumes no Centro de Distribuição</p>
             </div>
-            {renderVolumeList(emTriagem, 'Nenhum volume em triagem', { returnToSender: true })}
+            {renderVolumeList(emTriagem, 'Nenhum volume no CD', { returnToSender: true })}
           </TabsContent>
 
           {/* Operação Interna */}
@@ -956,14 +910,6 @@ const CdDashboard = () => {
             </Tabs>
           </TabsContent>
 
-          {/* Devoluções */}
-          <TabsContent value="devolucoes" className="mt-6">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-1.5 h-6 bg-red-500 rounded-full" />
-              <p className="text-sm text-muted-foreground">Volumes devolvidos</p>
-            </div>
-            {renderVolumeList(devolucoes, 'Nenhuma devolução', { resendToReceived: true })}
-          </TabsContent>
         </Tabs>
       </main>
 
@@ -1220,71 +1166,6 @@ const CdDashboard = () => {
                 disabled={returning || returnedVolumes.length === 0 || !returnMotoristaId}
               >
                 {returning ? 'Devolvendo...' : `Devolver (${returnedVolumes.length})`}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal: Reenviar para Recebidos */}
-      <Dialog open={resendToReceivedModalOpen} onOpenChange={setResendToReceivedModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <RotateCcw className="h-5 w-5 text-amber-600" />
-              Reenviar para Recebidos
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            {volumeToResend && (
-              <>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <p className="text-sm font-medium text-amber-800">Você está prestes a reenviar o volume:</p>
-                  <p className="font-mono text-lg font-bold text-amber-900 mt-1">{volumeToResend.eti_code}</p>
-                  
-                  {volumeToResend.shipment?.pickup_address && (
-                    <div className="mt-3 pt-2 border-t border-amber-200">
-                      <p className="text-xs text-amber-600 font-medium">Expedidor:</p>
-                      <p className="text-sm text-amber-800 font-medium">{volumeToResend.shipment.pickup_address.name}</p>
-                      <p className="text-sm text-amber-700">
-                        {volumeToResend.shipment.pickup_address.city}/{volumeToResend.shipment.pickup_address.state}
-                      </p>
-                    </div>
-                  )}
-                  
-                  <div className="mt-2 pt-2 border-t border-amber-200">
-                    <p className="text-xs text-amber-600 font-medium">Destinatário:</p>
-                    <p className="text-sm text-amber-800 font-medium">{volumeToResend.recipient_name}</p>
-                    <p className="text-sm text-amber-700">
-                      {volumeToResend.recipient_city}/{volumeToResend.recipient_state}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
-                  <p>O volume será movido de <strong>Devoluções</strong> para <strong>Recebidos</strong> e ficará disponível para nova expedição.</p>
-                </div>
-              </>
-            )}
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setResendToReceivedModalOpen(false);
-                  setVolumeToResend(null);
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                className="flex-1 bg-amber-600 hover:bg-amber-700"
-                onClick={handleResendToReceived}
-                disabled={resendingToReceived}
-              >
-                {resendingToReceived ? 'Reenviando...' : 'Confirmar Reenvio'}
               </Button>
             </div>
           </div>
