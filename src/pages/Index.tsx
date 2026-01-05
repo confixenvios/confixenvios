@@ -1,11 +1,11 @@
 import Header from "@/components/Header";
-import { Truck, Zap, Package, Building, Globe, Shield, Users, CheckCircle, MapPin, Phone, Mail, DollarSign, Clock, TrendingUp, Instagram, Facebook } from "lucide-react";
+import { Truck, Zap, Package, Building, Globe, Shield, Users, CheckCircle, MapPin, Phone, Mail, DollarSign, Clock, TrendingUp, Instagram, Facebook, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
+import { useState, useRef, useEffect } from "react";
 // Client logos
 import centauroLogo from "@/assets/clients/centauro-logo.png";
 import hankerLogo from "@/assets/clients/hanker-logo.webp";
@@ -18,7 +18,25 @@ import heroTruckConfix from "@/assets/hero-truck-confix.jpg";
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const [cotarMenuOpen, setCotarMenuOpen] = useState(false);
+  const [cotarMenuOpen2, setCotarMenuOpen2] = useState(false);
+  const cotarMenuRef = useRef<HTMLDivElement>(null);
+  const cotarMenuRef2 = useRef<HTMLDivElement>(null);
 
+  // Fechar menus ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (cotarMenuRef.current && !cotarMenuRef.current.contains(event.target as Node)) {
+        setCotarMenuOpen(false);
+      }
+      if (cotarMenuRef2.current && !cotarMenuRef2.current.contains(event.target as Node)) {
+        setCotarMenuOpen2(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-light flex items-center justify-center">
@@ -279,13 +297,40 @@ const Index = () => {
                 Last Mile, First Mile Ecommerce.
               </p>
               
-              <div className="flex justify-center md:justify-start">
-                <Button asChild className="px-6">
-                  <Link to="/cotacao">
-                    <Package className="mr-2 h-4 w-4" />
-                    COTAR FRETE
-                  </Link>
+              <div className="flex justify-center md:justify-start relative" ref={cotarMenuRef}>
+                <Button 
+                  className="px-6"
+                  onClick={() => setCotarMenuOpen(!cotarMenuOpen)}
+                >
+                  <Package className="mr-2 h-4 w-4" />
+                  COTAR FRETE
+                  <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
+                
+                {cotarMenuOpen && (
+                  <div className="absolute top-full left-0 md:left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
+                    <button
+                      onClick={() => {
+                        navigate('/cotacao');
+                        setCotarMenuOpen(false);
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-100 rounded-t-lg flex items-center gap-2 text-foreground"
+                    >
+                      <Globe className="h-4 w-4 text-primary" />
+                      Cotar Nacional
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigate('/b2b/auth');
+                        setCotarMenuOpen(false);
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-100 rounded-b-lg flex items-center gap-2 text-foreground"
+                    >
+                      <Zap className="h-4 w-4 text-primary" />
+                      Cotar Expresso
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -352,12 +397,41 @@ const Index = () => {
             </div>
           </div>
           
-          <Button asChild className="px-6">
-            <Link to="/cotacao">
+          <div className="relative inline-block" ref={cotarMenuRef2}>
+            <Button 
+              className="px-6"
+              onClick={() => setCotarMenuOpen2(!cotarMenuOpen2)}
+            >
               <Package className="mr-2 h-4 w-4" />
               COTAR FRETE
-            </Link>
-          </Button>
+              <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+            
+            {cotarMenuOpen2 && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-white rounded-lg shadow-lg border z-50">
+                <button
+                  onClick={() => {
+                    navigate('/cotacao');
+                    setCotarMenuOpen2(false);
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-100 rounded-t-lg flex items-center gap-2 text-foreground"
+                >
+                  <Globe className="h-4 w-4 text-primary" />
+                  Cotar Nacional
+                </button>
+                <button
+                  onClick={() => {
+                    navigate('/b2b/auth');
+                    setCotarMenuOpen2(false);
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-100 rounded-b-lg flex items-center gap-2 text-foreground"
+                >
+                  <Zap className="h-4 w-4 text-primary" />
+                  Cotar Expresso
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
