@@ -131,46 +131,46 @@ const Index = () => {
           <div className="overflow-hidden">
             <div className="flex animate-marquee-fast md:animate-marquee hover:pause-marquee">
               {/* First set of logos */}
-              <div className="flex shrink-0 gap-16 items-center pr-16">
-                <div className="h-16 flex items-center justify-center px-4">
-                  <img src={magaluLogo} alt="Magazine Luiza" className="max-h-12 max-w-32 object-contain opacity-70" />
+              <div className="flex shrink-0 gap-8 md:gap-16 items-center pr-8 md:pr-16">
+                <div className="h-12 md:h-16 flex items-center justify-center px-2 md:px-4">
+                  <img src={magaluLogo} alt="Magazine Luiza" className="max-h-8 md:max-h-12 max-w-20 md:max-w-32 object-contain opacity-70" />
                 </div>
-                <div className="h-16 flex items-center justify-center px-4">
-                  <img src={hankerLogo} alt="Hanker" className="max-h-12 max-w-32 object-contain opacity-70" />
+                <div className="h-12 md:h-16 flex items-center justify-center px-2 md:px-4">
+                  <img src={hankerLogo} alt="Hanker" className="max-h-8 md:max-h-12 max-w-20 md:max-w-32 object-contain opacity-70" />
                 </div>
-                <div className="h-16 flex items-center justify-center px-4">
-                  <img src={cabanaLogo} alt="Cabana Magazine" className="max-h-12 max-w-32 object-contain opacity-70" />
+                <div className="h-12 md:h-16 flex items-center justify-center px-2 md:px-4">
+                  <img src={cabanaLogo} alt="Cabana Magazine" className="max-h-8 md:max-h-12 max-w-20 md:max-w-32 object-contain opacity-70" />
                 </div>
-                <div className="h-16 flex items-center justify-center px-4">
-                  <img src={avodahLogo} alt="Avodah" className="max-h-12 max-w-32 object-contain opacity-70" />
+                <div className="h-12 md:h-16 flex items-center justify-center px-2 md:px-4">
+                  <img src={avodahLogo} alt="Avodah" className="max-h-8 md:max-h-12 max-w-20 md:max-w-32 object-contain opacity-70" />
                 </div>
-                <div className="h-16 flex items-center justify-center px-4">
-                  <img src={centauroLogo} alt="Centauro" className="max-h-12 max-w-32 object-contain opacity-70" />
+                <div className="h-12 md:h-16 flex items-center justify-center px-2 md:px-4">
+                  <img src={centauroLogo} alt="Centauro" className="max-h-8 md:max-h-12 max-w-20 md:max-w-32 object-contain opacity-70" />
                 </div>
-                <div className="h-16 flex items-center justify-center px-4">
-                  <img src={netshoesLogo} alt="Netshoes" className="max-h-12 max-w-32 object-contain opacity-70" />
+                <div className="h-12 md:h-16 flex items-center justify-center px-2 md:px-4">
+                  <img src={netshoesLogo} alt="Netshoes" className="max-h-8 md:max-h-12 max-w-20 md:max-w-32 object-contain opacity-70" />
                 </div>
               </div>
               
               {/* Duplicate set for seamless loop */}
-              <div className="flex shrink-0 gap-16 items-center pr-16">
-                <div className="h-16 flex items-center justify-center px-4">
-                  <img src={magaluLogo} alt="Magazine Luiza" className="max-h-12 max-w-32 object-contain opacity-70" />
+              <div className="flex shrink-0 gap-8 md:gap-16 items-center pr-8 md:pr-16">
+                <div className="h-12 md:h-16 flex items-center justify-center px-2 md:px-4">
+                  <img src={magaluLogo} alt="Magazine Luiza" className="max-h-8 md:max-h-12 max-w-20 md:max-w-32 object-contain opacity-70" />
                 </div>
-                <div className="h-16 flex items-center justify-center px-4">
-                  <img src={hankerLogo} alt="Hanker" className="max-h-12 max-w-32 object-contain opacity-70" />
+                <div className="h-12 md:h-16 flex items-center justify-center px-2 md:px-4">
+                  <img src={hankerLogo} alt="Hanker" className="max-h-8 md:max-h-12 max-w-20 md:max-w-32 object-contain opacity-70" />
                 </div>
-                <div className="h-16 flex items-center justify-center px-4">
-                  <img src={cabanaLogo} alt="Cabana Magazine" className="max-h-12 max-w-32 object-contain opacity-70" />
+                <div className="h-12 md:h-16 flex items-center justify-center px-2 md:px-4">
+                  <img src={cabanaLogo} alt="Cabana Magazine" className="max-h-8 md:max-h-12 max-w-20 md:max-w-32 object-contain opacity-70" />
                 </div>
-                <div className="h-16 flex items-center justify-center px-4">
-                  <img src={avodahLogo} alt="Avodah" className="max-h-12 max-w-32 object-contain opacity-70" />
+                <div className="h-12 md:h-16 flex items-center justify-center px-2 md:px-4">
+                  <img src={avodahLogo} alt="Avodah" className="max-h-8 md:max-h-12 max-w-20 md:max-w-32 object-contain opacity-70" />
                 </div>
-                <div className="h-16 flex items-center justify-center px-4">
-                  <img src={centauroLogo} alt="Centauro" className="max-h-12 max-w-32 object-contain opacity-70" />
+                <div className="h-12 md:h-16 flex items-center justify-center px-2 md:px-4">
+                  <img src={centauroLogo} alt="Centauro" className="max-h-8 md:max-h-12 max-w-20 md:max-w-32 object-contain opacity-70" />
                 </div>
-                <div className="h-16 flex items-center justify-center px-4">
-                  <img src={netshoesLogo} alt="Netshoes" className="max-h-12 max-w-32 object-contain opacity-70" />
+                <div className="h-12 md:h-16 flex items-center justify-center px-2 md:px-4">
+                  <img src={netshoesLogo} alt="Netshoes" className="max-h-8 md:max-h-12 max-w-20 md:max-w-32 object-contain opacity-70" />
                 </div>
               </div>
             </div>
