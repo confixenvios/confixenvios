@@ -2061,10 +2061,11 @@ const MotoristaDashboard = () => {
                 value={finalizeBatchEtiInput}
                 onChange={(e) => setFinalizeBatchEtiInput(e.target.value)}
                 onKeyDown={handleFinalizeBatchEtiKeyDown}
-                placeholder="Bipe o código (Enter para adicionar)"
-                className="font-mono"
+                placeholder=""
+                className="font-mono text-center text-lg"
                 autoFocus
               />
+              <p className="text-xs text-muted-foreground">Digite/Bipe e pressione Enter para adicionar</p>
             </div>
 
             {/* Lista de volumes selecionados */}
