@@ -1758,9 +1758,9 @@ const MotoristaDashboard = () => {
               />
             </div>
 
-            {/* Documento */}
+            {/* Documento de quem entregou */}
             <div className="space-y-2">
-              <Label>Documento *</Label>
+              <Label>Documento de quem entregou *</Label>
               <Input
                 value={collectDelivererDocument}
                 onChange={(e) => {
@@ -2099,9 +2099,9 @@ const MotoristaDashboard = () => {
               />
             </div>
 
-            {/* Documento */}
+            {/* Documento de quem recebeu */}
             <div className="space-y-2">
-              <Label>Documento *</Label>
+              <Label>Documento de quem recebeu *</Label>
               <Input
                 value={finalizeBatchReceiverDocument}
                 onChange={(e) => {
