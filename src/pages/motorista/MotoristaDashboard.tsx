@@ -1090,7 +1090,7 @@ const MotoristaDashboard = () => {
                   setShowDetailsModal(true);
                 }}
               >
-                Ver
+                Ver detalhes
               </Button>
 
               {showActions === 'accept' && (
