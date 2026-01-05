@@ -1242,12 +1242,24 @@ const CdDashboard = () => {
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                   <p className="text-sm font-medium text-amber-800">Você está prestes a reenviar o volume:</p>
                   <p className="font-mono text-lg font-bold text-amber-900 mt-1">{volumeToResend.eti_code}</p>
-                  <p className="text-sm text-amber-700 mt-2">
-                    Destinatário: {volumeToResend.recipient_name}
-                  </p>
-                  <p className="text-sm text-amber-700">
-                    {volumeToResend.recipient_city}/{volumeToResend.recipient_state}
-                  </p>
+                  
+                  {volumeToResend.shipment?.pickup_address && (
+                    <div className="mt-3 pt-2 border-t border-amber-200">
+                      <p className="text-xs text-amber-600 font-medium">Expedidor:</p>
+                      <p className="text-sm text-amber-800 font-medium">{volumeToResend.shipment.pickup_address.name}</p>
+                      <p className="text-sm text-amber-700">
+                        {volumeToResend.shipment.pickup_address.city}/{volumeToResend.shipment.pickup_address.state}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="mt-2 pt-2 border-t border-amber-200">
+                    <p className="text-xs text-amber-600 font-medium">Destinatário:</p>
+                    <p className="text-sm text-amber-800 font-medium">{volumeToResend.recipient_name}</p>
+                    <p className="text-sm text-amber-700">
+                      {volumeToResend.recipient_city}/{volumeToResend.recipient_state}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
