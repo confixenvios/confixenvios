@@ -126,6 +126,18 @@ const CdDashboard = () => {
   const [selectedVolume, setSelectedVolume] = useState<B2BVolume | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
+  // Modal Reenviar para Recebidos (de devolução)
+  const [resendToReceivedModalOpen, setResendToReceivedModalOpen] = useState(false);
+  const [resendingToReceived, setResendingToReceived] = useState(false);
+  const [volumeToResend, setVolumeToResend] = useState<B2BVolume | null>(null);
+
+  // Modal Devolver ao Expedidor
+  const [returnToSenderModalOpen, setReturnToSenderModalOpen] = useState(false);
+  const [returnToSenderMotoristaId, setReturnToSenderMotoristaId] = useState('');
+  const [returningToSender, setReturningToSender] = useState(false);
+  const [volumeToReturnToSender, setVolumeToReturnToSender] = useState<B2BVolume | null>(null);
+  const [returnToSenderStep, setReturnToSenderStep] = useState(1);
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -494,11 +506,95 @@ const CdDashboard = () => {
     }
   };
 
+  // ==================== REENVIAR PARA RECEBIDOS ====================
+  const handleResendToReceived = async () => {
+    if (!volumeToResend) return;
+    setResendingToReceived(true);
+
+    try {
+      await supabase
+        .from('b2b_volumes')
+        .update({ 
+          status: 'EM_TRIAGEM',
+          motorista_entrega_id: null
+        })
+        .eq('id', volumeToResend.id);
+
+      await supabase.from('b2b_status_history').insert({
+        volume_id: volumeToResend.id,
+        status: 'EM_TRIAGEM',
+        observacoes: `Reenviado para triagem por ${cdUser?.nome}`,
+        is_alert: false
+      });
+
+      toast.success(`Volume ${volumeToResend.eti_code} reenviado para Recebidos`);
+      setResendToReceivedModalOpen(false);
+      setVolumeToResend(null);
+      await loadVolumes();
+    } catch (error) {
+      toast.error('Erro ao reenviar volume');
+    } finally {
+      setResendingToReceived(false);
+    }
+  };
+
+  // ==================== DEVOLVER AO EXPEDIDOR ====================
+  const handleReturnToSender = async () => {
+    if (!volumeToReturnToSender || !returnToSenderMotoristaId) return;
+    setReturningToSender(true);
+
+    try {
+      const motoristaNome = motoristas.find(m => m.id === returnToSenderMotoristaId)?.nome;
+
+      // Atualiza o volume para AGUARDANDO_ACEITE_EXPEDICAO
+      // O destino será o endereço de coleta (expedidor)
+      await supabase
+        .from('b2b_volumes')
+        .update({ 
+          status: 'AGUARDANDO_ACEITE_EXPEDICAO',
+          motorista_entrega_id: returnToSenderMotoristaId
+        })
+        .eq('id', volumeToReturnToSender.id);
+
+      await supabase.from('b2b_status_history').insert({
+        volume_id: volumeToReturnToSender.id,
+        status: 'AGUARDANDO_ACEITE_EXPEDICAO',
+        motorista_id: returnToSenderMotoristaId,
+        motorista_nome: motoristaNome,
+        observacoes: `Devolução ao expedidor - ${motoristaNome} - Registrado por ${cdUser?.nome}`,
+        is_alert: true
+      });
+
+      toast.success(`Volume ${volumeToReturnToSender.eti_code} designado para devolução ao expedidor`);
+      setReturnToSenderModalOpen(false);
+      setVolumeToReturnToSender(null);
+      setReturnToSenderMotoristaId('');
+      setReturnToSenderStep(1);
+      await loadVolumes();
+    } catch (error) {
+      toast.error('Erro ao devolver ao expedidor');
+    } finally {
+      setReturningToSender(false);
+    }
+  };
+
+  // Contar devoluções de um volume
+  const countDevolucoes = (volume: B2BVolume): number => {
+    return (volume.status_history || []).filter(h => h.status === 'DEVOLUCAO').length;
+  };
+
   // Renderizar card de volume
-  const renderVolumeCard = (v: B2BVolume) => {
+  const renderVolumeCard = (v: B2BVolume, showActions?: { resendToReceived?: boolean; returnToSender?: boolean }) => {
     const statusConfig = STATUS_CONFIG[v.status] || { label: v.status, color: 'text-gray-700', bgColor: 'bg-gray-100', cardBorder: 'border-gray-200', cardBg: 'bg-white', iconBg: 'bg-gray-500' };
     const recentHistory = (v.status_history || []).slice(0, 2);
     const hasDevolucaoHistory = (v.status_history || []).some(h => h.status === 'DEVOLUCAO');
+    const devolucaoCount = countDevolucoes(v);
+
+    // Para status DEVOLUCAO, mostrar o número da devolução no badge
+    let badgeLabel = statusConfig.label;
+    if (v.status === 'DEVOLUCAO' && devolucaoCount > 0) {
+      badgeLabel = `Devolução ${devolucaoCount}`;
+    }
 
     return (
       <Card key={v.id} className="mb-4 overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-white">
@@ -518,14 +614,14 @@ const CdDashboard = () => {
               </div>
             </div>
             <Badge className={`${statusConfig.bgColor} ${statusConfig.color} border text-xs font-medium`}>
-              {statusConfig.label}
+              {badgeLabel}
             </Badge>
           </div>
           
-          {hasDevolucaoHistory && (
+          {hasDevolucaoHistory && v.status !== 'DEVOLUCAO' && (
             <div className="flex items-center gap-1 mb-2 text-red-600 text-xs">
               <AlertTriangle className="h-3 w-3" />
-              <span>Volume foi devolvido anteriormente</span>
+              <span>Volume foi devolvido anteriormente ({devolucaoCount}x)</span>
             </div>
           )}
           
@@ -585,10 +681,20 @@ const CdDashboard = () => {
                     };
                     const formattedObs = formatObservacoes(h.observacoes);
                     
+                    // Calcular número da devolução se for DEVOLUCAO
+                    let statusLabel = STATUS_CONFIG[h.status]?.label || h.status;
+                    if (h.status === 'DEVOLUCAO') {
+                      const allDevolucoes = (v.status_history || [])
+                        .filter(hist => hist.status === 'DEVOLUCAO')
+                        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+                      const devolucaoIndex = allDevolucoes.findIndex(d => d.created_at === h.created_at) + 1;
+                      statusLabel = `Devolução ${devolucaoIndex}`;
+                    }
+                    
                     return (
                       <div key={idx} className={`text-xs p-1.5 rounded ${h.is_alert ? 'bg-red-50 text-red-700' : 'bg-muted/50'}`}>
                         <div className="flex justify-between">
-                          <span className="font-medium">{STATUS_CONFIG[h.status]?.label || h.status}</span>
+                          <span className="font-medium">{statusLabel}</span>
                           <span className="text-muted-foreground">
                             {format(new Date(h.created_at), 'dd/MM HH:mm')}
                           </span>
@@ -602,24 +708,59 @@ const CdDashboard = () => {
             </div>
           )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-4 w-full border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-            onClick={() => {
-              setSelectedVolume(v);
-              setShowDetailsModal(true);
-            }}
-          >
-            Ver Detalhes
-          </Button>
+          <div className="flex flex-col gap-2 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+              onClick={() => {
+                setSelectedVolume(v);
+                setShowDetailsModal(true);
+              }}
+            >
+              Ver Detalhes
+            </Button>
+
+            {/* Botão Reenviar para Recebidos (só em Devoluções) */}
+            {showActions?.resendToReceived && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full border-amber-300 text-amber-700 hover:bg-amber-50 hover:border-amber-400"
+                onClick={() => {
+                  setVolumeToResend(v);
+                  setResendToReceivedModalOpen(true);
+                }}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reenviar para Recebidos
+              </Button>
+            )}
+
+            {/* Botão Devolver ao Expedidor (só em Recebidos com histórico de devolução) */}
+            {showActions?.returnToSender && hasDevolucaoHistory && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400"
+                onClick={() => {
+                  setVolumeToReturnToSender(v);
+                  setReturnToSenderStep(1);
+                  setReturnToSenderModalOpen(true);
+                }}
+              >
+                <Truck className="h-4 w-4 mr-2" />
+                Devolver ao Expedidor
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     );
   };
 
   // Render lista de volumes
-  const renderVolumeList = (volumeList: B2BVolume[], emptyMessage: string) => {
+  const renderVolumeList = (volumeList: B2BVolume[], emptyMessage: string, showActions?: { resendToReceived?: boolean; returnToSender?: boolean }) => {
     if (volumeList.length === 0) {
       return (
         <Card className="border-0 shadow-sm bg-white/80">
@@ -632,7 +773,7 @@ const CdDashboard = () => {
         </Card>
       );
     }
-    return volumeList.map(v => renderVolumeCard(v));
+    return volumeList.map(v => renderVolumeCard(v, showActions));
   };
 
   if (loading) {
@@ -787,7 +928,7 @@ const CdDashboard = () => {
               <div className="w-1.5 h-6 bg-purple-500 rounded-full" />
               <p className="text-sm text-muted-foreground">Volumes em triagem no CD</p>
             </div>
-            {renderVolumeList(emTriagem, 'Nenhum volume em triagem')}
+            {renderVolumeList(emTriagem, 'Nenhum volume em triagem', { returnToSender: true })}
           </TabsContent>
 
           {/* Operação Interna */}
@@ -821,7 +962,7 @@ const CdDashboard = () => {
               <div className="w-1.5 h-6 bg-red-500 rounded-full" />
               <p className="text-sm text-muted-foreground">Volumes devolvidos</p>
             </div>
-            {renderVolumeList(devolucoes, 'Nenhuma devolução')}
+            {renderVolumeList(devolucoes, 'Nenhuma devolução', { resendToReceived: true })}
           </TabsContent>
         </Tabs>
       </main>
@@ -1081,6 +1222,173 @@ const CdDashboard = () => {
                 {returning ? 'Devolvendo...' : `Devolver (${returnedVolumes.length})`}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Reenviar para Recebidos */}
+      <Dialog open={resendToReceivedModalOpen} onOpenChange={setResendToReceivedModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-5 w-5 text-amber-600" />
+              Reenviar para Recebidos
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {volumeToResend && (
+              <>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <p className="text-sm font-medium text-amber-800">Você está prestes a reenviar o volume:</p>
+                  <p className="font-mono text-lg font-bold text-amber-900 mt-1">{volumeToResend.eti_code}</p>
+                  <p className="text-sm text-amber-700 mt-2">
+                    Destinatário: {volumeToResend.recipient_name}
+                  </p>
+                  <p className="text-sm text-amber-700">
+                    {volumeToResend.recipient_city}/{volumeToResend.recipient_state}
+                  </p>
+                </div>
+
+                <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+                  <p>O volume será movido de <strong>Devoluções</strong> para <strong>Recebidos</strong> e ficará disponível para nova expedição.</p>
+                </div>
+              </>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setResendToReceivedModalOpen(false);
+                  setVolumeToResend(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 bg-amber-600 hover:bg-amber-700"
+                onClick={handleResendToReceived}
+                disabled={resendingToReceived}
+              >
+                {resendingToReceived ? 'Reenviando...' : 'Confirmar Reenvio'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Devolver ao Expedidor */}
+      <Dialog open={returnToSenderModalOpen} onOpenChange={setReturnToSenderModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Truck className="h-5 w-5 text-red-600" />
+              Devolver ao Expedidor
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {volumeToReturnToSender && returnToSenderStep === 1 && (
+              <>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                    <p className="font-semibold text-red-800">Atenção!</p>
+                  </div>
+                  <p className="text-sm text-red-700">
+                    Você está prestes a devolver o volume <strong>{volumeToReturnToSender.eti_code}</strong> ao expedidor.
+                  </p>
+                  <p className="text-sm text-red-700 mt-2">
+                    O volume será enviado para o endereço de coleta original.
+                  </p>
+                </div>
+
+                {volumeToReturnToSender.shipment?.pickup_address && (
+                  <div className="border rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-1">Endereço de destino (Expedidor)</p>
+                    <p className="font-medium text-sm">{volumeToReturnToSender.shipment.pickup_address.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {volumeToReturnToSender.shipment.pickup_address.street}, {volumeToReturnToSender.shipment.pickup_address.number}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {volumeToReturnToSender.shipment.pickup_address.city}/{volumeToReturnToSender.shipment.pickup_address.state}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setReturnToSenderModalOpen(false);
+                      setVolumeToReturnToSender(null);
+                      setReturnToSenderStep(1);
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    className="flex-1 bg-red-600 hover:bg-red-700"
+                    onClick={() => setReturnToSenderStep(2)}
+                  >
+                    Confirmar e Continuar
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {volumeToReturnToSender && returnToSenderStep === 2 && (
+              <>
+                <div className="space-y-2">
+                  <Label>Selecione o motorista para entrega</Label>
+                  <Select value={returnToSenderMotoristaId} onValueChange={setReturnToSenderMotoristaId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o motorista" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {motoristas.map(m => (
+                        <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="bg-muted/50 rounded-lg p-3 text-sm">
+                  <p className="font-medium mb-1">Resumo:</p>
+                  <p className="text-muted-foreground">
+                    Volume: <span className="font-mono">{volumeToReturnToSender.eti_code}</span>
+                  </p>
+                  <p className="text-muted-foreground">
+                    Destino: {volumeToReturnToSender.shipment?.pickup_address?.city}/{volumeToReturnToSender.shipment?.pickup_address?.state}
+                  </p>
+                  {returnToSenderMotoristaId && (
+                    <p className="text-muted-foreground">
+                      Motorista: {motoristas.find(m => m.id === returnToSenderMotoristaId)?.nome}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setReturnToSenderStep(1)}
+                  >
+                    Voltar
+                  </Button>
+                  <Button
+                    className="flex-1 bg-red-600 hover:bg-red-700"
+                    onClick={handleReturnToSender}
+                    disabled={returningToSender || !returnToSenderMotoristaId}
+                  >
+                    {returningToSender ? 'Processando...' : 'Confirmar Devolução'}
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
