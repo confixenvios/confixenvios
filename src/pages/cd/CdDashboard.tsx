@@ -1153,7 +1153,9 @@ const CdDashboard = () => {
                   <History className="h-4 w-4" />
                   Histórico Completo
                 </h4>
-                <B2BVolumeStatusHistory volumeId={selectedVolume.id} />
+                <ScrollArea className="max-h-60">
+                  <B2BVolumeStatusHistory volumeId={selectedVolume.id} />
+                </ScrollArea>
               </div>
             </div>
           )}
