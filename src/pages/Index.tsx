@@ -319,16 +319,16 @@ const Index = () => {
                       <Globe className="h-4 w-4 text-primary" />
                       Cotar Nacional
                     </button>
-                    <button
-                      onClick={() => {
-                        navigate('/b2b/auth');
-                        setCotarMenuOpen(false);
-                      }}
+                    <a
+                      href="https://confixenvios.com.br/b2b-expresso"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setCotarMenuOpen(false)}
                       className="w-full px-4 py-3 text-left hover:bg-gray-100 rounded-b-lg flex items-center gap-2 text-foreground"
                     >
                       <Zap className="h-4 w-4 text-primary" />
                       Cotar Expresso
-                    </button>
+                    </a>
                   </div>
                 )}
               </div>
@@ -419,16 +419,16 @@ const Index = () => {
                   <Globe className="h-4 w-4 text-primary" />
                   Cotar Nacional
                 </button>
-                <button
-                  onClick={() => {
-                    navigate('/b2b/auth');
-                    setCotarMenuOpen2(false);
-                  }}
+                <a
+                  href="https://confixenvios.com.br/b2b-expresso"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setCotarMenuOpen2(false)}
                   className="w-full px-4 py-3 text-left hover:bg-gray-100 rounded-b-lg flex items-center gap-2 text-foreground"
                 >
                   <Zap className="h-4 w-4 text-primary" />
                   Cotar Expresso
-                </button>
+                </a>
               </div>
             )}
           </div>
