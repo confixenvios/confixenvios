@@ -979,11 +979,6 @@ const MotoristaDashboard = () => {
                 )}
               </div>
             </div>
-            {v.status !== 'CONCLUIDO' && (
-              <Badge className={`${statusConfig.bgColor} ${statusConfig.color} border text-xs font-medium`}>
-                {statusConfig.label}
-              </Badge>
-            )}
           </div>
           
           {/* Para PENDENTE: mostrar apenas ETI + bairro + peso + tipo veículo */}
