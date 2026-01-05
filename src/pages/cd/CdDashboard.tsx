@@ -1087,13 +1087,13 @@ const CdDashboard = () => {
 
       {/* Modal de Detalhes */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-w-lg h-[85vh] p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b">
+        <DialogContent className="max-w-lg max-h-[85vh] p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <DialogTitle>Detalhes do Volume</DialogTitle>
           </DialogHeader>
           {selectedVolume && (
-            <div className="flex-1 overflow-y-auto px-6 pb-6">
-              <div className="space-y-4 px-6 pb-6">
+            <ScrollArea className="h-[calc(85vh-100px)] px-6 py-4">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Código ETI</p>
@@ -1157,7 +1157,7 @@ const CdDashboard = () => {
                   <B2BVolumeStatusHistory volumeId={selectedVolume.id} />
                 </div>
               </div>
-            </div>
+            </ScrollArea>
           )}
         </DialogContent>
       </Dialog>
