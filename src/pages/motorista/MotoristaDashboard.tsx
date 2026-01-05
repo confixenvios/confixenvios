@@ -2406,9 +2406,7 @@ const MotoristaDashboard = () => {
                   <History className="h-4 w-4" />
                   Histórico Completo
                 </h4>
-                <ScrollArea className="h-48">
-                  <B2BVolumeStatusHistory volumeId={selectedVolume.id} />
-                </ScrollArea>
+                <B2BVolumeStatusHistory volumeId={selectedVolume.id} />
               </div>
             </div>
           )}
