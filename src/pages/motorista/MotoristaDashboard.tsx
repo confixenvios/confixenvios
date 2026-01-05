@@ -10,8 +10,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, User, Camera, AlertTriangle, Menu, ClipboardList, Send, History, X, Search, PenTool, Home, RotateCcw } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, MapPin, RefreshCw, User, Camera, AlertTriangle, Menu, ClipboardList, Send, History, X, Search, PenTool, Home, RotateCcw, Phone } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Helper para criar link de telefone clicável
+const PhoneLink = ({ phone, className = '' }: { phone: string; className?: string }) => {
+  const cleanPhone = phone?.replace(/\D/g, '') || '';
+  if (!cleanPhone) return <span className={className}>{phone || '-'}</span>;
+  
+  return (
+    <a 
+      href={`tel:+55${cleanPhone}`} 
+      className={`text-primary hover:underline inline-flex items-center gap-1 ${className}`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <Phone className="h-3 w-3" />
+      {phone}
+    </a>
+  );
+};
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -2365,7 +2382,7 @@ const MotoristaDashboard = () => {
                   <h4 className="font-semibold mb-2">Destinatário</h4>
                   <div className="bg-muted/50 p-3 rounded text-sm space-y-1">
                     <p className="font-medium">{selectedVolume.recipient_name}</p>
-                    <p>{selectedVolume.recipient_phone}</p>
+                    <p><PhoneLink phone={selectedVolume.recipient_phone} /></p>
                     <p>{selectedVolume.recipient_street}, {selectedVolume.recipient_number}</p>
                     {selectedVolume.recipient_complement && <p>{selectedVolume.recipient_complement}</p>}
                     <p>{selectedVolume.recipient_neighborhood}</p>
@@ -2384,11 +2401,11 @@ const MotoristaDashboard = () => {
                     {selectedVolume.status === 'AGUARDANDO_ACEITE_COLETA' ? (
                       <>
                         <p>{selectedVolume.shipment.pickup_address.neighborhood}</p>
-                        <p>{selectedVolume.shipment.pickup_address.contact_phone}</p>
+                        <p><PhoneLink phone={selectedVolume.shipment.pickup_address.contact_phone} /></p>
                       </>
                     ) : (
                       <>
-                        <p>{selectedVolume.shipment.pickup_address.contact_name} - {selectedVolume.shipment.pickup_address.contact_phone}</p>
+                        <p>{selectedVolume.shipment.pickup_address.contact_name} - <PhoneLink phone={selectedVolume.shipment.pickup_address.contact_phone} /></p>
                         <p>{selectedVolume.shipment.pickup_address.street}, {selectedVolume.shipment.pickup_address.number}</p>
                         <p>{selectedVolume.shipment.pickup_address.neighborhood} - {selectedVolume.shipment.pickup_address.city}/{selectedVolume.shipment.pickup_address.state}</p>
                       </>
