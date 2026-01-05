@@ -108,9 +108,9 @@ const Index = () => {
               </CardHeader>
               <CardContent className="pt-0 p-2 sm:p-4 md:p-6 md:pt-0">
                 <Button size="sm" className="w-full text-xs sm:text-sm md:text-base md:py-5" asChild>
-                  <Link to="/cotacao">
+                  <a href="https://confixenvios.com.br/auth">
                     Cotar
-                  </Link>
+                  </a>
                 </Button>
               </CardContent>
             </Card>
@@ -311,8 +311,6 @@ const Index = () => {
                   <div className="absolute top-full left-1/2 -translate-x-1/2 md:left-0 md:translate-x-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
                     <a
                       href="https://confixenvios.com.br/auth"
-                      target="_blank"
-                      rel="noopener noreferrer"
                       onClick={() => setCotarMenuOpen(false)}
                       className="w-full px-4 py-3 text-left hover:bg-gray-100 rounded-t-lg flex items-center gap-2 text-foreground"
                     >
@@ -321,8 +319,6 @@ const Index = () => {
                     </a>
                     <a
                       href="https://confixenvios.com.br/b2b-expresso"
-                      target="_blank"
-                      rel="noopener noreferrer"
                       onClick={() => setCotarMenuOpen(false)}
                       className="w-full px-4 py-3 text-left hover:bg-gray-100 rounded-b-lg flex items-center gap-2 text-foreground"
                     >
@@ -411,8 +407,6 @@ const Index = () => {
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-white rounded-lg shadow-lg border z-50">
                 <a
                   href="https://confixenvios.com.br/auth"
-                  target="_blank"
-                  rel="noopener noreferrer"
                   onClick={() => setCotarMenuOpen2(false)}
                   className="w-full px-4 py-3 text-left hover:bg-gray-100 rounded-t-lg flex items-center gap-2 text-foreground"
                 >
@@ -421,8 +415,6 @@ const Index = () => {
                 </a>
                 <a
                   href="https://confixenvios.com.br/b2b-expresso"
-                  target="_blank"
-                  rel="noopener noreferrer"
                   onClick={() => setCotarMenuOpen2(false)}
                   className="w-full px-4 py-3 text-left hover:bg-gray-100 rounded-b-lg flex items-center gap-2 text-foreground"
                 >
