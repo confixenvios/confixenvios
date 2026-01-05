@@ -63,37 +63,37 @@ const Index = () => {
             fetchPriority="high"
           />
         </div>
-        <div className="relative flex flex-col items-center justify-start pt-6 sm:pt-8 md:pt-16 px-4 pb-6 min-h-[50vh] md:min-h-[70vh]">
+        <div className="relative flex flex-col items-center justify-start md:justify-between pt-6 sm:pt-8 md:pt-12 px-4 pb-6 min-h-[50vh] md:min-h-[75vh]">
           <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl mb-4 sm:mb-6 md:mb-12 leading-tight font-normal text-center">
             <span style={{ color: '#000000', textShadow: '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.7)' }}>Coletamos e Entregamos em todo o </span>
             <span className="text-primary" style={{ textShadow: '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.8)' }}>Brasil</span>
           </h1>
           
-          {/* Benefícios principais em mini badges */}
-          <div className="flex flex-wrap justify-center gap-1 sm:gap-2 mb-4 sm:mb-6 md:mb-10">
-            <div className="bg-white/70 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 text-[10px] sm:text-xs flex items-center gap-1">
-              <DollarSign className="w-3 h-3 text-primary" />
+        {/* Benefícios principais em mini badges */}
+          <div className="flex flex-wrap justify-center gap-1 sm:gap-2 md:gap-4 mb-4 sm:mb-6 md:mb-8">
+            <div className="bg-white/70 backdrop-blur-sm rounded-full px-2 sm:px-3 md:px-5 py-1 md:py-2 text-[10px] sm:text-xs md:text-sm flex items-center gap-1 md:gap-2">
+              <DollarSign className="w-3 h-3 md:w-5 md:h-5 text-primary" />
               <span style={{ color: '#333' }}>Menor preço</span>
             </div>
-            <div className="bg-white/70 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 text-[10px] sm:text-xs flex items-center gap-1">
-              <Clock className="w-3 h-3 text-primary" />
+            <div className="bg-white/70 backdrop-blur-sm rounded-full px-2 sm:px-3 md:px-5 py-1 md:py-2 text-[10px] sm:text-xs md:text-sm flex items-center gap-1 md:gap-2">
+              <Clock className="w-3 h-3 md:w-5 md:h-5 text-primary" />
               <span style={{ color: '#333' }}>Menor prazo</span>
             </div>
-            <div className="bg-white/70 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 text-[10px] sm:text-xs flex items-center gap-1">
-              <TrendingUp className="w-3 h-3 text-primary" />
+            <div className="bg-white/70 backdrop-blur-sm rounded-full px-2 sm:px-3 md:px-5 py-1 md:py-2 text-[10px] sm:text-xs md:text-sm flex items-center gap-1 md:gap-2">
+              <TrendingUp className="w-3 h-3 md:w-5 md:h-5 text-primary" />
               <span style={{ color: '#333' }}>Maior Agilidade</span>
             </div>
           </div>
 
           {/* Blocos de Serviços */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-4 max-w-md mx-auto w-full mt-24 sm:mt-6 md:mt-10">
+          <div className="grid grid-cols-2 gap-2 sm:gap-4 md:gap-6 max-w-md md:max-w-xl mx-auto w-full mt-24 sm:mt-6 md:mt-auto md:mb-8">
             {/* Expresso Local */}
-            <Card className="text-center p-3 sm:p-4 hover:shadow-lg transition-shadow flex flex-col">
-              <CardHeader className="pb-2 sm:pb-3 p-2 sm:p-4">
-                <CardTitle className="text-sm sm:text-lg text-primary">Expresso Local</CardTitle>
+            <Card className="text-center p-3 sm:p-4 md:p-6 hover:shadow-lg transition-shadow flex flex-col">
+              <CardHeader className="pb-2 sm:pb-3 md:pb-4 p-2 sm:p-4 md:p-6">
+                <CardTitle className="text-sm sm:text-lg md:text-xl text-primary">Expresso Local</CardTitle>
               </CardHeader>
-              <CardContent className="pt-0 p-2 sm:p-4">
-                <Button size="sm" className="w-full text-xs sm:text-sm" asChild>
+              <CardContent className="pt-0 p-2 sm:p-4 md:p-6 md:pt-0">
+                <Button size="sm" className="w-full text-xs sm:text-sm md:text-base md:py-5" asChild>
                   <Link to="/b2b-expresso">
                     Cotar
                   </Link>
@@ -102,12 +102,12 @@ const Index = () => {
             </Card>
 
             {/* Envio Nacional */}
-            <Card className="text-center p-3 sm:p-4 hover:shadow-lg transition-shadow flex flex-col">
-              <CardHeader className="pb-2 sm:pb-3 p-2 sm:p-4">
-                <CardTitle className="text-sm sm:text-lg text-primary">Envio Nacional</CardTitle>
+            <Card className="text-center p-3 sm:p-4 md:p-6 hover:shadow-lg transition-shadow flex flex-col">
+              <CardHeader className="pb-2 sm:pb-3 md:pb-4 p-2 sm:p-4 md:p-6">
+                <CardTitle className="text-sm sm:text-lg md:text-xl text-primary">Envio Nacional</CardTitle>
               </CardHeader>
-              <CardContent className="pt-0 p-2 sm:p-4">
-                <Button size="sm" className="w-full text-xs sm:text-sm" asChild>
+              <CardContent className="pt-0 p-2 sm:p-4 md:p-6 md:pt-0">
+                <Button size="sm" className="w-full text-xs sm:text-sm md:text-base md:py-5" asChild>
                   <Link to="/cotacao">
                     Cotar
                   </Link>
