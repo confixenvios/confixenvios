@@ -169,6 +169,11 @@ const AdminAuth = () => {
             {/* Red accent bar at top */}
             <div className="h-1.5 bg-gradient-to-r from-primary to-red-600" />
             <CardHeader className="text-center pb-4 pt-6">
+              <div className="flex justify-center mb-3">
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Shield className="h-7 w-7 text-primary" />
+                </div>
+              </div>
               <CardTitle className="text-2xl font-bold text-primary">Acesso Administrativo</CardTitle>
               <CardDescription>
                 Login exclusivo para administradores do sistema
