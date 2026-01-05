@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
-import { Package, User, Mail, Lock, Phone, CreditCard, Loader2 } from "lucide-react";
+import { Package, User, Mail, Lock, Phone, CreditCard, Loader2, ArrowLeft } from "lucide-react";
 
 const CdRegistro = () => {
   const navigate = useNavigate();
@@ -91,6 +91,12 @@ const CdRegistro = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted flex items-center justify-center p-4">
+      <div className="absolute top-4 left-4">
+        <Button variant="ghost" onClick={() => navigate('/cd')} className="gap-2">
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </Button>
+      </div>
       <Card className="w-full max-w-md border-border/50">
         <CardHeader className="text-center">
           <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">

@@ -233,7 +233,7 @@ const CdDashboard = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('cd_user');
-    navigate('/cd/auth');
+    navigate('/cd');
   };
 
   // Função de filtro por busca
