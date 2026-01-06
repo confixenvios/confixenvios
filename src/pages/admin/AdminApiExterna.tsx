@@ -76,7 +76,7 @@ const AdminApiExterna = () => {
               <Label>Endpoint da API</Label>
               <div className="flex items-center gap-2 mt-1">
                 <Input 
-                  value="https://api-frete-confix-producao-production.up.railway.app/frete/confix" 
+                  value="https://api-freteconfix-producao-production.up.railway.app/frete/confix" 
                   readOnly 
                   className="font-mono text-sm"
                 />
