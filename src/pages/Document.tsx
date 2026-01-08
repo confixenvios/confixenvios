@@ -213,8 +213,10 @@ const Document = () => {
         
         // Dados do documento fiscal
         if (documentType === 'nfe') {
+          queryParams.append('tipo', '1'); // Nota Fiscal Eletrônica
           queryParams.append('chaveNotaFiscal', nfeKey || '');
         } else {
+          queryParams.append('tipo', '3'); // Declaração de Conteúdo
           // Para declaração de conteúdo, enviar chave fictícia
           queryParams.append('chaveNotaFiscal', '99999999999999999999999999999999999999999999');
           queryParams.append('descricaoMercadoria', merchandiseDescription || 'Mercadoria Geral');
