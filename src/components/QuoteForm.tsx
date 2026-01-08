@@ -963,19 +963,55 @@ const QuoteForm = () => {
       const webhookResponse = await response.json();
       console.log("📥 Webhook resposta:", webhookResponse);
 
-      // Extrair preços e prazos da resposta
-      const precoJadlog = webhookResponse.preco_total_frete_jadlog 
-        ? parseFloat(webhookResponse.preco_total_frete_jadlog) 
-        : null;
-      const precoMagalog = webhookResponse.preco_total_frete_magalog 
-        ? parseFloat(webhookResponse.preco_total_frete_magalog) 
-        : null;
-      const prazoJadlog = webhookResponse.prazo_frete_jadlog 
-        ? parseInt(webhookResponse.prazo_frete_jadlog) 
-        : 5;
-      const prazoMagalog = webhookResponse.prazo_frete_magalog 
-        ? parseInt(webhookResponse.prazo_frete_magalog) 
-        : 7;
+      // Verificar se a resposta é o novo formato (array) ou o antigo
+      let precoJadlog: number | null = null;
+      let precoMagalog: number | null = null;
+      let prazoJadlog: number = 5;
+      let prazoMagalog: number = 7;
+      let ufDestino: string | null = null;
+
+      if (Array.isArray(webhookResponse) && webhookResponse.length > 0) {
+        // Novo formato: array com objetos jadlog, magalog, maisbarato, maisRapido
+        const apiData = webhookResponse[0];
+        
+        if (apiData.jadlog && apiData.jadlog.permitido) {
+          precoJadlog = parseFloat(apiData.jadlog.preco_total);
+          prazoJadlog = parseInt(apiData.jadlog.prazo) || 5;
+          ufDestino = apiData.jadlog.uf || null;
+        }
+        
+        if (apiData.magalog && apiData.magalog.permitido) {
+          precoMagalog = parseFloat(apiData.magalog.preco_total);
+          prazoMagalog = parseInt(apiData.magalog.prazo) || 7;
+          if (!ufDestino) {
+            ufDestino = apiData.magalog.uf || null;
+          }
+        }
+
+        // Fallback para maisbarato/maisRapido para pegar UF
+        if (!ufDestino && apiData.maisbarato?.uf) {
+          ufDestino = apiData.maisbarato.uf;
+        }
+        if (!ufDestino && apiData.maisRapido?.uf) {
+          ufDestino = apiData.maisRapido.uf;
+        }
+      } else {
+        // Formato antigo: objeto com preco_total_frete_jadlog, etc.
+        precoJadlog = webhookResponse.preco_total_frete_jadlog 
+          ? parseFloat(webhookResponse.preco_total_frete_jadlog) 
+          : null;
+        precoMagalog = webhookResponse.preco_total_frete_magalog 
+          ? parseFloat(webhookResponse.preco_total_frete_magalog) 
+          : null;
+        prazoJadlog = webhookResponse.prazo_frete_jadlog 
+          ? parseInt(webhookResponse.prazo_frete_jadlog) 
+          : 5;
+        prazoMagalog = webhookResponse.prazo_frete_magalog 
+          ? parseInt(webhookResponse.prazo_frete_magalog) 
+          : 7;
+      }
+      
+      console.log("🗺️ UF do destino extraída da API:", ufDestino);
 
       console.log("💰 Preços extraídos - Jadlog:", precoJadlog, "Magalog:", precoMagalog);
       console.log("📅 Prazos extraídos - Jadlog:", prazoJadlog, "Magalog:", prazoMagalog);
@@ -1039,6 +1075,7 @@ const QuoteForm = () => {
             : { permitido: false, motivo: magalogMotivo || "Não disponível" },
         },
         destinyCep: formData.destinyCep.replace(/\D/g, ""),
+        destinyUf: ufDestino, // UF retornada pela API
         formData: formData,
         volumes: volumesData,
         totalWeight: totalWeight,
@@ -2041,7 +2078,7 @@ const QuoteForm = () => {
                       <MapPin className="h-4 w-4 text-primary" />
                       <span className="text-muted-foreground">Destino:</span>
                       <span className="font-medium">
-                        {formatCep(quoteData.destinyCep)} - {getCepInfo(quoteData.destinyCep).state}
+                        {formatCep(quoteData.destinyCep)} - {quoteData.destinyUf || getCepInfo(quoteData.destinyCep).state}
                       </span>
                     </div>
                   </CardContent>
