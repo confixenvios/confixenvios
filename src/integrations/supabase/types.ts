@@ -1784,6 +1784,87 @@ export type Database = {
         }
         Relationships: []
       }
+      sla_configs: {
+        Row: {
+          created_at: string
+          first_response_hours: number
+          id: string
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          resolution_hours: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          first_response_hours: number
+          id?: string
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          resolution_hours: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          first_response_hours?: number
+          id?: string
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          resolution_hours?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          category: Database["public"]["Enums"]["ticket_category"]
+          closed_at: string | null
+          created_at: string
+          description: string
+          first_response_at: string | null
+          id: string
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          resolved_at: string | null
+          sla_due_at: string | null
+          status: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          ticket_number: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: Database["public"]["Enums"]["ticket_category"]
+          closed_at?: string | null
+          created_at?: string
+          description: string
+          first_response_at?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          resolved_at?: string | null
+          sla_due_at?: string | null
+          status?: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          ticket_number: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: Database["public"]["Enums"]["ticket_category"]
+          closed_at?: string | null
+          created_at?: string
+          description?: string
+          first_response_at?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          resolved_at?: string | null
+          sla_due_at?: string | null
+          status?: Database["public"]["Enums"]["ticket_status"]
+          subject?: string
+          ticket_number?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       temp_quotes: {
         Row: {
           created_at: string
@@ -1828,6 +1909,47 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      ticket_messages: {
+        Row: {
+          attachment_url: string | null
+          created_at: string
+          id: string
+          is_from_support: boolean
+          is_internal: boolean
+          message: string
+          ticket_id: string
+          user_id: string
+        }
+        Insert: {
+          attachment_url?: string | null
+          created_at?: string
+          id?: string
+          is_from_support?: boolean
+          is_internal?: boolean
+          message: string
+          ticket_id: string
+          user_id: string
+        }
+        Update: {
+          attachment_url?: string | null
+          created_at?: string
+          id?: string
+          is_from_support?: boolean
+          is_internal?: boolean
+          message?: string
+          ticket_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -2038,6 +2160,7 @@ export type Database = {
           volume_number: number
         }[]
       }
+      generate_ticket_number: { Args: never; Returns: string }
       generate_tracking_code: { Args: never; Returns: string }
       get_available_shipments: {
         Args: never
@@ -2388,6 +2511,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user" | "motorista"
+      ticket_category:
+        | "technical"
+        | "billing"
+        | "general"
+        | "feedback"
+        | "complaint"
+      ticket_priority: "low" | "medium" | "high" | "urgent"
+      ticket_status: "open" | "pending" | "in_progress" | "resolved" | "closed"
     }
     CompositeTypes: {
       http_header: {
@@ -2532,6 +2663,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user", "motorista"],
+      ticket_category: [
+        "technical",
+        "billing",
+        "general",
+        "feedback",
+        "complaint",
+      ],
+      ticket_priority: ["low", "medium", "high", "urgent"],
+      ticket_status: ["open", "pending", "in_progress", "resolved", "closed"],
     },
   },
 } as const
