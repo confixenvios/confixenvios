@@ -12,7 +12,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { shipmentId, paymentData, documentData, selectedQuote, shipmentData } = await req.json();
+    const { shipmentId, paymentData, documentData, selectedQuote, shipmentData, overrideWebhookUrl } = await req.json();
     
     // Create service role client to bypass RLS
     const supabaseService = createClient(
@@ -37,16 +37,25 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error(`Shipment not found: ${shipmentError?.message}`);
     }
 
-    // Get active integration webhook URL
-    const { data: integration, error: integrationError } = await supabaseService
-      .from('integrations')
-      .select('webhook_url, secret_key')
-      .eq('active', true)
-      .single();
+    // Use override URL if provided, otherwise get from integrations table
+    let webhookUrl = overrideWebhookUrl;
+    let secretKey = null;
 
-    if (integrationError || !integration) {
-      throw new Error(`No active integration found: ${integrationError?.message}`);
+    if (!webhookUrl) {
+      const { data: integration, error: integrationError } = await supabaseService
+        .from('integrations')
+        .select('webhook_url, secret_key')
+        .eq('active', true)
+        .single();
+
+      if (integrationError || !integration) {
+        throw new Error(`No active integration found: ${integrationError?.message}`);
+      }
+      webhookUrl = integration.webhook_url;
+      secretKey = integration.secret_key;
     }
+
+    console.log(`Using webhook URL: ${webhookUrl}`);
 
     // Prepare consolidated webhook payload as specified
     const payload = {
@@ -163,16 +172,16 @@ const handler = async (req: Request): Promise<Response> => {
       }
     };
 
-    console.log(`Sending webhook to: ${integration.webhook_url}`);
+    console.log(`Sending webhook to: ${webhookUrl}`);
     console.log('Payload:', JSON.stringify(payload, null, 2));
 
     // Send webhook to external system (only for admin notifications)
-    const webhookResponse = await fetch(integration.webhook_url, {
+    const webhookResponse = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Admin-Notification': 'true', // Indicador que é notificação administrativa
-        ...(integration.secret_key && { 'Authorization': `Bearer ${integration.secret_key}` })
+        ...(secretKey && { 'Authorization': `Bearer ${secretKey}` })
       },
       body: JSON.stringify({
         ...payload,
