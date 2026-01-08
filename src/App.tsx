@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import SupportBubble from "@/components/SupportBubble";
 
 // Public pages
 import Index from "./pages/Index";
@@ -21,6 +22,12 @@ import PixPaymentSuccess from "./pages/PixPaymentSuccess";
 import Auth from "./pages/Auth";
 import AdminAuth from "./pages/admin/AdminAuth";
 import NotFound from "./pages/NotFound";
+
+// Support pages
+import SuporteAuth from "./pages/suporte/SuporteAuth";
+import SuporteTickets from "./pages/suporte/SuporteTickets";
+import SuporteNovoTicket from "./pages/suporte/SuporteNovoTicket";
+import SuporteTicketDetalhes from "./pages/suporte/SuporteTicketDetalhes";
 
 // Client pages
 import ClientLayout from "./pages/cliente/ClientLayout";
@@ -82,6 +89,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <SupportBubble />
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Index />} />
@@ -101,6 +109,12 @@ const App = () => (
             <Route path="/rastreio" element={<Tracking />} />
             <Route path="/rastreio/:codigo" element={<Tracking />} />
             <Route path="/api-docs" element={<ApiDocs />} />
+
+            {/* Support Routes */}
+            <Route path="/suporte" element={<SuporteAuth />} />
+            <Route path="/suporte/tickets" element={<SuporteTickets />} />
+            <Route path="/suporte/novo-ticket" element={<SuporteNovoTicket />} />
+            <Route path="/suporte/ticket/:id" element={<SuporteTicketDetalhes />} />
 
             {/* Client Routes */}
             <Route 
