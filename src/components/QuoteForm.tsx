@@ -1009,6 +1009,9 @@ const QuoteForm = () => {
         prazoMagalog = webhookResponse.prazo_frete_magalog 
           ? parseInt(webhookResponse.prazo_frete_magalog) 
           : 7;
+        
+        // Extrair UF do formato antigo (local_uf_jadlog ou local_uf_magalog)
+        ufDestino = webhookResponse.local_uf_jadlog || webhookResponse.local_uf_magalog || null;
       }
       
       console.log("🗺️ UF do destino extraída da API:", ufDestino);
