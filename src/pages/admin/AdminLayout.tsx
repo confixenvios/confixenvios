@@ -97,14 +97,14 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     <div className="flex flex-col h-full">
       {/* Header do Sidebar com Banner */}
       <div className="p-4 bg-gradient-to-r from-primary via-primary to-red-700">
-        <div className="grid grid-cols-2 gap-3 items-center">
+        <div className="grid grid-cols-2 gap-3 items-start">
           <div className="bg-white rounded-lg p-2 flex items-center justify-center">
-            <img src={confixLogo} alt="Confix Envios" className="h-6" />
+            <img src={confixLogo} alt="Confix Envios" className="h-8" />
           </div>
-          <div className="text-right">
-            <p className="text-xs text-white font-semibold">Confix Admin</p>
-            <p className="text-xs text-white/80">Bem vindo,</p>
-            <p className="text-sm text-white font-medium truncate">{getDisplayName()}</p>
+          <div className="text-right flex flex-col">
+            <p className="text-xs text-white font-semibold leading-tight">Confix Admin</p>
+            <p className="text-xs text-white/80 leading-tight">Bem vindo,</p>
+            <p className="text-sm text-white font-medium truncate leading-tight">{getDisplayName()}</p>
           </div>
         </div>
       </div>
