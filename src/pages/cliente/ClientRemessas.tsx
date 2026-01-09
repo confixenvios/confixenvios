@@ -1,19 +1,17 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Plus, Calendar, MapPin, Eye, Search, Filter, ArrowUpDown, FileText, Receipt, RefreshCw, CheckCircle2, XCircle, Download } from "lucide-react";
+import { Package, Plus, MapPin, Eye, Search, Download, RefreshCw, Phone, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-
+import { format } from "date-fns";
 
 interface Shipment {
   id: string;
@@ -53,23 +51,10 @@ interface Shipment {
     complement?: string;
     reference?: string;
   };
-  cte_emission?: {
-    id: string;
-    chave_cte: string;
-    uuid_cte: string;
-    serie: string;
-    numero_cte: string;
-    status: string;
-    motivo: string | null;
-    modelo: string;
-    xml_url: string | null;
-    dacte_url: string | null;
-    payload_bruto: any;
-    created_at: string;
-  } | null;
 }
 
 const ClientRemessas = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const [shipments, setShipments] = useState<Shipment[]>([]);
@@ -78,7 +63,6 @@ const ClientRemessas = () => {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     if (user) {
@@ -86,14 +70,12 @@ const ClientRemessas = () => {
     }
   }, [user]);
 
-  // Auto-refresh a cada 30 segundos para pegar novos CT-es
+  // Auto-refresh a cada 30 segundos
   useEffect(() => {
     if (!user) return;
-    
     const interval = setInterval(() => {
       loadShipments();
-    }, 30000); // 30 segundos
-
+    }, 30000);
     return () => clearInterval(interval);
   }, [user]);
 
@@ -118,40 +100,17 @@ const ClientRemessas = () => {
           quote_data,
           payment_data,
           sender_address:addresses!sender_address_id (
-            name,
-            street,
-            number,
-            neighborhood,
-            city,
-            state,
-            cep,
-            complement,
-            reference
+            name, street, number, neighborhood, city, state, cep, complement, reference
           ),
           recipient_address:addresses!recipient_address_id (
-            name,
-            street,
-            number,
-            neighborhood,
-            city,
-            state,
-            cep,
-            complement,
-            reference
+            name, street, number, neighborhood, city, state, cep, complement, reference
           )
         `)
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      // Mapear remessas sem buscar CT-e (dados de CT-e são exclusivos do admin)
-      const shipmentsWithoutCte = (data || []).map((shipment) => ({
-        ...shipment,
-        cte_emission: null
-      }));
-      
-      setShipments(shipmentsWithoutCte);
+      setShipments(data || []);
     } catch (error) {
       console.error('Error loading shipments:', error);
       toast({
@@ -164,67 +123,41 @@ const ClientRemessas = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      'PENDING_LABEL': { variant: 'success', label: 'Pago' }, // Remessas criadas são consideradas pagas
-      'PENDING_DOCUMENT': { variant: 'destructive', label: 'Aguardando Documento' },
-      'PENDING_PAYMENT': { variant: 'destructive', label: 'Aguardando Pagamento' },
-      'PAYMENT_CONFIRMED': { variant: 'success', label: 'Pago' },
-      'PAGO_AGUARDANDO_ETIQUETA': { variant: 'success', label: 'Pago' },
-      'LABEL_AVAILABLE': { variant: 'success', label: 'Etiqueta Disponível' },
-      'IN_TRANSIT': { variant: 'default', label: 'Em Trânsito' },
-      'DELIVERED': { variant: 'success', label: 'Entregue' },
-      'PAID': { variant: 'success', label: 'Pago' },
-      'COLETA_ACEITA': { variant: 'default', label: 'Coleta Aceita' },
-      'COLETA_FINALIZADA': { variant: 'default', label: 'Coleta Finalizada' },
-      'ENTREGA_FINALIZADA': { variant: 'success', label: 'Entrega Finalizada' }
+  const getStatusLabel = (status: string) => {
+    const statusMap: Record<string, string> = {
+      'PENDING_LABEL': 'Pago',
+      'PENDING_DOCUMENT': 'Aguardando Documento',
+      'PENDING_PAYMENT': 'Aguardando Pagamento',
+      'PAYMENT_CONFIRMED': 'Pago',
+      'PAGO_AGUARDANDO_ETIQUETA': 'Pago',
+      'LABEL_AVAILABLE': 'Etiqueta Disponível',
+      'IN_TRANSIT': 'Em Trânsito',
+      'DELIVERED': 'Entregue',
+      'PAID': 'Pago',
+      'COLETA_ACEITA': 'Coleta Aceita',
+      'COLETA_FINALIZADA': 'Coleta Finalizada',
+      'ENTREGA_FINALIZADA': 'Entregue',
     };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', label: status };
-    return <Badge variant={config.variant as any}>{config.label}</Badge>;
+    return statusMap[status] || status;
   };
 
-  const handleViewDetails = (shipment: Shipment) => {
-    setSelectedShipment(shipment);
-    setDetailsModalOpen(true);
+  const getStatusColor = (status: string) => {
+    const colorMap: Record<string, string> = {
+      'PENDING_PAYMENT': 'bg-red-50 text-red-700 border-red-200',
+      'PENDING_DOCUMENT': 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      'PENDING_LABEL': 'bg-green-50 text-green-700 border-green-200',
+      'PAYMENT_CONFIRMED': 'bg-green-50 text-green-700 border-green-200',
+      'PAGO_AGUARDANDO_ETIQUETA': 'bg-green-50 text-green-700 border-green-200',
+      'PAID': 'bg-green-50 text-green-700 border-green-200',
+      'LABEL_AVAILABLE': 'bg-blue-50 text-blue-700 border-blue-200',
+      'IN_TRANSIT': 'bg-blue-50 text-blue-700 border-blue-200',
+      'COLETA_ACEITA': 'bg-amber-50 text-amber-700 border-amber-200',
+      'COLETA_FINALIZADA': 'bg-blue-50 text-blue-700 border-blue-200',
+      'DELIVERED': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      'ENTREGA_FINALIZADA': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    };
+    return colorMap[status] || 'bg-gray-50 text-gray-700 border-gray-200';
   };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // Filter and sort shipments
-  const filteredShipments = shipments
-    .filter(shipment => {
-      const matchesSearch = !searchTerm || 
-        shipment.tracking_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        shipment.sender_address?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        shipment.recipient_address?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        shipment.recipient_address?.city?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = statusFilter === 'all' || shipment.status === statusFilter;
-      
-      return matchesSearch && matchesStatus;
-    })
-    .sort((a, b) => {
-      const dateA = new Date(a.created_at).getTime();
-      const dateB = new Date(b.created_at).getTime();
-      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-    });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -233,836 +166,332 @@ const ClientRemessas = () => {
     }).format(amount / 100);
   };
 
+  const getShipmentPrice = (shipment: Shipment) => {
+    let amount = null;
+    if (shipment.payment_data?.pixData?.amount) {
+      amount = shipment.payment_data.pixData.amount;
+    } else if (shipment.payment_data?.amount && shipment.payment_data?.method === 'pix') {
+      amount = shipment.payment_data.amount * 100;
+    } else if (shipment.payment_data?.amount) {
+      amount = shipment.payment_data.amount;
+    } else if (shipment.quote_data?.amount) {
+      amount = shipment.quote_data.amount * 100;
+    } else if (shipment.quote_data?.shippingQuote) {
+      const price = shipment.selected_option === 'express' 
+        ? shipment.quote_data.shippingQuote.expressPrice 
+        : shipment.quote_data.shippingQuote.economicPrice;
+      amount = price * 100;
+    } else if (shipment.quote_data?.totalPrice) {
+      amount = shipment.quote_data.totalPrice * 100;
+    } else if (shipment.quote_data?.deliveryDetails?.totalPrice) {
+      amount = shipment.quote_data.deliveryDetails.totalPrice * 100;
+    }
+    return amount;
+  };
+
+  const getRecipientName = (shipment: Shipment) => {
+    return shipment.quote_data?.addressData?.recipient?.name || 
+           shipment.recipient_address?.name || 
+           shipment.quote_data?.recipientData?.name || 
+           'Destinatário';
+  };
+
+  const getRecipientPhone = (shipment: Shipment) => {
+    return shipment.quote_data?.addressData?.recipient?.phone || 
+           shipment.quote_data?.recipientData?.phone || 
+           '';
+  };
+
+  const getRecipientAddress = (shipment: Shipment) => {
+    const addr = shipment.recipient_address;
+    if (addr && addr.street && addr.street !== 'A definir') {
+      return `${addr.street}, ${addr.number} - ${addr.neighborhood}, ${addr.city}/${addr.state}`;
+    }
+    const recipientData = shipment.quote_data?.recipientData || shipment.quote_data?.addressData?.recipient;
+    if (recipientData) {
+      return `${recipientData.street || ''}, ${recipientData.number || ''} - ${recipientData.neighborhood || ''}, ${recipientData.city || ''}/${recipientData.state || ''}`;
+    }
+    return 'Endereço não disponível';
+  };
+
+  const getDeliveryDate = (shipment: Shipment) => {
+    const deliveryDays = shipment.quote_data?.shippingQuote?.economicDays || 
+                         shipment.quote_data?.deliveryDetails?.deliveryDays || 
+                         7;
+    const createdDate = new Date(shipment.created_at);
+    createdDate.setDate(createdDate.getDate() + deliveryDays);
+    return createdDate;
+  };
+
+  const handleViewDetails = (shipment: Shipment) => {
+    setSelectedShipment(shipment);
+    setDetailsModalOpen(true);
+  };
+
+  const handleDownloadLabel = (shipment: Shipment) => {
+    if (shipment.label_pdf_url) {
+      window.open(shipment.label_pdf_url, '_blank');
+    } else {
+      toast({
+        title: "Etiqueta não disponível",
+        description: "A etiqueta ainda não foi gerada para esta remessa.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const filteredShipments = shipments
+    .filter(shipment => {
+      const matchesSearch = !searchTerm || 
+        shipment.tracking_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getRecipientName(shipment).toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || shipment.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+
   if (loading) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="flex flex-col space-y-2">
-          <Skeleton className="h-9 w-48" />
-          <Skeleton className="h-5 w-80" />
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Package className="h-12 w-12 animate-pulse mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Carregando...</p>
         </div>
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-4 w-64" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-24 w-full" />
-            ))}
-          </CardContent>
-        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/95">
-      <div className="container mx-auto p-4 md:p-6 lg:p-8 max-w-7xl">
-        {/* Header */}
-        <div className="mb-8 flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl lg:text-4xl font-bold text-foreground flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-xl">
-                <Package className="w-8 h-8 text-primary" />
-              </div>
-              Minhas Remessas
-            </h1>
-            <p className="text-muted-foreground mt-2 text-base lg:text-lg">
-              Gerencie todas as suas remessas em um só lugar
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            onClick={loadShipments}
-            disabled={loading}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
-        </div>
-
-        {/* Filters */}
-        <Card className="mb-8 border-border/50 shadow-lg bg-gradient-to-br from-card to-card/80">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <Filter className="w-5 h-5 text-primary" />
-              Filtros e Busca
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="lg:col-span-2">
-                <label className="text-sm font-medium text-foreground mb-2 block">Buscar</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por código, remetente, destinatário..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-11"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">Status</label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-11 border border-border shadow-sm hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors">
-                    <SelectValue placeholder="Filtrar por status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os Status</SelectItem>
-                    <SelectItem value="PENDING_PAYMENT">Aguardando Pagamento</SelectItem>
-                    <SelectItem value="PAID">Pago</SelectItem>
-                    <SelectItem value="IN_TRANSIT">Em Trânsito</SelectItem>
-                    <SelectItem value="DELIVERED">Entregue</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">Ordenar</label>
-                <Button
-                  variant="outline"
-                  onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-                  className="w-full h-11 justify-start hover:bg-primary hover:text-primary-foreground hover:border-primary"
-                >
-                  <ArrowUpDown className="w-4 h-4 mr-2" />
-                  {sortOrder === 'desc' ? 'Mais recente' : 'Mais antigo'}
-                </Button>
-              </div>
+    <div className="p-6 space-y-6">
+      <Card className="border-0 shadow-md">
+        <CardHeader className="pb-4">
+          <div className="flex justify-between items-center flex-wrap gap-4">
+            <div>
+              <CardTitle className="text-xl">Envios Recentes</CardTitle>
+              <CardDescription>Seus últimos envios nacionais</CardDescription>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Results */}
-        <Card className="border-border/50 shadow-lg bg-gradient-to-br from-card to-card/80">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Package className="w-5 h-5" />
-              <span>Suas Remessas</span>
-            </CardTitle>
-            <CardDescription>
-              {filteredShipments.length > 0 
-                ? `${filteredShipments.length} remessa${filteredShipments.length > 1 ? 's' : ''} encontrada${filteredShipments.length > 1 ? 's' : ''}`
-                : shipments.length === 0 
-                  ? "Nenhuma remessa encontrada"
-                  : "Nenhuma remessa corresponde aos filtros selecionados"
-              }
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {filteredShipments.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="w-20 h-20 mx-auto mb-6 bg-muted/30 rounded-full flex items-center justify-center">
-                  <Package className="w-10 h-10 text-muted-foreground" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">
-                  {shipments.length === 0 ? 'Nenhuma remessa encontrada' : 'Nenhum resultado para os filtros'}
-                </h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  {shipments.length === 0 
-                    ? 'Você ainda não criou nenhuma remessa. Comece fazendo uma cotação.'
-                    : 'Tente ajustar os filtros de busca para encontrar suas remessas.'
-                  }
-                </p>
-                <div className="flex gap-3 justify-center">
-                  {shipments.length > 0 && (
-                    <Button 
-                      variant="outline"
-                      onClick={() => {
-                        setSearchTerm('');
-                        setStatusFilter('all');
-                      }}
-                    >
-                      Limpar Filtros
-                    </Button>
-                  )}
-                  <Button asChild>
-                    <Link to="/cliente/cotacoes">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Nova Cotação
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredShipments.map((shipment) => (
-                  <Card key={shipment.id} className="border-border/30 hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-lg">
-                            {shipment.tracking_code || `ID${shipment.id.slice(0, 8).toUpperCase()}`}
-                          </h3>
-                          {getStatusBadge(shipment.status)}
-                        </div>
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Calendar className="w-4 h-4 mr-2" />
-                            <span className="font-medium">Criado em:</span>
-                            <span className="ml-1">{formatDateTime(shipment.created_at)}</span>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewDetails(shipment)}
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            Ver Detalhes
-                          </Button>
-                          
-                          {/* Etiquetas são exclusivas do painel admin e B2B */}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                          <div className="space-y-1">
-                            <p className="font-medium text-muted-foreground">Remetente</p>
-                            <p className="font-medium">
-                              {shipment.quote_data?.addressData?.sender?.name || 
-                               shipment.sender_address?.name || 
-                               shipment.quote_data?.senderData?.name || 
-                               'N/A'
-                              }
-                            </p>
-                            <div className="flex items-center text-muted-foreground">
-                              <MapPin className="w-3 h-3 mr-1" />
-                              {shipment.sender_address?.city && shipment.sender_address?.city !== 'A definir' ? 
-                                `${shipment.sender_address.city} - ${shipment.sender_address.state}` : 
-                                shipment.quote_data?.senderData?.city ? 
-                                  `${shipment.quote_data.senderData.city} - ${shipment.quote_data.senderData.state}` :
-                                  'Goiânia - GO'
-                              }
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <p className="font-medium text-muted-foreground">Destinatário</p>
-                            <p className="font-medium">
-                              {shipment.quote_data?.addressData?.recipient?.name || 
-                               shipment.recipient_address?.name || 
-                               shipment.quote_data?.recipientData?.name || 
-                               'N/A'
-                              }
-                            </p>
-                            <div className="flex items-center text-muted-foreground">
-                              <MapPin className="w-3 h-3 mr-1" />
-                              {shipment.recipient_address?.city && shipment.recipient_address?.city !== 'A definir' ? 
-                                `${shipment.recipient_address.city} - ${shipment.recipient_address.state}` : 
-                                shipment.quote_data?.recipientData?.city ? 
-                                  `${shipment.quote_data.recipientData.city} - ${shipment.quote_data.recipientData.state}` :
-                                  shipment.quote_data?.shippingQuote?.zoneName || 'N/A'
-                              }
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <p className="font-medium text-muted-foreground">Valor do Frete</p>
-                            {(() => {
-                               // Tentar obter o valor do frete de várias fontes
-                               let amount = null;
-                               
-                               // 1. Tentar payment_data.pixData.amount (PIX - já vem em centavos)
-                               if (shipment.payment_data?.pixData?.amount) {
-                                 amount = shipment.payment_data.pixData.amount; // já está em centavos
-                               }
-                               // 2. Tentar payment_data.amount (PIX novo formato - vem em reais, precisa converter)
-                               else if (shipment.payment_data?.amount && shipment.payment_data?.method === 'pix') {
-                                 amount = shipment.payment_data.amount * 100; // converter de reais para centavos
-                               }
-                               // 3. Tentar payment_data.amount (Stripe/Cartão - já em centavos)
-                               else if (shipment.payment_data?.amount) {
-                                 amount = shipment.payment_data.amount;
-                               }
-                               // 4. Tentar quote_data.amount (valor já pago)
-                               else if (shipment.quote_data?.amount) {
-                                 amount = shipment.quote_data.amount * 100; // converter de reais para centavos
-                               }
-                               // 5. Tentar quote_data.shippingQuote.economicPrice ou expressPrice
-                               else if (shipment.quote_data?.shippingQuote) {
-                                 const price = shipment.selected_option === 'express' 
-                                   ? shipment.quote_data.shippingQuote.expressPrice 
-                                   : shipment.quote_data.shippingQuote.economicPrice;
-                                 amount = price * 100; // converter de reais para centavos
-                               }
-                               // 6. Tentar quote_data.totalPrice
-                               else if (shipment.quote_data?.totalPrice) {
-                                 amount = shipment.quote_data.totalPrice * 100; // converter de reais para centavos
-                               }
-                               // 7. Tentar deliveryDetails.totalPrice
-                               else if (shipment.quote_data?.deliveryDetails?.totalPrice) {
-                                 amount = shipment.quote_data.deliveryDetails.totalPrice * 100;
-                               }
-
-                               return amount ? (
-                                 <p className="font-medium text-success">
-                                   {formatCurrency(amount)}
-                                 </p>
-                               ) : (
-                                 <p className="font-medium text-muted-foreground">Valor não disponível</p>
-                               );
-                            })()}
-                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Modal de Detalhes */}
-        <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Detalhes da Remessa - {selectedShipment?.tracking_code || `ID${selectedShipment?.id.slice(0, 8).toUpperCase()}`}
-            </DialogTitle>
-          </DialogHeader>
+            <Button 
+              onClick={() => navigate('/painel/convencional/cotacoes')}
+              className="bg-gradient-to-r from-primary to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg shadow-primary/20"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Envio
+            </Button>
+          </div>
           
-          <ScrollArea className="max-h-[60vh] pr-4">
-            {selectedShipment && (
-              <div className="space-y-6">
-                {/* Informações Gerais */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Informações Gerais</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Código de Rastreamento</p>
-                      <p className="font-medium">{selectedShipment.tracking_code || `ID${selectedShipment.id.slice(0, 8).toUpperCase()}`}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Status</p>
-                      <div className="mt-1">{getStatusBadge(selectedShipment.status)}</div>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Data e Hora de Criação</p>
-                      <p className="font-medium">{formatDateTime(selectedShipment.created_at)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Tipo de Serviço</p>
-                      <p className="font-medium">{selectedShipment.selected_option === 'standard' ? 'Econômico' : 'Expresso'}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">CEP de Origem</p>
-                      <p className="font-medium">
-                        {selectedShipment.quote_data?.originCep || 
-                         selectedShipment.quote_data?.originalFormData?.originCep || 
-                         selectedShipment.quote_data?.quoteData?.originCep ||
-                         '74900-000'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">CEP de Destino</p>
-                      <p className="font-medium">
-                        {selectedShipment.quote_data?.destinyCep || 
-                         selectedShipment.quote_data?.originalFormData?.destinyCep || 
-                         selectedShipment.quote_data?.quoteData?.destinyCep ||
-                         'N/A'}
-                      </p>
-                    </div>
-                     <div>
-                       <p className="text-muted-foreground">Opção de Coleta</p>
-                       <p className="font-medium">
-                         {(() => {
-                           const pickupOption = selectedShipment.quote_data?.deliveryDetails?.pickupOption || selectedShipment.pickup_option;
-                           return pickupOption === 'pickup' ? 'Coleta no Local' : 'Entrega no Hub';
-                         })()}
-                       </p>
-                     </div>
-                    {selectedShipment.pickup_option === 'pickup' && (
-                      <div>
-                        <p className="text-muted-foreground">Taxa de Coleta</p>
-                        <p className="font-medium">R$ 10,00</p>
-                      </div>
-                    )}
-                    {/* CT-e info removido - disponível apenas no admin */}
+          {/* Filtros */}
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por código ou destinatário..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-[180px] border border-border shadow-sm hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors">
+                <SelectValue placeholder="Todos os status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="PENDING_PAYMENT">Aguardando Pagamento</SelectItem>
+                <SelectItem value="PAID">Pago</SelectItem>
+                <SelectItem value="IN_TRANSIT">Em Trânsito</SelectItem>
+                <SelectItem value="DELIVERED">Entregue</SelectItem>
+                <SelectItem value="COLETA_ACEITA">Coleta Aceita</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {shipments.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground mb-4">Nenhum envio cadastrado ainda</p>
+              <Button onClick={() => navigate('/painel/convencional/cotacoes')}>
+                <Plus className="mr-2 h-4 w-4" />
+                Fazer Primeiro Envio
+              </Button>
+            </div>
+          ) : filteredShipments.length === 0 ? (
+            <div className="text-center py-12">
+              <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground mb-4">Nenhum envio encontrado com os filtros aplicados</p>
+              <Button variant="outline" onClick={() => { setSearchTerm(''); setStatusFilter('all'); }}>
+                Limpar Filtros
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredShipments.map((shipment) => {
+                const price = getShipmentPrice(shipment);
+                const deliveryDate = getDeliveryDate(shipment);
+                return (
+                  <div
+                    key={shipment.id}
+                    className="p-4 border-0 rounded-xl shadow-md hover:shadow-lg transition-all bg-white overflow-hidden"
+                  >
+                    {/* Status bar on top */}
+                    <div className={`h-1 -mx-4 -mt-4 mb-4 ${
+                      shipment.status === 'DELIVERED' || shipment.status === 'ENTREGA_FINALIZADA' 
+                        ? 'bg-emerald-500' 
+                        : shipment.status === 'PENDING_PAYMENT' 
+                          ? 'bg-red-500' 
+                          : 'bg-primary'
+                    }`} />
                     
-                    {/* Exibir etiqueta se disponível */}
-                    {selectedShipment.label_pdf_url && (
-                      <div className="col-span-2 mt-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(selectedShipment.label_pdf_url!, '_blank')}
-                          className="flex items-center gap-2"
-                        >
-                          <FileText className="w-4 h-4" />
-                          Ver Etiqueta
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-mono text-sm font-bold text-foreground">
+                        {shipment.tracking_code || `ID${shipment.id.slice(0, 10).toUpperCase()}`}
+                      </span>
+                      <Badge className={`text-xs font-medium border ${getStatusColor(shipment.status)}`}>
+                        {getStatusLabel(shipment.status)}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-1 text-sm">
+                      <p className="font-medium flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        {getRecipientName(shipment)}
+                      </p>
+                      {getRecipientPhone(shipment) && (
+                        <p className="text-muted-foreground flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          {getRecipientPhone(shipment)}
+                        </p>
+                      )}
+                      <p className="text-muted-foreground flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {getRecipientAddress(shipment)}
+                      </p>
+                      <p className="text-foreground font-medium">
+                        Previsão: {format(deliveryDate, 'dd/MM/yyyy')}
+                      </p>
+                      {price && (
+                        <p className="text-primary font-semibold">
+                          Frete: {formatCurrency(price)}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Aviso de etiqueta */}
+                    <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                      <p className="text-xs font-semibold text-orange-700 flex items-center gap-1">
+                        ⚠️ Atenção: Por favor cole esta etiqueta no produto
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewDetails(shipment)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver Detalhes
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleDownloadLabel(shipment)}
+                        className="bg-primary hover:bg-primary/90"
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        Baixar Etiqueta
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Modal de Detalhes */}
+      <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle>Detalhes do Envio</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[calc(85vh-100px)] px-6 py-4">
+            {selectedShipment && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Código de Rastreio</p>
+                    <p className="font-mono font-semibold">
+                      {selectedShipment.tracking_code || `ID${selectedShipment.id.slice(0, 10).toUpperCase()}`}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Status</p>
+                    <Badge className={`text-xs font-medium border ${getStatusColor(selectedShipment.status)}`}>
+                      {getStatusLabel(selectedShipment.status)}
+                    </Badge>
                   </div>
                 </div>
 
-                <Separator />
-
-                {/* Dados do Remetente */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Dados do Remetente</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                     <div>
-                       <p className="text-muted-foreground">Nome</p>
-                       <p className="font-medium">
-                         {selectedShipment.quote_data?.addressData?.sender?.name || 
-                          selectedShipment.sender_address?.name || 
-                          selectedShipment.quote_data?.senderData?.name || 
-                          'Nome não informado'
-                         }
-                       </p>
-                     </div>
-                    <div>
-                      <p className="text-muted-foreground">CEP</p>
-                      <p className="font-medium">
-                        {selectedShipment.sender_address?.cep && selectedShipment.sender_address?.cep !== '00000000' ? 
-                          selectedShipment.sender_address.cep : 
-                          selectedShipment.quote_data?.senderData?.address?.cep || 'N/A'
-                        }
-                      </p>
-                    </div>
-                    {selectedShipment.quote_data?.senderData?.document && (
-                      <div>
-                        <p className="text-muted-foreground">Documento</p>
-                        <p className="font-medium">{selectedShipment.quote_data.senderData.document}</p>
-                      </div>
-                    )}
-                    {selectedShipment.quote_data?.senderData?.phone && (
-                      <div>
-                        <p className="text-muted-foreground">Telefone</p>
-                        <p className="font-medium">{selectedShipment.quote_data.senderData.phone}</p>
-                      </div>
-                    )}
-                    {selectedShipment.quote_data?.senderData?.email && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">E-mail</p>
-                        <p className="font-medium">{selectedShipment.quote_data.senderData.email}</p>
-                      </div>
-                    )}
-                    <div className="col-span-2">
-                      <p className="text-muted-foreground">Endereço</p>
-                      <p className="font-medium">
-                        {selectedShipment.sender_address?.street && selectedShipment.sender_address?.street !== 'Endereço a ser definido' ? 
-                          `${selectedShipment.sender_address.street}, ${selectedShipment.sender_address.number}${selectedShipment.sender_address?.complement ? `, ${selectedShipment.sender_address.complement}` : ''}` :
-                          selectedShipment.quote_data?.senderData?.address ? 
-                            `${selectedShipment.quote_data.senderData.address.street}, ${selectedShipment.quote_data.senderData.address.number}${selectedShipment.quote_data.senderData.address?.complement ? `, ${selectedShipment.quote_data.senderData.address.complement}` : ''}` :
-                            'Endereço não informado'
-                        }
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Bairro</p>
-                      <p className="font-medium">
-                        {selectedShipment.sender_address?.neighborhood && selectedShipment.sender_address?.neighborhood !== 'Centro' ? 
-                          selectedShipment.sender_address.neighborhood : 
-                          selectedShipment.quote_data?.senderData?.address?.neighborhood || 'N/A'
-                        }
-                      </p>
-                    </div>
-                     <div>
-                       <p className="text-muted-foreground">Cidade/Estado</p>
-                       <p className="font-medium">
-                         {selectedShipment.sender_address?.city && selectedShipment.sender_address?.city !== 'A definir' ? 
-                           `${selectedShipment.sender_address.city} - ${selectedShipment.sender_address.state}` : 
-                           selectedShipment.quote_data?.senderData?.address?.city ? 
-                             `${selectedShipment.quote_data.senderData.address.city} - ${selectedShipment.quote_data.senderData.address.state}` :
-                             'Goiânia - GO'
-                         }
-                       </p>
-                     </div>
-                    {(selectedShipment.sender_address?.reference || selectedShipment.quote_data?.senderData?.address?.reference) && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">Referência</p>
-                        <p className="font-medium">
-                          {selectedShipment.sender_address?.reference || selectedShipment.quote_data?.senderData?.address?.reference}
-                        </p>
-                      </div>
-                    )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Criado em</p>
+                    <p className="font-semibold">
+                      {format(new Date(selectedShipment.created_at), 'dd/MM/yyyy HH:mm')}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Previsão de Entrega</p>
+                    <p className="font-semibold">
+                      {format(getDeliveryDate(selectedShipment), 'dd/MM/yyyy')}
+                    </p>
                   </div>
                 </div>
 
-                <Separator />
-
-                {/* Dados do Destinatário */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Dados do Destinatário</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                     <div>
-                       <p className="text-muted-foreground">Nome</p>
-                       <p className="font-medium">
-                         {selectedShipment.quote_data?.addressData?.recipient?.name || 
-                          selectedShipment.recipient_address?.name || 
-                          selectedShipment.quote_data?.recipientData?.name || 
-                          'Nome não informado'
-                         }
-                       </p>
-                     </div>
-                    <div>
-                      <p className="text-muted-foreground">CEP</p>
-                      <p className="font-medium">
-                        {selectedShipment.recipient_address?.cep && selectedShipment.recipient_address?.cep !== '00000000' ? 
-                          selectedShipment.recipient_address.cep : 
-                          selectedShipment.quote_data?.recipientData?.address?.cep || 'N/A'
-                        }
-                      </p>
-                    </div>
-                    {selectedShipment.quote_data?.recipientData?.document && (
-                      <div>
-                        <p className="text-muted-foreground">Documento</p>
-                        <p className="font-medium">{selectedShipment.quote_data.recipientData.document}</p>
-                      </div>
-                    )}
-                    {selectedShipment.quote_data?.recipientData?.phone && (
-                      <div>
-                        <p className="text-muted-foreground">Telefone</p>
-                        <p className="font-medium">{selectedShipment.quote_data.recipientData.phone}</p>
-                      </div>
-                    )}
-                    {selectedShipment.quote_data?.recipientData?.email && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">E-mail</p>
-                        <p className="font-medium">{selectedShipment.quote_data.recipientData.email}</p>
-                      </div>
-                    )}
-                    <div className="col-span-2">
-                      <p className="text-muted-foreground">Endereço</p>
-                      <p className="font-medium">
-                        {selectedShipment.recipient_address?.street && selectedShipment.recipient_address?.street !== 'Endereço a ser definido' ? 
-                          `${selectedShipment.recipient_address.street}, ${selectedShipment.recipient_address.number}${selectedShipment.recipient_address?.complement ? `, ${selectedShipment.recipient_address.complement}` : ''}` :
-                          selectedShipment.quote_data?.recipientData?.address ? 
-                            `${selectedShipment.quote_data.recipientData.address.street}, ${selectedShipment.quote_data.recipientData.address.number}${selectedShipment.quote_data.recipientData.address?.complement ? `, ${selectedShipment.quote_data.recipientData.address.complement}` : ''}` :
-                            'Endereço não informado'
-                        }
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Bairro</p>
-                      <p className="font-medium">
-                        {selectedShipment.recipient_address?.neighborhood && selectedShipment.recipient_address?.neighborhood !== 'Centro' ? 
-                          selectedShipment.recipient_address.neighborhood : 
-                          selectedShipment.quote_data?.recipientData?.address?.neighborhood || 'N/A'
-                        }
-                      </p>
-                    </div>
-                     <div>
-                       <p className="text-muted-foreground">Cidade/Estado</p>
-                       <p className="font-medium">
-                         {selectedShipment.recipient_address?.city && selectedShipment.recipient_address?.city !== 'A definir' ? 
-                           `${selectedShipment.recipient_address.city} - ${selectedShipment.recipient_address.state}` : 
-                           selectedShipment.quote_data?.recipientData?.address?.city ? 
-                             `${selectedShipment.quote_data.recipientData.address.city} - ${selectedShipment.quote_data.recipientData.address.state}` :
-                             selectedShipment.quote_data?.shippingQuote?.zoneName || 'N/A'
-                         }
-                       </p>
-                     </div>
-                    {(selectedShipment.recipient_address?.reference || selectedShipment.quote_data?.recipientData?.address?.reference) && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">Referência</p>
-                        <p className="font-medium">
-                          {selectedShipment.recipient_address?.reference || selectedShipment.quote_data?.recipientData?.address?.reference}
-                        </p>
-                      </div>
-                    )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Peso</p>
+                    <p className="font-semibold">{selectedShipment.weight} kg</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Valor do Frete</p>
+                    <p className="font-semibold text-primary">
+                      {getShipmentPrice(selectedShipment) 
+                        ? formatCurrency(getShipmentPrice(selectedShipment)!) 
+                        : 'N/A'}
+                    </p>
                   </div>
                 </div>
 
-                <Separator />
-
-                {/* Dados do Pacote */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Dados do Pacote</h3>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Peso</p>
-                      <p className="font-medium">
-                        {selectedShipment.quote_data?.originalFormData?.weight || 
-                         selectedShipment.quote_data?.weight || 
-                         selectedShipment.weight}kg
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Quantidade</p>
-                      <p className="font-medium">
-                        {selectedShipment.quote_data?.originalFormData?.quantity || 
-                         selectedShipment.quote_data?.quantity || '1'} volumes
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Formato</p>
-                      <p className="font-medium capitalize">
-                        {selectedShipment.quote_data?.originalFormData?.format || 
-                         selectedShipment.quote_data?.format || 
-                         selectedShipment.format}
-                      </p>
-                    </div>
-                    {/* Valor Unitário */}
-                    {(selectedShipment.quote_data?.originalFormData?.unitValue || 
-                      selectedShipment.quote_data?.unitValue ||
-                      selectedShipment.quote_data?.merchandiseDetails?.unitValue) && (
-                      <div>
-                        <p className="text-muted-foreground">Valor Unitário</p>
-                        <p className="font-medium">
-                          R$ {parseFloat(
-                            selectedShipment.quote_data?.originalFormData?.unitValue || 
-                            selectedShipment.quote_data?.unitValue ||
-                            selectedShipment.quote_data?.merchandiseDetails?.unitValue || '0'
-                          ).toFixed(2).replace('.', ',')}
-                        </p>
-                      </div>
-                    )}
-                    {/* Valor Total da Mercadoria */}
-                    {(selectedShipment.quote_data?.originalFormData?.totalMerchandiseValue ||
-                      selectedShipment.quote_data?.totalMerchandiseValue || 
-                      selectedShipment.quote_data?.merchandiseDetails?.totalValue) && (
-                      <div>
-                        <p className="text-muted-foreground">Valor Total da Mercadoria</p>
-                        <p className="font-medium">
-                          R$ {parseFloat(
-                            selectedShipment.quote_data?.originalFormData?.totalMerchandiseValue ||
-                            selectedShipment.quote_data?.totalMerchandiseValue || 
-                            selectedShipment.quote_data?.merchandiseDetails?.totalValue || '0'
-                          ).toFixed(2).replace('.', ',')}
-                        </p>
-                      </div>
-                    )}
-                    {/* Valor da Nota (Valor Declarado) */}
-                    {(() => {
-                      const merchandiseValue = selectedShipment.quote_data?.originalFormData?.totalMerchandiseValue ||
-                                           selectedShipment.quote_data?.totalMerchandiseValue || 
-                                           selectedShipment.quote_data?.merchandiseDetails?.totalValue;
-                      
-                      if (merchandiseValue) {
-                        return (
-                          <div>
-                            <p className="text-muted-foreground">Valor da Nota (Valor Declarado)</p>
-                            <p className="font-medium text-primary">
-                              R$ {parseFloat(merchandiseValue).toFixed(2).replace('.', ',')}
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-
-                    {/* Valor do Seguro (0,6% do valor declarado) */}
-                    {(() => {
-                      const merchandiseValue = selectedShipment.quote_data?.originalFormData?.totalMerchandiseValue ||
-                                           selectedShipment.quote_data?.totalMerchandiseValue || 
-                                           selectedShipment.quote_data?.merchandiseDetails?.totalValue;
-                      
-                      if (merchandiseValue) {
-                        const insuranceValue = parseFloat(merchandiseValue) * 0.006; // 0,6%
-                        return (
-                          <div>
-                            <p className="text-muted-foreground">Valor do Seguro (0,6%)</p>
-                            <p className="font-medium text-primary">
-                              R$ {insuranceValue.toFixed(2).replace('.', ',')}
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                    {/* Peso Cúbico se disponível */}
-                    {selectedShipment.quote_data?.technicalData?.cubicWeight && (
-                      <div>
-                        <p className="text-muted-foreground">Peso Cúbico</p>
-                        <p className="font-medium">{selectedShipment.quote_data.technicalData.cubicWeight.toFixed(3)}kg</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Volumes Individuais */}
-                  {(() => {
-                    const volumes = selectedShipment.quote_data?.merchandiseDetails?.volumes || 
-                                    selectedShipment.quote_data?.technicalData?.volumes ||
-                                    selectedShipment.quote_data?.originalFormData?.volumes ||
-                                    selectedShipment.quote_data?.volumes || 
-                                    selectedShipment.quote_data?.quoteData?.volumes;
-                    if (Array.isArray(volumes) && volumes.length > 0) {
-                      return (
-                        <div className="mt-6">
-                          <h4 className="text-base font-semibold mb-3 text-primary">Volumes Individuais</h4>
-                          <div className="space-y-3">
-                            {volumes.map((volume: any, index: number) => (
-                              <div key={index} className="p-4 border border-border/50 rounded-lg bg-muted/30">
-                                <div className="flex items-center mb-2">
-                                  <Package className="w-4 h-4 mr-2 text-primary" />
-                                  <span className="font-medium">Volume {index + 1}</span>
-                                </div>
-                                <div className="grid grid-cols-4 gap-3 text-sm">
-                                  <div>
-                                    <p className="text-muted-foreground text-xs">Peso</p>
-                                    <p className="font-medium">{volume.weight}kg</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-muted-foreground text-xs">Comprimento</p>
-                                    <p className="font-medium">{volume.length}cm</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-muted-foreground text-xs">Largura</p>
-                                    <p className="font-medium">{volume.width}cm</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-muted-foreground text-xs">Altura</p>
-                                    <p className="font-medium">{volume.height}cm</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
+                <hr className="border-border" />
+                
+                <h4 className="font-semibold flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Destinatário
+                </h4>
+                <div className="text-sm bg-muted/50 p-3 rounded">
+                  <p className="font-medium">{getRecipientName(selectedShipment)}</p>
+                  {getRecipientPhone(selectedShipment) && (
+                    <p className="text-muted-foreground">{getRecipientPhone(selectedShipment)}</p>
+                  )}
+                  <p className="text-muted-foreground">{getRecipientAddress(selectedShipment)}</p>
                 </div>
 
-                <Separator />
-
-                {/* Dados do Documento */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Dados do Documento</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Tipo de Documento</p>
-                      <p className="font-medium">
-                        {selectedShipment.quote_data?.documentType === 'nota_fiscal' ? 'Nota Fiscal' : 
-                         selectedShipment.quote_data?.documentType === 'declaration' ? 'Declaração de Conteúdo' :
-                         'Declaração de Conteúdo'}
-                      </p>
-                    </div>
-                    {(selectedShipment.quote_data?.nfeKey || selectedShipment.quote_data?.nfeChave) && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">Chave da Nota Fiscal</p>
-                        <p className="font-medium font-mono text-xs break-all">
-                          {selectedShipment.quote_data.nfeKey || selectedShipment.quote_data.nfeChave}
-                        </p>
-                      </div>
-                    )}
-                    {(selectedShipment.quote_data?.merchandiseDescription || selectedShipment.quote_data?.descricaoMercadoria) && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">Descrição da Mercadoria</p>
-                        <p className="font-medium">
-                          {selectedShipment.quote_data.merchandiseDescription || selectedShipment.quote_data.descricaoMercadoria}
-                        </p>
-                      </div>
-                    )}
-                    {selectedShipment.quote_data?.merchandiseValue && (
-                      <div>
-                        <p className="text-muted-foreground">Valor da Mercadoria</p>
-                        <p className="font-medium">R$ {selectedShipment.quote_data.merchandiseValue.toFixed(2).replace('.', ',')}</p>
-                      </div>
-                    )}
-                    {selectedShipment.quote_data?.totalMerchandiseValue && !selectedShipment.quote_data?.merchandiseValue && (
-                      <div>
-                        <p className="text-muted-foreground">Valor Total da Mercadoria</p>
-                        <p className="font-medium">R$ {selectedShipment.quote_data.totalMerchandiseValue.toFixed(2).replace('.', ',')}</p>
-                      </div>
-                    )}
-                    {selectedShipment.quote_data?.quantity && (
-                      <div>
-                        <p className="text-muted-foreground">Quantidade de Volumes</p>
-                        <p className="font-medium">{selectedShipment.quote_data.quantity}</p>
-                      </div>
-                    )}
-                    {/* Mostrar informações adicionais se não houver dados específicos */}
-                    {!selectedShipment.quote_data?.merchandiseDescription && 
-                     !selectedShipment.quote_data?.descricaoMercadoria && 
-                     !selectedShipment.quote_data?.nfeKey && 
-                     !selectedShipment.quote_data?.nfeChave && (
-                      <div className="col-span-2 text-center py-4 text-muted-foreground">
-                        <p>Informações do documento não disponíveis</p>
-                        <p className="text-xs mt-1">Dados podem não ter sido preenchidos durante a cotação</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Dados de Pagamento */}
-                {selectedShipment.payment_data && (
-                  <>
-                    <div>
-                      <h3 className="text-lg font-semibold mb-3">Dados de Pagamento</h3>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                         <div>
-                           <p className="text-muted-foreground">Método de Pagamento</p>
-                           <p className="font-medium">{selectedShipment.payment_data.method?.toUpperCase()}</p>
-                         </div>
-                          {(() => {
-                            // Prioridade: Obter valor da cotação aprovada (mais confiável)
-                            let amount = null;
-                            
-                            // 1. PRIORIDADE: Valor da cotação aprovada (shippingQuote)
-                            if (selectedShipment.quote_data?.shippingQuote) {
-                              const price = selectedShipment.selected_option === 'express' 
-                                ? (selectedShipment.quote_data.shippingQuote.expressPrice || selectedShipment.quote_data.quoteData?.shippingQuote?.expressPrice)
-                                : (selectedShipment.quote_data.shippingQuote.economicPrice || selectedShipment.quote_data.quoteData?.shippingQuote?.economicPrice);
-                              if (price) {
-                                amount = price * 100; // converter de reais para centavos
-                              }
-                            }
-                            // 2. Fallback: payment_data.pixData.amount (PIX - já vem em centavos)
-                            if (!amount && selectedShipment.payment_data?.pixData?.amount) {
-                              amount = selectedShipment.payment_data.pixData.amount;
-                            }
-                            // 3. Fallback: payment_data.amount (PIX novo formato - vem em reais)
-                            else if (!amount && selectedShipment.payment_data?.amount && selectedShipment.payment_data?.method === 'pix') {
-                              amount = selectedShipment.payment_data.amount * 100;
-                            }
-                            // 4. Fallback: payment_data.amount (Stripe/Cartão - já em centavos)
-                            else if (!amount && selectedShipment.payment_data?.amount) {
-                              amount = selectedShipment.payment_data.amount;
-                            }
-                            // 5. Fallback: quote_data.totalPrice
-                            else if (!amount && selectedShipment.quote_data?.totalPrice) {
-                              amount = selectedShipment.quote_data.totalPrice * 100;
-                            }
-                            // 6. Fallback: deliveryDetails.totalPrice
-                            else if (!amount && selectedShipment.quote_data?.deliveryDetails?.totalPrice) {
-                              amount = selectedShipment.quote_data.deliveryDetails.totalPrice * 100;
-                            }
-
-                            return amount ? (
-                              <div>
-                                <p className="text-muted-foreground">Valor do Frete</p>
-                                <p className="font-medium">{formatCurrency(amount)}</p>
-                              </div>
-                            ) : null;
-                          })()}
-                        {selectedShipment.payment_data.paidAt && (
-                          <div>
-                            <p className="text-muted-foreground">Data do Pagamento</p>
-                            <p className="font-medium">{formatDate(selectedShipment.payment_data.paidAt)}</p>
-                          </div>
-                        )}
-                        {selectedShipment.payment_data.status && (
-                          <div>
-                            <p className="text-muted-foreground">Status do Pagamento</p>
-                            <p className="font-medium">{selectedShipment.payment_data.status === 'paid' ? 'PAGO' : selectedShipment.payment_data.status}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <Separator />
-                  </>
+                {selectedShipment.label_pdf_url && (
+                  <Button
+                    variant="default"
+                    className="w-full"
+                    onClick={() => handleDownloadLabel(selectedShipment)}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Baixar Etiqueta
+                  </Button>
                 )}
-
-                {/* Dados da Cotação removidos - exclusivo do admin */}
               </div>
             )}
           </ScrollArea>
         </DialogContent>
-        </Dialog>
-      </div>
+      </Dialog>
     </div>
   );
 };
