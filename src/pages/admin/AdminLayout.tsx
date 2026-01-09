@@ -48,7 +48,6 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const navigation = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Filiais', href: '/admin/filiais', icon: Building2 },
-    { name: 'Rastreamento', href: '/admin/rastreamento', icon: Search },
   ];
 
   const remessasSubItems = [
@@ -57,6 +56,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   ];
 
   const navigationAfterRemessas = [
+    { name: 'Rastreamento', href: '/admin/rastreamento', icon: Search },
     { name: 'Cadastros', href: '/admin/cadastros', icon: Users },
     { name: 'CTe', href: '/admin/cte', icon: FileText },
     { name: 'Faturamento', href: '/admin/faturamento', icon: DollarSign },
@@ -209,10 +209,25 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         </header>
 
         {/* Desktop Header */}
-        <header className="hidden lg:flex sticky top-0 z-40 bg-white border-b shadow-sm h-14 items-center px-6">
+        <header className="hidden lg:flex sticky top-0 z-40 bg-white border-b shadow-sm h-14 items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <Shield className="h-5 w-5 text-primary" />
             <span className="font-semibold text-foreground">Painel Administrativo</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-sm font-medium text-foreground">{getDisplayName()}</p>
+              <p className="text-xs text-muted-foreground">{user?.email}</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => signOut('/admin/auth')}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
           </div>
         </header>
 
