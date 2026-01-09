@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Progress } from "@/components/ui/progress";
 import {
   Calculator,
   MapPin,
@@ -22,6 +24,13 @@ import {
   ArrowRight,
   LogIn,
   AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  Calendar,
+  Scale,
+  Bike,
+  Car,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { validateCep } from "@/services/shippingService";
@@ -38,6 +47,8 @@ interface Volume {
   merchandiseType: string;
 }
 
+const EXPRESSO_STEPS = 4;
+
 const CotacaoPreview = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -48,7 +59,7 @@ const CotacaoPreview = () => {
   const [quoteResult, setQuoteResult] = useState<any>(null);
   const [selectedCarrier, setSelectedCarrier] = useState<"jadlog" | "magalog" | null>(null);
 
-  // Form data
+  // Form data - Convencional
   const [originCep] = useState("74900-000");
   const [destinyCep, setDestinyCep] = useState("");
   const [unitValue, setUnitValue] = useState("");
@@ -56,9 +67,15 @@ const CotacaoPreview = () => {
     { id: "1", weight: "", length: "", width: "", height: "", merchandiseType: "" },
   ]);
 
-  // Expresso form
-  const [expressoDestinyCep, setExpressoDestinyCep] = useState("");
-  const [expressoWeight, setExpressoWeight] = useState("");
+  // Expresso Quiz State
+  const [expressoStep, setExpressoStep] = useState(1);
+  const [expressoData, setExpressoData] = useState({
+    volume_count: "1",
+    delivery_date: "",
+    vehicle_type: "",
+    volume_weights: [""] as string[],
+    destination_count: "1",
+  });
 
   const formatCurrency = (value: string): string => {
     const numbers = value.replace(/\D/g, "");
@@ -104,18 +121,12 @@ const CotacaoPreview = () => {
   const updateVolume = (id: string, field: keyof Volume, value: string, previousValue?: string) => {
     let sanitizedValue = value;
     
-    // Para o campo peso
     if (field === "weight") {
-      // Permitir apenas números e ponto
       sanitizedValue = value.replace(/[^0-9.]/g, "");
-      
-      // Auto-inserir ponto apenas quando o usuário digita "0" em campo vazio
       const isTypingZeroFromEmpty = sanitizedValue === "0" && (!previousValue || previousValue === "");
       if (isTypingZeroFromEmpty) {
         sanitizedValue = "0.";
       }
-      
-      // Limitar peso a 4 dígitos no total
       const digitsOnly = sanitizedValue.replace(/\D/g, "");
       if (digitsOnly.length > 4) {
         return;
@@ -169,6 +180,117 @@ const CotacaoPreview = () => {
     return volumes.every((v) => v.weight && v.length && v.width && v.height && v.merchandiseType);
   };
 
+  // Expresso price calculation
+  const calculateExpressoTotal = () => {
+    const basePricePerDestination = 15;
+    const destinationCount = parseInt(expressoData.destination_count) || 1;
+    const baseTotal = destinationCount * basePricePerDestination;
+    
+    const weights = expressoData.volume_weights.map(w => parseFloat(w) || 0);
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    
+    let weightExtra = 0;
+    if (totalWeight > 5) {
+      weightExtra = Math.ceil(totalWeight - 5);
+    }
+    
+    const volumeCount = parseInt(expressoData.volume_count) || 1;
+    let volumeExtra = 0;
+    if (volumeCount > 3) {
+      volumeExtra = (volumeCount - 3) * 5;
+    }
+    
+    return baseTotal + weightExtra + volumeExtra;
+  };
+
+  const expressoTotalWeight = expressoData.volume_weights.map(w => parseFloat(w) || 0).reduce((sum, w) => sum + w, 0);
+  const expressoTotalPrice = calculateExpressoTotal();
+
+  const handleExpressoChange = (field: string, value: string) => {
+    if (field === 'volume_count') {
+      const volumeCount = parseInt(value) || 0;
+      setExpressoData(prev => ({
+        ...prev,
+        [field]: value,
+        volume_weights: Array(volumeCount).fill('').map((_, i) => prev.volume_weights[i] || ''),
+      }));
+    } else {
+      setExpressoData(prev => ({ ...prev, [field]: value }));
+    }
+  };
+
+  const handleExpressoWeightChange = (index: number, value: string) => {
+    const formatted = value.replace(/[^\d.]/g, '');
+    setExpressoData(prev => ({
+      ...prev,
+      volume_weights: prev.volume_weights.map((w, i) => i === index ? formatted : w)
+    }));
+  };
+
+  const validateExpressoStep = (step: number): boolean => {
+    switch (step) {
+      case 1:
+        if (!expressoData.volume_count || parseInt(expressoData.volume_count) < 1) {
+          toast({ title: "Atenção", description: "Informe a quantidade de volumes", variant: "destructive" });
+          return false;
+        }
+        if (!expressoData.delivery_date) {
+          toast({ title: "Atenção", description: "Selecione a data de entrega", variant: "destructive" });
+          return false;
+        }
+        return true;
+      case 2:
+        const hasValidWeights = expressoData.volume_weights.every(w => parseFloat(w) > 0);
+        if (!hasValidWeights) {
+          toast({ title: "Atenção", description: "Preencha o peso de todos os volumes", variant: "destructive" });
+          return false;
+        }
+        if (!expressoData.destination_count || parseInt(expressoData.destination_count) < 1) {
+          toast({ title: "Atenção", description: "Informe a quantidade de destinos", variant: "destructive" });
+          return false;
+        }
+        return true;
+      case 3:
+        if (!expressoData.vehicle_type) {
+          toast({ title: "Atenção", description: "Selecione o tipo de veículo", variant: "destructive" });
+          return false;
+        }
+        return true;
+      default:
+        return true;
+    }
+  };
+
+  const handleExpressoNext = () => {
+    if (validateExpressoStep(expressoStep)) {
+      setExpressoStep(prev => Math.min(prev + 1, EXPRESSO_STEPS));
+    }
+  };
+
+  const handleExpressoPrev = () => {
+    setExpressoStep(prev => Math.max(prev - 1, 1));
+  };
+
+  const getExpressoStepIcon = (step: number) => {
+    switch (step) {
+      case 1: return <Package className="h-6 w-6" />;
+      case 2: return <Scale className="h-6 w-6" />;
+      case 3: return <Truck className="h-6 w-6" />;
+      case 4: return <DollarSign className="h-6 w-6" />;
+      default: return <Package className="h-6 w-6" />;
+    }
+  };
+
+  const getExpressoStepTitle = (step: number) => {
+    switch (step) {
+      case 1: return "Informações do Envio";
+      case 2: return "Detalhes dos Volumes";
+      case 3: return "Tipo de Veículo";
+      case 4: return "Resumo e Valor";
+      default: return "";
+    }
+  };
+
   const handleCalculateConvencional = async () => {
     if (!validateCep(destinyCep)) {
       toast({ title: "CEP inválido", description: "Por favor, insira um CEP válido", variant: "destructive" });
@@ -194,7 +316,6 @@ const CotacaoPreview = () => {
       const totalWeight = calculateTotalWeight();
       const totalCubicWeight = calculateTotalCubicWeight();
       
-      // Preparar dados de cada volume
       const volumesData = volumes.map((vol, index) => {
         const volLength = parseFloat(vol.length) || 0;
         const volWidth = parseFloat(vol.width) || 0;
@@ -226,8 +347,6 @@ const CotacaoPreview = () => {
         dataHora: new Date().toISOString(),
       };
 
-      console.log("📤 Enviando POST para Webhook:", webhookPayload);
-
       const WEBHOOK_URL = "https://webhook.grupoconfix.com/webhook/470b0b62-d2ea-4f66-80c3-5dc013710241";
 
       const response = await fetch(WEBHOOK_URL, {
@@ -241,9 +360,7 @@ const CotacaoPreview = () => {
       }
 
       const webhookResponse = await response.json();
-      console.log("📥 Webhook resposta:", webhookResponse);
 
-      // Processar resposta
       if (Array.isArray(webhookResponse) && webhookResponse.length > 0) {
         const apiData = webhookResponse[0];
         setQuoteResult({
@@ -266,49 +383,6 @@ const CotacaoPreview = () => {
     }
   };
 
-  const handleCalculateExpresso = async () => {
-    if (!expressoDestinyCep || expressoDestinyCep.replace(/\D/g, "").length !== 8) {
-      toast({ title: "CEP inválido", description: "Por favor, insira um CEP válido", variant: "destructive" });
-      return;
-    }
-
-    if (!expressoWeight || parseFloat(expressoWeight) <= 0) {
-      toast({ title: "Peso obrigatório", description: "Informe o peso do volume", variant: "destructive" });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const cepPrefix = expressoDestinyCep.replace(/\D/g, "").substring(0, 2);
-      const weight = parseFloat(expressoWeight);
-      
-      let basePrice = 25;
-      if (["01", "02", "03", "04", "05", "06", "07", "08", "09"].includes(cepPrefix)) {
-        basePrice = 45;
-      } else if (["20", "21", "22", "23", "24"].includes(cepPrefix)) {
-        basePrice = 50;
-      } else if (["30", "31", "32", "33", "34", "35"].includes(cepPrefix)) {
-        basePrice = 40;
-      }
-      
-      const pricePerKg = weight > 5 ? 3.5 : 5;
-      const totalPrice = basePrice + (weight * pricePerKg);
-
-      setQuoteResult({
-        type: "expresso",
-        price: totalPrice,
-        deliveryDays: 1,
-        weight,
-      });
-
-      toast({ title: "Cotação expressa calculada!", description: "Veja o preço abaixo" });
-    } catch (error) {
-      toast({ title: "Erro", description: "Não foi possível calcular a cotação", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleProceed = () => {
     if (!user) {
       sessionStorage.setItem("cotacaoPreviewData", JSON.stringify({
@@ -318,8 +392,7 @@ const CotacaoPreview = () => {
         destinyCep,
         unitValue,
         volumes,
-        expressoDestinyCep,
-        expressoWeight,
+        expressoData,
       }));
       setShowAuthModal(true);
     } else {
@@ -374,7 +447,7 @@ const CotacaoPreview = () => {
       {/* Quote Form Section */}
       <section className="py-4 sm:py-8 px-2 sm:px-4">
         <div className="container mx-auto max-w-4xl">
-          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as any); setQuoteResult(null); setSelectedCarrier(null); }}>
+          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as any); setQuoteResult(null); setSelectedCarrier(null); setExpressoStep(1); }}>
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="convencional" className="flex items-center gap-2">
                 <Truck className="h-4 w-4" />
@@ -602,7 +675,6 @@ const CotacaoPreview = () => {
                               </div>
                             </div>
 
-                            {/* Mostrar peso cúbico individual */}
                             <div className="mt-3 text-sm text-muted-foreground">
                               Peso cúbico deste volume:{" "}
                               <span className="font-medium text-foreground">
@@ -618,7 +690,6 @@ const CotacaoPreview = () => {
                       ))}
                     </div>
 
-                    {/* Alerta para mercadorias perigosas */}
                     {hasDangerousMerchandise() && (
                       <Card className="border-warning bg-warning/10">
                         <CardContent className="pt-4 pb-4">
@@ -628,7 +699,6 @@ const CotacaoPreview = () => {
                               <p className="font-semibold text-warning">Atenção especial necessária</p>
                               <p className="text-sm text-muted-foreground mt-1">
                                 Você selecionou um tipo de mercadoria que requer cuidados especiais no transporte.
-                                Certifique-se de embalar adequadamente.
                               </p>
                             </div>
                           </div>
@@ -688,7 +758,6 @@ const CotacaoPreview = () => {
                       <Separator />
                       <h3 className="text-xl font-semibold text-center">Opções de Frete</h3>
                       
-                      {/* Verificar se ambas transportadoras falharam */}
                       {quoteResult.magalog && !quoteResult.magalog.permitido &&
                        quoteResult.jadlog && !quoteResult.jadlog.permitido ? (
                         <div className="p-6 bg-destructive/10 border-2 border-destructive/20 rounded-lg">
@@ -706,7 +775,6 @@ const CotacaoPreview = () => {
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Magalog Card */}
                           {quoteResult.magalog && (
                             <Card
                               className={`shadow-card cursor-pointer transition-all duration-200 ${
@@ -729,17 +797,13 @@ const CotacaoPreview = () => {
                               </CardHeader>
                               <CardContent>
                                 {quoteResult.magalog.permitido ? (
-                                  <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-xl font-bold text-primary">
-                                        R$ {quoteResult.magalog.preco_total?.toFixed(2)}
-                                      </span>
-                                      <div className="text-right">
-                                        <div className="flex items-center text-sm text-muted-foreground">
-                                          <Clock className="h-4 w-4 mr-1" />
-                                          {quoteResult.magalog.prazo} dias úteis
-                                        </div>
-                                      </div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xl font-bold text-primary">
+                                      R$ {quoteResult.magalog.preco_total?.toFixed(2)}
+                                    </span>
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                      <Clock className="h-4 w-4 mr-1" />
+                                      {quoteResult.magalog.prazo} dias úteis
                                     </div>
                                   </div>
                                 ) : (
@@ -751,7 +815,6 @@ const CotacaoPreview = () => {
                             </Card>
                           )}
 
-                          {/* Jadlog Card */}
                           {quoteResult.jadlog && (
                             <Card
                               className={`shadow-card cursor-pointer transition-all duration-200 ${
@@ -774,17 +837,13 @@ const CotacaoPreview = () => {
                               </CardHeader>
                               <CardContent>
                                 {quoteResult.jadlog.permitido ? (
-                                  <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-xl font-bold text-primary">
-                                        R$ {quoteResult.jadlog.preco_total?.toFixed(2)}
-                                      </span>
-                                      <div className="text-right">
-                                        <div className="flex items-center text-sm text-muted-foreground">
-                                          <Clock className="h-4 w-4 mr-1" />
-                                          {quoteResult.jadlog.prazo} dias úteis
-                                        </div>
-                                      </div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xl font-bold text-primary">
+                                      R$ {quoteResult.jadlog.preco_total?.toFixed(2)}
+                                    </span>
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                      <Clock className="h-4 w-4 mr-1" />
+                                      {quoteResult.jadlog.prazo} dias úteis
                                     </div>
                                   </div>
                                 ) : (
@@ -798,7 +857,6 @@ const CotacaoPreview = () => {
                         </div>
                       )}
 
-                      {/* Proceed Button */}
                       {(quoteResult.magalog?.permitido || quoteResult.jadlog?.permitido) && (
                         <Button
                           onClick={handleProceed}
@@ -824,91 +882,271 @@ const CotacaoPreview = () => {
               </Card>
             </TabsContent>
 
-            {/* Expresso Tab */}
+            {/* Expresso Tab - Quiz Format */}
             <TabsContent value="expresso">
               <Card className="shadow-card relative overflow-hidden border-border/50">
                 <div className="absolute inset-0 bg-gradient-subtle opacity-30"></div>
                 <CardHeader className="relative">
-                  <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-primary" />
-                    Cotação Expresso
-                  </CardTitle>
-                  <CardDescription>
-                    Entrega rápida no mesmo dia ou dia seguinte
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="relative space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                      <Label className="flex items-center space-x-2 text-base font-medium">
-                        <MapPin className="h-5 w-5 text-primary" />
-                        <span>CEP de Destino *</span>
-                      </Label>
-                      <InputMask
-                        mask="99999-999"
-                        value={expressoDestinyCep}
-                        onChange={(e) => setExpressoDestinyCep(e.target.value)}
-                      >
-                        {(inputProps: any) => (
-                          <Input {...inputProps} placeholder="00000-000" className="h-14 text-lg" />
-                        )}
-                      </InputMask>
-                    </div>
-                    <div className="space-y-3">
-                      <Label className="flex items-center space-x-2 text-base font-medium">
-                        <Package className="h-5 w-5 text-primary" />
-                        <span>Peso Total (kg) *</span>
-                      </Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={expressoWeight}
-                        onChange={(e) => setExpressoWeight(e.target.value)}
-                        placeholder="0.0"
-                        className="h-14 text-lg"
-                      />
+                  {/* Progress Header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                        {getExpressoStepIcon(expressoStep)}
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Etapa {expressoStep} de {EXPRESSO_STEPS}</p>
+                        <h2 className="text-xl font-bold">{getExpressoStepTitle(expressoStep)}</h2>
+                      </div>
                     </div>
                   </div>
+                  <Progress value={(expressoStep / EXPRESSO_STEPS) * 100} className="h-2" />
+                </CardHeader>
 
-                  <Button onClick={handleCalculateExpresso} disabled={isLoading} className="w-full h-14">
-                    {isLoading ? "Calculando..." : "Calcular Frete Expresso"}
-                  </Button>
+                <CardContent className="relative min-h-[400px]">
+                  {/* Step 1: Informações do Envio */}
+                  {expressoStep === 1 && (
+                    <div className="space-y-8 animate-in fade-in duration-300">
+                      <div className="space-y-4">
+                        <div className="text-center">
+                          <Package className="h-12 w-12 mx-auto mb-3 text-primary" />
+                          <Label className="text-lg font-medium">Quantos volumes você vai enviar?</Label>
+                        </div>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={expressoData.volume_count}
+                          onChange={(e) => handleExpressoChange('volume_count', e.target.value)}
+                          className="text-center text-2xl font-bold h-16"
+                          placeholder="1"
+                        />
+                      </div>
 
-                  {/* Quote Result - Expresso */}
-                  {quoteResult && quoteResult.type === "expresso" && (
-                    <Card className="mt-6 bg-primary/5 border-primary/20">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Zap className="h-5 w-5 text-primary" />
-                          Resultado da Cotação Expressa
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-2xl font-bold text-primary">
-                            R$ {quoteResult.price?.toFixed(2)}
-                          </span>
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Clock className="h-4 w-4" />
-                            <span>Entrega em {quoteResult.deliveryDays} dia(s)</span>
+                      <div className="space-y-4">
+                        <div className="text-center">
+                          <Calendar className="h-12 w-12 mx-auto mb-3 text-primary" />
+                          <Label className="text-lg font-medium">Quando você deseja a entrega?</Label>
+                        </div>
+                        <Input
+                          type="date"
+                          value={expressoData.delivery_date}
+                          onChange={(e) => handleExpressoChange('delivery_date', e.target.value)}
+                          min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
+                          className="text-center text-lg h-14"
+                        />
+                        <p className="text-sm text-center text-muted-foreground">
+                          A data mínima é D+1 (amanhã)
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 2: Detalhes dos Volumes */}
+                  {expressoStep === 2 && (
+                    <div className="space-y-6 animate-in fade-in duration-300">
+                      <p className="text-muted-foreground text-center">
+                        Informe o peso de cada volume e quantos destinos diferentes
+                      </p>
+
+                      <div className="space-y-4">
+                        {expressoData.volume_weights.map((weight, index) => (
+                          <div key={index} className="border rounded-xl p-4 bg-card space-y-4">
+                            <div className="flex items-center gap-2 text-primary">
+                              <Package className="h-5 w-5" />
+                              <span className="font-semibold">Volume {index + 1}</span>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label className="text-sm flex items-center gap-1">
+                                <Scale className="h-3 w-3" />
+                                Peso (kg)
+                              </Label>
+                              <Input
+                                type="text"
+                                value={weight}
+                                onChange={(e) => handleExpressoWeightChange(index, e.target.value)}
+                                placeholder="Ex: 2.5"
+                                className="h-12"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="text-center">
+                          <MapPin className="h-10 w-10 mx-auto mb-2 text-primary" />
+                          <Label className="text-lg font-medium">Para quantos destinos diferentes?</Label>
+                        </div>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={expressoData.destination_count}
+                          onChange={(e) => handleExpressoChange('destination_count', e.target.value)}
+                          className="text-center text-2xl font-bold h-14"
+                          placeholder="1"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 3: Tipo de Veículo */}
+                  {expressoStep === 3 && (
+                    <div className="space-y-6 animate-in fade-in duration-300">
+                      <p className="text-muted-foreground text-center">
+                        Qual veículo você precisa para a coleta e entrega?
+                      </p>
+
+                      <RadioGroup
+                        value={expressoData.vehicle_type}
+                        onValueChange={(value) => handleExpressoChange('vehicle_type', value)}
+                        className="space-y-3"
+                      >
+                        {[
+                          { id: 'moto', label: 'Moto', icon: Bike, desc: 'Ideal para pequenos volumes' },
+                          { id: 'carro', label: 'Carro Utilitário', icon: Car, desc: 'Para volumes médios' },
+                          { id: 'caminhao', label: 'Caminhão', icon: Truck, desc: 'Para grandes cargas' },
+                        ].map((vehicle) => (
+                          <label
+                            key={vehicle.id}
+                            htmlFor={vehicle.id}
+                            className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                              expressoData.vehicle_type === vehicle.id
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                          >
+                            <RadioGroupItem value={vehicle.id} id={vehicle.id} className="sr-only" />
+                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
+                              expressoData.vehicle_type === vehicle.id
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted'
+                            }`}>
+                              <vehicle.icon className="h-7 w-7" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-semibold">{vehicle.label}</p>
+                              <p className="text-sm text-muted-foreground">{vehicle.desc}</p>
+                            </div>
+                            {expressoData.vehicle_type === vehicle.id && (
+                              <Check className="h-5 w-5 text-primary" />
+                            )}
+                          </label>
+                        ))}
+                      </RadioGroup>
+                    </div>
+                  )}
+
+                  {/* Step 4: Resumo */}
+                  {expressoStep === 4 && (
+                    <div className="space-y-6 animate-in fade-in duration-300">
+                      <p className="text-muted-foreground text-center">
+                        Confira o resumo da sua simulação
+                      </p>
+
+                      <div className="space-y-4">
+                        {/* Volumes */}
+                        <div className="border rounded-xl p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Package className="h-4 w-4 text-primary" />
+                            <span className="font-semibold">{expressoData.volume_count} Volume(s)</span>
+                          </div>
+                          <div className="space-y-2">
+                            {expressoData.volume_weights.map((weight, index) => (
+                              <div key={index} className="flex justify-between text-sm py-2 border-b last:border-0">
+                                <span className="text-muted-foreground">Volume {index + 1}</span>
+                                <span className="font-medium">{weight || '0'} kg</span>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                        <Button onClick={handleProceed} className="w-full" variant={user ? "default" : "outline"}>
+
+                        {/* Info Grid */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="border rounded-xl p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <MapPin className="h-4 w-4 text-primary" />
+                              <span className="text-sm text-muted-foreground">Destinos</span>
+                            </div>
+                            <p className="font-semibold text-lg">{expressoData.destination_count}</p>
+                          </div>
+                          <div className="border rounded-xl p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Scale className="h-4 w-4 text-primary" />
+                              <span className="text-sm text-muted-foreground">Peso Total</span>
+                            </div>
+                            <p className="font-semibold text-lg">{expressoTotalWeight.toFixed(1)} kg</p>
+                          </div>
+                          <div className="border rounded-xl p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Truck className="h-4 w-4 text-primary" />
+                              <span className="text-sm text-muted-foreground">Veículo</span>
+                            </div>
+                            <p className="font-semibold capitalize">{expressoData.vehicle_type || '-'}</p>
+                          </div>
+                          <div className="border rounded-xl p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Calendar className="h-4 w-4 text-primary" />
+                              <span className="text-sm text-muted-foreground">Entrega</span>
+                            </div>
+                            <p className="font-semibold">
+                              {expressoData.delivery_date ? new Date(expressoData.delivery_date + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Total */}
+                        <div className="border-2 border-primary rounded-xl p-6 bg-primary/5 text-center">
+                          <p className="text-sm text-muted-foreground mb-1">Valor Estimado do Frete</p>
+                          <p className="text-4xl font-bold text-primary">R$ {expressoTotalPrice.toFixed(2)}</p>
+                        </div>
+
+                        {/* Login Button */}
+                        <Button
+                          onClick={handleProceed}
+                          className="w-full h-14 text-lg font-semibold"
+                          variant={user ? "default" : "outline"}
+                        >
                           {user ? (
                             <>
-                              <ArrowRight className="mr-2 h-4 w-4" />
-                              Continuar
+                              <ArrowRight className="mr-2 h-5 w-5" />
+                              Continuar para Envio Completo
                             </>
                           ) : (
                             <>
-                              <LogIn className="mr-2 h-4 w-4" />
+                              <LogIn className="mr-2 h-5 w-5" />
                               Fazer Login para Continuar
                             </>
                           )}
                         </Button>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   )}
+
+                  {/* Navigation Buttons */}
+                  <div className="flex gap-3 mt-8">
+                    {expressoStep > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleExpressoPrev}
+                        className="flex-1 h-14"
+                      >
+                        <ChevronLeft className="mr-2 h-5 w-5" />
+                        Voltar
+                      </Button>
+                    )}
+                    
+                    {expressoStep < EXPRESSO_STEPS && (
+                      <Button
+                        type="button"
+                        onClick={handleExpressoNext}
+                        className="flex-1 h-14"
+                      >
+                        Continuar
+                        <ChevronRight className="ml-2 h-5 w-5" />
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
