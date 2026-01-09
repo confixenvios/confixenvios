@@ -46,13 +46,13 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-rose-50 to-red-100 flex items-center justify-center">
         <motion.div 
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           className="text-center"
         >
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-red-600 border-t-transparent mx-auto mb-4"></div>
           <p className="text-muted-foreground">Carregando...</p>
         </motion.div>
       </div>
@@ -85,7 +85,7 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-rose-50 to-red-100 overflow-x-hidden">
       <Header />
       
       {/* Hero Section com 3D */}
@@ -94,11 +94,11 @@ const Index = () => {
         className="relative min-h-screen flex items-center justify-center overflow-hidden"
       >
         {/* Gradient Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-100 via-orange-100 to-amber-200" />
+        <div className="absolute inset-0 bg-gradient-to-br from-red-100 via-rose-100 to-red-200" />
         
         {/* Animated gradient orbs */}
         <motion.div
-          className="absolute top-20 left-10 w-72 h-72 bg-orange-300/30 rounded-full blur-3xl"
+          className="absolute top-20 left-10 w-72 h-72 bg-red-300/30 rounded-full blur-3xl"
           animate={{
             x: [0, 50, 0],
             y: [0, 30, 0],
@@ -107,7 +107,7 @@ const Index = () => {
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
-          className="absolute bottom-20 right-10 w-96 h-96 bg-amber-300/30 rounded-full blur-3xl"
+          className="absolute bottom-20 right-10 w-96 h-96 bg-rose-300/30 rounded-full blur-3xl"
           animate={{
             x: [0, -30, 0],
             y: [0, -50, 0],
@@ -128,7 +128,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <Badge className="mb-6 px-4 py-2 text-sm bg-white/80 backdrop-blur-sm border-orange-200">
+            <Badge className="mb-6 px-4 py-2 text-sm bg-red-600 text-white border-0 hover:bg-red-600">
               <Sparkles className="w-4 h-4 mr-2" />
               Logística Inteligente
             </Badge>
@@ -143,7 +143,7 @@ const Index = () => {
             <span className="text-foreground">Coletamos e Entregamos</span>
             <br />
             <span className="text-foreground">em todo o </span>
-            <span className="text-primary bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">Brasil</span>
+            <span className="text-red-600">Brasil</span>
           </motion.h1>
           
           <motion.p
@@ -174,7 +174,7 @@ const Index = () => {
                 whileHover={{ scale: 1.05, y: -2 }}
                 transition={{ type: "spring", stiffness: 400 }}
               >
-                <item.icon className="w-5 h-5 text-primary" />
+                <item.icon className="w-5 h-5 text-red-600" />
                 <span className="font-medium text-foreground">{item.text}</span>
               </motion.div>
             ))}
@@ -187,7 +187,7 @@ const Index = () => {
             transition={{ duration: 0.6, delay: 1 }}
           >
             <MagneticButton>
-              <Button size="lg" className="px-10 py-7 text-lg shadow-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 border-0" asChild>
+              <Button size="lg" className="px-10 py-7 text-lg shadow-2xl bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 border-0" asChild>
                 <Link to="/cotacaopreview">
                   <Package className="mr-2 h-5 w-5" />
                   COTAR FRETE
@@ -220,12 +220,12 @@ const Index = () => {
 
       {/* Clientes Section */}
       <section className="py-20 px-4 bg-white/50 backdrop-blur-sm relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-orange-50/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-red-50/50 to-transparent" />
         
         <div className="container mx-auto relative z-10">
           <FadeInUp>
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
-              Empresas que <span className="text-primary">confiam</span> em nós
+              Empresas que <span className="text-red-600">confiam</span> em nós
             </h2>
             <p className="text-muted-foreground mb-12 max-w-3xl mx-auto text-center text-lg">
               Grandes marcas já confiam em nossas soluções logísticas
@@ -258,7 +258,7 @@ const Index = () => {
 
       {/* Nossos Serviços */}
       <section id="servicos" className="py-24 px-4 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-amber-50/50 to-orange-50/50" />
+        <div className="absolute inset-0 bg-gradient-to-b from-red-50/50 to-rose-50/50" />
         
         <div className="container mx-auto relative z-10">
           <FadeInUp className="text-center mb-16">
@@ -276,11 +276,11 @@ const Index = () => {
                   whileHover={{ y: -8, scale: 1.02 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
-                  <Card className="h-full bg-white/80 backdrop-blur-sm border-orange-100/50 shadow-lg hover:shadow-2xl transition-shadow">
+                  <Card className="h-full bg-white/80 backdrop-blur-sm border-red-100/50 shadow-lg hover:shadow-2xl transition-shadow">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-3">
-                        <div className="p-3 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl">
-                          <service.icon className="h-6 w-6 text-primary" />
+                        <div className="p-3 bg-gradient-to-br from-red-100 to-rose-100 rounded-xl">
+                          <service.icon className="h-6 w-6 text-red-600" />
                         </div>
                         <span className="text-lg">{service.title}</span>
                       </CardTitle>
@@ -299,7 +299,7 @@ const Index = () => {
       {/* Sobre Nós */}
       <section id="quemsomos" className="py-24 px-4 bg-white/70 backdrop-blur-sm relative overflow-hidden">
         <motion.div
-          className="absolute -top-40 -right-40 w-80 h-80 bg-orange-200/40 rounded-full blur-3xl"
+          className="absolute -top-40 -right-40 w-80 h-80 bg-red-200/40 rounded-full blur-3xl"
           animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
           transition={{ duration: 20, repeat: Infinity }}
         />
@@ -351,7 +351,7 @@ const Index = () => {
                   whileHover={{ scale: 1.02 }}
                   transition={{ type: "spring", stiffness: 200 }}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-amber-400 rounded-3xl transform rotate-3 scale-105 opacity-20" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-red-500 to-red-400 rounded-3xl transform rotate-3 scale-105 opacity-20" />
                   <img 
                     src={deliveryProfessional} 
                     alt="Profissional de entrega da Confix Envios" 
@@ -366,12 +366,12 @@ const Index = () => {
 
       {/* Nosso Diferencial */}
       <section id="diferencial" className="py-24 px-4 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100" />
+        <div className="absolute inset-0 bg-gradient-to-br from-red-50 via-rose-50 to-red-100" />
         
         <div className="container mx-auto relative z-10">
           <FadeInUp className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Excelência logística para operações que exigem <span className="text-primary">agilidade</span>
+              Excelência logística para operações que exigem <span className="text-red-600">agilidade</span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-4xl mx-auto">
               Combinamos estrutura própria, tecnologia e atendimento consultivo para oferecer entregas sob medida.
@@ -386,7 +386,7 @@ const Index = () => {
                   whileHover={{ y: -5 }}
                 >
                   <motion.div 
-                    className="w-20 h-20 bg-gradient-to-br from-orange-400 to-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
+                    className="w-20 h-20 bg-gradient-to-br from-red-600 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
                     whileHover={{ rotate: 5, scale: 1.1 }}
                     transition={{ type: "spring", stiffness: 300 }}
                   >
@@ -413,7 +413,7 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer id="contato" className="bg-gradient-to-br from-orange-600 to-amber-600 text-white py-16 relative overflow-hidden">
+      <footer id="contato" className="bg-gradient-to-br from-red-700 to-red-600 text-white py-16 relative overflow-hidden">
         <motion.div
           className="absolute top-0 left-0 w-full h-full opacity-10"
           style={{
