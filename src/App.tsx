@@ -45,6 +45,9 @@ import ClientDestinatarios from "./pages/cliente/ClientDestinatarios";
 // Unified Panel pages
 import PainelLayout from "./pages/painel/PainelLayout";
 import PainelDashboard from "./pages/painel/PainelDashboard";
+import PainelSuporte from "./pages/painel/PainelSuporte";
+import PainelNovoTicket from "./pages/painel/PainelNovoTicket";
+import PainelTicketDetalhes from "./pages/painel/PainelTicketDetalhes";
 
 // Admin pages
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -121,11 +124,11 @@ const App = () => (
             <Route path="/rastreio/:codigo" element={<Tracking />} />
             <Route path="/api-docs" element={<ApiDocs />} />
 
-            {/* Support Routes */}
+            {/* Support Routes - redirect to painel if logged in, show FAQ if not */}
             <Route path="/suporte" element={<SuporteAuth />} />
-            <Route path="/suporte/tickets" element={<SuporteTickets />} />
-            <Route path="/suporte/novo-ticket" element={<SuporteNovoTicket />} />
-            <Route path="/suporte/ticket/:id" element={<SuporteTicketDetalhes />} />
+            <Route path="/suporte/tickets" element={<Navigate to="/painel/suporte" replace />} />
+            <Route path="/suporte/novo-ticket" element={<Navigate to="/painel/suporte/novo" replace />} />
+            <Route path="/suporte/ticket/:id" element={<Navigate to="/painel/suporte" replace />} />
 
             {/* Client Routes (legacy - redirect to painel) */}
             <Route path="/cliente/*" element={<Navigate to="/painel" replace />} />
@@ -156,6 +159,10 @@ const App = () => (
                       <Route path="convencional/relatorios" element={<ClientHistorico />} />
                       {/* Shared */}
                       <Route path="minha-conta" element={<ClientConta />} />
+                      {/* Suporte */}
+                      <Route path="suporte" element={<PainelSuporte />} />
+                      <Route path="suporte/novo" element={<PainelNovoTicket />} />
+                      <Route path="suporte/ticket/:id" element={<PainelTicketDetalhes />} />
                     </Route>
                   </Routes>
                 </ProtectedRoute>

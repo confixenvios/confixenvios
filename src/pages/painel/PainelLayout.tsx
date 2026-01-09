@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { 
   Plus, BarChart3, LogOut, MapPin, Truck, Menu, Car, Package2, 
   FileText, Search, History, User, Calculator, LayoutDashboard,
-  ChevronDown
+  ChevronDown, Headphones
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -291,6 +291,21 @@ const PainelLayout = () => {
         >
           <User className="h-4 w-4" />
           <span className="text-sm font-medium">Minha Conta</span>
+        </NavLink>
+
+        {/* Suporte */}
+        <NavLink
+          to="/painel/suporte"
+          onClick={() => setMenuOpen(false)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all mt-2",
+            location.pathname.startsWith('/painel/suporte')
+              ? 'bg-primary text-white shadow-md'
+              : 'text-foreground hover:bg-slate-100'
+          )}
+        >
+          <Headphones className="h-4 w-4" />
+          <span className="text-sm font-medium">Suporte</span>
         </NavLink>
       </div>
 
