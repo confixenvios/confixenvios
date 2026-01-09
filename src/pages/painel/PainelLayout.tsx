@@ -146,7 +146,7 @@ const PainelLayout = () => {
 
   const convencionalMenuItems = [
     { title: 'Envios Nacionais', url: '/painel/convencional/remessas', icon: Package2 },
-    { title: 'Novo Envio Nacional', url: '/painel/convencional/cotacoes', icon: Calculator },
+    { title: 'Novo Envio Nacional', url: '/painel/convencional/cotacoes', icon: Plus },
     { title: 'Etiquetas', url: '/painel/convencional/etiquetas', icon: FileText },
     { title: 'Rastreamento', url: '/painel/convencional/rastreamento', icon: Search },
     { title: 'Relatórios', url: '/painel/convencional/relatorios', icon: History },
