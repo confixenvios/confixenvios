@@ -294,6 +294,21 @@ const PainelLayout = () => {
         </NavLink>
       </div>
 
+      {/* Botão Sair no final do menu lateral */}
+      <div className="p-3 border-t lg:hidden">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setMenuOpen(false);
+            handleLogout();
+          }}
+          className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Sair da conta
+        </Button>
+      </div>
     </div>
   );
 
@@ -324,7 +339,17 @@ const PainelLayout = () => {
                 <img src={confixLogo} alt="Confix Envios" className="h-5" />
               </div>
             </div>
-            <span className="text-white text-sm font-medium">Painel</span>
+            <div className="flex items-center gap-2">
+              <span className="text-white text-sm font-medium">Painel</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-white hover:bg-white/20"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </header>
 
