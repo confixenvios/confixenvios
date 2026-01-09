@@ -23,17 +23,17 @@ const SupportAgentIcon = ({ className }: { className?: string }) => (
     className={className}
   >
     {/* Head/Face circle */}
-    <circle cx="12" cy="12" r="5" />
+    <circle cx="12" cy="13" r="6" />
     {/* Headset band on top */}
-    <path d="M4 12a8 8 0 0 1 16 0" />
+    <path d="M3 13a9 9 0 0 1 18 0" />
     {/* Left earpiece */}
-    <rect x="2" y="10" width="3" height="5" rx="1.5" />
+    <rect x="1" y="11" width="3" height="6" rx="1.5" />
     {/* Right earpiece */}
-    <rect x="19" y="10" width="3" height="5" rx="1.5" />
+    <rect x="20" y="11" width="3" height="6" rx="1.5" />
     {/* Microphone arm */}
-    <path d="M19 15v2a2 2 0 0 1-2 2h-3" />
+    <path d="M20 17v1.5a2 2 0 0 1-2 2h-4" />
     {/* Microphone */}
-    <circle cx="13" cy="19" r="1" />
+    <circle cx="13" cy="20.5" r="1.5" />
   </svg>
 );
 
