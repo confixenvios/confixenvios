@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Environment, Float, PerspectiveCamera, Stars } from '@react-three/drei';
-import FloatingBoxes from './FloatingBoxes';
+import { Environment, Float, PerspectiveCamera } from '@react-three/drei';
+import FloatingTrucks from './FloatingTrucks';
 
 interface Hero3DSceneProps {
   scrollY?: number;
@@ -32,16 +32,15 @@ const Hero3DScene = ({ scrollY = 0 }: Hero3DSceneProps) => {
         <Suspense fallback={null}>
           <PerspectiveCamera 
             makeDefault 
-            position={[0, 0, 10]} 
+            position={[0, 0, 12]} 
             fov={45}
-            rotation={[scrollY * 0.0001, 0, 0]}
           />
           
           {/* Fog para profundidade */}
-          <fog attach="fog" args={['#fef3c7', 15, 35]} />
+          <fog attach="fog" args={['#fef2f2', 18, 40]} />
           
           {/* Iluminação ambiente */}
-          <ambientLight intensity={0.5} />
+          <ambientLight intensity={0.6} />
           
           {/* Luz principal */}
           <directionalLight 
@@ -49,49 +48,33 @@ const Hero3DScene = ({ scrollY = 0 }: Hero3DSceneProps) => {
             intensity={1.5} 
             castShadow
             shadow-mapSize={[1024, 1024]}
-            shadow-camera-far={50}
-            shadow-camera-left={-10}
-            shadow-camera-right={10}
-            shadow-camera-top={10}
-            shadow-camera-bottom={-10}
           />
           
           {/* Luzes de preenchimento */}
-          <directionalLight position={[-8, 8, -8]} intensity={0.4} color="#fed7aa" />
-          <pointLight position={[0, -8, 8]} intensity={0.3} color="#f97316" />
-          <pointLight position={[-5, 5, 5]} intensity={0.2} color="#fef3c7" />
+          <directionalLight position={[-8, 8, -8]} intensity={0.4} color="#fee2e2" />
+          <pointLight position={[0, -8, 8]} intensity={0.3} color="#dc2626" />
+          <pointLight position={[-5, 5, 5]} intensity={0.2} color="#fef2f2" />
           
-          {/* Rim light */}
+          {/* Rim light vermelho */}
           <spotLight
             position={[0, 10, -10]}
             angle={0.5}
             penumbra={1}
             intensity={0.5}
-            color="#fff7ed"
+            color="#fecaca"
           />
           
-          {/* Caixas flutuantes com parallax */}
+          {/* Caminhões e pacotes flutuantes */}
           <Float
-            speed={1.2}
-            rotationIntensity={0.15}
-            floatIntensity={0.2}
+            speed={1}
+            rotationIntensity={0.1}
+            floatIntensity={0.15}
           >
-            <FloatingBoxes scrollY={scrollY} />
+            <FloatingTrucks scrollY={scrollY} />
           </Float>
           
-          {/* Partículas de fundo */}
-          <Stars 
-            radius={50} 
-            depth={50} 
-            count={200} 
-            factor={3} 
-            saturation={0} 
-            fade 
-            speed={0.5}
-          />
-          
           {/* Environment para reflexos */}
-          <Environment preset="sunset" />
+          <Environment preset="city" />
         </Suspense>
       </Canvas>
     </div>
