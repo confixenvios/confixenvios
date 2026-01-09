@@ -48,6 +48,7 @@ interface Volume {
 }
 
 const EXPRESSO_STEPS = 4;
+const CONVENCIONAL_STEPS = 2;
 
 const CotacaoPreview = () => {
   const navigate = useNavigate();
@@ -58,6 +59,9 @@ const CotacaoPreview = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [quoteResult, setQuoteResult] = useState<any>(null);
   const [selectedCarrier, setSelectedCarrier] = useState<"jadlog" | "magalog" | null>(null);
+  
+  // Convencional Steps
+  const [convencionalStep, setConvencionalStep] = useState(1);
 
   // Form data - Convencional
   const [originCep] = useState("74900-000");
@@ -375,6 +379,7 @@ const CotacaoPreview = () => {
       }
 
       toast({ title: "Cotação calculada!", description: "Veja os preços abaixo" });
+      setConvencionalStep(2);
     } catch (error) {
       console.error("Erro na cotação:", error);
       toast({ title: "Erro", description: "Não foi possível calcular a cotação", variant: "destructive" });
@@ -447,13 +452,13 @@ const CotacaoPreview = () => {
       {/* Quote Form Section */}
       <section className="py-4 sm:py-8 px-2 sm:px-4">
         <div className="container mx-auto max-w-4xl">
-          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as any); setQuoteResult(null); setSelectedCarrier(null); setExpressoStep(1); }}>
+          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as any); setQuoteResult(null); setSelectedCarrier(null); setExpressoStep(1); setConvencionalStep(1); }}>
             <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="convencional" className="flex items-center gap-2">
+              <TabsTrigger value="convencional" className="flex items-center gap-2" disabled={convencionalStep === 2}>
                 <Truck className="h-4 w-4" />
                 Convencional
               </TabsTrigger>
-              <TabsTrigger value="expresso" className="flex items-center gap-2">
+              <TabsTrigger value="expresso" className="flex items-center gap-2" disabled={expressoStep === 4 || convencionalStep === 2}>
                 <Zap className="h-4 w-4" />
                 Expresso
               </TabsTrigger>
@@ -463,300 +468,355 @@ const CotacaoPreview = () => {
             <TabsContent value="convencional">
               <Card className="shadow-card relative overflow-hidden border-border/50">
                 <div className="absolute inset-0 bg-gradient-subtle opacity-30"></div>
-                <CardHeader className="relative">
-                  <CardTitle className="flex items-center gap-2">
-                    <Calculator className="h-5 w-5 text-primary" />
-                    Cotação Convencional
-                  </CardTitle>
-                  <CardDescription>
-                    Envio nacional com prazo de 3-10 dias úteis
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="relative space-y-6">
-                  {/* CEP Fields */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-                    <div className="space-y-3">
-                      <Label htmlFor="origin-cep" className="flex items-center space-x-2 text-base font-medium">
-                        <MapPin className="h-5 w-5 text-primary" />
-                        <span>CEP de Origem</span>
-                      </Label>
-                      <Input
-                        id="origin-cep"
-                        type="text"
-                        value={originCep}
-                        disabled
-                        className="border-input-border bg-muted text-muted-foreground h-14 text-lg"
-                      />
-                      <p className="text-sm text-muted-foreground">Goiânia e Região / Origem fixa</p>
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label htmlFor="destiny-cep" className="flex items-center space-x-2 text-base font-medium">
-                        <MapPin className="h-5 w-5 text-primary" />
-                        <span>CEP de Destino</span>
-                      </Label>
-                      <InputMask
-                        mask="99999-999"
-                        value={destinyCep}
-                        onChange={(e) => setDestinyCep(e.target.value)}
-                      >
-                        {(inputProps: any) => (
-                          <Input
-                            {...inputProps}
-                            id="destiny-cep"
-                            type="text"
-                            placeholder="00000-000"
-                            className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
-                          />
-                        )}
-                      </InputMask>
-                    </div>
-                  </div>
-
-                  {/* Merchandise Details */}
-                  <div className="space-y-6">
-                    <Label className="flex items-center space-x-2 text-lg font-semibold">
-                      <DollarSign className="h-5 w-5 text-primary" />
-                      <span>Detalhes da Mercadoria</span>
-                    </Label>
-
-                    <div className="space-y-3">
-                      <Label htmlFor="totalValue" className="text-base font-medium">
-                        Valor Total Declarado (R$)
-                      </Label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium text-muted-foreground">
-                          R$
-                        </span>
-                        <Input
-                          id="totalValue"
-                          type="text"
-                          placeholder="0,00"
-                          value={getCurrencyDisplayValue()}
-                          onChange={(e) => handleCurrencyChange(e.target.value)}
-                          className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg pl-12"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Volumes Dinâmicos */}
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <Label className="flex items-center space-x-2 text-lg font-semibold">
-                        <Package className="h-5 w-5 text-primary" />
-                        <span>Volumes</span>
-                      </Label>
-                      <Button
-                        type="button"
-                        onClick={addVolume}
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center space-x-2"
-                      >
-                        <Plus className="h-4 w-4" />
-                        <span>Adicionar Volume</span>
-                      </Button>
-                    </div>
-
-                    {/* Tipo de mercadoria geral */}
-                    <Card className="bg-accent/10 border-border/50">
-                      <CardContent className="pt-4 pb-4">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                          <Label className="text-sm font-medium whitespace-nowrap">
-                            Aplicar tipo de mercadoria para todos:
+                
+                {/* Step 1 - Formulário */}
+                {convencionalStep === 1 && (
+                  <>
+                    <CardHeader className="relative">
+                      <CardTitle className="flex items-center gap-2">
+                        <Calculator className="h-5 w-5 text-primary" />
+                        Cotação Convencional
+                      </CardTitle>
+                      <CardDescription>
+                        Envio nacional com prazo de 3-10 dias úteis
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="relative space-y-6">
+                      {/* CEP Fields */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+                        <div className="space-y-3">
+                          <Label htmlFor="origin-cep" className="flex items-center space-x-2 text-base font-medium">
+                            <MapPin className="h-5 w-5 text-primary" />
+                            <span>CEP de Origem</span>
                           </Label>
-                          <Select onValueChange={applyMerchandiseTypeToAll}>
-                            <SelectTrigger className="w-full sm:w-64 h-10">
-                              <SelectValue placeholder="Selecione um tipo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="normal">Normal</SelectItem>
-                              <SelectItem value="liquido">Líquido</SelectItem>
-                              <SelectItem value="quimico">Químico</SelectItem>
-                              <SelectItem value="inflamavel">Inflamável</SelectItem>
-                              <SelectItem value="vidro">Vidro</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Input
+                            id="origin-cep"
+                            type="text"
+                            value={originCep}
+                            disabled
+                            className="border-input-border bg-muted text-muted-foreground h-14 text-lg"
+                          />
+                          <p className="text-sm text-muted-foreground">Goiânia e Região / Origem fixa</p>
                         </div>
-                      </CardContent>
-                    </Card>
 
-                    {/* Lista de volumes */}
-                    <div className="space-y-4">
-                      {volumes.map((volume, index) => (
-                        <Card key={volume.id} className="border-border/50">
-                          <CardHeader className="pb-3 pt-4 px-4">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-base font-semibold">Volume {index + 1}</CardTitle>
-                              {volumes.length > 1 && (
-                                <Button
-                                  type="button"
-                                  onClick={() => removeVolume(volume.id)}
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </CardHeader>
-                          <CardContent className="px-4 pb-4">
-                            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                              <div className="space-y-2">
-                                <Label className="text-sm font-medium">Peso (kg)</Label>
-                                <Input
-                                  type="text"
-                                  inputMode="decimal"
-                                  placeholder="0.5"
-                                  value={volume.weight}
-                                  onChange={(e) => {
-                                    let value = e.target.value.replace(/[^0-9.]/g, "");
-                                    if (volume.weight === "0." && value === "0") {
-                                      value = "";
-                                    }
-                                    updateVolume(volume.id, "weight", value, volume.weight);
-                                  }}
-                                  className="h-12"
-                                />
-                              </div>
+                        <div className="space-y-3">
+                          <Label htmlFor="destiny-cep" className="flex items-center space-x-2 text-base font-medium">
+                            <MapPin className="h-5 w-5 text-primary" />
+                            <span>CEP de Destino</span>
+                          </Label>
+                          <InputMask
+                            mask="99999-999"
+                            value={destinyCep}
+                            onChange={(e) => setDestinyCep(e.target.value)}
+                          >
+                            {(inputProps: any) => (
+                              <Input
+                                {...inputProps}
+                                id="destiny-cep"
+                                type="text"
+                                placeholder="00000-000"
+                                className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
+                              />
+                            )}
+                          </InputMask>
+                        </div>
+                      </div>
 
-                              <div className="space-y-2">
-                                <Label className="text-sm font-medium">Comp. (cm)</Label>
-                                <Input
-                                  type="number"
-                                  placeholder="20"
-                                  value={volume.length}
-                                  onChange={(e) => updateVolume(volume.id, "length", e.target.value)}
-                                  className="h-12"
-                                />
-                              </div>
+                      {/* Merchandise Details */}
+                      <div className="space-y-6">
+                        <Label className="flex items-center space-x-2 text-lg font-semibold">
+                          <DollarSign className="h-5 w-5 text-primary" />
+                          <span>Detalhes da Mercadoria</span>
+                        </Label>
 
-                              <div className="space-y-2">
-                                <Label className="text-sm font-medium">Larg. (cm)</Label>
-                                <Input
-                                  type="number"
-                                  placeholder="15"
-                                  value={volume.width}
-                                  onChange={(e) => updateVolume(volume.id, "width", e.target.value)}
-                                  className="h-12"
-                                />
-                              </div>
+                        <div className="space-y-3">
+                          <Label htmlFor="totalValue" className="text-base font-medium">
+                            Valor Total Declarado (R$)
+                          </Label>
+                          <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium text-muted-foreground">
+                              R$
+                            </span>
+                            <Input
+                              id="totalValue"
+                              type="text"
+                              placeholder="0,00"
+                              value={getCurrencyDisplayValue()}
+                              onChange={(e) => handleCurrencyChange(e.target.value)}
+                              className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg pl-12"
+                            />
+                          </div>
+                        </div>
+                      </div>
 
-                              <div className="space-y-2">
-                                <Label className="text-sm font-medium">Alt. (cm)</Label>
-                                <Input
-                                  type="number"
-                                  placeholder="10"
-                                  value={volume.height}
-                                  onChange={(e) => updateVolume(volume.id, "height", e.target.value)}
-                                  className="h-12"
-                                />
-                              </div>
+                      {/* Volumes Dinâmicos */}
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <Label className="flex items-center space-x-2 text-lg font-semibold">
+                            <Package className="h-5 w-5 text-primary" />
+                            <span>Volumes</span>
+                          </Label>
+                          <Button
+                            type="button"
+                            onClick={addVolume}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center space-x-2"
+                          >
+                            <Plus className="h-4 w-4" />
+                            <span>Adicionar Volume</span>
+                          </Button>
+                        </div>
 
-                              <div className="space-y-2 col-span-2 lg:col-span-1">
-                                <Label className="text-sm font-medium">Tipo de Mercadoria *</Label>
-                                <Select
-                                  value={volume.merchandiseType}
-                                  onValueChange={(value) => updateVolume(volume.id, "merchandiseType", value)}
-                                >
-                                  <SelectTrigger className="h-12">
-                                    <SelectValue placeholder="Selecione" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="normal">Normal</SelectItem>
-                                    <SelectItem value="liquido">Líquido</SelectItem>
-                                    <SelectItem value="quimico">Químico</SelectItem>
-                                    <SelectItem value="inflamavel">Inflamável</SelectItem>
-                                    <SelectItem value="vidro">Vidro</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-
-                            <div className="mt-3 text-sm text-muted-foreground">
-                              Peso cúbico deste volume:{" "}
-                              <span className="font-medium text-foreground">
-                                {calculateCubicWeight(
-                                  parseFloat(volume.length) || 0,
-                                  parseFloat(volume.width) || 0,
-                                  parseFloat(volume.height) || 0,
-                                ).toFixed(3)} kg
-                              </span>
+                        {/* Tipo de mercadoria geral */}
+                        <Card className="bg-accent/10 border-border/50">
+                          <CardContent className="pt-4 pb-4">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                              <Label className="text-sm font-medium whitespace-nowrap">
+                                Aplicar tipo de mercadoria para todos:
+                              </Label>
+                              <Select onValueChange={applyMerchandiseTypeToAll}>
+                                <SelectTrigger className="w-full sm:w-64 h-10">
+                                  <SelectValue placeholder="Selecione um tipo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="normal">Normal</SelectItem>
+                                  <SelectItem value="liquido">Líquido</SelectItem>
+                                  <SelectItem value="quimico">Químico</SelectItem>
+                                  <SelectItem value="inflamavel">Inflamável</SelectItem>
+                                  <SelectItem value="vidro">Vidro</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
                           </CardContent>
                         </Card>
-                      ))}
-                    </div>
 
-                    {hasDangerousMerchandise() && (
-                      <Card className="border-warning bg-warning/10">
+                        {/* Lista de volumes */}
+                        <div className="space-y-4">
+                          {volumes.map((volume, index) => (
+                            <Card key={volume.id} className="border-border/50">
+                              <CardHeader className="pb-3 pt-4 px-4">
+                                <div className="flex items-center justify-between">
+                                  <CardTitle className="text-base font-semibold">Volume {index + 1}</CardTitle>
+                                  {volumes.length > 1 && (
+                                    <Button
+                                      type="button"
+                                      onClick={() => removeVolume(volume.id)}
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </CardHeader>
+                              <CardContent className="px-4 pb-4">
+                                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Peso (kg)</Label>
+                                    <Input
+                                      type="text"
+                                      inputMode="decimal"
+                                      placeholder="0.5"
+                                      value={volume.weight}
+                                      onChange={(e) => {
+                                        let value = e.target.value.replace(/[^0-9.]/g, "");
+                                        if (volume.weight === "0." && value === "0") {
+                                          value = "";
+                                        }
+                                        updateVolume(volume.id, "weight", value, volume.weight);
+                                      }}
+                                      className="h-12"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Comp. (cm)</Label>
+                                    <Input
+                                      type="number"
+                                      placeholder="20"
+                                      value={volume.length}
+                                      onChange={(e) => updateVolume(volume.id, "length", e.target.value)}
+                                      className="h-12"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Larg. (cm)</Label>
+                                    <Input
+                                      type="number"
+                                      placeholder="15"
+                                      value={volume.width}
+                                      onChange={(e) => updateVolume(volume.id, "width", e.target.value)}
+                                      className="h-12"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Alt. (cm)</Label>
+                                    <Input
+                                      type="number"
+                                      placeholder="10"
+                                      value={volume.height}
+                                      onChange={(e) => updateVolume(volume.id, "height", e.target.value)}
+                                      className="h-12"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-2 col-span-2 lg:col-span-1">
+                                    <Label className="text-sm font-medium">Tipo de Mercadoria *</Label>
+                                    <Select
+                                      value={volume.merchandiseType}
+                                      onValueChange={(value) => updateVolume(volume.id, "merchandiseType", value)}
+                                    >
+                                      <SelectTrigger className="h-12">
+                                        <SelectValue placeholder="Selecione" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="normal">Normal</SelectItem>
+                                        <SelectItem value="liquido">Líquido</SelectItem>
+                                        <SelectItem value="quimico">Químico</SelectItem>
+                                        <SelectItem value="inflamavel">Inflamável</SelectItem>
+                                        <SelectItem value="vidro">Vidro</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+
+                                <div className="mt-3 text-sm text-muted-foreground">
+                                  Peso cúbico deste volume:{" "}
+                                  <span className="font-medium text-foreground">
+                                    {calculateCubicWeight(
+                                      parseFloat(volume.length) || 0,
+                                      parseFloat(volume.width) || 0,
+                                      parseFloat(volume.height) || 0,
+                                    ).toFixed(3)} kg
+                                  </span>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+
+                        {hasDangerousMerchandise() && (
+                          <Card className="border-warning bg-warning/10">
+                            <CardContent className="pt-4 pb-4">
+                              <div className="flex items-start space-x-3">
+                                <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="font-semibold text-warning">Atenção especial necessária</p>
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    Você selecionou um tipo de mercadoria que requer cuidados especiais no transporte.
+                                  </p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {/* Resumo dos volumes */}
+                        <Card className="bg-primary/5 border-primary/20">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-base font-semibold">Resumo dos Volumes</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">Quantidade de Volumes</p>
+                                <p className="text-2xl font-bold text-primary">{volumes.length}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">Peso Total Declarado</p>
+                                <p className="text-2xl font-bold">{calculateTotalWeight().toFixed(3)} kg</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">Peso Total Cubado</p>
+                                <p className="text-2xl font-bold">{calculateTotalCubicWeight().toFixed(3)} kg</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">Volume Total</p>
+                                <p className="text-2xl font-bold">{calculateTotalCubicMeters().toFixed(4)} m³</p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      <Button
+                        onClick={handleCalculateConvencional}
+                        disabled={!isFormValid() || isLoading}
+                        className="w-full h-16 text-lg font-semibold bg-gradient-primary hover:shadow-primary transition-all duration-300 mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isLoading ? (
+                          <div className="flex items-center space-x-3">
+                            <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"></div>
+                            <span>Calculando frete...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <Calculator className="mr-3 h-5 w-5" />
+                            Calcular Frete
+                          </>
+                        )}
+                      </Button>
+                    </CardContent>
+                  </>
+                )}
+
+                {/* Step 2 - Resultado da Cotação */}
+                {convencionalStep === 2 && quoteResult && quoteResult.type === "convencional" && (
+                  <>
+                    <CardHeader className="relative">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center text-success">
+                            <Check className="h-6 w-6" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Cotação realizada com sucesso!</p>
+                            <h2 className="text-xl font-bold">Resultado da Cotação</h2>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => { setConvencionalStep(1); setQuoteResult(null); setSelectedCarrier(null); }}
+                          className="text-muted-foreground"
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-1" />
+                          Voltar
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="relative space-y-6">
+                      {/* Resumo da Cotação */}
+                      <Card className="bg-muted/30 border-border/50">
                         <CardContent className="pt-4 pb-4">
-                          <div className="flex items-start space-x-3">
-                            <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                             <div>
-                              <p className="font-semibold text-warning">Atenção especial necessária</p>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                Você selecionou um tipo de mercadoria que requer cuidados especiais no transporte.
-                              </p>
+                              <p className="text-xs text-muted-foreground">Origem</p>
+                              <p className="font-semibold">{originCep}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Destino</p>
+                              <p className="font-semibold">{destinyCep}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Volumes</p>
+                              <p className="font-semibold">{quoteResult.volumeCount}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Peso Considerado</p>
+                              <p className="font-semibold">{quoteResult.consideredWeight?.toFixed(2)} kg</p>
                             </div>
                           </div>
                         </CardContent>
                       </Card>
-                    )}
 
-                    {/* Resumo dos volumes */}
-                    <Card className="bg-primary/5 border-primary/20">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base font-semibold">Resumo dos Volumes</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Quantidade de Volumes</p>
-                            <p className="text-2xl font-bold text-primary">{volumes.length}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Peso Total Declarado</p>
-                            <p className="text-2xl font-bold">{calculateTotalWeight().toFixed(3)} kg</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Peso Total Cubado</p>
-                            <p className="text-2xl font-bold">{calculateTotalCubicWeight().toFixed(3)} kg</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Volume Total</p>
-                            <p className="text-2xl font-bold">{calculateTotalCubicMeters().toFixed(4)} m³</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <Button
-                    onClick={handleCalculateConvencional}
-                    disabled={!isFormValid() || isLoading}
-                    className="w-full h-16 text-lg font-semibold bg-gradient-primary hover:shadow-primary transition-all duration-300 mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isLoading ? (
-                      <div className="flex items-center space-x-3">
-                        <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"></div>
-                        <span>Calculando frete...</span>
-                      </div>
-                    ) : (
-                      <>
-                        <Calculator className="mr-3 h-5 w-5" />
-                        Calcular Frete
-                      </>
-                    )}
-                  </Button>
-
-                  {/* Quote Results - Convencional */}
-                  {quoteResult && quoteResult.type === "convencional" && (
-                    <div className="mt-8 space-y-6">
                       <Separator />
-                      <h3 className="text-xl font-semibold text-center">Opções de Frete</h3>
+                      
+                      <h3 className="text-xl font-semibold text-center">Opções de Frete Disponíveis</h3>
                       
                       {quoteResult.magalog && !quoteResult.magalog.permitido &&
                        quoteResult.jadlog && !quoteResult.jadlog.permitido ? (
@@ -772,113 +832,134 @@ const CotacaoPreview = () => {
                               </p>
                             </div>
                           </div>
+                          <Button
+                            onClick={() => { setConvencionalStep(1); setQuoteResult(null); }}
+                            variant="outline"
+                            className="w-full mt-6"
+                          >
+                            <ChevronLeft className="mr-2 h-4 w-4" />
+                            Alterar dados e tentar novamente
+                          </Button>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {quoteResult.magalog && (
-                            <Card
-                              className={`shadow-card cursor-pointer transition-all duration-200 ${
-                                quoteResult.magalog.permitido
-                                  ? selectedCarrier === "magalog"
-                                    ? "border-primary ring-2 ring-primary"
-                                    : "hover:border-primary/50"
-                                  : "opacity-50 cursor-not-allowed"
-                              }`}
-                              onClick={() => quoteResult.magalog.permitido && setSelectedCarrier("magalog")}
-                            >
-                              <CardHeader>
-                                <CardTitle className="flex items-center space-x-2 text-base">
-                                  <DollarSign className="h-4 w-4 text-success" />
-                                  <span>Econômico</span>
-                                  {!quoteResult.magalog.permitido && (
-                                    <Badge variant="destructive" className="ml-2">Indisponível</Badge>
-                                  )}
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                {quoteResult.magalog.permitido ? (
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xl font-bold text-primary">
-                                      R$ {quoteResult.magalog.preco_total?.toFixed(2)}
-                                    </span>
-                                    <div className="flex items-center text-sm text-muted-foreground">
-                                      <Clock className="h-4 w-4 mr-1" />
-                                      {quoteResult.magalog.prazo} dias úteis
+                        <>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {quoteResult.magalog && (
+                              <Card
+                                className={`shadow-card cursor-pointer transition-all duration-200 ${
+                                  quoteResult.magalog.permitido
+                                    ? selectedCarrier === "magalog"
+                                      ? "border-primary ring-2 ring-primary"
+                                      : "hover:border-primary/50"
+                                    : "opacity-50 cursor-not-allowed"
+                                }`}
+                                onClick={() => quoteResult.magalog.permitido && setSelectedCarrier("magalog")}
+                              >
+                                <CardHeader>
+                                  <CardTitle className="flex items-center space-x-2 text-base">
+                                    <DollarSign className="h-4 w-4 text-success" />
+                                    <span>Econômico</span>
+                                    {!quoteResult.magalog.permitido && (
+                                      <Badge variant="destructive" className="ml-2">Indisponível</Badge>
+                                    )}
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  {quoteResult.magalog.permitido ? (
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-3xl font-bold text-primary">
+                                          R$ {quoteResult.magalog.preco_total?.toFixed(2)}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center text-sm text-muted-foreground">
+                                        <Clock className="h-4 w-4 mr-1" />
+                                        Prazo: {quoteResult.magalog.prazo} dias úteis
+                                      </div>
                                     </div>
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-muted-foreground">
-                                    {translateErrorReason(quoteResult.magalog.motivo)}
-                                  </p>
-                                )}
-                              </CardContent>
-                            </Card>
-                          )}
-
-                          {quoteResult.jadlog && (
-                            <Card
-                              className={`shadow-card cursor-pointer transition-all duration-200 ${
-                                quoteResult.jadlog.permitido
-                                  ? selectedCarrier === "jadlog"
-                                    ? "border-primary ring-2 ring-primary"
-                                    : "hover:border-primary/50"
-                                  : "opacity-50 cursor-not-allowed"
-                              }`}
-                              onClick={() => quoteResult.jadlog.permitido && setSelectedCarrier("jadlog")}
-                            >
-                              <CardHeader>
-                                <CardTitle className="flex items-center space-x-2 text-base">
-                                  <Zap className="h-4 w-4 text-primary" />
-                                  <span>Expresso</span>
-                                  {!quoteResult.jadlog.permitido && (
-                                    <Badge variant="destructive" className="ml-2">Indisponível</Badge>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground">
+                                      {translateErrorReason(quoteResult.magalog.motivo)}
+                                    </p>
                                   )}
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                {quoteResult.jadlog.permitido ? (
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xl font-bold text-primary">
-                                      R$ {quoteResult.jadlog.preco_total?.toFixed(2)}
-                                    </span>
-                                    <div className="flex items-center text-sm text-muted-foreground">
-                                      <Clock className="h-4 w-4 mr-1" />
-                                      {quoteResult.jadlog.prazo} dias úteis
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-muted-foreground">
-                                    {translateErrorReason(quoteResult.jadlog.motivo)}
-                                  </p>
-                                )}
-                              </CardContent>
-                            </Card>
-                          )}
-                        </div>
-                      )}
+                                </CardContent>
+                              </Card>
+                            )}
 
-                      {(quoteResult.magalog?.permitido || quoteResult.jadlog?.permitido) && (
-                        <Button
-                          onClick={handleProceed}
-                          className="w-full h-14 text-lg font-semibold"
-                          variant={user ? "default" : "outline"}
-                        >
-                          {user ? (
-                            <>
-                              <ArrowRight className="mr-2 h-5 w-5" />
-                              Continuar para Cotação Completa
-                            </>
-                          ) : (
-                            <>
-                              <LogIn className="mr-2 h-5 w-5" />
-                              Fazer Login para Continuar
-                            </>
+                            {quoteResult.jadlog && (
+                              <Card
+                                className={`shadow-card cursor-pointer transition-all duration-200 ${
+                                  quoteResult.jadlog.permitido
+                                    ? selectedCarrier === "jadlog"
+                                      ? "border-primary ring-2 ring-primary"
+                                      : "hover:border-primary/50"
+                                    : "opacity-50 cursor-not-allowed"
+                                }`}
+                                onClick={() => quoteResult.jadlog.permitido && setSelectedCarrier("jadlog")}
+                              >
+                                <CardHeader>
+                                  <CardTitle className="flex items-center space-x-2 text-base">
+                                    <Zap className="h-4 w-4 text-primary" />
+                                    <span>Expresso</span>
+                                    {!quoteResult.jadlog.permitido && (
+                                      <Badge variant="destructive" className="ml-2">Indisponível</Badge>
+                                    )}
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  {quoteResult.jadlog.permitido ? (
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-3xl font-bold text-primary">
+                                          R$ {quoteResult.jadlog.preco_total?.toFixed(2)}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center text-sm text-muted-foreground">
+                                        <Clock className="h-4 w-4 mr-1" />
+                                        Prazo: {quoteResult.jadlog.prazo} dias úteis
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground">
+                                      {translateErrorReason(quoteResult.jadlog.motivo)}
+                                    </p>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            )}
+                          </div>
+
+                          {(quoteResult.magalog?.permitido || quoteResult.jadlog?.permitido) && (
+                            <div className="space-y-4 pt-4">
+                              <Separator />
+                              <div className="text-center space-y-2">
+                                <p className="text-muted-foreground">
+                                  Para finalizar seu envio, faça login ou crie sua conta
+                                </p>
+                              </div>
+                              <Button
+                                onClick={handleProceed}
+                                className="w-full h-16 text-lg font-semibold bg-gradient-primary hover:shadow-primary transition-all duration-300"
+                              >
+                                {user ? (
+                                  <>
+                                    <ArrowRight className="mr-2 h-5 w-5" />
+                                    Continuar para Cotação Completa
+                                  </>
+                                ) : (
+                                  <>
+                                    <LogIn className="mr-2 h-5 w-5" />
+                                    Fazer Login para Continuar
+                                  </>
+                                )}
+                              </Button>
+                            </div>
                           )}
-                        </Button>
+                        </>
                       )}
-                    </div>
-                  )}
-                </CardContent>
+                    </CardContent>
+                  </>
+                )}
               </Card>
             </TabsContent>
 
