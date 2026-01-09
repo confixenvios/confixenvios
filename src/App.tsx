@@ -88,6 +88,7 @@ import B2BPixPayment from "./pages/b2b/B2BPixPayment";
 import B2BPixPaymentSuccess from "./pages/b2b/B2BPixPaymentSuccess";
 import B2BEnderecos from "./pages/b2b/B2BEnderecos";
 import B2BEnderecosColeta from "./pages/b2b/B2BEnderecosColeta";
+import B2BRastreamento from "./pages/b2b/B2BRastreamento";
 
 const queryClient = new QueryClient();
 
@@ -142,7 +143,7 @@ const App = () => (
                       <Route path="expresso/novo-envio" element={<B2BNovaRemessa />} />
                       <Route path="expresso/enderecos-coleta" element={<B2BEnderecosColeta />} />
                       <Route path="expresso/enderecos" element={<B2BEnderecos />} />
-                      <Route path="expresso/rastreamento" element={<ClientRastreio />} />
+                      <Route path="expresso/rastreamento" element={<B2BRastreamento />} />
                       <Route path="expresso/relatorios" element={<B2BRelatorios />} />
                       <Route path="expresso/pix-pagamento" element={<B2BPixPayment />} />
                       <Route path="expresso/pix-sucesso" element={<B2BPixPaymentSuccess />} />
