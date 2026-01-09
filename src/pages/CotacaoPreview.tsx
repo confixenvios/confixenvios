@@ -433,8 +433,12 @@ const CotacaoPreview = () => {
 
   const handleAuthSuccess = () => {
     setShowAuthModal(false);
-    // Sempre redireciona para o painel após login
-    navigate("/painel");
+    // Redireciona para a área correta do painel baseado no tipo de cotação
+    if (activeTab === "convencional") {
+      navigate("/painel/convencional/cotacoes");
+    } else {
+      navigate("/painel/expresso/novo-envio");
+    }
   };
 
   const translateErrorReason = (reason: string | null): string => {
