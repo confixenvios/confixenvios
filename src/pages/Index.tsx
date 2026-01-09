@@ -88,7 +88,7 @@ const Index = () => {
           {/* Botão Cotar Frete */}
           <div className="flex justify-center mt-24 sm:mt-6 md:mt-auto md:mb-8">
             <Button 
-              className="bg-primary hover:bg-primary/90 text-white text-base sm:text-lg px-8 sm:px-10 py-4 sm:py-6 h-auto shadow-lg"
+              className="bg-primary hover:bg-primary/90 text-white text-base sm:text-lg px-8 sm:px-10 py-2 sm:py-3 h-auto shadow-lg"
               asChild
             >
               <Link to="/auth">
