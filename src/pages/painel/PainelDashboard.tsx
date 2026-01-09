@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { 
   Car, Truck, Plus, Package, ArrowRight, TrendingUp, 
   Clock, FileText, Search, BarChart3, MapPin
@@ -28,6 +29,7 @@ const PainelDashboard = () => {
     deliveredShipments: 0
   });
   const [loading, setLoading] = useState(true);
+  const [showQuoteTypeModal, setShowQuoteTypeModal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -115,12 +117,55 @@ const PainelDashboard = () => {
       {/* Main Action Button */}
       <div className="flex justify-center max-w-5xl mx-auto">
         <Button 
-          onClick={() => navigate('/painel/convencional/cotacoes')}
+          onClick={() => setShowQuoteTypeModal(true)}
           className="bg-primary hover:bg-primary/90 text-white text-lg px-10 py-6 h-auto shadow-lg"
         >
           Cotar frete
         </Button>
       </div>
+
+      {/* Modal de seleção de tipo de cotação */}
+      <Dialog open={showQuoteTypeModal} onOpenChange={setShowQuoteTypeModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl">Escolha o tipo de envio</DialogTitle>
+            <DialogDescription className="text-center">
+              Selecione a modalidade de frete que deseja cotar
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+            <Button
+              variant="outline"
+              className="h-auto py-6 flex-col gap-3 border-2 hover:border-orange-500 hover:bg-orange-50"
+              onClick={() => {
+                setShowQuoteTypeModal(false);
+                navigate('/painel/expresso/nova-remessa');
+              }}
+            >
+              <Car className="h-8 w-8 text-orange-500" />
+              <div className="text-center">
+                <p className="font-semibold text-foreground">Expresso</p>
+                <p className="text-xs text-muted-foreground">Entrega rápida regional</p>
+              </div>
+            </Button>
+            
+            <Button
+              variant="outline"
+              className="h-auto py-6 flex-col gap-3 border-2 hover:border-blue-500 hover:bg-blue-50"
+              onClick={() => {
+                setShowQuoteTypeModal(false);
+                navigate('/painel/convencional/cotacoes');
+              }}
+            >
+              <Truck className="h-8 w-8 text-blue-500" />
+              <div className="text-center">
+                <p className="font-semibold text-foreground">Nacional</p>
+                <p className="text-xs text-muted-foreground">Envio para todo Brasil</p>
+              </div>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
