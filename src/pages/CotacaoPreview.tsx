@@ -364,13 +364,34 @@ const CotacaoPreview = () => {
       }
 
       const webhookResponse = await response.json();
+      console.log("Webhook response:", webhookResponse);
 
+      // Handle both array and object responses
+      let apiData = null;
       if (Array.isArray(webhookResponse) && webhookResponse.length > 0) {
-        const apiData = webhookResponse[0];
+        apiData = webhookResponse[0];
+      } else if (webhookResponse && typeof webhookResponse === 'object' && !Array.isArray(webhookResponse)) {
+        apiData = webhookResponse;
+      }
+
+      if (apiData) {
+        // Map the webhook response format to our expected format
+        const jadlogResult = apiData.preco_total_frete_jadlog ? {
+          permitido: true,
+          preco_total: parseFloat(apiData.preco_total_frete_jadlog),
+          prazo: apiData.prazo_frete_jadlog,
+        } : apiData.jadlog || null;
+
+        const magalogResult = apiData.preco_total_frete_magalog ? {
+          permitido: true,
+          preco_total: parseFloat(apiData.preco_total_frete_magalog),
+          prazo: apiData.prazo_frete_magalog,
+        } : apiData.magalog || null;
+
         setQuoteResult({
           type: "convencional",
-          jadlog: apiData.jadlog || null,
-          magalog: apiData.magalog || null,
+          jadlog: jadlogResult,
+          magalog: magalogResult,
           totalWeight,
           totalCubicWeight,
           consideredWeight: Math.max(totalWeight, totalCubicWeight),
