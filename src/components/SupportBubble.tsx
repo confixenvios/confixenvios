@@ -236,7 +236,7 @@ const SupportBubble = () => {
                   </Button>
                   <Button
                     variant="outline"
-                    className="h-auto py-3 flex flex-col gap-1 border-green-200 hover:bg-green-50 text-green-700"
+                    className="h-auto py-3 flex flex-col gap-1 border-green-200 text-green-700 hover:bg-destructive hover:text-white hover:border-destructive"
                     onClick={openWhatsApp}
                   >
                     <MessageCircle className="h-5 w-5" />
