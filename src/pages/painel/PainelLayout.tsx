@@ -149,7 +149,7 @@ const PainelLayout = () => {
     { title: 'Novo Envio Nacional', url: '/painel/convencional/cotacoes', icon: Plus },
     { title: 'Etiquetas', url: '/painel/convencional/etiquetas', icon: FileText },
     { title: 'Rastreamento', url: '/painel/convencional/rastreamento', icon: Search },
-    { title: 'Relatórios', url: '/painel/convencional/relatorios', icon: History },
+    { title: 'Relatórios', url: '/painel/convencional/relatorios', icon: BarChart3 },
   ];
 
   const isActive = (path: string) => location.pathname === path;
