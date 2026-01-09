@@ -376,10 +376,11 @@ const CotacaoPreview = () => {
           consideredWeight: Math.max(totalWeight, totalCubicWeight),
           volumeCount: volumes.length,
         });
+        toast({ title: "Cotação calculada!", description: "Veja os preços abaixo" });
+        setConvencionalStep(2);
+      } else {
+        toast({ title: "Erro", description: "Não foi possível obter cotação para este destino", variant: "destructive" });
       }
-
-      toast({ title: "Cotação calculada!", description: "Veja os preços abaixo" });
-      setConvencionalStep(2);
     } catch (error) {
       console.error("Erro na cotação:", error);
       toast({ title: "Erro", description: "Não foi possível calcular a cotação", variant: "destructive" });
