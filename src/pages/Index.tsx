@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, lazy, Suspense } from "react";
 // Client logos
 import centauroLogo from "@/assets/clients/centauro-logo.png";
 import hankerLogo from "@/assets/clients/hanker-logo.webp";
@@ -14,7 +14,9 @@ import netshoesLogo from "@/assets/clients/netshoes-logo.png";
 import avodahLogo from "@/assets/clients/avodah-logo.png";
 import magaluLogo from "@/assets/clients/magalu-logo.png";
 import deliveryProfessional from "@/assets/delivery-professional.webp";
-import heroTruckConfix from "@/assets/hero-truck-confix.jpg";
+
+// Lazy load 3D component for better performance
+const Hero3DScene = lazy(() => import("@/components/3d/Hero3DScene"));
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -52,47 +54,47 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-light">
       <Header />
       
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-amber-100 to-amber-200">
-          <img 
-            src={heroTruckConfix} 
-            alt="Caminhão Confix Envios" 
-            className="w-full h-full object-cover object-center md:object-right"
-            loading="eager"
-            fetchPriority="high"
-          />
-        </div>
-        <div className="relative flex flex-col items-center justify-start md:justify-between pt-6 sm:pt-8 md:pt-12 px-4 pb-6 min-h-[50vh] md:min-h-[75vh]">
-          <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl mb-4 sm:mb-6 md:mb-12 leading-tight font-normal text-center">
-            <span style={{ color: '#000000', textShadow: '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.7)' }}>Coletamos e Entregamos em todo o </span>
-            <span className="text-primary" style={{ textShadow: '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.8)' }}>Brasil</span>
+      {/* Hero Section 3D */}
+      <section className="relative overflow-hidden min-h-[70vh] md:min-h-[85vh]">
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-orange-100 to-amber-200" />
+        
+        {/* 3D Scene */}
+        <Suspense fallback={
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-orange-100 to-amber-200" />
+        }>
+          <Hero3DScene />
+        </Suspense>
+        
+        {/* Content overlay */}
+        <div className="relative z-10 flex flex-col items-center justify-center pt-20 sm:pt-24 md:pt-32 px-4 pb-12 min-h-[70vh] md:min-h-[85vh]">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl mb-4 sm:mb-6 md:mb-8 leading-tight font-bold text-center drop-shadow-lg">
+            <span className="text-foreground">Coletamos e Entregamos em todo o </span>
+            <span className="text-primary">Brasil</span>
           </h1>
           
-        {/* Benefícios principais em mini badges */}
-          <div className="flex flex-wrap justify-center gap-1 sm:gap-2 md:gap-4 mb-4 sm:mb-6 md:mb-8">
-            <div className="bg-white/70 backdrop-blur-sm rounded-full px-2 sm:px-3 md:px-5 py-1 md:py-2 text-[10px] sm:text-xs md:text-sm flex items-center gap-1 md:gap-2">
-              <DollarSign className="w-3 h-3 md:w-5 md:h-5 text-primary" />
-              <span style={{ color: '#333' }}>Menor preço</span>
+          {/* Benefícios principais em mini badges */}
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4 mb-8 sm:mb-10 md:mb-12">
+            <div className="bg-white/80 backdrop-blur-md rounded-full px-3 sm:px-4 md:px-6 py-2 md:py-3 text-xs sm:text-sm md:text-base flex items-center gap-2 shadow-lg border border-white/50">
+              <DollarSign className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+              <span className="font-medium text-foreground">Menor preço</span>
             </div>
-            <div className="bg-white/70 backdrop-blur-sm rounded-full px-2 sm:px-3 md:px-5 py-1 md:py-2 text-[10px] sm:text-xs md:text-sm flex items-center gap-1 md:gap-2">
-              <Clock className="w-3 h-3 md:w-5 md:h-5 text-primary" />
-              <span style={{ color: '#333' }}>Menor prazo</span>
+            <div className="bg-white/80 backdrop-blur-md rounded-full px-3 sm:px-4 md:px-6 py-2 md:py-3 text-xs sm:text-sm md:text-base flex items-center gap-2 shadow-lg border border-white/50">
+              <Clock className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+              <span className="font-medium text-foreground">Menor prazo</span>
             </div>
-            <div className="bg-white/70 backdrop-blur-sm rounded-full px-2 sm:px-3 md:px-5 py-1 md:py-2 text-[10px] sm:text-xs md:text-sm flex items-center gap-1 md:gap-2">
-              <TrendingUp className="w-3 h-3 md:w-5 md:h-5 text-primary" />
-              <span style={{ color: '#333' }}>Maior Agilidade</span>
+            <div className="bg-white/80 backdrop-blur-md rounded-full px-3 sm:px-4 md:px-6 py-2 md:py-3 text-xs sm:text-sm md:text-base flex items-center gap-2 shadow-lg border border-white/50">
+              <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+              <span className="font-medium text-foreground">Maior Agilidade</span>
             </div>
           </div>
 
           {/* Botão Cotar Frete */}
-          <div className="flex justify-center mt-24 sm:mt-6 md:mt-auto md:mb-8">
-            <Button className="px-6" asChild>
-              <Link to="/cotacaopreview">
-                COTAR FRETE
-              </Link>
-            </Button>
-          </div>
+          <Button size="lg" className="px-8 py-6 text-lg shadow-xl hover:scale-105 transition-transform" asChild>
+            <Link to="/cotacaopreview">
+              COTAR FRETE
+            </Link>
+          </Button>
         </div>
       </section>
 
