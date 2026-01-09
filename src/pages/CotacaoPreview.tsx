@@ -433,11 +433,8 @@ const CotacaoPreview = () => {
 
   const handleAuthSuccess = () => {
     setShowAuthModal(false);
-    if (activeTab === "convencional") {
-      navigate("/cotacao");
-    } else {
-      navigate("/painel/expresso/novo-envio");
-    }
+    // Sempre redireciona para o painel após login
+    navigate("/painel");
   };
 
   const translateErrorReason = (reason: string | null): string => {
