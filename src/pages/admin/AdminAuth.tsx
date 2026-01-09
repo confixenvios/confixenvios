@@ -37,7 +37,7 @@ const AdminAuth = () => {
           description: "Você não tem permissão de administrador",
           variant: "destructive"
         });
-        navigate('/cliente/dashboard', { replace: true });
+        navigate('/painel', { replace: true });
       }
     }
   }, [user, loading, userRole, isAdmin, navigate, toast]);

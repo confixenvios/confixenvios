@@ -155,7 +155,7 @@ const Header = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">
                         <DropdownMenuItem asChild>
-                          <Link to="/cliente/dashboard" className="flex items-center">
+                          <Link to="/painel" className="flex items-center">
                             <LayoutDashboard className="mr-2 h-4 w-4" />
                             Dashboard
                           </Link>

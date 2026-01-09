@@ -38,8 +38,8 @@ const ProtectedRoute = ({ children, requireAdmin = false, requireClient = false 
   }
 
   if (requireAdmin && !isAdmin) {
-    console.log('🔒 [PROTECTED ROUTE] Admin required but user is not admin, redirecting to /cliente/dashboard');
-    return <Navigate to="/cliente/dashboard" replace />;
+    console.log('🔒 [PROTECTED ROUTE] Admin required but user is not admin, redirecting to /painel');
+    return <Navigate to="/painel" replace />;
   }
 
   if (requireClient && isAdmin) {
