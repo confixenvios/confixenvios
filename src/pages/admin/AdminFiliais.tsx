@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Building2, Plus, Edit, Trash2, MapPin, Phone, Mail } from 'lucide-react';
-import AdminLayout from './AdminLayout';
+
 
 interface CompanyBranch {
   id: string;
@@ -251,20 +251,17 @@ const AdminFiliais = () => {
 
   if (loading) {
     return (
-      <AdminLayout>
-        <div className="container mx-auto max-w-7xl p-6 flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground text-lg">Carregando filiais...</p>
-          </div>
+      <div className="container mx-auto max-w-7xl p-6 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground text-lg">Carregando filiais...</p>
         </div>
-      </AdminLayout>
+      </div>
     );
   }
 
   return (
-    <AdminLayout>
-      <div className="container mx-auto max-w-7xl p-6">
+    <div className="container mx-auto max-w-7xl p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -619,7 +616,6 @@ const AdminFiliais = () => {
           )}
         </div>
       </div>
-    </AdminLayout>
   );
 };
 
