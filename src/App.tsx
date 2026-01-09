@@ -9,6 +9,7 @@ import SupportBubble from "@/components/SupportBubble";
 
 // Public pages
 import Index from "./pages/Index";
+import CotacaoPreview from "./pages/CotacaoPreview";
 import Cotacao from "./pages/Cotacao";
 import Results from "./pages/Results";
 import Label from "./pages/Label";
@@ -99,6 +100,7 @@ const App = () => (
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Index />} />
+            <Route path="/cotacaopreview" element={<CotacaoPreview />} />
             <Route path="/cotacao" element={<Cotacao />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin/auth" element={<AdminAuth />} />
