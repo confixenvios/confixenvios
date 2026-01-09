@@ -350,7 +350,7 @@ const PixPaymentSuccess = () => {
   };
 
   const handleViewShipments = () => {
-    navigate('/cliente/remessas');
+    navigate('/painel/convencional/remessas');
   };
 
   const handleNewShipment = () => {

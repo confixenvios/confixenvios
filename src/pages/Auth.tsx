@@ -53,7 +53,7 @@ const Auth = () => {
   useEffect(() => {
     if (user && !loading) {
       console.log('User authenticated:', !!user, 'Loading:', loading, 'UserRole:', userRole);
-      navigate('/cliente/dashboard');
+      navigate('/painel');
     }
   }, [user, loading, navigate]);
 

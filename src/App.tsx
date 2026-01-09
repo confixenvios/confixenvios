@@ -29,7 +29,7 @@ import SuporteTickets from "./pages/suporte/SuporteTickets";
 import SuporteNovoTicket from "./pages/suporte/SuporteNovoTicket";
 import SuporteTicketDetalhes from "./pages/suporte/SuporteTicketDetalhes";
 
-// Client pages
+// Client pages (legacy - will redirect to /painel)
 import ClientLayout from "./pages/cliente/ClientLayout";
 import ClientDashboard from "./pages/cliente/ClientDashboard";
 import ClientCotacoes from "./pages/cliente/ClientCotacoes";
@@ -38,6 +38,10 @@ import ClientEtiquetas from "./pages/cliente/ClientEtiquetas";
 import ClientRastreio from "./pages/cliente/ClientRastreio";
 import ClientHistorico from "./pages/cliente/ClientHistorico";
 import ClientConta from "./pages/cliente/ClientConta";
+
+// Unified Panel pages
+import PainelLayout from "./pages/painel/PainelLayout";
+import PainelDashboard from "./pages/painel/PainelDashboard";
 
 // Admin pages
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -116,23 +120,35 @@ const App = () => (
             <Route path="/suporte/novo-ticket" element={<SuporteNovoTicket />} />
             <Route path="/suporte/ticket/:id" element={<SuporteTicketDetalhes />} />
 
-            {/* Client Routes */}
+            {/* Client Routes (legacy - redirect to painel) */}
+            <Route path="/cliente/*" element={<Navigate to="/painel" replace />} />
+
+            {/* Unified Panel Routes */}
             <Route 
-              path="/cliente/*" 
+              path="/painel/*" 
               element={
                 <ProtectedRoute requireClient>
-                  <ClientLayout>
-                    <Routes>
-                      <Route index element={<Navigate to="dashboard" replace />} />
-                      <Route path="dashboard" element={<ClientDashboard />} />
-                      <Route path="cotacoes" element={<ClientCotacoes />} />
-                      <Route path="remessas" element={<ClientRemessas />} />
-                      <Route path="etiquetas" element={<ClientEtiquetas />} />
-                      <Route path="rastreamento" element={<ClientRastreio />} />
-                      <Route path="relatorio" element={<ClientHistorico />} />
+                  <Routes>
+                    <Route element={<PainelLayout />}>
+                      <Route index element={<PainelDashboard />} />
+                      {/* Expresso (B2B) Routes */}
+                      <Route path="expresso/envios" element={<B2BDashboard />} />
+                      <Route path="expresso/novo-envio" element={<B2BNovaRemessa />} />
+                      <Route path="expresso/enderecos-coleta" element={<B2BEnderecosColeta />} />
+                      <Route path="expresso/enderecos" element={<B2BEnderecos />} />
+                      <Route path="expresso/relatorios" element={<B2BRelatorios />} />
+                      <Route path="expresso/pix-pagamento" element={<B2BPixPayment />} />
+                      <Route path="expresso/pix-sucesso" element={<B2BPixPaymentSuccess />} />
+                      {/* Convencional Routes */}
+                      <Route path="convencional/cotacoes" element={<ClientCotacoes />} />
+                      <Route path="convencional/remessas" element={<ClientRemessas />} />
+                      <Route path="convencional/etiquetas" element={<ClientEtiquetas />} />
+                      <Route path="convencional/rastreamento" element={<ClientRastreio />} />
+                      <Route path="convencional/relatorios" element={<ClientHistorico />} />
+                      {/* Shared */}
                       <Route path="minha-conta" element={<ClientConta />} />
-                    </Routes>
-                  </ClientLayout>
+                    </Route>
+                  </Routes>
                 </ProtectedRoute>
               } 
             />
@@ -184,24 +200,14 @@ const App = () => (
             <Route path="/cd" element={<CdAuth />} />
             <Route path="/cd/registro" element={<CdRegistro />} />
             <Route path="/cd/dashboard" element={<CdDashboard />} />
-            <Route path="/motorista/dashboard" element={<MotoristaDashboard />} />
-            <Route path="/motorista/relatorios" element={<MotoristaRelatorios />} />
 
-            {/* B2B Expresso Routes */}
+            {/* B2B Expresso Routes (legacy - redirect to painel) */}
             <Route path="/b2b-expresso" element={<B2BAuth />} />
             <Route path="/b2b-expresso/registro" element={<B2BRegistro />} />
-            <Route path="/b2b-expresso/*" element={<B2BLayout />}>
-              <Route path="dashboard" element={<B2BDashboard />} />
-              <Route path="nova-remessa" element={<B2BNovaRemessa />} />
-              <Route path="enderecos" element={<B2BEnderecos />} />
-              <Route path="enderecos-coleta" element={<B2BEnderecosColeta />} />
-              <Route path="pix-pagamento" element={<B2BPixPayment />} />
-              <Route path="pix-sucesso" element={<B2BPixPaymentSuccess />} />
-              <Route path="relatorios" element={<B2BRelatorios />} />
-            </Route>
+            <Route path="/b2b-expresso/*" element={<Navigate to="/painel" replace />} />
 
             {/* Legacy redirects */}
-            <Route path="/dashboard/*" element={<Navigate to="/cliente" replace />} />
+            <Route path="/dashboard/*" element={<Navigate to="/painel" replace />} />
             
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
