@@ -368,9 +368,6 @@ const B2BDashboard = () => {
                           Previsão: {format(new Date(volumeShipment.delivery_date + 'T12:00:00'), 'dd/MM/yyyy')}
                         </p>
                       )}
-                      <p className="text-primary font-semibold">
-                        Frete: R$ {volume.weight ? (volume.weight * 2.5).toFixed(2).replace('.', ',') : '0,00'}
-                      </p>
                     </div>
 
                     {/* Aviso de etiqueta */}
