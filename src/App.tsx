@@ -58,6 +58,7 @@ import AdminClientesB2B from "./pages/admin/AdminClientesB2B";
 import AdminCadastroClienteB2B from "./pages/admin/AdminCadastroClienteB2B";
 import AdminGestaoCd from "./pages/admin/AdminGestaoCd";
 import AdminCdUsers from "./pages/admin/AdminCdUsers";
+import AdminTickets from "./pages/admin/AdminTickets";
 
 import AdminIntegracoes from "./pages/admin/AdminIntegracoes";
 import AdminWebhooks from "./pages/admin/AdminWebhooks";
@@ -179,6 +180,7 @@ const App = () => (
                       <Route path="cte" element={<AdminCte />} />
                        <Route path="api-externa" element={<AdminApiExterna />} />
                        <Route path="relatorios" element={<AdminRelatorios />} />
+                       <Route path="tickets" element={<AdminTickets />} />
                        <Route path="integracoes" element={<AdminIntegracoes />} />
                        <Route path="webhooks" element={<AdminWebhooks />} />
                        <Route path="api-keys" element={<AdminApiKeys />} />
