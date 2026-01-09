@@ -54,8 +54,15 @@ const PainelLayout = () => {
         return;
       }
       
-      // Redirecionar admin para painel administrativo
-      if (user.email === 'grupoconfix@gmail.com') {
+      // Verificar se é admin usando a tabela user_roles
+      const { data: adminRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .single();
+      
+      if (adminRole) {
         navigate('/admin/dashboard');
         return;
       }
