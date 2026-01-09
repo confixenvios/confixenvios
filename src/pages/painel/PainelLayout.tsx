@@ -332,21 +332,14 @@ const PainelLayout = () => {
             <LayoutDashboard className="h-5 w-5 text-primary" />
             <span className="font-semibold text-foreground">Painel de Envios</span>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-medium text-foreground truncate">{getDisplayName()}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="text-red-600 hover:text-white hover:bg-primary"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </Button>
-          </div>
+          <Button
+            size="sm"
+            onClick={handleLogout}
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Sair
+          </Button>
         </header>
 
         {/* Main Content */}
