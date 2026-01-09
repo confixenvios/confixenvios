@@ -83,7 +83,7 @@ const Header = () => {
           <nav className="hidden md:flex items-center justify-center flex-1 space-x-8">
             <Link 
               to="#servicos" 
-              className="hover:text-primary transition-colors text-lg font-normal"
+              className="relative text-lg font-normal transition-colors hover:text-primary after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-[-4px] after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
               style={{ fontFamily: 'Arial, sans-serif', color: '#000000' }}
               onClick={(e) => {
                 e.preventDefault();
@@ -94,7 +94,7 @@ const Header = () => {
             </Link>
             <Link 
               to="#diferencial" 
-              className="hover:text-primary transition-colors text-lg font-normal"
+              className="relative text-lg font-normal transition-colors hover:text-primary after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-[-4px] after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
               style={{ fontFamily: 'Arial, sans-serif', color: '#000000' }}
               onClick={(e) => {
                 e.preventDefault();
@@ -105,7 +105,7 @@ const Header = () => {
             </Link>
             <Link 
               to="#quemsomos" 
-              className="hover:text-primary transition-colors text-lg font-normal"
+              className="relative text-lg font-normal transition-colors hover:text-primary after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-[-4px] after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
               style={{ fontFamily: 'Arial, sans-serif', color: '#000000' }}
               onClick={(e) => {
                 e.preventDefault();
@@ -116,7 +116,7 @@ const Header = () => {
             </Link>
             <Link 
               to="#contato" 
-              className="hover:text-primary transition-colors text-lg font-normal"
+              className="relative text-lg font-normal transition-colors hover:text-primary after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-[-4px] after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
               style={{ fontFamily: 'Arial, sans-serif', color: '#000000' }}
               onClick={(e) => {
                 e.preventDefault();
