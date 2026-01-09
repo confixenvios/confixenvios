@@ -259,9 +259,9 @@ const CotacaoPreview = () => {
       <section className="relative py-8 sm:py-12 px-2 sm:px-4 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-glow opacity-30"></div>
         <div className="container mx-auto text-center relative">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 leading-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 leading-normal">
             Simule o valor do seu
-            <span className="bg-gradient-primary bg-clip-text text-transparent block">
+            <span className="bg-gradient-primary bg-clip-text text-transparent block pb-1">
               envio agora mesmo
             </span>
           </h1>
