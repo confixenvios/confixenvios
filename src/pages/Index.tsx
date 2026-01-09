@@ -105,16 +105,6 @@ const Index = () => {
             <span className="text-red-600">Brasil</span>
           </motion.h1>
           
-          <motion.p
-            className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-          >
-            Soluções logísticas completas para sua empresa com tecnologia, 
-            agilidade e o melhor custo-benefício do mercado.
-          </motion.p>
-          
           {/* Benefícios */}
           <motion.div 
             className="flex flex-wrap justify-center gap-3 mb-10"
