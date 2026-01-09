@@ -112,89 +112,14 @@ const PainelDashboard = () => {
         </p>
       </div>
 
-      {/* Main Action Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
-        {/* Card Novo Envio Expresso */}
-        <Card className="border-2 border-primary/20 hover:border-primary/50 transition-all hover:shadow-xl group cursor-pointer" onClick={() => navigate('/painel/expresso/novo-envio')}>
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="p-3 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl shadow-lg">
-                <Car className="h-8 w-8 text-white" />
-              </div>
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200">
-                Expresso
-              </Badge>
-            </div>
-            <CardTitle className="text-2xl mt-4 group-hover:text-primary transition-colors">
-              Envio Expresso
-            </CardTitle>
-            <CardDescription className="text-base">
-              Coleta no seu endereço, múltiplos volumes, entregas rápidas
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2 text-sm text-muted-foreground mb-4">
-              <li className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-primary" />
-                Coleta agendada no seu endereço
-              </li>
-              <li className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-primary" />
-                Múltiplos volumes por remessa
-              </li>
-              <li className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" />
-                Etiquetas individuais por volume
-              </li>
-            </ul>
-            <Button className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 shadow-lg group-hover:scale-[1.02] transition-transform">
-              <Plus className="mr-2 h-5 w-5" />
-              Novo Envio Expresso
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Card Novo Envio Convencional */}
-        <Card className="border-2 border-primary/20 hover:border-primary/50 transition-all hover:shadow-xl group cursor-pointer" onClick={() => navigate('/painel/convencional/cotacoes')}>
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-                <Truck className="h-8 w-8 text-white" />
-              </div>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200">
-                Nacional
-              </Badge>
-            </div>
-            <CardTitle className="text-2xl mt-4 group-hover:text-primary transition-colors">
-              Envio Nacional
-            </CardTitle>
-            <CardDescription className="text-base">
-              Faça cotação, pague e gere sua etiqueta para postar
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2 text-sm text-muted-foreground mb-4">
-              <li className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-blue-600" />
-                Compare preços de transportadoras
-              </li>
-              <li className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-blue-600" />
-                Pague online com PIX ou Cartão
-              </li>
-              <li className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-blue-600" />
-                Poste em agência ou agende coleta
-              </li>
-            </ul>
-            <Button className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg group-hover:scale-[1.02] transition-transform">
-              <Plus className="mr-2 h-5 w-5" />
-              Nova Cotação
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </CardContent>
-        </Card>
+      {/* Main Action Button */}
+      <div className="flex justify-center max-w-5xl mx-auto">
+        <Button 
+          onClick={() => navigate('/painel/convencional/cotacoes')}
+          className="bg-primary hover:bg-primary/90 text-white text-lg px-10 py-6 h-auto shadow-lg"
+        >
+          Cotar frete
+        </Button>
       </div>
 
       {/* Stats Cards */}
