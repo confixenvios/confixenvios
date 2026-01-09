@@ -350,37 +350,11 @@ const Index = () => {
             </div>
           </div>
           
-          <div className="relative inline-block" ref={cotarMenuRef2}>
-            <Button 
-              className="px-6"
-              onClick={() => setCotarMenuOpen2(!cotarMenuOpen2)}
-            >
-              <Package className="mr-2 h-4 w-4" />
+          <Button className="px-6" asChild>
+            <Link to="/auth">
               COTAR FRETE
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-            
-            {cotarMenuOpen2 && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-white rounded-lg shadow-lg border z-50">
-                <Link
-                  to="/auth"
-                  onClick={() => setCotarMenuOpen2(false)}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-100 rounded-t-lg flex items-center gap-2 text-foreground"
-                >
-                  <Globe className="h-4 w-4 text-primary" />
-                  Cotar Nacional
-                </Link>
-                <Link
-                  to="/b2b-expresso"
-                  onClick={() => setCotarMenuOpen2(false)}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-100 rounded-b-lg flex items-center gap-2 text-foreground"
-                >
-                  <Zap className="h-4 w-4 text-primary" />
-                  Cotar Expresso
-                </Link>
-              </div>
-            )}
-          </div>
+            </Link>
+          </Button>
         </div>
       </section>
 
