@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Search, UserPlus, Shield, Truck, Users, Headset, Building2, Loader2, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import AdminLayout from './AdminLayout';
+
 
 type RoleType = 'admin' | 'user' | 'motorista' | 'cd' | 'suporte';
 
@@ -179,8 +179,7 @@ const AdminCadastros = () => {
   const counts = getCounts();
 
   return (
-    <AdminLayout>
-      <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Cadastros</h1>
@@ -355,8 +354,7 @@ const AdminCadastros = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </AdminLayout>
+    </div>
   );
 };
 
