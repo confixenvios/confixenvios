@@ -26,6 +26,7 @@ interface UserWithRole {
   created_at: string;
   status: string;
   roles: RoleType[];
+  source: 'profile' | 'motorista' | 'cd';
 }
 
 const roleLabels: Record<RoleType, { label: string; color: string; icon: React.ReactNode }> = {
@@ -54,31 +55,26 @@ const AdminCadastros = () => {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      // Carregar todos os profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Carregar dados de todas as fontes em paralelo
+      const [profilesRes, rolesRes, motoristasRes, cdUsersRes] = await Promise.all([
+        supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+        supabase.from('user_roles').select('user_id, role'),
+        supabase.from('motoristas').select('*').order('created_at', { ascending: false }),
+        supabase.from('cd_users').select('*').order('created_at', { ascending: false }),
+      ]);
 
-      if (profilesError) throw profilesError;
-
-      // Carregar todos os roles
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
-
-      if (rolesError) throw rolesError;
+      if (profilesRes.error) throw profilesRes.error;
 
       // Mapear roles por user_id
       const rolesByUser = new Map<string, RoleType[]>();
-      roles?.forEach((r) => {
+      rolesRes.data?.forEach((r) => {
         const existing = rolesByUser.get(r.user_id) || [];
         existing.push(r.role as RoleType);
         rolesByUser.set(r.user_id, existing);
       });
 
-      // Combinar dados
-      const usersWithRoles: UserWithRole[] = (profiles || []).map((p) => ({
+      // Usuários do profiles (clientes/admins/suporte)
+      const profileUsers: UserWithRole[] = (profilesRes.data || []).map((p) => ({
         id: p.id,
         email: p.email || '',
         first_name: p.first_name,
@@ -88,9 +84,44 @@ const AdminCadastros = () => {
         created_at: p.created_at || '',
         status: p.status || 'active',
         roles: rolesByUser.get(p.id) || ['user'],
+        source: 'profile' as const,
       }));
 
-      setUsers(usersWithRoles);
+      // Motoristas (tabela separada)
+      const motoristaUsers: UserWithRole[] = (motoristasRes.data || []).map((m) => ({
+        id: m.id,
+        email: m.username || '',
+        first_name: m.nome,
+        last_name: null,
+        phone: m.telefone,
+        document: m.cpf,
+        created_at: m.created_at || '',
+        status: m.status === 'ativo' ? 'active' : m.status,
+        roles: ['motorista'] as RoleType[],
+        source: 'motorista' as const,
+      }));
+
+      // Usuários CD (tabela separada)
+      const cdUsersList: UserWithRole[] = (cdUsersRes.data || []).map((c) => ({
+        id: c.id,
+        email: c.email || '',
+        first_name: c.nome,
+        last_name: null,
+        phone: c.telefone,
+        document: c.cpf,
+        created_at: c.created_at || '',
+        status: c.status === 'ativo' ? 'active' : c.status,
+        roles: ['cd'] as RoleType[],
+        source: 'cd' as const,
+      }));
+
+      // Combinar todos
+      const allUsers = [...profileUsers, ...motoristaUsers, ...cdUsersList];
+      
+      // Ordenar por data de criação
+      allUsers.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      setUsers(allUsers);
     } catch (error) {
       console.error('Error loading users:', error);
       toast({
