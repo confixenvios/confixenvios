@@ -126,7 +126,7 @@ const PainelDashboard = () => {
               </Badge>
             </div>
             <CardTitle className="text-2xl mt-4 group-hover:text-primary transition-colors">
-              Envio Expresso (B2B)
+              Envio Expresso
             </CardTitle>
             <CardDescription className="text-base">
               Coleta no seu endereço, múltiplos volumes, entregas rápidas
@@ -163,11 +163,11 @@ const PainelDashboard = () => {
                 <Truck className="h-8 w-8 text-white" />
               </div>
               <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200">
-                Convencional
+                Nacional
               </Badge>
             </div>
             <CardTitle className="text-2xl mt-4 group-hover:text-primary transition-colors">
-              Envio Convencional
+              Envio Nacional
             </CardTitle>
             <CardDescription className="text-base">
               Faça cotação, pague e gere sua etiqueta para postar
@@ -219,7 +219,7 @@ const PainelDashboard = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">Envios Convencional</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Envios Nacional</p>
                 <p className="text-2xl font-bold text-foreground">
                   {loading ? '...' : stats.totalConvencional}
                 </p>

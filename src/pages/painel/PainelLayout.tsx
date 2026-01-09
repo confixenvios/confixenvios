@@ -194,7 +194,7 @@ const PainelLayout = () => {
             )}>
               <div className="flex items-center gap-3">
                 <Car className="h-4 w-4" />
-                <span className="text-sm font-semibold">Expresso (B2B)</span>
+                <span className="text-sm font-semibold">Expresso</span>
               </div>
               <ChevronDown className={cn(
                 "h-4 w-4 transition-transform",
@@ -233,7 +233,7 @@ const PainelLayout = () => {
             )}>
               <div className="flex items-center gap-3">
                 <Truck className="h-4 w-4" />
-                <span className="text-sm font-semibold">Convencional</span>
+                <span className="text-sm font-semibold">Nacional</span>
               </div>
               <ChevronDown className={cn(
                 "h-4 w-4 transition-transform",
