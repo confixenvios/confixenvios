@@ -155,7 +155,12 @@ const SupportBubble = () => {
   };
 
   const openWhatsApp = () => {
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}`, "_blank");
+    // Usar link direto do WhatsApp que funciona melhor em desktop
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const url = isMobile 
+      ? `https://wa.me/${WHATSAPP_NUMBER}`
+      : `https://web.whatsapp.com/send?phone=${WHATSAPP_NUMBER}`;
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   if (shouldHide) return null;
