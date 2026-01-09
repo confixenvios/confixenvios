@@ -16,7 +16,8 @@ import {
   Search,
   ChevronDown,
   Zap,
-  Globe
+  Globe,
+  Ticket
 } from "lucide-react";
 import { NavLink, useLocation } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -61,6 +62,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'CTe', href: '/admin/cte', icon: FileText },
     { name: 'Faturamento', href: '/admin/faturamento', icon: DollarSign },
     { name: 'Relatórios', href: '/admin/relatorios', icon: BarChart3 },
+    { name: 'Tickets', href: '/admin/tickets', icon: Ticket },
   ];
 
   const isActive = (path: string) => {
