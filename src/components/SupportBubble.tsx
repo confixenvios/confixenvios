@@ -6,10 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
-import { X, Send, Ticket, ExternalLink, Headphones, MessageCircle, HelpCircle } from "lucide-react";
+import { X, Send, Ticket, Headphones, MessageCircle } from "lucide-react";
 
 // Custom Support Agent Icon (head with headset)
 const SupportAgentIcon = ({ className }: { className?: string }) => (
@@ -37,14 +36,6 @@ const SupportAgentIcon = ({ className }: { className?: string }) => (
     <circle cx="13" cy="20.5" r="1.5" />
   </svg>
 );
-
-const categoryOptions = [
-  { value: "technical", label: "Suporte Técnico" },
-  { value: "billing", label: "Faturamento" },
-  { value: "general", label: "Dúvidas Gerais" },
-  { value: "feedback", label: "Sugestões" },
-  { value: "complaint", label: "Reclamações" },
-];
 
 const faqItems = [
   {
@@ -82,34 +73,46 @@ const SupportBubble = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [ticketCount, setTicketCount] = useState(0);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Quick ticket form
+  // Ticket form
   const [subject, setSubject] = useState("");
+  const [orderNumber, setOrderNumber] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("general");
 
-  // Hide on support pages and painel
-  const shouldHide = location.pathname.startsWith("/suporte") || location.pathname.startsWith("/painel");
+  // Hide only on admin pages
+  const shouldHide = location.pathname.startsWith("/admin");
 
   useEffect(() => {
     checkAuth();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session?.user);
+      setUserId(session?.user?.id || null);
+      if (session?.user) {
+        loadTicketCount(session.user.id);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     setIsLoggedIn(!!user);
+    setUserId(user?.id || null);
 
     if (user) {
       loadTicketCount(user.id);
     }
   };
 
-  const loadTicketCount = async (userId: string) => {
+  const loadTicketCount = async (uid: string) => {
     try {
       const { count } = await supabase
         .from("support_tickets")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", userId)
+        .eq("user_id", uid)
         .in("status", ["open", "pending", "in_progress"]);
 
       setTicketCount(count || 0);
@@ -118,24 +121,38 @@ const SupportBubble = () => {
     }
   };
 
-  const handleQuickTicket = async (e: React.FormEvent) => {
+  const handleSubmitTicket = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!subject.trim()) {
+      toast.error("O assunto é obrigatório");
+      return;
+    }
+    
+    if (!description.trim()) {
+      toast.error("A descrição é obrigatória");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
+      if (!userId) {
         toast.error("Faça login para abrir um ticket");
         navigate("/auth");
         return;
       }
 
+      // Build description with order number if provided
+      const fullDescription = orderNumber.trim() 
+        ? `Número do Pedido: ${orderNumber.trim()}\n\n${description}`
+        : description;
+
       const { error } = await supabase.from("support_tickets").insert({
-        user_id: user.id,
+        user_id: userId,
         subject,
-        description,
-        category: category as any,
+        description: fullDescription,
+        category: "general" as any,
         priority: "medium" as any,
       } as any);
 
@@ -143,10 +160,9 @@ const SupportBubble = () => {
 
       toast.success("Ticket criado com sucesso!");
       setSubject("");
+      setOrderNumber("");
       setDescription("");
-      setCategory("general");
-      setIsOpen(false);
-      loadTicketCount(user.id);
+      loadTicketCount(userId);
     } catch (error: any) {
       toast.error(error.message || "Erro ao criar ticket");
     } finally {
@@ -155,7 +171,6 @@ const SupportBubble = () => {
   };
 
   const openWhatsApp = () => {
-    // Usar link direto do WhatsApp que funciona melhor em desktop
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const url = isMobile 
       ? `https://wa.me/${WHATSAPP_NUMBER}`
@@ -201,7 +216,7 @@ const SupportBubble = () => {
           <CardContent className="pt-4 space-y-4 overflow-y-auto flex-1">
             {isLoggedIn ? (
               <>
-                {/* Quick Actions */}
+                {/* Quick Actions - My Tickets + WhatsApp */}
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant="outline"
@@ -221,14 +236,11 @@ const SupportBubble = () => {
                   </Button>
                   <Button
                     variant="outline"
-                    className="h-auto py-3 flex flex-col gap-1"
-                    onClick={() => {
-                      navigate("/painel/suporte/novo");
-                      setIsOpen(false);
-                    }}
+                    className="h-auto py-3 flex flex-col gap-1 border-green-200 hover:bg-green-50 text-green-700"
+                    onClick={openWhatsApp}
                   >
-                    <ExternalLink className="h-5 w-5" />
-                    <span className="text-xs">Novo Ticket</span>
+                    <MessageCircle className="h-5 w-5" />
+                    <span className="text-xs">WhatsApp</span>
                   </Button>
                 </div>
 
@@ -238,19 +250,19 @@ const SupportBubble = () => {
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
                     <span className="bg-background px-2 text-muted-foreground">
-                      ou envie rápido
+                      Abrir novo ticket
                     </span>
                   </div>
                 </div>
 
-                {/* Quick Ticket Form */}
-                <form onSubmit={handleQuickTicket} className="space-y-3">
+                {/* Ticket Form */}
+                <form onSubmit={handleSubmitTicket} className="space-y-3">
                   <div className="space-y-1">
-                    <Label htmlFor="quick-subject" className="text-xs">
-                      Assunto
+                    <Label htmlFor="ticket-subject" className="text-xs">
+                      Assunto <span className="text-destructive">*</span>
                     </Label>
                     <Input
-                      id="quick-subject"
+                      id="ticket-subject"
                       placeholder="Resumo do problema"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
@@ -259,29 +271,24 @@ const SupportBubble = () => {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="quick-category" className="text-xs">
-                      Categoria
+                    <Label htmlFor="ticket-order" className="text-xs">
+                      Número do Pedido <span className="text-muted-foreground">(opcional)</span>
                     </Label>
-                    <Select value={category} onValueChange={setCategory}>
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categoryOptions.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      id="ticket-order"
+                      placeholder="Ex: CFX-123456"
+                      value={orderNumber}
+                      onChange={(e) => setOrderNumber(e.target.value)}
+                      className="h-8 text-sm"
+                    />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="quick-description" className="text-xs">
-                      Descrição
+                    <Label htmlFor="ticket-description" className="text-xs">
+                      Descrição <span className="text-destructive">*</span>
                     </Label>
                     <Textarea
-                      id="quick-description"
-                      placeholder="Descreva seu problema..."
+                      id="ticket-description"
+                      placeholder="Descreva seu problema detalhadamente..."
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       required
@@ -322,7 +329,7 @@ const SupportBubble = () => {
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
                     <span className="bg-background px-2 text-muted-foreground">
-                      ou veja as dúvidas frequentes
+                      Dúvidas frequentes
                     </span>
                   </div>
                 </div>
