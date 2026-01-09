@@ -39,6 +39,8 @@ import ClientEtiquetas from "./pages/cliente/ClientEtiquetas";
 import ClientRastreio from "./pages/cliente/ClientRastreio";
 import ClientHistorico from "./pages/cliente/ClientHistorico";
 import ClientConta from "./pages/cliente/ClientConta";
+import ClientRemetentes from "./pages/cliente/ClientRemetentes";
+import ClientDestinatarios from "./pages/cliente/ClientDestinatarios";
 
 // Unified Panel pages
 import PainelLayout from "./pages/painel/PainelLayout";
@@ -140,13 +142,15 @@ const App = () => (
                       <Route path="expresso/novo-envio" element={<B2BNovaRemessa />} />
                       <Route path="expresso/enderecos-coleta" element={<B2BEnderecosColeta />} />
                       <Route path="expresso/enderecos" element={<B2BEnderecos />} />
+                      <Route path="expresso/rastreamento" element={<ClientRastreio />} />
                       <Route path="expresso/relatorios" element={<B2BRelatorios />} />
                       <Route path="expresso/pix-pagamento" element={<B2BPixPayment />} />
                       <Route path="expresso/pix-sucesso" element={<B2BPixPaymentSuccess />} />
                       {/* Convencional Routes */}
                       <Route path="convencional/cotacoes" element={<ClientCotacoes />} />
                       <Route path="convencional/remessas" element={<ClientRemessas />} />
-                      <Route path="convencional/etiquetas" element={<ClientEtiquetas />} />
+                      <Route path="convencional/remetentes" element={<ClientRemetentes />} />
+                      <Route path="convencional/destinatarios" element={<ClientDestinatarios />} />
                       <Route path="convencional/rastreamento" element={<ClientRastreio />} />
                       <Route path="convencional/relatorios" element={<ClientHistorico />} />
                       {/* Shared */}
