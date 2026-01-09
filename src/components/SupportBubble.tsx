@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { X, Send, Ticket, ExternalLink, Headphones } from "lucide-react";
 
-// Custom Support Agent Icon (person with headset)
+// Custom Support Agent Icon (head with headset)
 const SupportAgentIcon = ({ className }: { className?: string }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -22,18 +22,18 @@ const SupportAgentIcon = ({ className }: { className?: string }) => (
     strokeLinejoin="round"
     className={className}
   >
-    {/* Head */}
-    <circle cx="12" cy="8" r="4" />
-    {/* Body/Shoulders */}
-    <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
-    {/* Headset band */}
-    <path d="M5 8a7 7 0 0 1 14 0" />
+    {/* Head/Face circle */}
+    <circle cx="12" cy="12" r="5" />
+    {/* Headset band on top */}
+    <path d="M4 12a8 8 0 0 1 16 0" />
     {/* Left earpiece */}
-    <rect x="3" y="8" width="2" height="4" rx="1" />
+    <rect x="2" y="10" width="3" height="5" rx="1.5" />
     {/* Right earpiece */}
-    <rect x="19" y="8" width="2" height="4" rx="1" />
+    <rect x="19" y="10" width="3" height="5" rx="1.5" />
+    {/* Microphone arm */}
+    <path d="M19 15v2a2 2 0 0 1-2 2h-3" />
     {/* Microphone */}
-    <path d="M19 12v1a2 2 0 0 1-2 2h-1" />
+    <circle cx="13" cy="19" r="1" />
   </svg>
 );
 
