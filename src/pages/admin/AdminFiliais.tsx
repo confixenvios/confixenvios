@@ -543,14 +543,6 @@ const AdminFiliais = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleTestWebhook(branch.id)}
-                      className="flex items-center gap-2 text-blue-600 hover:text-blue-700"
-                    >
-                      <span className="hidden sm:inline">Testar Webhook</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
                       onClick={() => handleDelete(branch.id)}
                       className="flex items-center gap-2 text-destructive hover:text-destructive"
                     >
