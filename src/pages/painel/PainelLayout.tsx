@@ -137,16 +137,16 @@ const PainelLayout = () => {
   };
 
   const expressoMenuItems = [
-    { title: 'Envios', url: '/painel/expresso/envios', icon: Truck },
-    { title: 'Novo Envio', url: '/painel/expresso/novo-envio', icon: Plus },
+    { title: 'Envios Expresso', url: '/painel/expresso/envios', icon: Truck },
+    { title: 'Novo Envio Expresso', url: '/painel/expresso/novo-envio', icon: Plus },
     { title: 'Endereços de Coleta', url: '/painel/expresso/enderecos-coleta', icon: MapPin },
     { title: 'Endereços de Entrega', url: '/painel/expresso/enderecos', icon: MapPin },
     { title: 'Relatórios', url: '/painel/expresso/relatorios', icon: BarChart3 },
   ];
 
   const convencionalMenuItems = [
-    { title: 'Cotações', url: '/painel/convencional/cotacoes', icon: Calculator },
-    { title: 'Remessas', url: '/painel/convencional/remessas', icon: Package2 },
+    { title: 'Envios Nacionais', url: '/painel/convencional/remessas', icon: Package2 },
+    { title: 'Novo Envio Nacional', url: '/painel/convencional/cotacoes', icon: Calculator },
     { title: 'Etiquetas', url: '/painel/convencional/etiquetas', icon: FileText },
     { title: 'Rastreamento', url: '/painel/convencional/rastreamento', icon: Search },
     { title: 'Relatórios', url: '/painel/convencional/relatorios', icon: History },
