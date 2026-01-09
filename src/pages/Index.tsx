@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect, lazy, Suspense } from "react";
+import { lazy, Suspense } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import {
   FadeInUp,
@@ -28,21 +28,14 @@ import avodahLogo from "@/assets/clients/avodah-logo.png";
 import magaluLogo from "@/assets/clients/magalu-logo.png";
 import deliveryProfessional from "@/assets/delivery-professional.webp";
 
-// Lazy load 3D component
-const Hero3DScene = lazy(() => import("@/components/3d/Hero3DScene"));
+// Lazy load background component
+const HeroBackground = lazy(() => import("@/components/animations/HeroBackground"));
 
 const Index = () => {
   const { loading } = useAuth();
-  const [scrollY, setScrollY] = useState(0);
   const { scrollYProgress } = useScroll();
   const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
   const heroScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
-
-  useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   if (loading) {
     return (
@@ -93,32 +86,9 @@ const Index = () => {
         style={{ opacity: heroOpacity, scale: heroScale }}
         className="relative min-h-screen flex items-center justify-center overflow-hidden"
       >
-        {/* Gradient Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-red-100 via-rose-100 to-red-200" />
-        
-        {/* Animated gradient orbs */}
-        <motion.div
-          className="absolute top-20 left-10 w-72 h-72 bg-red-300/30 rounded-full blur-3xl"
-          animate={{
-            x: [0, 50, 0],
-            y: [0, 30, 0],
-            scale: [1, 1.1, 1],
-          }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div
-          className="absolute bottom-20 right-10 w-96 h-96 bg-rose-300/30 rounded-full blur-3xl"
-          animate={{
-            x: [0, -30, 0],
-            y: [0, -50, 0],
-            scale: [1, 1.2, 1],
-          }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        />
-        
-        {/* 3D Scene */}
-        <Suspense fallback={null}>
-          <Hero3DScene scrollY={scrollY} />
+        {/* Animated Background */}
+        <Suspense fallback={<div className="absolute inset-0 bg-gradient-to-br from-red-50 via-white to-red-50/50" />}>
+          <HeroBackground />
         </Suspense>
         
         {/* Hero Content */}
