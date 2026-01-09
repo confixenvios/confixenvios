@@ -307,9 +307,10 @@ const CotacaoPreview = () => {
                         mask="99999-999"
                         value={originCep}
                         onChange={(e) => setOriginCep(e.target.value)}
+                        disabled
                       >
                         {(inputProps: any) => (
-                          <Input {...inputProps} placeholder="00000-000" disabled className="bg-muted" />
+                          <Input {...inputProps} placeholder="00000-000" className="bg-muted" />
                         )}
                       </InputMask>
                       <p className="text-xs text-muted-foreground mt-1">Goiânia - GO (fixo)</p>
