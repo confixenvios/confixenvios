@@ -6,9 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
 import { X, Send, Ticket, Headphones, MessageCircle } from "lucide-react";
+
+const SUBJECT_OPTIONS = [
+  { value: "insucesso_entrega", label: "Insucesso na Entrega" },
+  { value: "fora_prazo", label: "Entrega Fora do Prazo" },
+  { value: "avaria", label: "Avaria de Produto" },
+  { value: "duvida_outros", label: "Dúvida / Outros" },
+];
 
 // Custom Support Agent Icon (head with headset)
 const SupportAgentIcon = ({ className }: { className?: string }) => (
@@ -261,14 +269,18 @@ const SupportBubble = () => {
                     <Label htmlFor="ticket-subject" className="text-xs">
                       Assunto <span className="text-destructive">*</span>
                     </Label>
-                    <Input
-                      id="ticket-subject"
-                      placeholder="Resumo do problema"
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                      required
-                      className="h-8 text-sm"
-                    />
+                    <Select value={subject} onValueChange={setSubject}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="Selecione o assunto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SUBJECT_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.label}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="ticket-order" className="text-xs">

@@ -89,9 +89,10 @@ import B2BNovaRemessa from "./pages/b2b/B2BNovaRemessa";
 import B2BRelatorios from "./pages/b2b/B2BRelatorios";
 import B2BPixPayment from "./pages/b2b/B2BPixPayment";
 import B2BPixPaymentSuccess from "./pages/b2b/B2BPixPaymentSuccess";
-import B2BEnderecos from "./pages/b2b/B2BEnderecos";
-import B2BEnderecosColeta from "./pages/b2b/B2BEnderecosColeta";
 import B2BRastreamento from "./pages/b2b/B2BRastreamento";
+import PainelEnderecos from "./pages/painel/PainelEnderecos";
+import PainelCadastros from "./pages/painel/PainelCadastros";
+import PainelRelatorios from "./pages/painel/PainelRelatorios";
 
 const queryClient = new QueryClient();
 
@@ -141,22 +142,22 @@ const App = () => (
                   <Routes>
                     <Route element={<PainelLayout />}>
                       <Route index element={<PainelDashboard />} />
-                      {/* Expresso (B2B) Routes */}
+                      {/* Local (antigo Expresso) Routes */}
                       <Route path="expresso/envios" element={<B2BDashboard />} />
                       <Route path="expresso/novo-envio" element={<B2BNovaRemessa />} />
-                      <Route path="expresso/enderecos-coleta" element={<B2BEnderecosColeta />} />
-                      <Route path="expresso/enderecos" element={<B2BEnderecos />} />
+                      <Route path="expresso/enderecos" element={<PainelEnderecos />} />
                       <Route path="expresso/rastreamento" element={<B2BRastreamento />} />
-                      <Route path="expresso/relatorios" element={<B2BRelatorios />} />
                       <Route path="expresso/pix-pagamento" element={<B2BPixPayment />} />
                       <Route path="expresso/pix-sucesso" element={<B2BPixPaymentSuccess />} />
-                      {/* Convencional Routes */}
+                      {/* Nacional Routes */}
                       <Route path="convencional/cotacoes" element={<ClientCotacoes />} />
                       <Route path="convencional/remessas" element={<ClientRemessas />} />
+                      <Route path="convencional/cadastros" element={<PainelCadastros />} />
                       <Route path="convencional/remetentes" element={<ClientRemetentes />} />
                       <Route path="convencional/destinatarios" element={<ClientDestinatarios />} />
                       <Route path="convencional/rastreamento" element={<ClientRastreio />} />
-                      <Route path="convencional/relatorios" element={<ClientHistorico />} />
+                      {/* Relatórios unificado */}
+                      <Route path="relatorios" element={<PainelRelatorios />} />
                       {/* Shared */}
                       <Route path="minha-conta" element={<ClientConta />} />
                       {/* Suporte */}

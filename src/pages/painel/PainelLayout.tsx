@@ -3,8 +3,8 @@ import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { 
-  Plus, BarChart3, LogOut, MapPin, Truck, Menu, Car, Package2, 
-  FileText, Search, History, User, Calculator, LayoutDashboard,
+  Plus, BarChart3, LogOut, MapPin, Truck, Menu, Car, 
+  Search, User, LayoutDashboard,
   ChevronDown, Headphones
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -30,7 +30,7 @@ const PainelLayout = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
-  const [expressoOpen, setExpressoOpen] = useState(false);
+  const [localOpen, setLocalOpen] = useState(false);
   const [convencionalOpen, setConvencionalOpen] = useState(false);
 
   useEffect(() => {
@@ -39,8 +39,8 @@ const PainelLayout = () => {
 
   // Auto-expand menu based on current route
   useEffect(() => {
-    if (location.pathname.includes('/painel/expresso')) {
-      setExpressoOpen(true);
+    if (location.pathname.includes('/painel/expresso') || location.pathname.includes('/painel/local')) {
+      setLocalOpen(true);
     } else if (location.pathname.includes('/painel/convencional')) {
       setConvencionalOpen(true);
     }
@@ -136,26 +136,22 @@ const PainelLayout = () => {
     return user?.email?.split('@')[0] || 'Cliente';
   };
 
-  const expressoMenuItems = [
-    { title: 'Envios Expresso', url: '/painel/expresso/envios', icon: Car },
-    { title: 'Novo Envio Expresso', url: '/painel/expresso/novo-envio', icon: Plus },
-    { title: 'Endereços de Coleta', url: '/painel/expresso/enderecos-coleta', icon: MapPin },
-    { title: 'Endereços de Entrega', url: '/painel/expresso/enderecos', icon: MapPin },
+  const localMenuItems = [
+    { title: 'Envios Local', url: '/painel/expresso/envios', icon: Car },
+    { title: 'Novo Envio Local', url: '/painel/expresso/novo-envio', icon: Plus },
+    { title: 'Endereços', url: '/painel/expresso/enderecos', icon: MapPin },
     { title: 'Rastreamento', url: '/painel/expresso/rastreamento', icon: Search },
-    { title: 'Relatórios', url: '/painel/expresso/relatorios', icon: BarChart3 },
   ];
 
   const convencionalMenuItems = [
     { title: 'Envios Nacionais', url: '/painel/convencional/remessas', icon: Truck },
     { title: 'Novo Envio Nacional', url: '/painel/convencional/cotacoes', icon: Plus },
-    { title: 'Cadastros Remetente', url: '/painel/convencional/remetentes', icon: User },
-    { title: 'Cadastros Destinatário', url: '/painel/convencional/destinatarios', icon: User },
+    { title: 'Cadastros', url: '/painel/convencional/cadastros', icon: User },
     { title: 'Rastreamento', url: '/painel/convencional/rastreamento', icon: Search },
-    { title: 'Relatórios', url: '/painel/convencional/relatorios', icon: BarChart3 },
   ];
 
   const isActive = (path: string) => location.pathname === path;
-  const isInExpresso = location.pathname.includes('/painel/expresso');
+  const isInLocal = location.pathname.includes('/painel/expresso');
   const isInConvencional = location.pathname.includes('/painel/convencional');
 
   if (loading) {
@@ -200,27 +196,27 @@ const PainelLayout = () => {
           <span className="text-sm font-medium">Início</span>
         </NavLink>
 
-        {/* Expresso Section */}
-        <Collapsible open={expressoOpen} onOpenChange={setExpressoOpen}>
+        {/* Local Section (antigo Expresso) */}
+        <Collapsible open={localOpen} onOpenChange={setLocalOpen}>
           <CollapsibleTrigger asChild>
             <button className={cn(
               "w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg transition-all mb-1",
-              isInExpresso 
+              isInLocal 
                 ? 'bg-primary/10 text-primary' 
                 : 'text-foreground hover:bg-slate-100'
             )}>
               <div className="flex items-center gap-3">
                 <Car className="h-4 w-4" />
-                <span className="text-sm font-semibold">Expresso</span>
+                <span className="text-sm font-semibold">Local</span>
               </div>
               <ChevronDown className={cn(
                 "h-4 w-4 transition-transform",
-                expressoOpen && "rotate-180"
+                localOpen && "rotate-180"
               )} />
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent className="pl-4 space-y-1">
-            {expressoMenuItems.map((item) => (
+            {localMenuItems.map((item) => (
               <NavLink
                 key={item.title}
                 to={item.url}
@@ -239,7 +235,7 @@ const PainelLayout = () => {
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Convencional Section */}
+        {/* Nacional Section */}
         <Collapsible open={convencionalOpen} onOpenChange={setConvencionalOpen} className="mt-2">
           <CollapsibleTrigger asChild>
             <button className={cn(
@@ -278,12 +274,27 @@ const PainelLayout = () => {
           </CollapsibleContent>
         </Collapsible>
 
+        {/* Relatórios unificado */}
+        <NavLink
+          to="/painel/relatorios"
+          onClick={() => setMenuOpen(false)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all mt-4",
+            isActive('/painel/relatorios')
+              ? 'bg-primary text-white shadow-md'
+              : 'text-foreground hover:bg-slate-100'
+          )}
+        >
+          <BarChart3 className="h-4 w-4" />
+          <span className="text-sm font-medium">Relatórios</span>
+        </NavLink>
+
         {/* Minha Conta */}
         <NavLink
           to="/painel/minha-conta"
           onClick={() => setMenuOpen(false)}
           className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all mt-4",
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all mt-2",
             isActive('/painel/minha-conta')
               ? 'bg-primary text-white shadow-md'
               : 'text-foreground hover:bg-slate-100'

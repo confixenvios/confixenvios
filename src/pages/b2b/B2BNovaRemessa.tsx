@@ -112,9 +112,16 @@ const B2BNovaRemessa = () => {
     state: '',
     reference: '',
   });
+  // Data de entrega fixa D+1
+  const getDeliveryDateD1 = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  };
+
   const [formData, setFormData] = useState({
     volume_count: '1',
-    delivery_date: '',
+    delivery_date: getDeliveryDateD1(),
     vehicle_type: '',
     pickup_address_id: '',
     volume_weights: [''] as string[],
@@ -230,10 +237,7 @@ const B2BNovaRemessa = () => {
           toast.error('Informe a quantidade de volumes');
           return false;
         }
-        if (!formData.delivery_date) {
-          toast.error('Selecione a data de entrega');
-          return false;
-        }
+        // Data de entrega é sempre D+1, não precisa validar
         return true;
       case 3:
         const hasValidWeights = formData.volume_weights.every(w => parseFloat(w) > 0);
@@ -821,21 +825,9 @@ const B2BNovaRemessa = () => {
               />
             </div>
 
-            <div className="space-y-4">
-              <div className="text-center">
-                <Calendar className="h-12 w-12 mx-auto mb-3 text-primary" />
-                <Label className="text-lg font-medium">Quando você deseja a entrega?</Label>
-              </div>
-              <Input
-                type="date"
-                value={formData.delivery_date}
-                onChange={(e) => handleChange('delivery_date', e.target.value)}
-                min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
-                className="text-center text-lg h-14"
-              />
-              <p className="text-sm text-center text-muted-foreground">
-                A data mínima é D+1 (amanhã)
-              </p>
+            <div className="p-4 bg-primary/5 rounded-xl border border-primary/20 text-center">
+              <p className="text-sm text-muted-foreground">Previsão de entrega</p>
+              <p className="text-lg font-semibold text-primary">D+1 (Próximo dia útil)</p>
             </div>
           </div>
         )}
