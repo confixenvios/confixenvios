@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MapPin, Plus, Loader2, Pencil, Trash2, Star, Package, Truck } from 'lucide-react';
+import { MapPin, Plus, Loader2, Pencil, Trash2, Star, Package, Truck, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   sanitizeName,
@@ -25,6 +25,26 @@ import {
   formatPhone,
   formatDocument
 } from '@/utils/addressFieldValidation';
+
+// Faixas de CEP permitidas para Envio Local (são as mesmas bloqueadas no Nacional)
+const LOCAL_ALLOWED_CEP_RANGES: [number, number][] = [
+  [74000000, 74899999],
+  [74900000, 74999999],
+  [75000000, 75159999],
+  [75170000, 75174999],
+  [75250000, 75264999],
+  [75340000, 75344999],
+  [75345000, 75349999],
+  [75380000, 75394799],
+];
+
+const isAllowedLocalCep = (cep: string): boolean => {
+  const cleanCep = cep.replace(/\D/g, "");
+  if (cleanCep.length !== 8) return false;
+  
+  const cepNum = parseInt(cleanCep, 10);
+  return LOCAL_ALLOWED_CEP_RANGES.some(([min, max]) => cepNum >= min && cepNum <= max);
+};
 
 interface B2BClient {
   id: string;
@@ -77,6 +97,7 @@ const PainelEnderecos = () => {
   const [editingAddress, setEditingAddress] = useState<DeliveryAddress | PickupAddress | null>(null);
   const [addressType, setAddressType] = useState<AddressType>('coleta');
   const [activeTab, setActiveTab] = useState<'todos' | 'coleta' | 'entrega'>('todos');
+  const [cepError, setCepError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -164,10 +185,12 @@ const PainelEnderecos = () => {
       is_default: false,
     });
     setEditingAddress(null);
+    setCepError(null);
   };
 
   const handleOpenDialog = (type: AddressType, address?: DeliveryAddress | PickupAddress) => {
     setAddressType(type);
+    setCepError(null);
     if (address) {
       setEditingAddress(address);
       setFormData({
@@ -201,6 +224,14 @@ const PainelEnderecos = () => {
     const cleanCep = cep.replace(/\D/g, '');
     if (cleanCep.length !== 8) return;
 
+    // Validar se o CEP está na faixa permitida para Local
+    if (!isAllowedLocalCep(cleanCep)) {
+      setCepError('CEP fora da área de atendimento Local. Somente região metropolitana de Goiânia.');
+      return;
+    }
+
+    setCepError(null);
+
     try {
       const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
       const data = await response.json();
@@ -223,8 +254,11 @@ const PainelEnderecos = () => {
     const formatted = formatCep(value);
     setFormData(prev => ({ ...prev, cep: formatted }));
     
-    if (sanitizeCep(value).length === 8) {
+    const cleanCep = sanitizeCep(value);
+    if (cleanCep.length === 8) {
       handleCepSearch(formatted);
+    } else {
+      setCepError(null);
     }
   };
 
@@ -241,6 +275,14 @@ const PainelEnderecos = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!client) return;
+
+    // Validar CEP antes de salvar
+    const cleanCep = sanitizeCep(formData.cep);
+    if (!isAllowedLocalCep(cleanCep)) {
+      setCepError('CEP fora da área de atendimento Local. Somente região metropolitana de Goiânia.');
+      toast.error('CEP não permitido para envios locais');
+      return;
+    }
 
     setSaving(true);
 
@@ -561,7 +603,14 @@ const PainelEnderecos = () => {
                   placeholder="00000-000"
                   maxLength={9}
                   required
+                  className={cepError ? 'border-destructive' : ''}
                 />
+                {cepError && (
+                  <p className="text-xs text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {cepError}
+                  </p>
+                )}
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="street">Rua *</Label>
