@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
-import { X, Send, Ticket, ExternalLink, Headphones } from "lucide-react";
+import { X, Send, Ticket, ExternalLink, Headphones, MessageCircle, HelpCircle } from "lucide-react";
 
 // Custom Support Agent Icon (head with headset)
 const SupportAgentIcon = ({ className }: { className?: string }) => (
@@ -45,6 +46,35 @@ const categoryOptions = [
   { value: "complaint", label: "Reclamações" },
 ];
 
+const faqItems = [
+  {
+    question: "Como faço para rastrear minha encomenda?",
+    answer: "Você pode rastrear sua encomenda acessando a página de rastreamento e inserindo o código de rastreio que foi enviado por e-mail ou acessando seu painel de cliente."
+  },
+  {
+    question: "Qual o prazo de entrega?",
+    answer: "O prazo de entrega varia de acordo com a origem e destino do envio. Para envios expressos na região metropolitana, geralmente entregamos em até 24h. Para envios nacionais, o prazo pode variar de 2 a 10 dias úteis."
+  },
+  {
+    question: "Como funciona o serviço de coleta?",
+    answer: "Nosso serviço de coleta pode ser agendado no momento da criação do envio. Você escolhe a data e horário mais conveniente e nosso motorista vai até o endereço indicado para retirar a encomenda."
+  },
+  {
+    question: "Posso alterar o endereço de entrega?",
+    answer: "Sim, é possível alterar o endereço de entrega enquanto a encomenda ainda não foi despachada. Entre em contato com nosso suporte via WhatsApp ou abra um ticket no seu painel."
+  },
+  {
+    question: "Como faço para cadastrar minha empresa?",
+    answer: "Para cadastrar sua empresa, acesse a página de login e clique em 'Criar conta'. Preencha os dados solicitados e aguarde a aprovação do seu cadastro."
+  },
+  {
+    question: "Quais formas de pagamento são aceitas?",
+    answer: "Aceitamos pagamento via PIX, cartão de crédito e boleto bancário para clientes empresariais com cadastro aprovado."
+  },
+];
+
+const WHATSAPP_NUMBER = "5562987333276";
+
 const SupportBubble = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -58,8 +88,8 @@ const SupportBubble = () => {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("general");
 
-  // Hide on support pages
-  const isSupportPage = location.pathname.startsWith("/suporte");
+  // Hide on support pages and painel
+  const shouldHide = location.pathname.startsWith("/suporte") || location.pathname.startsWith("/painel");
 
   useEffect(() => {
     checkAuth();
@@ -97,7 +127,7 @@ const SupportBubble = () => {
       
       if (!user) {
         toast.error("Faça login para abrir um ticket");
-        navigate("/suporte");
+        navigate("/auth");
         return;
       }
 
@@ -124,7 +154,11 @@ const SupportBubble = () => {
     }
   };
 
-  if (isSupportPage) return null;
+  const openWhatsApp = () => {
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}`, "_blank");
+  };
+
+  if (shouldHide) return null;
 
   return (
     <>
@@ -152,14 +186,14 @@ const SupportBubble = () => {
 
       {/* Popup Card */}
       {isOpen && (
-        <Card className="fixed bottom-24 right-6 z-50 w-80 sm:w-96 shadow-2xl border-2 animate-in slide-in-from-bottom-4">
-          <CardHeader className="pb-3 bg-primary text-primary-foreground rounded-t-lg">
+        <Card className="fixed bottom-24 right-6 z-50 w-80 sm:w-96 shadow-2xl border-2 animate-in slide-in-from-bottom-4 max-h-[80vh] overflow-hidden flex flex-col">
+          <CardHeader className="pb-3 bg-primary text-primary-foreground rounded-t-lg flex-shrink-0">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Headphones className="h-5 w-5" />
               Central de Suporte
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-4 space-y-4">
+          <CardContent className="pt-4 space-y-4 overflow-y-auto flex-1">
             {isLoggedIn ? (
               <>
                 {/* Quick Actions */}
@@ -168,7 +202,7 @@ const SupportBubble = () => {
                     variant="outline"
                     className="h-auto py-3 flex flex-col gap-1"
                     onClick={() => {
-                      navigate("/suporte/tickets");
+                      navigate("/painel/suporte");
                       setIsOpen(false);
                     }}
                   >
@@ -184,7 +218,7 @@ const SupportBubble = () => {
                     variant="outline"
                     className="h-auto py-3 flex flex-col gap-1"
                     onClick={() => {
-                      navigate("/suporte/novo-ticket");
+                      navigate("/painel/suporte/novo");
                       setIsOpen(false);
                     }}
                   >
@@ -267,20 +301,45 @@ const SupportBubble = () => {
                 </form>
               </>
             ) : (
-              <div className="text-center py-4 space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Faça login para acessar o suporte e gerenciar seus tickets.
-                </p>
-                <div className="space-y-2">
-                  <Button
-                    className="w-full"
-                    onClick={() => {
-                      navigate("/suporte");
-                      setIsOpen(false);
-                    }}
-                  >
-                    Acessar Suporte
-                  </Button>
+              <div className="space-y-4">
+                {/* WhatsApp Contact */}
+                <Button
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  onClick={openWhatsApp}
+                >
+                  <MessageCircle className="h-5 w-5 mr-2" />
+                  Falar no WhatsApp
+                </Button>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      ou veja as dúvidas frequentes
+                    </span>
+                  </div>
+                </div>
+
+                {/* FAQ */}
+                <Accordion type="single" collapsible className="w-full">
+                  {faqItems.slice(0, 4).map((item, index) => (
+                    <AccordionItem key={index} value={`item-${index}`}>
+                      <AccordionTrigger className="text-sm text-left">
+                        {item.question}
+                      </AccordionTrigger>
+                      <AccordionContent className="text-sm text-muted-foreground">
+                        {item.answer}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-muted-foreground text-center mb-3">
+                    Para abrir um ticket de suporte, faça login
+                  </p>
                   <Button
                     variant="outline"
                     className="w-full"
@@ -289,7 +348,7 @@ const SupportBubble = () => {
                       setIsOpen(false);
                     }}
                   >
-                    Login / Cadastro
+                    Fazer Login
                   </Button>
                 </div>
               </div>
