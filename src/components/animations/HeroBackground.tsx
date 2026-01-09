@@ -1,5 +1,5 @@
-import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
-import { useRef } from 'react';
+import { motion } from 'framer-motion';
+import heroTruck from '@/assets/hero-truck-confix.jpg';
 
 // Partículas flutuantes leves
 const FloatingParticle = ({ delay, duration, x, y, size }: { delay: number; duration: number; x: string; y: string; size: number }) => (
@@ -23,33 +23,6 @@ const FloatingParticle = ({ delay, duration, x, y, size }: { delay: number; dura
       ease: "easeInOut",
     }}
   />
-);
-
-// Linha de rota animada
-const RouteLine = ({ path, delay }: { path: string; delay: number }) => (
-  <motion.svg
-    className="absolute inset-0 w-full h-full pointer-events-none"
-    viewBox="0 0 1000 600"
-    preserveAspectRatio="none"
-  >
-    <motion.path
-      d={path}
-      stroke="rgba(220, 38, 38, 0.08)"
-      strokeWidth="2"
-      fill="none"
-      strokeLinecap="round"
-      strokeDasharray="8 12"
-      initial={{ pathLength: 0, opacity: 0 }}
-      animate={{ pathLength: 1, opacity: 1 }}
-      transition={{
-        duration: 4,
-        delay,
-        repeat: Infinity,
-        repeatType: "loop",
-        ease: "linear",
-      }}
-    />
-  </motion.svg>
 );
 
 // Ícone de localização pulsante
@@ -79,101 +52,6 @@ const LocationPulse = ({ x, y, delay }: { x: string; y: string; delay: number })
   </motion.div>
 );
 
-// Caminhão com animação baseada em scroll
-const TruckAnimation = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  const { scrollYProgress } = useScroll();
-
-  // Suavizar a animação
-  const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001
-  });
-
-  // Caminhão entra da esquerda e para no centro
-  const truckX = useTransform(smoothProgress, [0, 0.08, 0.15], ['-120%', '0%', '0%']);
-  const truckOpacity = useTransform(smoothProgress, [0, 0.03], [0, 1]);
-  const truckScale = useTransform(smoothProgress, [0.08, 0.15], [0.95, 1]);
-  
-  // Rodas girando durante movimento
-  const wheelRotation = useTransform(smoothProgress, [0, 0.15], [0, 720]);
-
-  return (
-    <motion.div
-      ref={containerRef}
-      className="absolute bottom-[18%] left-1/2 -translate-x-1/2 z-10"
-      style={{
-        x: truckX,
-        opacity: truckOpacity,
-        scale: truckScale,
-      }}
-    >
-      <svg
-        width="200"
-        height="100"
-        viewBox="0 0 280 140"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="drop-shadow-xl"
-      >
-        {/* Sombra */}
-        <ellipse cx="140" cy="128" rx="100" ry="6" fill="rgba(0,0,0,0.08)" />
-        
-        {/* Baú */}
-        <rect x="80" y="35" width="175" height="70" rx="3" fill="#f8f8f8" stroke="#e8e8e8" strokeWidth="1.5" />
-        
-        {/* Faixa vermelha */}
-        <rect x="80" y="82" width="175" height="18" fill="#dc2626" />
-        
-        {/* Logo */}
-        <text x="167" y="65" textAnchor="middle" fill="#dc2626" fontSize="14" fontWeight="bold" fontFamily="system-ui">
-          CONFIX
-        </text>
-        <text x="167" y="76" textAnchor="middle" fill="#888" fontSize="6" fontFamily="system-ui">
-          ENVIOS
-        </text>
-        
-        {/* Cabine */}
-        <path d="M22 55 L22 100 L80 100 L80 48 L52 48 L42 55 Z" fill="#dc2626" />
-        
-        {/* Janela */}
-        <path d="M27 58 L27 72 L55 72 L55 52 L47 52 L40 58 Z" fill="#1e3a5f" opacity="0.85" />
-        <path d="M29 60 L29 64 L42 64 L42 54 L38 54 L33 60 Z" fill="white" opacity="0.25" />
-        
-        {/* Grade */}
-        <rect x="17" y="78" width="10" height="22" rx="2" fill="#1f2937" />
-        
-        {/* Farol */}
-        <rect x="17" y="70" width="7" height="5" rx="1" fill="#fef08a" />
-        
-        {/* Chassi */}
-        <rect x="17" y="100" width="240" height="6" rx="2" fill="#1f2937" />
-        
-        {/* Rodas */}
-        <motion.g style={{ rotate: wheelRotation, transformOrigin: '198px 108px' }}>
-          <circle cx="198" cy="108" r="14" fill="#1f2937" />
-          <circle cx="198" cy="108" r="10" fill="#374151" />
-          <circle cx="198" cy="108" r="4" fill="#6b7280" />
-        </motion.g>
-        
-        <motion.g style={{ rotate: wheelRotation, transformOrigin: '224px 108px' }}>
-          <circle cx="224" cy="108" r="14" fill="#1f2937" />
-          <circle cx="224" cy="108" r="10" fill="#374151" />
-          <circle cx="224" cy="108" r="4" fill="#6b7280" />
-        </motion.g>
-        
-        <motion.g style={{ rotate: wheelRotation, transformOrigin: '50px 108px' }}>
-          <circle cx="50" cy="108" r="12" fill="#1f2937" />
-          <circle cx="50" cy="108" r="8" fill="#374151" />
-          <circle cx="50" cy="108" r="3" fill="#6b7280" />
-        </motion.g>
-      </svg>
-    </motion.div>
-  );
-};
-
 const HeroBackground = () => {
   const particles = [
     { delay: 0, duration: 6, x: '10%', y: '20%', size: 8 },
@@ -192,9 +70,22 @@ const HeroBackground = () => {
   ];
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Gradiente de fundo suave */}
-      <div className="absolute inset-0 bg-gradient-to-br from-red-50 via-white to-red-50/50" />
+    <div className="absolute inset-0 overflow-hidden">
+      {/* Imagem de fundo do caminhão */}
+      <motion.div 
+        className="absolute inset-0"
+        initial={{ opacity: 0, scale: 1.1 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 1.2, ease: "easeOut" }}
+      >
+        <img 
+          src={heroTruck} 
+          alt="Caminhão Confix Envios" 
+          className="w-full h-full object-cover"
+        />
+        {/* Overlay para melhorar legibilidade do texto */}
+        <div className="absolute inset-0 bg-gradient-to-b from-white/70 via-white/50 to-white/80" />
+      </motion.div>
       
       {/* Círculos decorativos */}
       <motion.div
@@ -224,12 +115,9 @@ const HeroBackground = () => {
         <LocationPulse key={i} {...loc} />
       ))}
       
-      {/* Caminhão animado */}
-      <TruckAnimation />
-      
       {/* Grid sutil */}
       <div 
-        className="absolute inset-0 opacity-[0.015]"
+        className="absolute inset-0 opacity-[0.015] pointer-events-none"
         style={{
           backgroundImage: `
             linear-gradient(rgba(220, 38, 38, 0.5) 1px, transparent 1px),
