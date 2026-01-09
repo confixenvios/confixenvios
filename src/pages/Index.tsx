@@ -88,7 +88,7 @@ const Index = () => {
           {/* Botão Cotar Frete */}
           <div className="flex justify-center mt-24 sm:mt-6 md:mt-auto md:mb-8">
             <Button className="px-6" asChild>
-              <Link to="/auth">
+              <Link to="/cotacaopreview">
                 COTAR FRETE
               </Link>
             </Button>
@@ -277,7 +277,7 @@ const Index = () => {
               
               <div className="flex justify-center md:justify-start">
                 <Button className="px-6" asChild>
-                  <Link to="/auth">
+                  <Link to="/cotacaopreview">
                     COTAR FRETE
                   </Link>
                 </Button>
@@ -348,7 +348,7 @@ const Index = () => {
           </div>
           
           <Button className="px-6" asChild>
-            <Link to="/auth">
+            <Link to="/cotacaopreview">
               COTAR FRETE
             </Link>
           </Button>
