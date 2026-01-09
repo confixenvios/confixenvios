@@ -48,6 +48,7 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboardEnhanced from "./pages/admin/AdminDashboardEnhanced";
 import AdminClienteDetalhes from "./pages/admin/AdminClienteDetalhes";
 import AdminClientes from "./pages/admin/AdminClientes";
+import AdminCadastros from "./pages/admin/AdminCadastros";
 import AdminMotoristas from "./pages/admin/AdminMotoristas";
 import AdminFiliais from "./pages/admin/AdminFiliais";
 import AdminRemessas from "./pages/admin/AdminRemessas";
@@ -162,6 +163,7 @@ const App = () => (
                     <Routes>
                       <Route index element={<Navigate to="dashboard" replace />} />
                       <Route path="dashboard" element={<AdminDashboardEnhanced />} />
+                      <Route path="cadastros" element={<AdminCadastros />} />
                       <Route path="clientes" element={<AdminClientes />} />
                       <Route path="clientes/:id" element={<AdminClienteDetalhes />} />
                       <Route path="clientes-b2b" element={<AdminClientesB2B />} />
