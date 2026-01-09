@@ -865,91 +865,143 @@ const CotacaoPreview = () => {
                         </div>
                       ) : (
                         <>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {quoteResult.magalog && (
-                              <Card
-                                className={`shadow-card cursor-pointer transition-all duration-200 ${
-                                  quoteResult.magalog.permitido
-                                    ? selectedCarrier === "magalog"
+                          {(() => {
+                            // Determinar qual é mais barato e mais rápido
+                            const magalog = quoteResult.magalog;
+                            const jadlog = quoteResult.jadlog;
+                            
+                            if (!magalog?.permitido && !jadlog?.permitido) return null;
+                            
+                            let opcaoMaisBarata = null;
+                            let opcaoMaisRapida = null;
+                            let maisBarataKey = "";
+                            let maisRapidaKey = "";
+                            
+                            const options = [];
+                            if (magalog?.permitido) options.push({ key: "magalog", data: magalog });
+                            if (jadlog?.permitido) options.push({ key: "jadlog", data: jadlog });
+                            
+                            if (options.length === 1) {
+                              // Apenas uma opção disponível
+                              opcaoMaisBarata = options[0].data;
+                              opcaoMaisRapida = options[0].data;
+                              maisBarataKey = options[0].key;
+                              maisRapidaKey = options[0].key;
+                            } else if (options.length === 2) {
+                              // Comparar preços
+                              if (options[0].data.preco_total <= options[1].data.preco_total) {
+                                opcaoMaisBarata = options[0].data;
+                                maisBarataKey = options[0].key;
+                              } else {
+                                opcaoMaisBarata = options[1].data;
+                                maisBarataKey = options[1].key;
+                              }
+                              // Comparar prazos
+                              if (options[0].data.prazo <= options[1].data.prazo) {
+                                opcaoMaisRapida = options[0].data;
+                                maisRapidaKey = options[0].key;
+                              } else {
+                                opcaoMaisRapida = options[1].data;
+                                maisRapidaKey = options[1].key;
+                              }
+                            }
+                            
+                            // Se são a mesma opção, mostrar apenas um card
+                            if (maisBarataKey === maisRapidaKey) {
+                              return (
+                                <div className="grid grid-cols-1 gap-4 max-w-md mx-auto">
+                                  <Card
+                                    className={`shadow-card cursor-pointer transition-all duration-200 border-primary ring-2 ring-primary`}
+                                  >
+                                    <CardHeader>
+                                      <CardTitle className="flex items-center space-x-2 text-base">
+                                        <DollarSign className="h-4 w-4 text-success" />
+                                        <Zap className="h-4 w-4 text-primary" />
+                                        <span>Mais barato e mais rápido</span>
+                                      </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                      <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-3xl font-bold text-primary">
+                                            R$ {opcaoMaisBarata.preco_total.toFixed(2)}
+                                          </span>
+                                          <div className="text-right">
+                                            <div className="text-lg font-semibold">{opcaoMaisBarata.prazo} dias</div>
+                                            <div className="text-xs text-muted-foreground">úteis</div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                </div>
+                              );
+                            }
+                            
+                            return (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Opção Mais Barato */}
+                                <Card
+                                  className={`shadow-card cursor-pointer transition-all duration-200 ${
+                                    selectedCarrier === maisBarataKey
                                       ? "border-primary ring-2 ring-primary"
-                                      : "hover:border-primary/50"
-                                    : "opacity-50 cursor-not-allowed"
-                                }`}
-                                onClick={() => quoteResult.magalog.permitido && setSelectedCarrier("magalog")}
-                              >
-                                <CardHeader>
-                                  <CardTitle className="flex items-center space-x-2 text-base">
-                                    <DollarSign className="h-4 w-4 text-success" />
-                                    <span>Econômico</span>
-                                    {!quoteResult.magalog.permitido && (
-                                      <Badge variant="destructive" className="ml-2">Indisponível</Badge>
-                                    )}
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  {quoteResult.magalog.permitido ? (
+                                      : "border-border hover:border-primary/50"
+                                  }`}
+                                  onClick={() => setSelectedCarrier(maisBarataKey as any)}
+                                >
+                                  <CardHeader>
+                                    <CardTitle className="flex items-center space-x-2 text-base">
+                                      <DollarSign className="h-4 w-4 text-success" />
+                                      <span>Mais barato</span>
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent>
                                     <div className="space-y-3">
                                       <div className="flex items-center justify-between">
                                         <span className="text-3xl font-bold text-primary">
-                                          R$ {quoteResult.magalog.preco_total?.toFixed(2)}
+                                          R$ {opcaoMaisBarata.preco_total.toFixed(2)}
                                         </span>
-                                      </div>
-                                      <div className="flex items-center text-sm text-muted-foreground">
-                                        <Clock className="h-4 w-4 mr-1" />
-                                        Prazo: {quoteResult.magalog.prazo} dias úteis
+                                        <div className="text-right">
+                                          <div className="text-lg font-semibold">{opcaoMaisBarata.prazo} dias</div>
+                                          <div className="text-xs text-muted-foreground">úteis</div>
+                                        </div>
                                       </div>
                                     </div>
-                                  ) : (
-                                    <p className="text-sm text-muted-foreground">
-                                      {translateErrorReason(quoteResult.magalog.motivo)}
-                                    </p>
-                                  )}
-                                </CardContent>
-                              </Card>
-                            )}
+                                  </CardContent>
+                                </Card>
 
-                            {quoteResult.jadlog && (
-                              <Card
-                                className={`shadow-card cursor-pointer transition-all duration-200 ${
-                                  quoteResult.jadlog.permitido
-                                    ? selectedCarrier === "jadlog"
+                                {/* Opção Mais Rápido */}
+                                <Card
+                                  className={`shadow-card cursor-pointer transition-all duration-200 ${
+                                    selectedCarrier === maisRapidaKey
                                       ? "border-primary ring-2 ring-primary"
-                                      : "hover:border-primary/50"
-                                    : "opacity-50 cursor-not-allowed"
-                                }`}
-                                onClick={() => quoteResult.jadlog.permitido && setSelectedCarrier("jadlog")}
-                              >
-                                <CardHeader>
-                                  <CardTitle className="flex items-center space-x-2 text-base">
-                                    <Zap className="h-4 w-4 text-primary" />
-                                    <span>Expresso</span>
-                                    {!quoteResult.jadlog.permitido && (
-                                      <Badge variant="destructive" className="ml-2">Indisponível</Badge>
-                                    )}
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  {quoteResult.jadlog.permitido ? (
+                                      : "border-border hover:border-primary/50"
+                                  }`}
+                                  onClick={() => setSelectedCarrier(maisRapidaKey as any)}
+                                >
+                                  <CardHeader>
+                                    <CardTitle className="flex items-center space-x-2 text-base">
+                                      <Zap className="h-4 w-4 text-primary" />
+                                      <span>Mais rápido</span>
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent>
                                     <div className="space-y-3">
                                       <div className="flex items-center justify-between">
                                         <span className="text-3xl font-bold text-primary">
-                                          R$ {quoteResult.jadlog.preco_total?.toFixed(2)}
+                                          R$ {opcaoMaisRapida.preco_total.toFixed(2)}
                                         </span>
-                                      </div>
-                                      <div className="flex items-center text-sm text-muted-foreground">
-                                        <Clock className="h-4 w-4 mr-1" />
-                                        Prazo: {quoteResult.jadlog.prazo} dias úteis
+                                        <div className="text-right">
+                                          <div className="text-lg font-semibold">{opcaoMaisRapida.prazo} dias</div>
+                                          <div className="text-xs text-muted-foreground">úteis</div>
+                                        </div>
                                       </div>
                                     </div>
-                                  ) : (
-                                    <p className="text-sm text-muted-foreground">
-                                      {translateErrorReason(quoteResult.jadlog.motivo)}
-                                    </p>
-                                  )}
-                                </CardContent>
-                              </Card>
-                            )}
-                          </div>
+                                  </CardContent>
+                                </Card>
+                              </div>
+                            );
+                          })()}
 
                           {(quoteResult.magalog?.permitido || quoteResult.jadlog?.permitido) && (
                             <div className="space-y-4 pt-4">
