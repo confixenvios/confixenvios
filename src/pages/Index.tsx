@@ -93,18 +93,7 @@ const Index = () => {
         
         {/* Hero Content */}
         <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            <Badge className="mb-6 px-4 py-2 text-sm bg-red-600 text-white border-0 hover:bg-red-600">
-              <Sparkles className="w-4 h-4 mr-2" />
-              Logística Inteligente
-            </Badge>
-          </motion.div>
-          
-          <motion.h1 
+          <motion.h1
             className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight"
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
