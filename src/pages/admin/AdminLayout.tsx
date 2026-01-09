@@ -102,8 +102,9 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
             <img src={confixLogo} alt="Confix Envios" className="h-6" />
           </div>
           <div className="text-right">
-            <span className="text-xs text-white/80 font-medium">Confix Admin</span>
-            <p className="text-sm text-white font-medium truncate">Bem vindo, {getDisplayName()}</p>
+            <p className="text-xs text-white font-semibold">Confix Admin</p>
+            <p className="text-xs text-white/80">Bem vindo,</p>
+            <p className="text-sm text-white font-medium truncate">{getDisplayName()}</p>
           </div>
         </div>
       </div>
