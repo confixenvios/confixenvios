@@ -277,28 +277,28 @@ const PainelDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2 hover:bg-primary/5 hover:border-primary">
+            <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2 hover:bg-primary hover:text-white hover:border-primary [&_svg]:hover:text-white">
               <Link to="/painel/expresso/envios">
                 <Package className="h-5 w-5 text-orange-500" />
                 <span className="text-sm">Envios Expresso</span>
               </Link>
             </Button>
             
-            <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2 hover:bg-primary/5 hover:border-primary">
+            <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2 hover:bg-primary hover:text-white hover:border-primary [&_svg]:hover:text-white">
               <Link to="/painel/convencional/remessas">
                 <Package className="h-5 w-5 text-blue-500" />
                 <span className="text-sm">Remessas</span>
               </Link>
             </Button>
             
-            <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2 hover:bg-primary/5 hover:border-primary">
+            <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2 hover:bg-primary hover:text-white hover:border-primary [&_svg]:hover:text-white">
               <Link to="/painel/convencional/rastreamento">
                 <Search className="h-5 w-5 text-primary" />
                 <span className="text-sm">Rastrear</span>
               </Link>
             </Button>
             
-            <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2 hover:bg-primary/5 hover:border-primary">
+            <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2 hover:bg-primary hover:text-white hover:border-primary [&_svg]:hover:text-white">
               <Link to="/painel/convencional/etiquetas">
                 <FileText className="h-5 w-5 text-primary" />
                 <span className="text-sm">Etiquetas</span>
