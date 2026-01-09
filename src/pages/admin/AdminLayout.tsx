@@ -45,20 +45,13 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const navigation = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Cadastros', href: '/admin/cadastros', icon: Users },
-    { name: 'Motoristas', href: '/admin/motoristas', icon: Truck },
-    { name: 'CD - Usuários', href: '/admin/cd-users', icon: Users },
     { name: 'Filiais', href: '/admin/filiais', icon: Building2 },
     { name: 'Faturamento', href: '/admin/faturamento', icon: DollarSign },
     { name: 'Remessas Expresso', href: '/admin/remessas-expresso', icon: Package },
     { name: 'Remessas Nacional', href: '/admin/remessas', icon: Package },
     { name: 'Rastreamento', href: '/admin/rastreamento', icon: Search },
     { name: 'Cte', href: '/admin/cte', icon: FileText },
-    { name: 'API Externa', href: '/admin/api-externa', icon: Puzzle },
     { name: 'Relatórios', href: '/admin/relatorios', icon: BarChart3 },
-    { name: 'Integrações', href: '/admin/integracoes', icon: Puzzle },
-    { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
-    { name: 'API Docs', href: '/api-docs', icon: FileText },
-    { name: 'API Keys', href: '/admin/api-keys', icon: Key },
   ];
 
   const isActive = (path: string) => {
