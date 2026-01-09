@@ -141,13 +141,15 @@ const PainelLayout = () => {
     { title: 'Novo Envio Expresso', url: '/painel/expresso/novo-envio', icon: Plus },
     { title: 'Endereços de Coleta', url: '/painel/expresso/enderecos-coleta', icon: MapPin },
     { title: 'Endereços de Entrega', url: '/painel/expresso/enderecos', icon: MapPin },
+    { title: 'Rastreamento', url: '/painel/expresso/rastreamento', icon: Search },
     { title: 'Relatórios', url: '/painel/expresso/relatorios', icon: BarChart3 },
   ];
 
   const convencionalMenuItems = [
     { title: 'Envios Nacionais', url: '/painel/convencional/remessas', icon: Truck },
     { title: 'Novo Envio Nacional', url: '/painel/convencional/cotacoes', icon: Plus },
-    { title: 'Etiquetas', url: '/painel/convencional/etiquetas', icon: FileText },
+    { title: 'Cadastros Remetente', url: '/painel/convencional/remetentes', icon: User },
+    { title: 'Cadastros Destinatário', url: '/painel/convencional/destinatarios', icon: User },
     { title: 'Rastreamento', url: '/painel/convencional/rastreamento', icon: Search },
     { title: 'Relatórios', url: '/painel/convencional/relatorios', icon: BarChart3 },
   ];
