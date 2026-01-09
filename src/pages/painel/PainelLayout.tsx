@@ -137,7 +137,7 @@ const PainelLayout = () => {
   };
 
   const expressoMenuItems = [
-    { title: 'Envios Expresso', url: '/painel/expresso/envios', icon: Truck },
+    { title: 'Envios Expresso', url: '/painel/expresso/envios', icon: Car },
     { title: 'Novo Envio Expresso', url: '/painel/expresso/novo-envio', icon: Plus },
     { title: 'Endereços de Coleta', url: '/painel/expresso/enderecos-coleta', icon: MapPin },
     { title: 'Endereços de Entrega', url: '/painel/expresso/enderecos', icon: MapPin },
@@ -145,7 +145,7 @@ const PainelLayout = () => {
   ];
 
   const convencionalMenuItems = [
-    { title: 'Envios Nacionais', url: '/painel/convencional/remessas', icon: Package2 },
+    { title: 'Envios Nacionais', url: '/painel/convencional/remessas', icon: Truck },
     { title: 'Novo Envio Nacional', url: '/painel/convencional/cotacoes', icon: Plus },
     { title: 'Etiquetas', url: '/painel/convencional/etiquetas', icon: FileText },
     { title: 'Rastreamento', url: '/painel/convencional/rastreamento', icon: Search },
