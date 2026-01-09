@@ -8,7 +8,34 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { MessageCircle, X, Send, Ticket, ExternalLink, Headphones } from "lucide-react";
+import { X, Send, Ticket, ExternalLink, Headphones } from "lucide-react";
+
+// Custom Support Agent Icon (person with headset)
+const SupportAgentIcon = ({ className }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    {/* Head */}
+    <circle cx="12" cy="8" r="4" />
+    {/* Body/Shoulders */}
+    <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
+    {/* Headset band */}
+    <path d="M5 8a7 7 0 0 1 14 0" />
+    {/* Left earpiece */}
+    <rect x="3" y="8" width="2" height="4" rx="1" />
+    {/* Right earpiece */}
+    <rect x="19" y="8" width="2" height="4" rx="1" />
+    {/* Microphone */}
+    <path d="M19 12v1a2 2 0 0 1-2 2h-1" />
+  </svg>
+);
 
 const categoryOptions = [
   { value: "technical", label: "Suporte Técnico" },
@@ -113,7 +140,7 @@ const SupportBubble = () => {
           <X className="h-6 w-6" />
         ) : (
           <div className="relative">
-            <Headphones className="h-6 w-6" />
+            <SupportAgentIcon className="h-6 w-6" />
             {ticketCount > 0 && (
               <span className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
                 {ticketCount}
