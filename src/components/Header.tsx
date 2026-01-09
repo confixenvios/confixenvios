@@ -215,19 +215,7 @@ const Header = () => {
               }}
             >
               <User className="h-8 w-8" />
-              <div className="font-semibold text-lg">Envio Nacional</div>
-            </Button>
-
-            <Button
-              size="lg"
-              className="h-auto py-6 flex flex-col gap-2"
-              onClick={() => {
-                setLoginModalOpen(false);
-                navigate('/b2b-expresso');
-              }}
-            >
-              <Building2 className="h-8 w-8" />
-              <div className="font-semibold text-lg">Expresso Local</div>
+              <div className="font-semibold text-lg">Cliente</div>
             </Button>
 
             <Button
