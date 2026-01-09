@@ -81,33 +81,33 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-rose-50 to-red-100 overflow-x-hidden">
       <Header />
       
-      {/* Hero Section com 3D */}
+      {/* Hero Section */}
       <motion.section 
         style={{ opacity: heroOpacity, scale: heroScale }}
-        className="relative min-h-screen flex items-center justify-center overflow-hidden"
+        className="relative min-h-screen flex flex-col overflow-hidden"
       >
         {/* Animated Background */}
         <Suspense fallback={<div className="absolute inset-0 bg-gradient-to-br from-red-50 via-white to-red-50/50" />}>
           <HeroBackground />
         </Suspense>
         
-        {/* Hero Content */}
-        <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
+        {/* Hero Content - Top */}
+        <div className="relative z-10 pt-24 px-4 max-w-5xl mx-auto text-center">
           <motion.h1
             className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight"
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
-            <span className="text-foreground">Coletamos e Entregamos</span>
+            <span className="text-white drop-shadow-lg">Coletamos e Entregamos</span>
             <br />
-            <span className="text-foreground">em todo o </span>
-            <span className="text-red-600">Brasil</span>
+            <span className="text-white drop-shadow-lg">em todo o </span>
+            <span className="text-red-600 drop-shadow-lg">Brasil</span>
           </motion.h1>
           
           {/* Benefícios */}
           <motion.div 
-            className="flex flex-wrap justify-center gap-3 mb-10"
+            className="flex flex-wrap justify-center gap-3"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.8 }}
@@ -128,8 +128,13 @@ const Index = () => {
               </motion.div>
             ))}
           </motion.div>
+        </div>
 
-          {/* CTA Button */}
+        {/* Spacer to push button to bottom */}
+        <div className="flex-1" />
+
+        {/* CTA Button - Bottom */}
+        <div className="relative z-10 pb-24 px-4 text-center">
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -144,27 +149,27 @@ const Index = () => {
               </Button>
             </MagneticButton>
           </motion.div>
-        </div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-        >
+          
+          {/* Scroll indicator */}
           <motion.div
-            className="w-6 h-10 border-2 border-foreground/30 rounded-full flex justify-center"
-            animate={{ y: [0, 5, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
+            className="mt-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.5 }}
           >
             <motion.div
-              className="w-1.5 h-3 bg-foreground/50 rounded-full mt-2"
-              animate={{ y: [0, 8, 0], opacity: [1, 0.3, 1] }}
+              className="w-6 h-10 border-2 border-white/50 rounded-full flex justify-center mx-auto"
+              animate={{ y: [0, 5, 0] }}
               transition={{ duration: 1.5, repeat: Infinity }}
-            />
+            >
+              <motion.div
+                className="w-1.5 h-3 bg-white/70 rounded-full mt-2"
+                animate={{ y: [0, 8, 0], opacity: [1, 0.3, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              />
+            </motion.div>
           </motion.div>
-        </motion.div>
+        </div>
       </motion.section>
 
       {/* Clientes Section */}
