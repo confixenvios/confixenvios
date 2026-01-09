@@ -53,6 +53,13 @@ const PainelLayout = () => {
         navigate('/auth');
         return;
       }
+      
+      // Redirecionar admin para painel administrativo
+      if (user.email === 'grupoconfix@gmail.com') {
+        navigate('/admin/dashboard');
+        return;
+      }
+      
       setUser(user);
 
       // Carregar perfil
