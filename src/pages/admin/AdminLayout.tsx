@@ -6,21 +6,21 @@ import {
   LayoutDashboard, 
   Users, 
   Package, 
-  Webhook,
   LogOut,
   Menu,
   Shield,
-  Puzzle,
   FileText,
   DollarSign,
-  Truck,
   Building2,
   BarChart3,
-  Key,
-  Search
+  Search,
+  ChevronDown,
+  Zap,
+  Globe
 } from "lucide-react";
 import { NavLink, useLocation } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import confixLogo from '@/assets/confix-logo-black.png';
 
 interface AdminLayoutProps {
@@ -31,6 +31,9 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [remessasOpen, setRemessasOpen] = useState(
+    location.pathname.includes('/admin/remessas')
+  );
 
   const getDisplayName = () => {
     if (profile?.first_name && profile?.last_name) {
@@ -47,10 +50,16 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'Cadastros', href: '/admin/cadastros', icon: Users },
     { name: 'Filiais', href: '/admin/filiais', icon: Building2 },
     { name: 'Faturamento', href: '/admin/faturamento', icon: DollarSign },
-    { name: 'Remessas Expresso', href: '/admin/remessas-expresso', icon: Package },
-    { name: 'Remessas Nacional', href: '/admin/remessas', icon: Package },
+  ];
+
+  const remessasSubItems = [
+    { name: 'Expresso', href: '/admin/remessas-expresso', icon: Zap },
+    { name: 'Nacional', href: '/admin/remessas', icon: Globe },
+  ];
+
+  const navigationAfterRemessas = [
     { name: 'Rastreamento', href: '/admin/rastreamento', icon: Search },
-    { name: 'Cte', href: '/admin/cte', icon: FileText },
+    { name: 'CTe', href: '/admin/cte', icon: FileText },
     { name: 'Relatórios', href: '/admin/relatorios', icon: BarChart3 },
   ];
 
@@ -58,12 +67,29 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     if (path === '/admin/dashboard') {
       return location.pathname === '/admin/dashboard' || location.pathname === '/admin';
     }
-    // Exact match for remessas to avoid conflict with remessas-expresso
     if (path === '/admin/remessas') {
       return location.pathname === '/admin/remessas';
     }
     return location.pathname.startsWith(path);
   };
+
+  const isRemessasActive = remessasSubItems.some(item => isActive(item.href));
+
+  const NavItem = ({ item, onClick }: { item: { name: string; href: string; icon: React.ElementType }; onClick?: () => void }) => (
+    <NavLink
+      to={item.href}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all",
+        isActive(item.href)
+          ? "bg-primary text-white shadow-md"
+          : "text-foreground hover:bg-slate-100"
+      )}
+    >
+      <item.icon className="h-4 w-4" />
+      <span className="text-sm font-medium">{item.name}</span>
+    </NavLink>
+  );
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -85,20 +111,49 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         <p className="text-xs font-medium text-muted-foreground mb-3 px-2">Menu</p>
         <nav className="space-y-1">
           {navigation.map((item) => (
-            <NavLink
-              key={item.name}
-              to={item.href}
-              onClick={() => setMenuOpen(false)}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all",
-                isActive(item.href)
-                  ? "bg-primary text-white shadow-md"
-                  : "text-foreground hover:bg-slate-100"
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              <span className="text-sm font-medium">{item.name}</span>
-            </NavLink>
+            <NavItem key={item.name} item={item} onClick={() => setMenuOpen(false)} />
+          ))}
+
+          {/* Remessas Collapsible */}
+          <Collapsible open={remessasOpen} onOpenChange={setRemessasOpen}>
+            <CollapsibleTrigger asChild>
+              <button
+                className={cn(
+                  "flex items-center justify-between w-full px-3 py-2.5 rounded-lg transition-all",
+                  isRemessasActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-foreground hover:bg-slate-100"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Package className="h-4 w-4" />
+                  <span className="text-sm font-medium">Remessas</span>
+                </div>
+                <ChevronDown className={cn("h-4 w-4 transition-transform", remessasOpen && "rotate-180")} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 mt-1 space-y-1">
+              {remessasSubItems.map((item) => (
+                <NavLink
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => setMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm",
+                    isActive(item.href)
+                      ? "bg-primary text-white shadow-md"
+                      : "text-foreground hover:bg-slate-100"
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  <span className="font-medium">{item.name}</span>
+                </NavLink>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {navigationAfterRemessas.map((item) => (
+            <NavItem key={item.name} item={item} onClick={() => setMenuOpen(false)} />
           ))}
         </nav>
       </div>
