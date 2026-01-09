@@ -168,14 +168,15 @@ const PainelLayout = () => {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="p-4 bg-gradient-to-r from-primary via-primary to-red-700">
-        <div className="flex items-center gap-3">
-          <div className="bg-white rounded-lg p-1">
-            <img src={confixLogo} alt="Confix Envios" className="h-5" />
+        <div className="grid grid-cols-2 gap-3 items-start">
+          <div className="bg-white rounded-lg p-2 flex items-center justify-center">
+            <img src={confixLogo} alt="Confix Envios" className="h-8" />
           </div>
-        </div>
-        <div className="mt-2">
-          <span className="text-xs text-white/80 font-medium">Painel do Cliente</span>
-          <p className="text-sm text-white font-medium truncate">Bem vindo, {getDisplayName()}</p>
+          <div className="text-right flex flex-col">
+            <p className="text-xs text-white font-semibold leading-tight">Painel Cliente</p>
+            <p className="text-xs text-white/80 leading-tight">Bem vindo,</p>
+            <p className="text-sm text-white font-medium truncate leading-tight">{getDisplayName()}</p>
+          </div>
         </div>
       </div>
 
@@ -346,6 +347,21 @@ const PainelLayout = () => {
           <div className="flex items-center gap-3">
             <LayoutDashboard className="h-5 w-5 text-primary" />
             <span className="font-semibold text-foreground">Painel de Envios</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-sm font-medium text-foreground truncate">{getDisplayName()}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="text-red-600 hover:text-white hover:bg-primary"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
           </div>
         </header>
 

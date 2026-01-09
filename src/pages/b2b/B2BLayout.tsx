@@ -109,16 +109,15 @@ const B2BLayout = () => {
     <div className="flex flex-col h-full">
       {/* Header do Sidebar */}
       <div className="p-4 bg-gradient-to-r from-primary via-primary to-red-700">
-        <div className="flex items-center gap-3">
-          <div className="bg-white rounded-lg p-1">
-            <img src={confixLogo} alt="Confix Envios" className="h-5" />
+        <div className="grid grid-cols-2 gap-3 items-start">
+          <div className="bg-white rounded-lg p-2 flex items-center justify-center">
+            <img src={confixLogo} alt="Confix Envios" className="h-8" />
           </div>
-        </div>
-        <div className="mt-2">
-          <span className="text-xs text-white/80 font-medium">B2B Express</span>
-          {client && (
-            <p className="text-sm text-white font-medium truncate">Bem vindo, {client.company_name}</p>
-          )}
+          <div className="text-right flex flex-col">
+            <p className="text-xs text-white font-semibold leading-tight">B2B Express</p>
+            <p className="text-xs text-white/80 leading-tight">Bem vindo,</p>
+            <p className="text-sm text-white font-medium truncate leading-tight">{client?.company_name || 'Cliente'}</p>
+          </div>
         </div>
       </div>
 
@@ -198,15 +197,30 @@ const B2BLayout = () => {
             <Car className="h-5 w-5 text-primary" />
             <span className="font-semibold text-foreground">Painel de Envios Expresso</span>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/cliente/dashboard')}
-            className="flex items-center gap-2"
-          >
-            <Truck className="h-4 w-4" />
-            <span>Ir para Convencional</span>
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/cliente/dashboard')}
+              className="flex items-center gap-2"
+            >
+              <Truck className="h-4 w-4" />
+              <span>Ir para Convencional</span>
+            </Button>
+            <div className="text-right">
+              <p className="text-sm font-medium text-foreground truncate">{client?.company_name || 'Cliente'}</p>
+              <p className="text-xs text-muted-foreground truncate">{client?.company_name ? 'B2B Express' : ''}</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="text-red-600 hover:text-white hover:bg-primary"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
+          </div>
         </header>
 
         {/* Main Content */}
