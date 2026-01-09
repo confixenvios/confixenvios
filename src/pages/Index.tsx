@@ -85,35 +85,16 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Blocos de Serviços */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-4 md:gap-6 max-w-md md:max-w-xl mx-auto w-full mt-24 sm:mt-6 md:mt-auto md:mb-8">
-            {/* Expresso Local */}
-            <Card className="text-center p-3 sm:p-4 md:p-6 hover:shadow-lg transition-shadow flex flex-col">
-              <CardHeader className="pb-2 sm:pb-3 md:pb-4 p-2 sm:p-4 md:p-6">
-                <CardTitle className="text-sm sm:text-lg md:text-xl text-primary">Expresso Local</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 p-2 sm:p-4 md:p-6 md:pt-0">
-                <Button size="sm" className="w-full text-xs sm:text-sm md:text-base md:py-5" asChild>
-                  <Link to="/b2b-expresso">
-                    Cotar
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Envio Nacional */}
-            <Card className="text-center p-3 sm:p-4 md:p-6 hover:shadow-lg transition-shadow flex flex-col">
-              <CardHeader className="pb-2 sm:pb-3 md:pb-4 p-2 sm:p-4 md:p-6">
-                <CardTitle className="text-sm sm:text-lg md:text-xl text-primary">Envio Nacional</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 p-2 sm:p-4 md:p-6 md:pt-0">
-                <Button size="sm" className="w-full text-xs sm:text-sm md:text-base md:py-5" asChild>
-                  <Link to="/auth">
-                    Cotar
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
+          {/* Botão Cotar Frete */}
+          <div className="flex justify-center mt-24 sm:mt-6 md:mt-auto md:mb-8">
+            <Button 
+              className="bg-primary hover:bg-primary/90 text-white text-base sm:text-lg px-8 sm:px-10 py-4 sm:py-6 h-auto shadow-lg"
+              asChild
+            >
+              <Link to="/auth">
+                Cotar frete
+              </Link>
+            </Button>
           </div>
         </div>
       </section>
