@@ -47,9 +47,8 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
   const navigation = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-    { name: 'Cadastros', href: '/admin/cadastros', icon: Users },
     { name: 'Filiais', href: '/admin/filiais', icon: Building2 },
-    { name: 'Faturamento', href: '/admin/faturamento', icon: DollarSign },
+    { name: 'Rastreamento', href: '/admin/rastreamento', icon: Search },
   ];
 
   const remessasSubItems = [
@@ -58,8 +57,9 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   ];
 
   const navigationAfterRemessas = [
-    { name: 'Rastreamento', href: '/admin/rastreamento', icon: Search },
+    { name: 'Cadastros', href: '/admin/cadastros', icon: Users },
     { name: 'CTe', href: '/admin/cte', icon: FileText },
+    { name: 'Faturamento', href: '/admin/faturamento', icon: DollarSign },
     { name: 'Relatórios', href: '/admin/relatorios', icon: BarChart3 },
   ];
 
