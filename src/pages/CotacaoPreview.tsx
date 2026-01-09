@@ -463,7 +463,7 @@ const CotacaoPreview = () => {
             </span>
           </h1>
           <p className="text-base sm:text-lg text-muted-foreground mb-6 max-w-2xl mx-auto">
-            Calcule o frete sem compromisso. Compare preços do envio convencional e expresso.
+            Calcule o frete sem compromisso. Compare preços do envio nacional e expresso.
           </p>
         </div>
       </section>
@@ -475,7 +475,7 @@ const CotacaoPreview = () => {
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="convencional" className="flex items-center gap-2" disabled={convencionalStep === 2}>
                 <Truck className="h-4 w-4" />
-                Convencional
+                Nacional
               </TabsTrigger>
               <TabsTrigger value="expresso" className="flex items-center gap-2" disabled={expressoStep === 4 || convencionalStep === 2}>
                 <Zap className="h-4 w-4" />
@@ -494,7 +494,7 @@ const CotacaoPreview = () => {
                     <CardHeader className="relative">
                       <CardTitle className="flex items-center gap-2">
                         <Calculator className="h-5 w-5 text-primary" />
-                        Cotação Convencional
+                        Cotação Nacional
                       </CardTitle>
                       <CardDescription>
                         Envio nacional com prazo de 3-10 dias úteis
