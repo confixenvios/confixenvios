@@ -158,22 +158,6 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         </nav>
       </div>
 
-      {/* User Section & Logout */}
-      <div className="p-3 border-t">
-        <div className="px-2 py-2 mb-2">
-          <p className="text-sm font-medium text-foreground truncate">{getDisplayName()}</p>
-          <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => signOut('/admin/auth')}
-          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          Sair
-        </Button>
-      </div>
     </div>
   );
 
