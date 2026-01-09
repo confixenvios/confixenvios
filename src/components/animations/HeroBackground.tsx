@@ -17,7 +17,7 @@ const HeroBackground = () => {
           className="w-full h-full object-cover"
         />
         {/* Overlay leve para legibilidade do texto */}
-        <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/20 to-white/50" />
+        <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-white/30" />
       </motion.div>
     </div>
   );
