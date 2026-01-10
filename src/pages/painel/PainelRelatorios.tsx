@@ -1,16 +1,26 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Car, Truck, BarChart3, Search, FileDown, Package, Clock } from 'lucide-react';
+import { 
+  Car, 
+  Truck, 
+  BarChart3, 
+  Search, 
+  Package, 
+  Clock, 
+  CheckCircle2,
+  XCircle,
+  Timer,
+  TrendingUp,
+  ArrowRight,
+  Calendar
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import * as XLSX from 'xlsx';
-import { toast } from 'sonner';
 
 interface B2BShipment {
   id: string;
@@ -107,136 +117,368 @@ const PainelRelatorios = () => {
     );
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-      pending_payment: { label: 'Aguardando Pagamento', variant: 'outline' },
-      paid: { label: 'Pago', variant: 'secondary' },
-      processing: { label: 'Processando', variant: 'secondary' },
-      collected: { label: 'Coletado', variant: 'secondary' },
-      in_transit: { label: 'Em Trânsito', variant: 'default' },
-      out_for_delivery: { label: 'Saiu para Entrega', variant: 'default' },
-      delivered: { label: 'Entregue', variant: 'default' },
-      cancelled: { label: 'Cancelado', variant: 'destructive' },
+  const getStatusConfig = (status: string) => {
+    const statusMap: Record<string, { label: string; color: string; bgColor: string; icon: React.ReactNode }> = {
+      pending_payment: { 
+        label: 'Aguardando Pagamento', 
+        color: 'text-amber-700', 
+        bgColor: 'bg-amber-50 border-amber-200',
+        icon: <Timer className="h-4 w-4" />
+      },
+      paid: { 
+        label: 'Pago', 
+        color: 'text-emerald-700', 
+        bgColor: 'bg-emerald-50 border-emerald-200',
+        icon: <CheckCircle2 className="h-4 w-4" />
+      },
+      PAYMENT_CONFIRMED: { 
+        label: 'Pagamento Confirmado', 
+        color: 'text-emerald-700', 
+        bgColor: 'bg-emerald-50 border-emerald-200',
+        icon: <CheckCircle2 className="h-4 w-4" />
+      },
+      PAGO_AGUARDANDO_ETIQUETA: { 
+        label: 'Aguardando Etiqueta', 
+        color: 'text-blue-700', 
+        bgColor: 'bg-blue-50 border-blue-200',
+        icon: <Package className="h-4 w-4" />
+      },
+      processing: { 
+        label: 'Processando', 
+        color: 'text-blue-700', 
+        bgColor: 'bg-blue-50 border-blue-200',
+        icon: <Package className="h-4 w-4" />
+      },
+      collected: { 
+        label: 'Coletado', 
+        color: 'text-indigo-700', 
+        bgColor: 'bg-indigo-50 border-indigo-200',
+        icon: <Package className="h-4 w-4" />
+      },
+      in_transit: { 
+        label: 'Em Trânsito', 
+        color: 'text-purple-700', 
+        bgColor: 'bg-purple-50 border-purple-200',
+        icon: <Truck className="h-4 w-4" />
+      },
+      out_for_delivery: { 
+        label: 'Saiu para Entrega', 
+        color: 'text-orange-700', 
+        bgColor: 'bg-orange-50 border-orange-200',
+        icon: <Truck className="h-4 w-4" />
+      },
+      delivered: { 
+        label: 'Entregue', 
+        color: 'text-green-700', 
+        bgColor: 'bg-green-50 border-green-200',
+        icon: <CheckCircle2 className="h-4 w-4" />
+      },
+      cancelled: { 
+        label: 'Cancelado', 
+        color: 'text-red-700', 
+        bgColor: 'bg-red-50 border-red-200',
+        icon: <XCircle className="h-4 w-4" />
+      },
+      PENDENTE: { 
+        label: 'Pendente', 
+        color: 'text-amber-700', 
+        bgColor: 'bg-amber-50 border-amber-200',
+        icon: <Timer className="h-4 w-4" />
+      },
     };
 
-    const config = statusConfig[status] || { label: status, variant: 'outline' as const };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-
-  const exportToExcel = () => {
-    const data = getFilteredShipments().map(s => ({
-      'Código': s.tracking_code || '-',
-      'Tipo': s.type === 'local' ? 'Local' : 'Nacional',
-      'Status': s.status,
-      'Data': format(new Date(s.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
-      'Peso': s.type === 'local' ? (s as B2BShipment).total_weight : (s as NationalShipment).weight,
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Relatório');
-    XLSX.writeFile(wb, `relatorio_envios_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
-    toast.success('Relatório exportado!');
+    return statusMap[status] || { 
+      label: status, 
+      color: 'text-gray-700', 
+      bgColor: 'bg-gray-50 border-gray-200',
+      icon: <Package className="h-4 w-4" />
+    };
   };
 
   const filteredShipments = getFilteredShipments();
+  const allShipments = [...b2bShipments, ...nationalShipments];
+  
+  // Calculate stats
+  const stats = {
+    total: allShipments.length,
+    local: b2bShipments.length,
+    nacional: nationalShipments.length,
+    delivered: allShipments.filter(s => s.status === 'delivered' || s.status === 'DELIVERED').length,
+    inTransit: allShipments.filter(s => 
+      s.status === 'in_transit' || s.status === 'IN_TRANSIT' || 
+      s.status === 'out_for_delivery' || s.status === 'collected'
+    ).length,
+    pending: allShipments.filter(s => 
+      s.status === 'pending_payment' || s.status === 'PENDENTE' || 
+      s.status === 'PAGO_AGUARDANDO_ETIQUETA' || s.status === 'paid' ||
+      s.status === 'PAYMENT_CONFIRMED'
+    ).length,
+  };
 
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <BarChart3 className="h-12 w-12 animate-pulse mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Carregando...</p>
+          <div className="relative">
+            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <BarChart3 className="h-8 w-8 animate-pulse text-primary" />
+            </div>
+          </div>
+          <p className="text-muted-foreground font-medium">Carregando relatórios...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <BarChart3 className="h-6 w-6 text-primary" />
-            Relatórios
-          </h1>
-          <p className="text-muted-foreground">Visualize relatórios de todos os seus envios</p>
+    <div className="p-4 md:p-6 space-y-6 bg-gradient-to-b from-background to-muted/20 min-h-screen">
+      {/* Header */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/25">
+            <BarChart3 className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Relatórios</h1>
+            <p className="text-muted-foreground text-sm md:text-base">Acompanhe todos os seus envios em um só lugar</p>
+          </div>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'todos' | 'local' | 'nacional')}>
-          <TabsList>
-            <TabsTrigger value="todos">Todos ({b2bShipments.length + nationalShipments.length})</TabsTrigger>
-            <TabsTrigger value="local" className="flex items-center gap-2">
-              <Car className="h-4 w-4" />
-              Local ({b2bShipments.length})
-            </TabsTrigger>
-            <TabsTrigger value="nacional" className="flex items-center gap-2">
-              <Truck className="h-4 w-4" />
-              Nacional ({nationalShipments.length})
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <Card className="border-0 shadow-md bg-gradient-to-br from-white to-slate-50 overflow-hidden group hover:shadow-lg transition-all duration-300">
+          <CardContent className="p-4 md:p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground mb-1">Total de Envios</p>
+                <p className="text-2xl md:text-3xl font-bold text-foreground">{stats.total}</p>
+              </div>
+              <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Package className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
+              <TrendingUp className="h-3 w-3 text-emerald-500" />
+              <span className="text-emerald-600 font-medium">{stats.local} locais</span>
+              <span>•</span>
+              <span className="text-blue-600 font-medium">{stats.nacional} nacionais</span>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por código..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        <Card className="border-0 shadow-md bg-gradient-to-br from-emerald-50 to-white overflow-hidden group hover:shadow-lg transition-all duration-300">
+          <CardContent className="p-4 md:p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs md:text-sm font-medium text-emerald-600 mb-1">Entregues</p>
+                <p className="text-2xl md:text-3xl font-bold text-emerald-700">{stats.delivered}</p>
+              </div>
+              <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-emerald-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <CheckCircle2 className="h-5 w-5 md:h-6 md:w-6 text-emerald-600" />
+              </div>
+            </div>
+            <div className="mt-3 h-1.5 bg-emerald-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full transition-all duration-500"
+                style={{ width: `${stats.total > 0 ? (stats.delivered / stats.total) * 100 : 0}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-white overflow-hidden group hover:shadow-lg transition-all duration-300">
+          <CardContent className="p-4 md:p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs md:text-sm font-medium text-purple-600 mb-1">Em Trânsito</p>
+                <p className="text-2xl md:text-3xl font-bold text-purple-700">{stats.inTransit}</p>
+              </div>
+              <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Truck className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
+              </div>
+            </div>
+            <div className="mt-3 h-1.5 bg-purple-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-purple-400 to-purple-500 rounded-full transition-all duration-500"
+                style={{ width: `${stats.total > 0 ? (stats.inTransit / stats.total) * 100 : 0}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md bg-gradient-to-br from-amber-50 to-white overflow-hidden group hover:shadow-lg transition-all duration-300">
+          <CardContent className="p-4 md:p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs md:text-sm font-medium text-amber-600 mb-1">Processando</p>
+                <p className="text-2xl md:text-3xl font-bold text-amber-700">{stats.pending}</p>
+              </div>
+              <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-amber-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Timer className="h-5 w-5 md:h-6 md:w-6 text-amber-600" />
+              </div>
+            </div>
+            <div className="mt-3 h-1.5 bg-amber-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-500"
+                style={{ width: `${stats.total > 0 ? (stats.pending / stats.total) * 100 : 0}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
+      {/* Filters Section */}
+      <Card className="border-0 shadow-md">
+        <CardContent className="p-4">
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'todos' | 'local' | 'nacional')} className="w-full lg:w-auto">
+              <TabsList className="bg-muted/50 p-1 h-auto">
+                <TabsTrigger 
+                  value="todos" 
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 py-2"
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Todos ({stats.total})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="local" 
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 py-2"
+                >
+                  <Car className="h-4 w-4 mr-2 text-emerald-600" />
+                  Local ({stats.local})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="nacional" 
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 py-2"
+                >
+                  <Truck className="h-4 w-4 mr-2 text-blue-600" />
+                  Nacional ({stats.nacional})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="relative w-full lg:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por código de rastreio..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-muted/30 border-0 focus-visible:ring-primary/20"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Shipments List */}
       {filteredShipments.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <p className="text-muted-foreground">Nenhum envio encontrado</p>
+        <Card className="border-0 shadow-md">
+          <CardContent className="py-16 text-center">
+            <div className="h-20 w-20 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+              <Package className="h-10 w-10 text-muted-foreground/50" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Nenhum envio encontrado</h3>
+            <p className="text-muted-foreground text-sm max-w-md mx-auto">
+              {searchTerm 
+                ? `Não encontramos envios com o código "${searchTerm}"`
+                : 'Você ainda não possui envios registrados nesta categoria'
+              }
+            </p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
-          {filteredShipments.map((shipment) => (
-            <Card key={shipment.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="py-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    {shipment.type === 'local' ? (
-                      <div className="p-2 rounded-full bg-green-100">
-                        <Car className="h-4 w-4 text-green-600" />
-                      </div>
-                    ) : (
-                      <div className="p-2 rounded-full bg-blue-100">
-                        <Truck className="h-4 w-4 text-blue-600" />
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-semibold">{shipment.tracking_code || 'Sem código'}</p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {format(new Date(shipment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+          {filteredShipments.map((shipment, index) => {
+            const statusConfig = getStatusConfig(shipment.status);
+            const isLocal = shipment.type === 'local';
+            
+            return (
+              <Card 
+                key={shipment.id} 
+                className="border-0 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <CardContent className="p-0">
+                  <div className="flex items-stretch">
+                    {/* Type indicator bar */}
+                    <div className={`w-1.5 ${isLocal ? 'bg-gradient-to-b from-emerald-400 to-emerald-500' : 'bg-gradient-to-b from-blue-400 to-blue-500'}`} />
+                    
+                    <div className="flex-1 p-4 md:p-5">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        {/* Left side - Icon and info */}
+                        <div className="flex items-start gap-4">
+                          <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${isLocal ? 'bg-emerald-100' : 'bg-blue-100'}`}>
+                            {isLocal ? (
+                              <Car className="h-6 w-6 text-emerald-600" />
+                            ) : (
+                              <Truck className="h-6 w-6 text-blue-600" />
+                            )}
+                          </div>
+                          
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-bold text-foreground text-base md:text-lg">
+                                {shipment.tracking_code || 'Sem código'}
+                              </h3>
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs font-medium ${isLocal ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : 'text-blue-600 border-blue-200 bg-blue-50'}`}
+                              >
+                                {isLocal ? 'Local' : 'Nacional'}
+                              </Badge>
+                            </div>
+                            
+                            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1.5">
+                                <Calendar className="h-3.5 w-3.5" />
+                                <span>{format(new Date(shipment.created_at), "dd 'de' MMM, yyyy", { locale: ptBR })}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="h-3.5 w-3.5" />
+                                <span>{format(new Date(shipment.created_at), 'HH:mm', { locale: ptBR })}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right side - Status and weight */}
+                        <div className="flex items-center gap-3 md:gap-4">
+                          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${statusConfig.bgColor} ${statusConfig.color}`}>
+                            {statusConfig.icon}
+                            <span className="text-sm font-medium hidden md:inline">{statusConfig.label}</span>
+                          </div>
+                          
+                          <div className="text-right">
+                            <p className="text-lg font-bold text-foreground">
+                              {isLocal 
+                                ? `${(shipment as B2BShipment).total_weight}kg` 
+                                : `${(shipment as NationalShipment).weight}kg`
+                              }
+                            </p>
+                            {isLocal && (
+                              <p className="text-xs text-muted-foreground">
+                                {(shipment as B2BShipment).total_volumes} volume(s)
+                              </p>
+                            )}
+                          </div>
+
+                          <ArrowRight className="h-5 w-5 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-1 transition-all hidden md:block" />
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className={shipment.type === 'local' ? 'text-green-600 border-green-200' : 'text-blue-600 border-blue-200'}>
-                      {shipment.type === 'local' ? 'Local' : 'Nacional'}
-                    </Badge>
-                    {getStatusBadge(shipment.status)}
-                    <span className="text-sm text-muted-foreground">
-                      {shipment.type === 'local' 
-                        ? `${(shipment as B2BShipment).total_weight}kg` 
-                        : `${(shipment as NationalShipment).weight}kg`
-                      }
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Results count */}
+      {filteredShipments.length > 0 && (
+        <div className="text-center text-sm text-muted-foreground py-4">
+          Mostrando <span className="font-semibold text-foreground">{filteredShipments.length}</span> envio(s)
         </div>
       )}
     </div>
