@@ -159,13 +159,13 @@ const PainelLayout = () => {
   };
 
   const localMenuItems = [
-    { title: 'Envios Local', url: '/painel/expresso/envios', icon: Car },
+    { title: 'Meus Envios', url: '/painel/expresso/envios', icon: Car },
     { title: 'Novo Envio Local', url: '/painel/expresso/novo-envio', icon: Plus },
     { title: 'Endereços', url: '/painel/expresso/enderecos', icon: MapPin },
   ];
 
   const convencionalMenuItems = [
-    { title: 'Envios Nacionais', url: '/painel/convencional/remessas', icon: Truck },
+    { title: 'Meus Envios', url: '/painel/convencional/remessas', icon: Truck },
     { title: 'Novo Envio Nacional', url: '/painel/convencional/cotacoes', icon: Plus },
     { title: 'Cadastros', url: '/painel/convencional/cadastros', icon: User },
   ];
@@ -227,7 +227,7 @@ const PainelLayout = () => {
             )}>
               <div className="flex items-center gap-3">
                 <Car className="h-4 w-4" />
-                <span className="text-sm font-semibold">Local</span>
+                <span className="text-sm font-semibold">Envios Locais</span>
               </div>
               <ChevronDown className={cn(
                 "h-4 w-4 transition-transform",
@@ -266,7 +266,7 @@ const PainelLayout = () => {
             )}>
               <div className="flex items-center gap-3">
                 <Truck className="h-4 w-4" />
-                <span className="text-sm font-semibold">Nacional</span>
+                <span className="text-sm font-semibold">Envios Nacionais</span>
               </div>
               <ChevronDown className={cn(
                 "h-4 w-4 transition-transform",
