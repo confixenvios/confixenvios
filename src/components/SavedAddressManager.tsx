@@ -29,6 +29,7 @@ interface SavedAddress {
   state: string;
   reference?: string;
   is_default: boolean;
+  inscricao_estadual?: string;
 }
 
 interface AddressData {
@@ -44,6 +45,7 @@ interface AddressData {
   city: string;
   state: string;
   reference: string;
+  inscricaoEstadual?: string;
 }
 
 interface SavedAddressManagerProps {
@@ -105,7 +107,8 @@ const SavedAddressManager = ({
           neighborhood: defaultAddress.neighborhood,
           city: defaultAddress.city,
           state: defaultAddress.state,
-          reference: defaultAddress.reference || ""
+          reference: defaultAddress.reference || "",
+          inscricaoEstadual: defaultAddress.inscricao_estadual || ""
         });
       }
     } catch (error) {
@@ -154,6 +157,7 @@ const SavedAddressManager = ({
           city: addressData.city,
           state: addressData.state,
           reference: addressData.reference || null,
+          inscricao_estadual: addressData.inscricaoEstadual || null,
           is_default: setAsDefault || savedAddresses.length === 0 // Primeiro endereço é padrão
         })
         .select()
@@ -200,7 +204,8 @@ const SavedAddressManager = ({
           neighborhood: addressData.neighborhood,
           city: addressData.city,
           state: addressData.state,
-          reference: addressData.reference || null
+          reference: addressData.reference || null,
+          inscricao_estadual: addressData.inscricaoEstadual || null
         })
         .eq('id', addressId);
 
@@ -310,7 +315,8 @@ const SavedAddressManager = ({
         neighborhood: address.neighborhood,
         city: address.city,
         state: address.state,
-        reference: address.reference || ""
+        reference: address.reference || "",
+        inscricaoEstadual: address.inscricao_estadual || ""
       });
     }
   };
@@ -334,7 +340,8 @@ const SavedAddressManager = ({
       selectedAddress.neighborhood !== currentAddressData.neighborhood ||
       selectedAddress.city !== currentAddressData.city ||
       selectedAddress.state !== currentAddressData.state ||
-      (selectedAddress.reference || "") !== currentAddressData.reference
+      (selectedAddress.reference || "") !== currentAddressData.reference ||
+      (selectedAddress.inscricao_estadual || "") !== (currentAddressData.inscricaoEstadual || "")
     );
   };
 
@@ -529,7 +536,8 @@ const AddressFormContent = ({ editingAddress, isNewAddress, onSave, onCancel, lo
     neighborhood: editingAddress?.neighborhood || "",
     city: editingAddress?.city || "",
     state: editingAddress?.state || "",
-    reference: editingAddress?.reference || ""
+    reference: editingAddress?.reference || "",
+    inscricaoEstadual: editingAddress?.inscricao_estadual || ""
   });
 
   const handleInputChange = (field: keyof AddressData, value: string) => {
@@ -544,6 +552,8 @@ const AddressFormContent = ({ editingAddress, isNewAddress, onSave, onCancel, lo
       sanitizedValue = value.replace(/[^a-zA-Z0-9@._\-]/g, '').substring(0, 100);
     } else if (field === 'cep') {
       sanitizedValue = value.replace(/[^0-9\-]/g, '').substring(0, 9);
+    } else if (field === 'inscricaoEstadual') {
+      sanitizedValue = value.replace(/\D/g, '').substring(0, 15);
     } else if (shouldPreserveSpaces) {
       sanitizedValue = value.replace(/[<>\"'&\x00-\x1f\x7f-\x9f]/g, '').substring(0, 100);
     } else {
@@ -558,7 +568,7 @@ const AddressFormContent = ({ editingAddress, isNewAddress, onSave, onCancel, lo
       'name', 'document', 'phone', 'email', 'cep', 'street', 
       'number', 'complement', 'neighborhood', 'city', 'state'
     ];
-    return requiredFields.every(field => formData[field].trim() !== "");
+    return requiredFields.every(field => (formData[field] || '').trim() !== "");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -700,6 +710,16 @@ const AddressFormContent = ({ editingAddress, isNewAddress, onSave, onCancel, lo
             value={formData.reference}
             onChange={(e) => handleInputChange('reference', e.target.value)}
             placeholder="Ponto de referência"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label>Inscrição Estadual (apenas para empresas)</Label>
+          <Input
+            value={formData.inscricaoEstadual || ""}
+            onChange={(e) => handleInputChange('inscricaoEstadual', e.target.value)}
+            placeholder="Inscrição Estadual"
+            maxLength={15}
           />
         </div>
       </div>
