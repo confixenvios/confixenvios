@@ -20,9 +20,25 @@ const B2BPixPayment = () => {
   
   const { amount, shipmentData } = location.state || {};
   
+  // Detectar contexto para navegação
+  const currentPath = window.location.pathname;
+  const isInPainel = currentPath.startsWith('/painel');
+  const baseRoute = isInPainel ? '/painel/expresso' : '/b2b-expresso';
+  
   useEffect(() => {
     if (!amount || !shipmentData) {
-      navigate('/b2b-expresso/nova-remessa');
+      navigate(`${baseRoute}/novo-envio`);
+      return;
+    }
+    
+    // Verificar se o cliente tem documento válido
+    if (!shipmentData.clientDocument || shipmentData.clientDocument.replace(/\D/g, '').length < 11) {
+      toast({
+        title: "Documento não cadastrado",
+        description: "Para gerar o PIX, você precisa ter um CPF ou CNPJ válido cadastrado. Por favor, atualize seu cadastro.",
+        variant: "destructive"
+      });
+      navigate(`${baseRoute}/envios`);
       return;
     }
     
@@ -121,7 +137,7 @@ const B2BPixPayment = () => {
   };
 
   const handleBack = () => {
-    navigate('/b2b-expresso/nova-remessa');
+    navigate(`${baseRoute}/novo-envio`);
   };
 
   const copyPixCode = () => {
@@ -148,7 +164,7 @@ const B2BPixPayment = () => {
       if (data?.success && data.isPaid) {
         setPaymentStatus('PAID');
         // Remessa B2B é criada automaticamente pela edge function check-pix-status
-        navigate('/b2b-expresso/pix-sucesso', {
+        navigate(`${baseRoute}/pix-sucesso`, {
           state: { paymentId: paymentIntent.paymentId }
         });
       }
@@ -192,7 +208,7 @@ const B2BPixPayment = () => {
           description: "PIX processado com sucesso. Redirecionando..."
         });
         // Remessa B2B é criada automaticamente pela edge function check-pix-status
-        navigate('/b2b-expresso/pix-sucesso', {
+        navigate(`${baseRoute}/pix-sucesso`, {
           state: { paymentId: paymentIntent.paymentId }
         });
       } else {
@@ -228,7 +244,7 @@ const B2BPixPayment = () => {
           title: "Pagamento confirmado!",
           description: "Sua solicitação foi registrada com sucesso."
         });
-        navigate('/b2b-expresso/pix-sucesso', {
+        navigate(`${baseRoute}/pix-sucesso`, {
           state: { paymentId: paymentIntent.paymentId }
         });
       } else {
