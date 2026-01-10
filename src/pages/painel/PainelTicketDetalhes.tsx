@@ -419,7 +419,7 @@ const PainelTicketDetalhes = () => {
                           className="inline-flex items-center gap-2 text-sm text-primary hover:underline cursor-pointer"
                         >
                           <FileText className="h-4 w-4" />
-                          Ver anexo
+                          {decodeURIComponent((msg as any).attachment_url.split('/').pop() || 'Anexo')}
                         </button>
                       )}
                     </div>
