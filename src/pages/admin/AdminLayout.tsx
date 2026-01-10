@@ -191,7 +191,14 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                 <img src={confixLogo} alt="Confix Envios" className="h-5" />
               </div>
             </div>
-            <span className="text-sm text-white/90 truncate max-w-[180px]">Bem vindo, {getDisplayName()}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => signOut('/admin/auth')}
+              className="text-white hover:bg-white/20"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
           </div>
         </header>
 
