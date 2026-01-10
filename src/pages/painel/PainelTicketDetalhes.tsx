@@ -154,8 +154,9 @@ const PainelTicketDetalhes = () => {
   const uploadFile = async (file: File): Promise<string | null> => {
     if (!userId) return null;
 
-    const fileExt = file.name.split('.').pop();
-    const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    // Preserve original filename with a unique prefix to avoid collisions
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = `${userId}/${Date.now()}-${sanitizedName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('ticket-attachments')
