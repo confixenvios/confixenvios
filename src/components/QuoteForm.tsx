@@ -337,6 +337,7 @@ const QuoteForm = () => {
   const [alternativePickupAddress, setAlternativePickupAddress] = useState<string>("");
   const [senderDocType, setSenderDocType] = useState<'cpf' | 'cnpj'>('cpf');
   const [recipientDocType, setRecipientDocType] = useState<'cpf' | 'cnpj'>('cpf');
+  const [senderDataLoaded, setSenderDataLoaded] = useState<boolean>(false);
 
   // Restaurar dados do formulário quando o usuário faz login
   useEffect(() => {
@@ -372,7 +373,7 @@ const QuoteForm = () => {
 
   // Função para carregar dados do perfil do usuário (usada quando não há remetentes salvos)
   const loadUserProfileAsSender = async () => {
-    if (!user) return;
+    if (!user || senderDataLoaded) return;
     
     try {
       // Buscar perfil do usuário
@@ -384,6 +385,7 @@ const QuoteForm = () => {
 
       if (error) {
         console.log("Erro ao buscar perfil:", error);
+        setSenderDataLoaded(true);
         return;
       }
 
@@ -412,8 +414,11 @@ const QuoteForm = () => {
           inscricaoEstadual: profile.inscricao_estadual || prev.inscricaoEstadual,
         }));
       }
+      
+      setSenderDataLoaded(true);
     } catch (error) {
       console.error("Erro ao carregar perfil do cliente:", error);
+      setSenderDataLoaded(true);
     }
   };
 
