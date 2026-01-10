@@ -370,68 +370,52 @@ const QuoteForm = () => {
     }
   }, [quoteData]);
 
-  // Carregar dados do perfil do cliente quando chegar no Step 3
-  // APENAS se os campos estiverem vazios (não sobrescrever dados de remetentes salvos)
-  useEffect(() => {
-    const loadUserProfile = async () => {
-      if (currentStep === 3 && user) {
-        // Verificar se já existem dados preenchidos (por remetentes salvos ou manualmente)
-        const hasExistingData = senderData.name.trim() !== '' || 
-                                 senderData.document.trim() !== '' ||
-                                 senderData.email.trim() !== '';
-        
-        // Se já tem dados, não sobrescrever com o perfil
-        if (hasExistingData) {
-          console.log("📋 Dados do remetente já preenchidos, não sobrescrevendo com perfil");
-          return;
-        }
-        
-        try {
-          // Buscar perfil do usuário
-          const { data: profile, error } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", user.id)
-            .single();
+  // Função para carregar dados do perfil do usuário (usada quando não há remetentes salvos)
+  const loadUserProfileAsSender = async () => {
+    if (!user) return;
+    
+    try {
+      // Buscar perfil do usuário
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
 
-          if (error) {
-            console.log("Erro ao buscar perfil:", error);
-            return;
-          }
-
-          if (profile) {
-            console.log("📋 Perfil do cliente carregado:", profile);
-            
-            // Determinar tipo de documento PRIMEIRO (baseado no tipo_cliente ou tamanho do documento)
-            let docType: 'cpf' | 'cnpj' = 'cpf';
-            if (profile.tipo_cliente === 'pj') {
-              docType = 'cnpj';
-            } else if (profile.document) {
-              const docLength = profile.document.replace(/\D/g, "").length;
-              docType = docLength > 11 ? 'cnpj' : 'cpf';
-            }
-            
-            // Definir o tipo de documento antes de preencher os dados
-            setSenderDocType(docType);
-            
-            // Preencher dados do remetente com os dados do perfil
-            setSenderData(prev => ({
-              ...prev,
-              name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || prev.name,
-              document: profile.document || prev.document,
-              phone: profile.phone || prev.phone,
-              email: profile.email || user.email || prev.email,
-              inscricaoEstadual: profile.inscricao_estadual || prev.inscricaoEstadual,
-            }));
-          }
-        } catch (error) {
-          console.error("Erro ao carregar perfil do cliente:", error);
-        }
+      if (error) {
+        console.log("Erro ao buscar perfil:", error);
+        return;
       }
-    };
 
-    loadUserProfile();
-  }, [currentStep, user]);
+      if (profile) {
+        console.log("📋 Perfil do cliente carregado (sem remetentes salvos):", profile);
+        
+        // Determinar tipo de documento PRIMEIRO (baseado no tipo_cliente ou tamanho do documento)
+        let docType: 'cpf' | 'cnpj' = 'cpf';
+        if (profile.tipo_cliente === 'pj') {
+          docType = 'cnpj';
+        } else if (profile.document) {
+          const docLength = profile.document.replace(/\D/g, "").length;
+          docType = docLength > 11 ? 'cnpj' : 'cpf';
+        }
+        
+        // Definir o tipo de documento antes de preencher os dados
+        setSenderDocType(docType);
+        
+        // Preencher dados do remetente com os dados do perfil
+        setSenderData(prev => ({
+          ...prev,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || prev.name,
+          document: profile.document || prev.document,
+          phone: profile.phone || prev.phone,
+          email: profile.email || user.email || prev.email,
+          inscricaoEstadual: profile.inscricao_estadual || prev.inscricaoEstadual,
+        }));
+      }
+    } catch (error) {
+      console.error("Erro ao carregar perfil do cliente:", error);
+    }
+  };
 
   const steps = [
     { number: 1, title: "Calcular Frete", icon: Calculator },
@@ -2648,12 +2632,23 @@ const QuoteForm = () => {
                       type="sender"
                       title="Remetentes Salvos"
                       currentAddressData={senderData}
-                      onAddressSelect={(data) => setSenderData(data)}
+                      onAddressSelect={(data) => {
+                        // Atualizar tipo de documento baseado no documento selecionado
+                        if (data.document) {
+                          const docLength = data.document.replace(/\D/g, "").length;
+                          setSenderDocType(docLength > 11 ? 'cnpj' : 'cpf');
+                        }
+                        setSenderData(data);
+                      }}
                       onAddressSave={(data) => {
                         toast({
                           title: "Remetente salvo!",
                           description: "Dados salvos para futuras cotações",
                         });
+                      }}
+                      onNoSavedAddresses={() => {
+                        // Se não há remetentes salvos, carregar dados do perfil
+                        loadUserProfileAsSender();
                       }}
                     />
 
@@ -2661,7 +2656,14 @@ const QuoteForm = () => {
                       type="recipient"
                       title="Destinatários Salvos"
                       currentAddressData={recipientData}
-                      onAddressSelect={(data) => setRecipientData(data)}
+                      onAddressSelect={(data) => {
+                        // Atualizar tipo de documento baseado no documento selecionado
+                        if (data.document) {
+                          const docLength = data.document.replace(/\D/g, "").length;
+                          setRecipientDocType(docLength > 11 ? 'cnpj' : 'cpf');
+                        }
+                        setRecipientData(data);
+                      }}
                       onAddressSave={(data) => {
                         toast({
                           title: "Destinatário salvo!",
