@@ -1199,7 +1199,7 @@ const QuoteForm = () => {
   };
 
   // Step 2: Selecionar opções
-  const handleStep2Submit = () => {
+  const handleStep2Submit = async () => {
     if (!pickupOption) {
       toast({
         title: "Seleção obrigatória",
@@ -1216,6 +1216,27 @@ const QuoteForm = () => {
         variant: "destructive",
       });
       return;
+    }
+
+    // Preencher automaticamente o CEP do destinatário com o CEP de destino da cotação
+    const destinyCepClean = formData.destinyCep.replace(/\D/g, "");
+    if (destinyCepClean.length === 8 && !recipientData.cep) {
+      // Formatar CEP
+      const formattedCep = `${destinyCepClean.slice(0, 5)}-${destinyCepClean.slice(5)}`;
+      setRecipientData((prev) => ({ ...prev, cep: formattedCep }));
+      
+      // Buscar endereço automaticamente
+      const endereco = await fetchEnderecoPorCep(formattedCep);
+      if (endereco) {
+        setRecipientData((prev) => ({
+          ...prev,
+          cep: formattedCep,
+          street: endereco.logradouro || prev.street,
+          neighborhood: endereco.bairro || prev.neighborhood,
+          city: endereco.cidade || prev.city,
+          state: endereco.estado || prev.state,
+        }));
+      }
     }
 
     setCurrentStep(3);
