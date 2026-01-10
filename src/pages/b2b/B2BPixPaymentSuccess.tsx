@@ -67,6 +67,11 @@ const B2BPixPaymentSuccess = () => {
 
   const { shipmentId, trackingCode, paymentId } = location.state || {};
 
+  // Detectar contexto para navegação
+  const currentPath = window.location.pathname;
+  const isInPainel = currentPath.startsWith('/painel');
+  const baseRoute = isInPainel ? '/painel/expresso' : '/b2b-expresso';
+
   useEffect(() => {
     if (!shipmentId && !trackingCode) {
       // Tentar buscar o shipment mais recente do cliente
@@ -82,7 +87,7 @@ const B2BPixPaymentSuccess = () => {
       
       const clientData = localStorage.getItem('b2b_client');
       if (!clientData) {
-        navigate('/b2b-expresso/dashboard');
+        navigate(`${baseRoute}/envios`);
         return;
       }
       
@@ -103,7 +108,7 @@ const B2BPixPaymentSuccess = () => {
 
       if (error || !latestShipment) {
         console.error('Erro ao buscar shipment:', error);
-        navigate('/b2b-expresso/dashboard');
+        navigate(`${baseRoute}/envios`);
         return;
       }
 
@@ -122,7 +127,7 @@ const B2BPixPaymentSuccess = () => {
       setVolumes(volumesData || []);
     } catch (error) {
       console.error('Erro:', error);
-      navigate('/b2b-expresso/dashboard');
+      navigate(`${baseRoute}/envios`);
     } finally {
       setIsLoading(false);
     }
@@ -154,7 +159,7 @@ const B2BPixPaymentSuccess = () => {
 
       if (error || !shipmentData) {
         console.error('Erro ao buscar shipment:', error);
-        navigate('/b2b-expresso/dashboard');
+        navigate(`${baseRoute}/envios`);
         return;
       }
 
@@ -179,11 +184,11 @@ const B2BPixPaymentSuccess = () => {
   };
 
   const handleGoToDashboard = () => {
-    navigate('/b2b-expresso/dashboard');
+    navigate(`${baseRoute}/envios`);
   };
 
   const handleNewShipment = () => {
-    navigate('/b2b-expresso/nova-remessa');
+    navigate(`${baseRoute}/novo-envio`);
   };
 
   if (isLoading) {
