@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { 
   Plus, BarChart3, LogOut, MapPin, Truck, Menu, Car, 
   Search, User, LayoutDashboard,
-  ChevronDown, Headphones
+  ChevronDown, Headphones, List
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -159,13 +159,13 @@ const PainelLayout = () => {
   };
 
   const localMenuItems = [
-    { title: 'Remessas Locais', url: '/painel/expresso/envios', icon: Car },
+    { title: 'Remessas Locais', url: '/painel/expresso/envios', icon: List },
     { title: 'Novo Envio Local', url: '/painel/expresso/novo-envio', icon: Plus },
     { title: 'Endereços', url: '/painel/expresso/enderecos', icon: MapPin },
   ];
 
   const convencionalMenuItems = [
-    { title: 'Remessas Nacionais', url: '/painel/convencional/remessas', icon: Truck },
+    { title: 'Remessas Nacionais', url: '/painel/convencional/remessas', icon: List },
     { title: 'Novo Envio Nacional', url: '/painel/convencional/cotacoes', icon: Plus },
     { title: 'Cadastros', url: '/painel/convencional/cadastros', icon: User },
   ];
