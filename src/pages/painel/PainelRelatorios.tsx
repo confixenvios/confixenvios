@@ -16,7 +16,8 @@ import {
   TrendingUp,
   ArrowRight,
   Calendar,
-  MapPin
+  MapPin,
+  DollarSign
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -65,6 +66,7 @@ const PainelRelatorios = () => {
   const [nationalShipments, setNationalShipments] = useState<NationalShipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [totalFreightPaid, setTotalFreightPaid] = useState(0);
   
 
   useEffect(() => {
@@ -114,15 +116,27 @@ const PainelRelatorios = () => {
         }));
       }
 
-      // Load national shipments with recipient address
+      // Load national shipments with recipient address and payment data
       const { data: nationalData } = await supabase
         .from('shipments')
         .select(`
-          id, tracking_code, status, created_at, weight,
+          id, tracking_code, status, created_at, weight, payment_data,
           recipient_address:addresses!recipient_address_id(city, state, street, number)
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
+
+      // Calculate total freight paid from national shipments
+      let totalPaid = 0;
+      (nationalData || []).forEach(s => {
+        const paymentData = s.payment_data as { amount?: number; total?: number } | null;
+        if (paymentData) {
+          // Amount is usually in cents for PIX payments
+          const amount = paymentData.amount || paymentData.total || 0;
+          totalPaid += amount > 100 ? amount / 100 : amount; // Convert from cents if needed
+        }
+      });
+      setTotalFreightPaid(totalPaid);
 
       setNationalShipments((nationalData || []).map(s => {
         const addr = s.recipient_address as { city: string; state: string; street: string; number: string } | null;
@@ -292,8 +306,8 @@ const PainelRelatorios = () => {
         </div>
       </div>
 
-      {/* Stats Cards - 3 columns */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+      {/* Stats Cards - 4 columns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <Card className="border-0 shadow-md bg-gradient-to-br from-white to-slate-50 overflow-hidden group hover:shadow-lg transition-all duration-300">
           <CardContent className="p-4 md:p-5">
             <div className="flex items-center justify-between">
@@ -310,6 +324,25 @@ const PainelRelatorios = () => {
               <span className="text-emerald-600 font-medium">{stats.local} locais</span>
               <span>•</span>
               <span className="text-blue-600 font-medium">{stats.nacional} nacionais</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md bg-gradient-to-br from-amber-50 to-white overflow-hidden group hover:shadow-lg transition-all duration-300">
+          <CardContent className="p-4 md:p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs md:text-sm font-medium text-amber-600 mb-1">Total Frete Contratado</p>
+                <p className="text-2xl md:text-3xl font-bold text-amber-700">
+                  {totalFreightPaid.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </p>
+              </div>
+              <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-amber-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <DollarSign className="h-5 w-5 md:h-6 md:w-6 text-amber-600" />
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-muted-foreground">
+              Soma de todos os pagamentos PIX
             </div>
           </CardContent>
         </Card>
