@@ -105,7 +105,9 @@ const CotacaoPreview = () => {
     vehicle_type: "",
     volume_weights: [""] as string[],
     destination_count: "1",
+    destination_cep: "", // CEP de destino para validar cobertura
   });
+  const [expressoCepError, setExpressoCepError] = useState("");
 
   const formatCurrency = (value: string): string => {
     const numbers = value.replace(/\D/g, "");
@@ -262,6 +264,20 @@ const CotacaoPreview = () => {
       case 1:
         if (!expressoData.volume_count || parseInt(expressoData.volume_count) < 1) {
           toast({ title: "Atenção", description: "Informe a quantidade de volumes", variant: "destructive" });
+          return false;
+        }
+        // Validar CEP de destino
+        const cleanCep = expressoData.destination_cep.replace(/\D/g, '');
+        if (cleanCep.length !== 8) {
+          toast({ title: "Atenção", description: "Informe um CEP de destino válido", variant: "destructive" });
+          return false;
+        }
+        if (!isLocalOnlyCep(cleanCep)) {
+          toast({ 
+            title: "CEP fora da área de cobertura", 
+            description: "Este CEP não está na área de atendimento Local. Para outras regiões, use a aba 'Nacional'.", 
+            variant: "destructive" 
+          });
           return false;
         }
         // Data D+1 é definida automaticamente, não precisa validar
@@ -1095,6 +1111,51 @@ const CotacaoPreview = () => {
                   {/* Step 1: Informações do Envio */}
                   {expressoStep === 1 && (
                     <div className="space-y-8 animate-in fade-in duration-300">
+                      {/* CEP de destino */}
+                      <div className="space-y-4">
+                        <div className="text-center">
+                          <MapPin className="h-12 w-12 mx-auto mb-3 text-primary" />
+                          <Label className="text-lg font-medium">CEP de destino</Label>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Área de cobertura: Região Metropolitana de Goiânia
+                          </p>
+                        </div>
+                        <InputMask
+                          mask="99999-999"
+                          value={expressoData.destination_cep}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            handleExpressoChange('destination_cep', value);
+                            // Validar em tempo real
+                            const cleanCep = value.replace(/\D/g, '');
+                            if (cleanCep.length === 8) {
+                              if (!isLocalOnlyCep(cleanCep)) {
+                                setExpressoCepError('CEP fora da área de cobertura Local. Use a aba "Nacional" para outras regiões.');
+                              } else {
+                                setExpressoCepError('');
+                              }
+                            } else {
+                              setExpressoCepError('');
+                            }
+                          }}
+                        >
+                          {(inputProps: any) => (
+                            <Input
+                              {...inputProps}
+                              className={`text-center text-2xl font-bold h-16 ${expressoCepError ? 'border-destructive' : ''}`}
+                              placeholder="00000-000"
+                            />
+                          )}
+                        </InputMask>
+                        {expressoCepError && (
+                          <p className="text-sm text-destructive text-center flex items-center justify-center gap-2">
+                            <AlertTriangle className="h-4 w-4" />
+                            {expressoCepError}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Quantidade de volumes */}
                       <div className="space-y-4">
                         <div className="text-center">
                           <Package className="h-12 w-12 mx-auto mb-3 text-primary" />
