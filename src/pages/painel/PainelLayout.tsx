@@ -162,14 +162,12 @@ const PainelLayout = () => {
     { title: 'Envios Local', url: '/painel/expresso/envios', icon: Car },
     { title: 'Novo Envio Local', url: '/painel/expresso/novo-envio', icon: Plus },
     { title: 'Endereços', url: '/painel/expresso/enderecos', icon: MapPin },
-    { title: 'Rastreamento', url: '/painel/expresso/rastreamento', icon: Search },
   ];
 
   const convencionalMenuItems = [
     { title: 'Envios Nacionais', url: '/painel/convencional/remessas', icon: Truck },
     { title: 'Novo Envio Nacional', url: '/painel/convencional/cotacoes', icon: Plus },
     { title: 'Cadastros', url: '/painel/convencional/cadastros', icon: User },
-    { title: 'Rastreamento', url: '/painel/convencional/rastreamento', icon: Search },
   ];
 
   const isActive = (path: string) => location.pathname === path;
