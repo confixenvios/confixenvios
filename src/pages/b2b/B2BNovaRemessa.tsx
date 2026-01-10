@@ -324,7 +324,12 @@ const B2BNovaRemessa = () => {
       const selectedPickupAddress = pickupAddresses.find(a => a.id === formData.pickup_address_id);
 
       // Navegar para tela de pagamento PIX com preço validado
-      navigate('/b2b-expresso/pix-pagamento', {
+      // Detectar se está no contexto do painel ou b2b-expresso
+      const currentPath = window.location.pathname;
+      const isInPainel = currentPath.startsWith('/painel');
+      const pixRoute = isInPainel ? '/painel/expresso/pix-pagamento' : '/b2b-expresso/pix-pagamento';
+      
+      navigate(pixRoute, {
         state: {
           amount: finalPrice,
           serverValidatedPrice: validatedPrice.calculated_price,
