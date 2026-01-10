@@ -27,6 +27,24 @@ import {
   formatDocument
 } from '@/utils/addressFieldValidation';
 
+// Faixas de CEP permitidas para Envio Local (são as mesmas bloqueadas no Nacional)
+const LOCAL_ALLOWED_CEP_RANGES: [number, number][] = [
+  [74000000, 74899999],
+  [74900000, 74999999],
+  [75000000, 75159999],
+  [75170000, 75174999],
+  [75250000, 75264999],
+  [75340000, 75344999],
+];
+
+const isAllowedLocalCep = (cep: string): boolean => {
+  const cleanCep = cep.replace(/\D/g, "");
+  if (cleanCep.length !== 8) return false;
+  
+  const cepNum = parseInt(cleanCep, 10);
+  return LOCAL_ALLOWED_CEP_RANGES.some(([min, max]) => cepNum >= min && cepNum <= max);
+};
+
 interface B2BClient {
   id: string;
   company_name: string;
@@ -401,6 +419,19 @@ const B2BNovaRemessa = () => {
     const cleanCep = cep.replace(/\D/g, '');
     if (cleanCep.length !== 8) return;
 
+    // Validar se o CEP está na área de cobertura Local
+    if (!isAllowedLocalCep(cleanCep)) {
+      toast.error('CEP fora da área de atendimento Local. Somente região metropolitana de Goiânia.');
+      setNewAddress(prev => ({
+        ...prev,
+        street: '',
+        neighborhood: '',
+        city: '',
+        state: '',
+      }));
+      return;
+    }
+
     setLoadingCep(true);
     try {
       const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
@@ -645,6 +676,13 @@ const B2BNovaRemessa = () => {
         !newAddress.cep || !newAddress.street || !newAddress.number ||
         !newAddress.neighborhood || !newAddress.city || !newAddress.state || !newAddress.complement) {
       toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    // Validar se o CEP está na área de cobertura Local
+    const cleanCep = newAddress.cep.replace(/\D/g, '');
+    if (!isAllowedLocalCep(cleanCep)) {
+      toast.error('CEP fora da área de atendimento Local. Somente região metropolitana de Goiânia.');
       return;
     }
 
