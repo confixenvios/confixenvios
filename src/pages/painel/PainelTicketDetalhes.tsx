@@ -155,7 +155,6 @@ const PainelTicketDetalhes = () => {
     if (!userId) return null;
 
     const fileExt = file.name.split('.').pop();
-    // Store the file path (not the full URL) so we can generate signed URLs later
     const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
@@ -167,37 +166,16 @@ const PainelTicketDetalhes = () => {
       throw new Error('Erro ao fazer upload do arquivo');
     }
 
-    // Return the file path instead of public URL
-    return filePath;
-  };
-
-  const getSignedUrl = async (filePath: string): Promise<string | null> => {
-    const { data, error } = await supabase.storage
+    // Return the public URL directly (bucket is public now)
+    const { data: urlData } = supabase.storage
       .from('ticket-attachments')
-      .createSignedUrl(filePath, 3600); // 1 hour expiry
+      .getPublicUrl(filePath);
 
-    if (error) {
-      console.error('Error creating signed URL:', error);
-      return null;
-    }
-
-    return data.signedUrl;
+    return urlData.publicUrl;
   };
 
-  const handleOpenAttachment = async (attachmentPath: string) => {
-    // Check if it's already a full URL (legacy data)
-    if (attachmentPath.startsWith('http')) {
-      window.open(attachmentPath, '_blank', 'noopener,noreferrer');
-      return;
-    }
-
-    // Generate signed URL for the file path
-    const signedUrl = await getSignedUrl(attachmentPath);
-    if (signedUrl) {
-      window.open(signedUrl, '_blank', 'noopener,noreferrer');
-    } else {
-      toast.error('Erro ao abrir anexo');
-    }
+  const handleOpenAttachment = (attachmentUrl: string) => {
+    window.open(attachmentUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -399,27 +377,28 @@ const PainelTicketDetalhes = () => {
                   {(msg as any).attachment_url && (
                     <div className="mt-3 pt-3 border-t border-border/50">
                       {(msg as any).attachment_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                        <button 
-                          onClick={() => handleOpenAttachment((msg as any).attachment_url)}
-                          className="block cursor-pointer"
+                        <a 
+                          href={(msg as any).attachment_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block"
                         >
                           <img 
-                            src={(msg as any).attachment_url.startsWith('http') 
-                              ? (msg as any).attachment_url 
-                              : `https://dhznyjtisfdxzbnzinab.supabase.co/storage/v1/object/public/ticket-attachments/${(msg as any).attachment_url}`
-                            } 
+                            src={(msg as any).attachment_url} 
                             alt="Anexo" 
                             className="max-w-full max-h-48 rounded-lg border object-contain hover:opacity-80 transition-opacity"
                           />
-                        </button>
+                        </a>
                       ) : (
-                        <button 
-                          onClick={() => handleOpenAttachment((msg as any).attachment_url)}
-                          className="inline-flex items-center gap-2 text-sm text-primary hover:underline cursor-pointer"
+                        <a 
+                          href={(msg as any).attachment_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
                         >
                           <FileText className="h-4 w-4" />
                           Ver anexo
-                        </button>
+                        </a>
                       )}
                     </div>
                   )}
