@@ -529,11 +529,11 @@ const CotacaoPreview = () => {
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="convencional" className="flex items-center gap-2" disabled={convencionalStep === 2}>
                 <Truck className="h-4 w-4" />
-                Nacional
+                Envio Nacional
               </TabsTrigger>
               <TabsTrigger value="expresso" className="flex items-center gap-2" disabled={expressoStep === 4 || convencionalStep === 2}>
                 <Car className="h-4 w-4" />
-                Local
+                Envio Local
               </TabsTrigger>
             </TabsList>
 
