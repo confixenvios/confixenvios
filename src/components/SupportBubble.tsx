@@ -88,8 +88,8 @@ const SupportBubble = () => {
   const [orderNumber, setOrderNumber] = useState("");
   const [description, setDescription] = useState("");
 
-  // Hide on admin pages and support ticket pages (to avoid covering the message input)
-  const shouldHide = location.pathname.startsWith("/admin") || location.pathname.startsWith("/painel/suporte");
+  // Hide on admin pages and ticket detail pages (to avoid covering the message input)
+  const shouldHide = location.pathname.startsWith("/admin") || location.pathname.includes("/suporte/ticket/");
 
   useEffect(() => {
     checkAuth();
