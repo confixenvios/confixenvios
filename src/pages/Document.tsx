@@ -21,6 +21,7 @@ const Document = () => {
   const [documentType, setDocumentType] = useState<string>("");
   const [nfeKey, setNfeKey] = useState<string>("");
   const [merchandiseDescription, setMerchandiseDescription] = useState<string>("");
+  const [nfePredominantProduct, setNfePredominantProduct] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   
 
@@ -40,7 +41,7 @@ const Document = () => {
 
   const isFormValid = () => {
     if (!documentType) return false;
-    if (documentType === 'nfe' && !nfeKey) return false;
+    if (documentType === 'nfe' && (!nfeKey || !nfePredominantProduct)) return false;
     if (documentType === 'declaration') {
       return !!merchandiseDescription;
     }
@@ -87,12 +88,14 @@ const Document = () => {
         documentType,
         nfeKey: documentType === 'nfe' ? nfeKey : null,
         merchandiseDescription: documentType === 'declaration' ? merchandiseDescription : null,
+        nfePredominantProduct: documentType === 'nfe' ? nfePredominantProduct : null,
         
         // Dados fiscais estruturados
         fiscalData: {
           type: documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo',
           nfeAccessKey: documentType === 'nfe' ? nfeKey : null,
-          contentDescription: documentType === 'declaration' ? merchandiseDescription : null,
+          // contentDescription: descrição da declaração OU produto predominante da NFe
+          contentDescription: documentType === 'declaration' ? merchandiseDescription : nfePredominantProduct,
           processedAt: new Date().toISOString()
         }
       };
@@ -215,6 +218,8 @@ const Document = () => {
         if (documentType === 'nfe') {
           queryParams.append('tipo', '1'); // Nota Fiscal Eletrônica
           queryParams.append('chaveNotaFiscal', nfeKey || '');
+          // Produto predominante da NFe vai como descricaoMercadoria/content_description
+          queryParams.append('descricaoMercadoria', nfePredominantProduct || 'Mercadoria Geral');
         } else {
           queryParams.append('tipo', '3'); // Declaração de Conteúdo
           // Para declaração de conteúdo, enviar chave fictícia
@@ -388,12 +393,12 @@ const Document = () => {
             {documentType === 'nfe' && (
               <Card className="shadow-card">
                 <CardHeader>
-                  <CardTitle>Chave de Acesso da NFe</CardTitle>
+                  <CardTitle>Dados da Nota Fiscal Eletrônica</CardTitle>
                   <CardDescription>
-                    Digite a chave de 44 dígitos da Nota Fiscal Eletrônica
+                    Preencha os dados da NFe para o envio
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="nfe-key">Chave de Acesso *</Label>
                     <Input
@@ -406,6 +411,20 @@ const Document = () => {
                     />
                     <p className="text-xs text-muted-foreground">
                       {nfeKey.length}/44 dígitos
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="predominant-product">Produto Predominante *</Label>
+                    <Input
+                      id="predominant-product"
+                      value={nfePredominantProduct}
+                      onChange={(e) => setNfePredominantProduct(e.target.value)}
+                      placeholder="Ex: Calçados, Roupas, Eletrônicos, Cosméticos..."
+                      className="border-input-border focus:border-primary focus:ring-primary"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Informe o tipo principal de mercadoria da nota fiscal
                     </p>
                   </div>
                 </CardContent>
