@@ -73,12 +73,16 @@ const SavedAddressManager = ({
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingAddress, setEditingAddress] = useState<SavedAddress | null>(null);
   const [isNewAddress, setIsNewAddress] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   const tableName = type === 'sender' ? 'saved_senders' : 'saved_recipients';
 
-  // Carregar endereços salvos
-  const loadSavedAddresses = async () => {
+  // Carregar endereços salvos (apenas uma vez no mount inicial)
+  const loadSavedAddresses = async (isInitialLoad = false) => {
     if (!user) return;
+    
+    // Se já fez o load inicial e está tentando fazer novamente, apenas buscar dados sem selecionar
+    const shouldAutoSelect = isInitialLoad && !initialLoadDone;
     
     setLoading(true);
     try {
@@ -93,28 +97,31 @@ const SavedAddressManager = ({
 
       setSavedAddresses(data || []);
       
-      // Selecionar automaticamente o endereço padrão
-      const defaultAddress = data?.find(address => address.is_default);
-      if (defaultAddress) {
-        setSelectedAddressId(defaultAddress.id);
-        onAddressSelect({
-          name: defaultAddress.name,
-          document: defaultAddress.document,
-          phone: defaultAddress.phone,
-          email: defaultAddress.email,
-          cep: defaultAddress.cep,
-          street: defaultAddress.street,
-          number: defaultAddress.number,
-          complement: defaultAddress.complement || "",
-          neighborhood: defaultAddress.neighborhood,
-          city: defaultAddress.city,
-          state: defaultAddress.state,
-          reference: defaultAddress.reference || "",
-          inscricaoEstadual: defaultAddress.inscricao_estadual || ""
-        });
-      } else if (!data || data.length === 0) {
-        // Notificar que não há endereços salvos
-        onNoSavedAddresses?.();
+      // Selecionar automaticamente o endereço padrão APENAS no primeiro load
+      if (shouldAutoSelect) {
+        const defaultAddress = data?.find(address => address.is_default);
+        if (defaultAddress) {
+          setSelectedAddressId(defaultAddress.id);
+          onAddressSelect({
+            name: defaultAddress.name,
+            document: defaultAddress.document,
+            phone: defaultAddress.phone,
+            email: defaultAddress.email,
+            cep: defaultAddress.cep,
+            street: defaultAddress.street,
+            number: defaultAddress.number,
+            complement: defaultAddress.complement || "",
+            neighborhood: defaultAddress.neighborhood,
+            city: defaultAddress.city,
+            state: defaultAddress.state,
+            reference: defaultAddress.reference || "",
+            inscricaoEstadual: defaultAddress.inscricao_estadual || ""
+          });
+        } else if (!data || data.length === 0) {
+          // Notificar que não há endereços salvos
+          onNoSavedAddresses?.();
+        }
+        setInitialLoadDone(true);
       }
     } catch (error) {
       console.error(`Erro ao carregar ${type}s:`, error);
@@ -129,7 +136,9 @@ const SavedAddressManager = ({
   };
 
   useEffect(() => {
-    loadSavedAddresses();
+    if (user && !initialLoadDone) {
+      loadSavedAddresses(true);
+    }
   }, [user]);
 
   // Salvar endereço atual
