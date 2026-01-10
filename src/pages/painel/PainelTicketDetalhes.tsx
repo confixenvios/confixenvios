@@ -176,17 +176,28 @@ const PainelTicketDetalhes = () => {
 
   const handleOpenAttachment = async (attachmentUrl: string) => {
     try {
-      // Fetch the file as blob to bypass ad blockers
+      // Fetch the file as blob and trigger download to bypass ad blockers
       const response = await fetch(attachmentUrl);
       const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, '_blank', 'noopener,noreferrer');
-      // Cleanup after a delay
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+      
+      // Extract filename from URL
+      const urlParts = attachmentUrl.split('/');
+      const filename = urlParts[urlParts.length - 1] || 'anexo';
+      
+      // Create download link and trigger it
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Cleanup after download starts
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
     } catch (error) {
-      console.error('Error opening attachment:', error);
-      // Fallback to direct URL
-      window.open(attachmentUrl, '_blank', 'noopener,noreferrer');
+      console.error('Error downloading attachment:', error);
+      toast.error('Erro ao baixar anexo');
     }
   };
 
