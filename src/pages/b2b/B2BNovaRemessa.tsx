@@ -541,6 +541,19 @@ const B2BNovaRemessa = () => {
     const cleanCep = cep.replace(/\D/g, '');
     if (cleanCep.length !== 8) return;
 
+    // Validar se o CEP está na área de cobertura Local
+    if (!isAllowedLocalCep(cleanCep)) {
+      toast.error('CEP fora da área de atendimento Local. Somente região metropolitana de Goiânia.');
+      setNewPickupAddress(prev => ({
+        ...prev,
+        street: '',
+        neighborhood: '',
+        city: '',
+        state: '',
+      }));
+      return;
+    }
+
     setLoadingPickupCep(true);
     try {
       const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
@@ -625,6 +638,13 @@ const B2BNovaRemessa = () => {
         !newPickupAddress.cep || !newPickupAddress.street || !newPickupAddress.number ||
         !newPickupAddress.neighborhood || !newPickupAddress.city || !newPickupAddress.state || !newPickupAddress.complement) {
       toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    // Validar se o CEP está na área de cobertura Local
+    const cleanCep = newPickupAddress.cep.replace(/\D/g, '');
+    if (!isAllowedLocalCep(cleanCep)) {
+      toast.error('CEP fora da área de atendimento Local. Somente região metropolitana de Goiânia.');
       return;
     }
 
