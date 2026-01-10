@@ -85,6 +85,7 @@ const CotacaoPreview = () => {
   // Form data - Convencional
   const [originCep] = useState("74900-000");
   const [destinyCep, setDestinyCep] = useState("");
+  const [nacionalCepError, setNacionalCepError] = useState("");
   const [unitValue, setUnitValue] = useState("");
   const [volumes, setVolumes] = useState<Volume[]>([
     { id: "1", weight: "", length: "", width: "", height: "", merchandiseType: "" },
@@ -579,7 +580,21 @@ const CotacaoPreview = () => {
                           <InputMask
                             mask="99999-999"
                             value={destinyCep}
-                            onChange={(e) => setDestinyCep(e.target.value)}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setDestinyCep(value);
+                              // Validar em tempo real
+                              const cleanCep = value.replace(/\D/g, '');
+                              if (cleanCep.length === 8) {
+                                if (isLocalOnlyCep(cleanCep)) {
+                                  setNacionalCepError('CEP não disponível para Nacional. Este CEP está na área de atendimento Local. Use a aba "Local" para envios nesta região.');
+                                } else {
+                                  setNacionalCepError('');
+                                }
+                              } else {
+                                setNacionalCepError('');
+                              }
+                            }}
                           >
                             {(inputProps: any) => (
                               <Input
@@ -587,10 +602,16 @@ const CotacaoPreview = () => {
                                 id="destiny-cep"
                                 type="text"
                                 placeholder="00000-000"
-                                className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg"
+                                className={`border-input-border focus:border-primary focus:ring-primary h-14 text-lg ${nacionalCepError ? 'border-destructive' : ''}`}
                               />
                             )}
                           </InputMask>
+                          {nacionalCepError && (
+                            <p className="text-sm text-destructive flex items-center gap-2">
+                              <AlertTriangle className="h-4 w-4" />
+                              {nacionalCepError}
+                            </p>
+                          )}
                         </div>
                       </div>
 
