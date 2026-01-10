@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Plus, MapPin, Eye, Search, Download, RefreshCw, Phone, User, History } from "lucide-react";
+import { Package, Plus, MapPin, Eye, Search, Download, RefreshCw, Phone, User, History, Tag, ChevronDown, Printer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 
@@ -426,15 +427,35 @@ const ClientRemessas = () => {
                         Rastreio
                       </Button>
                       {shipment.label_pdf_url && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => handleDownloadLabel(shipment)}
-                          className="bg-primary hover:bg-primary/90"
-                        >
-                          <Download className="h-4 w-4 mr-1" />
-                          Baixar Etiqueta
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="bg-primary hover:bg-primary/90"
+                            >
+                              <Tag className="h-4 w-4 mr-1" />
+                              Etiqueta
+                              <ChevronDown className="h-3 w-3 ml-1" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="bg-white z-50">
+                            <DropdownMenuItem 
+                              onClick={() => window.print()}
+                              className="cursor-pointer"
+                            >
+                              <Printer className="h-4 w-4 mr-2" />
+                              Imprimir Etiqueta
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDownloadLabel(shipment)}
+                              className="cursor-pointer"
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Baixar PDF
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                     </div>
                   </div>
