@@ -73,9 +73,16 @@ const CotacaoPreview = () => {
 
   // Expresso Quiz State
   const [expressoStep, setExpressoStep] = useState(1);
+  // Calcular D+1 automaticamente
+  const getD1Date = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  };
+
   const [expressoData, setExpressoData] = useState({
     volume_count: "1",
-    delivery_date: "",
+    delivery_date: getD1Date(), // Fixo em D+1
     vehicle_type: "",
     volume_weights: [""] as string[],
     destination_count: "1",
@@ -238,10 +245,7 @@ const CotacaoPreview = () => {
           toast({ title: "Atenção", description: "Informe a quantidade de volumes", variant: "destructive" });
           return false;
         }
-        if (!expressoData.delivery_date) {
-          toast({ title: "Atenção", description: "Selecione a data de entrega", variant: "destructive" });
-          return false;
-        }
+        // Data D+1 é definida automaticamente, não precisa validar
         return true;
       case 2:
         const hasValidWeights = expressoData.volume_weights.every(w => parseFloat(w) > 0);
@@ -1077,21 +1081,14 @@ const CotacaoPreview = () => {
                         />
                       </div>
 
-                      <div className="space-y-4">
+                      {/* Data fixa D+1 - apenas exibição informativa */}
+                      <div className="space-y-2">
                         <div className="text-center">
-                          <Calendar className="h-12 w-12 mx-auto mb-3 text-primary" />
-                          <Label className="text-lg font-medium">Quando você deseja a entrega?</Label>
+                          <Calendar className="h-10 w-10 mx-auto mb-2 text-primary/60" />
+                          <p className="text-sm text-muted-foreground">
+                            Entrega programada para <span className="font-semibold text-foreground">D+1 (amanhã)</span>
+                          </p>
                         </div>
-                        <Input
-                          type="date"
-                          value={expressoData.delivery_date}
-                          onChange={(e) => handleExpressoChange('delivery_date', e.target.value)}
-                          min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
-                          className="text-center text-lg h-14"
-                        />
-                        <p className="text-sm text-center text-muted-foreground">
-                          A data mínima é D+1 (amanhã)
-                        </p>
                       </div>
                     </div>
                   )}
@@ -1128,20 +1125,51 @@ const CotacaoPreview = () => {
                         ))}
                       </div>
 
-                      <div className="space-y-4">
-                        <div className="text-center">
-                          <MapPin className="h-10 w-10 mx-auto mb-2 text-primary" />
-                          <Label className="text-lg font-medium">Para quantos destinos diferentes?</Label>
-                        </div>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={expressoData.destination_count}
-                          onChange={(e) => handleExpressoChange('destination_count', e.target.value)}
-                          className="text-center text-2xl font-bold h-14"
-                          placeholder="1"
-                        />
-                      </div>
+                      {/* Destinos diferentes - lógica baseada na quantidade de volumes */}
+                      {(() => {
+                        const volumeCount = parseInt(expressoData.volume_count) || 1;
+                        const maxDestinations = volumeCount;
+                        
+                        // Se só tem 1 volume, fixar em 1 destino (sem mostrar input)
+                        if (volumeCount === 1) {
+                          return (
+                            <div className="space-y-2">
+                              <div className="text-center">
+                                <MapPin className="h-10 w-10 mx-auto mb-2 text-primary/60" />
+                                <p className="text-sm text-muted-foreground">
+                                  Destino: <span className="font-semibold text-foreground">1 endereço</span>
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        // Se tem 2+ volumes, mostrar input com min 1 e max = volumeCount
+                        return (
+                          <div className="space-y-4">
+                            <div className="text-center">
+                              <MapPin className="h-10 w-10 mx-auto mb-2 text-primary" />
+                              <Label className="text-lg font-medium">Para quantos destinos diferentes?</Label>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Mínimo: 1 | Máximo: {maxDestinations} (com base nos volumes)
+                              </p>
+                            </div>
+                            <Input
+                              type="number"
+                              min="1"
+                              max={maxDestinations}
+                              value={expressoData.destination_count}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value) || 1;
+                                const clamped = Math.min(Math.max(val, 1), maxDestinations);
+                                handleExpressoChange('destination_count', clamped.toString());
+                              }}
+                              className="text-center text-2xl font-bold h-14"
+                              placeholder="1"
+                            />
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
 
