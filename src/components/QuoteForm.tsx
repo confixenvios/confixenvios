@@ -371,9 +371,21 @@ const QuoteForm = () => {
   }, [quoteData]);
 
   // Carregar dados do perfil do cliente quando chegar no Step 3
+  // APENAS se os campos estiverem vazios (não sobrescrever dados de remetentes salvos)
   useEffect(() => {
     const loadUserProfile = async () => {
       if (currentStep === 3 && user) {
+        // Verificar se já existem dados preenchidos (por remetentes salvos ou manualmente)
+        const hasExistingData = senderData.name.trim() !== '' || 
+                                 senderData.document.trim() !== '' ||
+                                 senderData.email.trim() !== '';
+        
+        // Se já tem dados, não sobrescrever com o perfil
+        if (hasExistingData) {
+          console.log("📋 Dados do remetente já preenchidos, não sobrescrevendo com perfil");
+          return;
+        }
+        
         try {
           // Buscar perfil do usuário
           const { data: profile, error } = await supabase
