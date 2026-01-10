@@ -271,7 +271,8 @@ const ClientRemessas = () => {
         },
         body: JSON.stringify({ 
           trackingCode: shipment.tracking_code,
-          shipmentId: shipment.id 
+          shipmentId: shipment.id,
+          codigo: shipment.cte_key
         }),
       });
 
