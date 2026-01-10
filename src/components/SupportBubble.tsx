@@ -72,7 +72,7 @@ const faqItems = [
   },
 ];
 
-const WHATSAPP_NUMBER = "5562987333276";
+const WHATSAPP_NUMBER = "556298733276";
 
 const SupportBubble = () => {
   const navigate = useNavigate();
