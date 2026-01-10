@@ -269,7 +269,10 @@ const ClientRemessas = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ trackingCode: shipment.tracking_code }),
+        body: JSON.stringify({ 
+          trackingCode: shipment.tracking_code,
+          shipmentId: shipment.id 
+        }),
       });
 
       if (!response.ok) {
