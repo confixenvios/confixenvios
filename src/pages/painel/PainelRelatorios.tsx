@@ -520,10 +520,6 @@ const PainelRelatorios = () => {
 
                         {/* Right side - Status and weight */}
                         <div className="flex items-center gap-3 md:gap-4">
-                          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${statusConfig.bgColor} ${statusConfig.color}`}>
-                            {statusConfig.icon}
-                            <span className="text-sm font-medium hidden md:inline">{statusConfig.label}</span>
-                          </div>
                           
                           <div className="text-right">
                             <p className="text-lg font-bold text-foreground">
