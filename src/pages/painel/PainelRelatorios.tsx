@@ -84,10 +84,11 @@ const PainelRelatorios = () => {
     }
 
     setCurrentTrackingCode(trackingCode);
-    setTrackingModalOpen(true);
     setTrackingLoading(true);
     setTrackingError(null);
     setTrackingData(null);
+    
+    toast.info('Consultando rastreamento...', { duration: 2000 });
 
     try {
       const response = await fetch('https://n8n.grupoconfix.com/webhook-test/47827545-77ca-4e68-8b43-9c50467a3f55', {
@@ -104,9 +105,10 @@ const PainelRelatorios = () => {
 
       const data = await response.json();
       setTrackingData(data);
+      setTrackingModalOpen(true);
     } catch (error) {
       console.error('Erro ao buscar rastreio:', error);
-      setTrackingError('Não foi possível consultar o rastreamento. Tente novamente.');
+      toast.error('Não foi possível consultar o rastreamento. Tente novamente.');
     } finally {
       setTrackingLoading(false);
     }
