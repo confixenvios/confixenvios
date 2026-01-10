@@ -130,7 +130,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
               >
                 <div className="flex items-center gap-3">
                   <Package className="h-4 w-4" />
-                  <span className="text-sm font-medium">Remessas</span>
+                  <span className="text-sm font-medium">Pedidos</span>
                 </div>
                 <ChevronDown className={cn("h-4 w-4 transition-transform", remessasOpen && "rotate-180")} />
               </button>
