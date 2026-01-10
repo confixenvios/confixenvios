@@ -394,7 +394,10 @@ const PainelTicketDetalhes = () => {
                       })}
                     </span>
                   </div>
-                  <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                  {/* Hide message if it's just an attachment placeholder */}
+                  {!msg.message.startsWith('[Anexo:') && (
+                    <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                  )}
                   
                   {/* Attachment display */}
                   {(msg as any).attachment_url && (
