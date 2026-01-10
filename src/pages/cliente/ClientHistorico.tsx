@@ -370,19 +370,6 @@ const ClientHistorico = () => {
                 Gere relatórios detalhados das suas remessas e atividades
               </p>
             </div>
-            <Button 
-              onClick={exportToExcel} 
-              disabled={isExporting || filteredItems.length === 0}
-              className="flex items-center gap-2 h-11 px-6"
-              size="lg"
-            >
-              {isExporting ? (
-                <Clock className="w-5 h-5 animate-spin" />
-              ) : (
-                <FileSpreadsheet className="w-5 h-5" />
-              )}
-              {isExporting ? 'Exportando...' : 'Baixar Excel'}
-            </Button>
           </div>
         </div>
 
