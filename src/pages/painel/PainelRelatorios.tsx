@@ -15,12 +15,20 @@ import {
   Timer,
   TrendingUp,
   ArrowRight,
-  Calendar
+  Calendar,
+  MapPin
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+interface B2BVolume {
+  recipient_city: string;
+  recipient_state: string;
+  recipient_street: string;
+  recipient_number: string;
+}
 
 interface B2BShipment {
   id: string;
@@ -31,6 +39,9 @@ interface B2BShipment {
   total_weight: number;
   delivery_date: string | null;
   type: 'local';
+  destination_city?: string;
+  destination_state?: string;
+  destination_address?: string;
 }
 
 interface NationalShipment {
@@ -40,6 +51,9 @@ interface NationalShipment {
   created_at: string;
   weight: number;
   type: 'nacional';
+  destination_city?: string;
+  destination_state?: string;
+  destination_address?: string;
 }
 
 type Shipment = B2BShipment | NationalShipment;
@@ -64,7 +78,7 @@ const PainelRelatorios = () => {
         return;
       }
 
-      // Load B2B shipments
+      // Load B2B shipments with volumes for address info
       const { data: clientData } = await supabase
         .from('b2b_clients')
         .select('id')
@@ -74,21 +88,55 @@ const PainelRelatorios = () => {
       if (clientData) {
         const { data: b2bData } = await supabase
           .from('b2b_shipments')
-          .select('id, tracking_code, status, created_at, total_volumes, total_weight, delivery_date')
+          .select(`
+            id, tracking_code, status, created_at, total_volumes, total_weight, delivery_date,
+            b2b_volumes(recipient_city, recipient_state, recipient_street, recipient_number)
+          `)
           .eq('b2b_client_id', clientData.id)
           .order('created_at', { ascending: false });
 
-        setB2BShipments((b2bData || []).map(s => ({ ...s, type: 'local' as const })));
+        setB2BShipments((b2bData || []).map(s => {
+          const firstVolume = (s.b2b_volumes as B2BVolume[] | null)?.[0];
+          return {
+            id: s.id,
+            tracking_code: s.tracking_code,
+            status: s.status,
+            created_at: s.created_at,
+            total_volumes: s.total_volumes,
+            total_weight: s.total_weight,
+            delivery_date: s.delivery_date,
+            type: 'local' as const,
+            destination_city: firstVolume?.recipient_city,
+            destination_state: firstVolume?.recipient_state,
+            destination_address: firstVolume ? `${firstVolume.recipient_street}, ${firstVolume.recipient_number}` : undefined
+          };
+        }));
       }
 
-      // Load national shipments
+      // Load national shipments with recipient address
       const { data: nationalData } = await supabase
         .from('shipments')
-        .select('id, tracking_code, status, created_at, weight')
+        .select(`
+          id, tracking_code, status, created_at, weight,
+          recipient_address:addresses!recipient_address_id(city, state, street, number)
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      setNationalShipments((nationalData || []).map(s => ({ ...s, type: 'nacional' as const })));
+      setNationalShipments((nationalData || []).map(s => {
+        const addr = s.recipient_address as { city: string; state: string; street: string; number: string } | null;
+        return {
+          id: s.id,
+          tracking_code: s.tracking_code,
+          status: s.status,
+          created_at: s.created_at,
+          weight: s.weight,
+          type: 'nacional' as const,
+          destination_city: addr?.city,
+          destination_state: addr?.state,
+          destination_address: addr ? `${addr.street}, ${addr.number}` : undefined
+        };
+      }));
     } catch (error) {
       console.error(error);
     } finally {
@@ -198,7 +246,7 @@ const PainelRelatorios = () => {
   const filteredShipments = getFilteredShipments();
   const allShipments = [...b2bShipments, ...nationalShipments];
   
-  // Calculate stats
+  // Calculate stats - combining processing + in_transit into "Em Trânsito"
   const stats = {
     total: allShipments.length,
     local: b2bShipments.length,
@@ -206,12 +254,10 @@ const PainelRelatorios = () => {
     delivered: allShipments.filter(s => s.status === 'delivered' || s.status === 'DELIVERED').length,
     inTransit: allShipments.filter(s => 
       s.status === 'in_transit' || s.status === 'IN_TRANSIT' || 
-      s.status === 'out_for_delivery' || s.status === 'collected'
-    ).length,
-    pending: allShipments.filter(s => 
+      s.status === 'out_for_delivery' || s.status === 'collected' ||
       s.status === 'pending_payment' || s.status === 'PENDENTE' || 
       s.status === 'PAGO_AGUARDANDO_ETIQUETA' || s.status === 'paid' ||
-      s.status === 'PAYMENT_CONFIRMED'
+      s.status === 'PAYMENT_CONFIRMED' || s.status === 'processing'
     ).length,
   };
 
@@ -245,8 +291,8 @@ const PainelRelatorios = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      {/* Stats Cards - 3 columns */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
         <Card className="border-0 shadow-md bg-gradient-to-br from-white to-slate-50 overflow-hidden group hover:shadow-lg transition-all duration-300">
           <CardContent className="p-4 md:p-5">
             <div className="flex items-center justify-between">
@@ -302,26 +348,6 @@ const PainelRelatorios = () => {
               <div 
                 className="h-full bg-gradient-to-r from-purple-400 to-purple-500 rounded-full transition-all duration-500"
                 style={{ width: `${stats.total > 0 ? (stats.inTransit / stats.total) * 100 : 0}%` }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-md bg-gradient-to-br from-amber-50 to-white overflow-hidden group hover:shadow-lg transition-all duration-300">
-          <CardContent className="p-4 md:p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-amber-600 mb-1">Processando</p>
-                <p className="text-2xl md:text-3xl font-bold text-amber-700">{stats.pending}</p>
-              </div>
-              <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-amber-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Timer className="h-5 w-5 md:h-6 md:w-6 text-amber-600" />
-              </div>
-            </div>
-            <div className="mt-3 h-1.5 bg-amber-100 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-500"
-                style={{ width: `${stats.total > 0 ? (stats.pending / stats.total) * 100 : 0}%` }}
               />
             </div>
           </CardContent>
@@ -428,6 +454,22 @@ const PainelRelatorios = () => {
                                 {isLocal ? 'Local' : 'Nacional'}
                               </Badge>
                             </div>
+                            
+                            {/* Address info */}
+                            {(shipment.destination_city || shipment.destination_address) && (
+                              <div className="flex items-center gap-1.5 mt-1.5 text-sm text-foreground">
+                                <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                                <span className="truncate">
+                                  {shipment.destination_address && (
+                                    <span className="text-muted-foreground">{shipment.destination_address} - </span>
+                                  )}
+                                  <span className="font-medium">{shipment.destination_city}</span>
+                                  {shipment.destination_state && (
+                                    <span className="text-muted-foreground">/{shipment.destination_state}</span>
+                                  )}
+                                </span>
+                              </div>
+                            )}
                             
                             <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                               <div className="flex items-center gap-1.5">
