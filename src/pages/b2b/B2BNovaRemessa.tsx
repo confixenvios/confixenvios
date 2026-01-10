@@ -275,6 +275,12 @@ const B2BNovaRemessa = () => {
   const handleSubmit = async () => {
     if (!client) return;
 
+    // Validar se o cliente tem documento (CPF/CNPJ) cadastrado
+    if (!client.cnpj || client.cnpj.replace(/\D/g, '').length < 11) {
+      toast.error('Para criar envios, você precisa ter um CPF ou CNPJ válido cadastrado. Por favor, entre em contato com o suporte para atualizar seu cadastro.');
+      return;
+    }
+
     setLoading(true);
 
     try {
