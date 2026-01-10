@@ -212,6 +212,12 @@ const B2BDashboard = () => {
     return allConcluded ? 'CONCLUIDO' : shipment.status;
   };
 
+  // Verifica se a etiqueta está travada (status NO_CD ou posterior)
+  const isLabelLocked = (status: string) => {
+    const lockedStatuses = ['NO_CD', 'EM_ROTA', 'ENTREGUE', 'CONCLUIDO', 'DEVOLUCAO'];
+    return lockedStatuses.includes(status);
+  };
+
   // Filtra as remessas baseado na busca e status
   const filteredShipments = useMemo(() => {
     return shipments.filter(shipment => {
@@ -370,12 +376,14 @@ const B2BDashboard = () => {
                       )}
                     </div>
 
-                    {/* Aviso de etiqueta */}
-                    <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                      <p className="text-xs font-semibold text-orange-700 flex items-center gap-1">
-                        ⚠️ Atenção: Por favor cole esta etiqueta no produto
-                      </p>
-                    </div>
+                    {/* Aviso de etiqueta - só mostra se não estiver travada */}
+                    {!isLabelLocked(volume.status) && (
+                      <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                        <p className="text-xs font-semibold text-orange-700 flex items-center gap-1">
+                          ⚠️ Atenção: Por favor cole esta etiqueta no produto
+                        </p>
+                      </div>
+                    )}
                     
                     <div className="flex items-center gap-2 mt-3">
                       <Button
@@ -386,15 +394,17 @@ const B2BDashboard = () => {
                         <Eye className="h-4 w-4 mr-1" />
                         Ver Detalhes
                       </Button>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handlePrintLabel(volume)}
-                        className="bg-primary hover:bg-primary/90"
-                      >
-                        <Download className="h-4 w-4 mr-1" />
-                        Baixar Etiqueta
-                      </Button>
+                      {!isLabelLocked(volume.status) && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handlePrintLabel(volume)}
+                          className="bg-primary hover:bg-primary/90"
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Baixar Etiqueta
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
