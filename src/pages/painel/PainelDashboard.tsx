@@ -173,7 +173,7 @@ const PainelDashboard = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">Envios Expresso</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Envios Locais</p>
                 <p className="text-2xl font-bold text-foreground">
                   {loading ? '...' : stats.totalExpresso}
                 </p>
