@@ -54,21 +54,23 @@ const Payment = () => {
     navigate('/documento');
   };
 
+  // Por enquanto, mostrar apenas PIX que está implementado e funcional
   const paymentMethods = [
-    {
-      id: 'saved_credit',
-      name: 'Cartão de Crédito Salvo',
-      icon: CreditCard,
-      description: 'Use um cartão salvo',
-      available: !!user // Only available for logged users
-    },
-    {
-      id: 'credit',
-      name: 'Novo Cartão de Crédito',
-      icon: CreditCard,
-      description: 'Pagamento à vista',
-      available: true
-    },
+    // TODO: Reativar quando implementados
+    // {
+    //   id: 'saved_credit',
+    //   name: 'Cartão de Crédito Salvo',
+    //   icon: CreditCard,
+    //   description: 'Use um cartão salvo',
+    //   available: !!user
+    // },
+    // {
+    //   id: 'credit',
+    //   name: 'Novo Cartão de Crédito',
+    //   icon: CreditCard,
+    //   description: 'Pagamento à vista',
+    //   available: true
+    // },
     {
       id: 'pix',
       name: 'PIX',
@@ -76,13 +78,13 @@ const Payment = () => {
       description: 'Aprovação instantânea',
       available: true
     },
-    {
-      id: 'boleto',
-      name: 'Boleto Bancário',
-      icon: Barcode,
-      description: 'Vencimento em 3 dias úteis',
-      available: true
-    }
+    // {
+    //   id: 'boleto',
+    //   name: 'Boleto Bancário',
+    //   icon: Barcode,
+    //   description: 'Vencimento em 3 dias úteis',
+    //   available: true
+    // }
   ].filter(method => method.available);
 
   const handlePaymentSelect = (methodId: string) => {
