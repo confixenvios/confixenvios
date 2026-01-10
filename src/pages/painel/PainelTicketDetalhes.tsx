@@ -155,22 +155,49 @@ const PainelTicketDetalhes = () => {
     if (!userId) return null;
 
     const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    // Store the file path (not the full URL) so we can generate signed URLs later
+    const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('ticket-attachments')
-      .upload(fileName, file);
+      .upload(filePath, file);
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
       throw new Error('Erro ao fazer upload do arquivo');
     }
 
-    const { data: urlData } = supabase.storage
-      .from('ticket-attachments')
-      .getPublicUrl(fileName);
+    // Return the file path instead of public URL
+    return filePath;
+  };
 
-    return urlData.publicUrl;
+  const getSignedUrl = async (filePath: string): Promise<string | null> => {
+    const { data, error } = await supabase.storage
+      .from('ticket-attachments')
+      .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+    if (error) {
+      console.error('Error creating signed URL:', error);
+      return null;
+    }
+
+    return data.signedUrl;
+  };
+
+  const handleOpenAttachment = async (attachmentPath: string) => {
+    // Check if it's already a full URL (legacy data)
+    if (attachmentPath.startsWith('http')) {
+      window.open(attachmentPath, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    // Generate signed URL for the file path
+    const signedUrl = await getSignedUrl(attachmentPath);
+    if (signedUrl) {
+      window.open(signedUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      toast.error('Erro ao abrir anexo');
+    }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -372,28 +399,27 @@ const PainelTicketDetalhes = () => {
                   {(msg as any).attachment_url && (
                     <div className="mt-3 pt-3 border-t border-border/50">
                       {(msg as any).attachment_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                        <a 
-                          href={(msg as any).attachment_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="block"
+                        <button 
+                          onClick={() => handleOpenAttachment((msg as any).attachment_url)}
+                          className="block cursor-pointer"
                         >
                           <img 
-                            src={(msg as any).attachment_url} 
+                            src={(msg as any).attachment_url.startsWith('http') 
+                              ? (msg as any).attachment_url 
+                              : `https://dhznyjtisfdxzbnzinab.supabase.co/storage/v1/object/public/ticket-attachments/${(msg as any).attachment_url}`
+                            } 
                             alt="Anexo" 
-                            className="max-w-full max-h-48 rounded-lg border object-contain"
+                            className="max-w-full max-h-48 rounded-lg border object-contain hover:opacity-80 transition-opacity"
                           />
-                        </a>
+                        </button>
                       ) : (
-                        <a 
-                          href={(msg as any).attachment_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                        <button 
+                          onClick={() => handleOpenAttachment((msg as any).attachment_url)}
+                          className="inline-flex items-center gap-2 text-sm text-primary hover:underline cursor-pointer"
                         >
                           <FileText className="h-4 w-4" />
                           Ver anexo
-                        </a>
+                        </button>
                       )}
                     </div>
                   )}
