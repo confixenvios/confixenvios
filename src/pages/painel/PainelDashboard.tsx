@@ -139,7 +139,7 @@ const PainelDashboard = () => {
               className="h-auto py-6 flex-col gap-3 border-2 hover:border-orange-500 hover:bg-orange-50"
               onClick={() => {
                 setShowQuoteTypeModal(false);
-                navigate('/painel/expresso/nova-remessa');
+                navigate('/painel/expresso/novo-envio');
               }}
             >
               <Car className="h-8 w-8 text-orange-500" />
