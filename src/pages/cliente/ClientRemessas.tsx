@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Plus, MapPin, Eye, Search, Download, RefreshCw, Phone, User } from "lucide-react";
+import { Package, Plus, MapPin, Eye, Search, Download, RefreshCw, Phone, User, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +61,10 @@ const ClientRemessas = () => {
   const [loading, setLoading] = useState(true);
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [trackingModalOpen, setTrackingModalOpen] = useState(false);
+  const [trackingShipment, setTrackingShipment] = useState<Shipment | null>(null);
+  const [statusHistory, setStatusHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -240,6 +244,28 @@ const ClientRemessas = () => {
     }
   };
 
+  const handleShowTracking = async (shipment: Shipment) => {
+    setTrackingShipment(shipment);
+    setTrackingModalOpen(true);
+    setLoadingHistory(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from('shipment_status_history')
+        .select('*')
+        .eq('shipment_id', shipment.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setStatusHistory(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar histórico:', error);
+      setStatusHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   const filteredShipments = shipments
     .filter(shipment => {
       const matchesSearch = !searchTerm || 
@@ -382,7 +408,7 @@ const ClientRemessas = () => {
                       </p>
                     </div>
                     
-                    <div className="flex items-center gap-2 mt-3">
+                    <div className="flex items-center gap-2 mt-3 flex-wrap">
                       <Button
                         variant="outline"
                         size="sm"
@@ -392,14 +418,24 @@ const ClientRemessas = () => {
                         Ver Detalhes
                       </Button>
                       <Button
-                        variant="default"
+                        variant="outline"
                         size="sm"
-                        onClick={() => handleDownloadLabel(shipment)}
-                        className="bg-primary hover:bg-primary/90"
+                        onClick={() => handleShowTracking(shipment)}
                       >
-                        <Download className="h-4 w-4 mr-1" />
-                        Baixar Etiqueta
+                        <History className="h-4 w-4 mr-1" />
+                        Rastreio
                       </Button>
+                      {shipment.label_pdf_url && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleDownloadLabel(shipment)}
+                          className="bg-primary hover:bg-primary/90"
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Baixar Etiqueta
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
@@ -486,6 +522,74 @@ const ClientRemessas = () => {
                     <Download className="h-4 w-4 mr-2" />
                     Baixar Etiqueta
                   </Button>
+                )}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Rastreio */}
+      <Dialog open={trackingModalOpen} onOpenChange={setTrackingModalOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Rastreio do Envio
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[calc(85vh-100px)] px-6 py-4">
+            {trackingShipment && (
+              <div className="space-y-4">
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-sm text-muted-foreground">Código de Rastreio</p>
+                  <p className="font-mono font-bold text-lg">
+                    {trackingShipment.tracking_code || `ID${trackingShipment.id.slice(0, 10).toUpperCase()}`}
+                  </p>
+                </div>
+                
+                <h4 className="font-semibold flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Histórico de Status
+                </h4>
+                
+                {loadingHistory ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Package className="h-6 w-6 animate-pulse text-primary" />
+                  </div>
+                ) : statusHistory.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Nenhum histórico disponível</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {statusHistory.map((history, index) => (
+                      <div 
+                        key={history.id} 
+                        className="relative pl-6 pb-4 border-l-2 border-primary/30 last:border-l-0"
+                      >
+                        <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-primary border-2 border-white" />
+                        <div className="bg-muted/50 p-3 rounded-lg">
+                          <Badge className={`text-xs font-medium border ${getStatusColor(history.status)}`}>
+                            {getStatusLabel(history.status)}
+                          </Badge>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {format(new Date(history.created_at), 'dd/MM/yyyy')} às {format(new Date(history.created_at), 'HH:mm')}
+                          </p>
+                          {history.status_description && (
+                            <p className="text-sm mt-1 text-muted-foreground italic">
+                              {history.status_description}
+                            </p>
+                          )}
+                          {history.observacoes && (
+                            <p className="text-sm mt-1 text-muted-foreground italic">
+                              {history.observacoes}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
