@@ -411,15 +411,35 @@ const B2BDashboard = () => {
                         Rastreio
                       </Button>
                       {!isLabelLocked(volume.status) && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => handlePrintLabel(volume)}
-                          className="bg-primary hover:bg-primary/90"
-                        >
-                          <Download className="h-4 w-4 mr-1" />
-                          Baixar Etiqueta
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="bg-primary hover:bg-primary/90"
+                            >
+                              <Tag className="h-4 w-4 mr-1" />
+                              Etiqueta
+                              <ChevronDown className="h-3 w-3 ml-1" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="bg-white z-50">
+                            <DropdownMenuItem 
+                              onClick={() => handlePrintLabel(volume)}
+                              className="cursor-pointer"
+                            >
+                              <Printer className="h-4 w-4 mr-2" />
+                              Imprimir Etiqueta
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handlePrintLabel(volume)}
+                              className="cursor-pointer"
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Baixar PDF
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                     </div>
                   </div>
