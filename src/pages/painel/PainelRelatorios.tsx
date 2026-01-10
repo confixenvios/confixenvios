@@ -162,10 +162,6 @@ const PainelRelatorios = () => {
           </h1>
           <p className="text-muted-foreground">Visualize relatórios de todos os seus envios</p>
         </div>
-        <Button onClick={exportToExcel} variant="outline" className="flex items-center gap-2">
-          <FileDown className="h-4 w-4" />
-          Exportar Excel
-        </Button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
