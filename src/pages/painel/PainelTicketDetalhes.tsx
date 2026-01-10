@@ -420,7 +420,11 @@ const PainelTicketDetalhes = () => {
                           className="inline-flex items-center gap-2 text-sm text-primary hover:underline cursor-pointer"
                         >
                           <FileText className="h-4 w-4" />
-                          {decodeURIComponent((msg as any).attachment_url.split('/').pop() || 'Anexo')}
+                          {(() => {
+                            const fullName = decodeURIComponent((msg as any).attachment_url.split('/').pop() || 'Anexo');
+                            // Remove timestamp prefix (e.g., "1768085780-filename.pdf" -> "filename.pdf")
+                            return fullName.replace(/^\d+-/, '');
+                          })()}
                         </button>
                       )}
                     </div>
