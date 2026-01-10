@@ -72,7 +72,7 @@ const PainelLayout = () => {
       // Carregar perfil
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('first_name, last_name, email')
+        .select('first_name, last_name, email, phone, document')
         .eq('id', user.id)
         .single();
 
@@ -83,11 +83,12 @@ const PainelLayout = () => {
       // Carregar ou criar cliente B2B
       let { data: clientData } = await supabase
         .from('b2b_clients')
-        .select('company_name')
+        .select('company_name, cnpj, phone')
         .eq('user_id', user.id)
         .single();
 
       if (!clientData && profileData) {
+        // Criar novo cliente B2B
         const companyName = profileData.first_name && profileData.last_name 
           ? `${profileData.first_name} ${profileData.last_name}`
           : profileData.first_name || user.email?.split('@')[0] || 'Cliente';
@@ -98,13 +99,34 @@ const PainelLayout = () => {
             user_id: user.id,
             company_name: companyName,
             email: profileData.email || user.email || '',
+            phone: profileData.phone?.replace(/\D/g, '') || null,
+            cnpj: profileData.document?.replace(/\D/g, '') || null,
             is_active: true
           })
-          .select('company_name')
+          .select('company_name, cnpj, phone')
           .single();
 
         if (newClient) {
           clientData = newClient;
+        }
+      } else if (clientData && profileData) {
+        // Sincronizar dados faltantes do perfil para o cliente B2B
+        const needsUpdate = (!clientData.cnpj && profileData.document) || 
+                           (!clientData.phone && profileData.phone);
+        
+        if (needsUpdate) {
+          const updateData: { cnpj?: string; phone?: string } = {};
+          if (!clientData.cnpj && profileData.document) {
+            updateData.cnpj = profileData.document.replace(/\D/g, '');
+          }
+          if (!clientData.phone && profileData.phone) {
+            updateData.phone = profileData.phone.replace(/\D/g, '');
+          }
+          
+          await supabase
+            .from('b2b_clients')
+            .update(updateData)
+            .eq('user_id', user.id);
         }
       }
 
