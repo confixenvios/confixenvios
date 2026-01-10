@@ -482,8 +482,8 @@ const CotacaoPreview = () => {
                 Nacional
               </TabsTrigger>
               <TabsTrigger value="expresso" className="flex items-center gap-2" disabled={expressoStep === 4 || convencionalStep === 2}>
-                <Zap className="h-4 w-4" />
-                Expresso
+                <Car className="h-4 w-4" />
+                Local
               </TabsTrigger>
             </TabsList>
 
