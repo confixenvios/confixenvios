@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { 
   Car, 
   Truck, 
@@ -16,12 +17,15 @@ import {
   TrendingUp,
   ArrowRight,
   Calendar,
-  MapPin
+  MapPin,
+  Navigation
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
+import CarrierTrackingModal from '@/components/cliente/CarrierTrackingModal';
 
 interface B2BVolume {
   recipient_city: string;
@@ -65,6 +69,48 @@ const PainelRelatorios = () => {
   const [nationalShipments, setNationalShipments] = useState<NationalShipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Tracking modal state
+  const [trackingModalOpen, setTrackingModalOpen] = useState(false);
+  const [trackingData, setTrackingData] = useState<any>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [trackingError, setTrackingError] = useState<string | null>(null);
+  const [currentTrackingCode, setCurrentTrackingCode] = useState('');
+
+  const handleNationalTracking = async (trackingCode: string) => {
+    if (!trackingCode) {
+      toast.error('Código de rastreio não disponível');
+      return;
+    }
+
+    setCurrentTrackingCode(trackingCode);
+    setTrackingModalOpen(true);
+    setTrackingLoading(true);
+    setTrackingError(null);
+    setTrackingData(null);
+
+    try {
+      const response = await fetch('https://webhook.grupoconfix.com/webhook/47827545-77ca-4e68-8b43-9c50467a3f55', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ trackingCode }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao consultar rastreamento');
+      }
+
+      const data = await response.json();
+      setTrackingData(data);
+    } catch (error) {
+      console.error('Erro ao buscar rastreio:', error);
+      setTrackingError('Não foi possível consultar o rastreamento. Tente novamente.');
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -505,6 +551,21 @@ const PainelRelatorios = () => {
                             )}
                           </div>
 
+                          {!isLocal && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleNationalTracking(shipment.tracking_code);
+                              }}
+                              className="gap-2 text-primary border-primary/30 hover:bg-primary/10"
+                            >
+                              <Navigation className="h-4 w-4" />
+                              <span className="hidden md:inline">Rastrear</span>
+                            </Button>
+                          )}
+
                           <ArrowRight className="h-5 w-5 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-1 transition-all hidden md:block" />
                         </div>
                       </div>
@@ -523,6 +584,16 @@ const PainelRelatorios = () => {
           Mostrando <span className="font-semibold text-foreground">{filteredShipments.length}</span> envio(s)
         </div>
       )}
+
+      {/* Carrier Tracking Modal */}
+      <CarrierTrackingModal
+        isOpen={trackingModalOpen}
+        onClose={() => setTrackingModalOpen(false)}
+        trackingData={trackingData}
+        loading={trackingLoading}
+        error={trackingError}
+        trackingCode={currentTrackingCode}
+      />
     </div>
   );
 };
