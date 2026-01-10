@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Send, Clock, AlertCircle, User, Headphones } from "lucide-react";
+import { ArrowLeft, Send, Clock, AlertCircle, User, Headphones, Paperclip, X, FileText, Image as ImageIcon } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -74,6 +74,9 @@ const PainelTicketDetalhes = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     checkAuth();
@@ -136,17 +139,61 @@ const PainelTicketDetalhes = () => {
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("Arquivo muito grande. Limite de 10MB.");
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const uploadFile = async (file: File): Promise<string | null> => {
+    if (!userId) return null;
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('ticket-attachments')
+      .upload(fileName, file);
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      throw new Error('Erro ao fazer upload do arquivo');
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('ticket-attachments')
+      .getPublicUrl(fileName);
+
+    return urlData.publicUrl;
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !userId || !id) return;
+    if ((!newMessage.trim() && !selectedFile) || !userId || !id) return;
 
     setIsSending(true);
+    setIsUploading(!!selectedFile);
+    
     try {
+      let attachmentUrl: string | null = null;
+
+      // Upload file if selected
+      if (selectedFile) {
+        attachmentUrl = await uploadFile(selectedFile);
+      }
+
       const { error } = await supabase.from("ticket_messages").insert({
         ticket_id: id,
         user_id: userId,
-        message: newMessage.trim(),
+        message: newMessage.trim() || (selectedFile ? `[Anexo: ${selectedFile.name}]` : ''),
         is_from_support: false,
+        attachment_url: attachmentUrl,
       });
 
       if (error) throw error;
@@ -161,12 +208,17 @@ const PainelTicketDetalhes = () => {
       }
 
       setNewMessage("");
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       loadMessages();
       toast.success("Mensagem enviada!");
     } catch (error: any) {
-      toast.error("Erro ao enviar mensagem");
+      toast.error(error.message || "Erro ao enviar mensagem");
     } finally {
       setIsSending(false);
+      setIsUploading(false);
     }
   };
 
@@ -315,6 +367,36 @@ const PainelTicketDetalhes = () => {
                     </span>
                   </div>
                   <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                  
+                  {/* Attachment display */}
+                  {(msg as any).attachment_url && (
+                    <div className="mt-3 pt-3 border-t border-border/50">
+                      {(msg as any).attachment_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                        <a 
+                          href={(msg as any).attachment_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="block"
+                        >
+                          <img 
+                            src={(msg as any).attachment_url} 
+                            alt="Anexo" 
+                            className="max-w-full max-h-48 rounded-lg border object-contain"
+                          />
+                        </a>
+                      ) : (
+                        <a 
+                          href={(msg as any).attachment_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                        >
+                          <FileText className="h-4 w-4" />
+                          Ver anexo
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))
@@ -328,7 +410,36 @@ const PainelTicketDetalhes = () => {
             <p className="text-muted-foreground">Este ticket foi fechado.</p>
           </div>
         ) : (
-          <form onSubmit={handleSendMessage} className="space-y-4">
+          <form onSubmit={handleSendMessage} className="space-y-3">
+            {/* Selected file preview */}
+            {selectedFile && (
+              <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                {selectedFile.type.startsWith('image/') ? (
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                )}
+                <span className="text-sm flex-1 truncate">{selectedFile.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  ({(selectedFile.size / 1024).toFixed(1)} KB)
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = '';
+                    }
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            
             <Textarea
               placeholder="Digite sua mensagem..."
               value={newMessage}
@@ -336,16 +447,37 @@ const PainelTicketDetalhes = () => {
               rows={3}
               maxLength={2000}
             />
-            <div className="flex justify-between items-center">
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,.pdf,.doc,.docx,.txt"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            
+            <div className="flex justify-between items-center gap-2">
               {ticket.status === "resolved" && (
                 <Button type="button" variant="outline" onClick={handleCloseTicket}>
                   Fechar Ticket
                 </Button>
               )}
               <div className="flex-1" />
-              <Button type="submit" disabled={isSending || !newMessage.trim()}>
+              
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSending}
+                title="Anexar arquivo"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
+              
+              <Button type="submit" disabled={isSending || (!newMessage.trim() && !selectedFile)}>
                 {isSending ? (
-                  "Enviando..."
+                  isUploading ? "Enviando anexo..." : "Enviando..."
                 ) : (
                   <>
                     <Send className="h-4 w-4 mr-2" />
