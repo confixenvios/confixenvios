@@ -246,21 +246,55 @@ const ClientRemessas = () => {
   };
 
   const handleShowTracking = async (shipment: Shipment) => {
-    setTrackingShipment(shipment);
-    setTrackingModalOpen(true);
+    if (!shipment.tracking_code) {
+      toast({
+        title: "Código de rastreio não disponível",
+        description: "Esta remessa ainda não possui código de rastreio.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoadingHistory(true);
+    setTrackingShipment(shipment);
     
+    toast({
+      title: "Consultando rastreamento...",
+      description: "Aguarde enquanto buscamos as informações.",
+    });
+
     try {
-      const { data, error } = await supabase
-        .from('shipment_status_history')
-        .select('*')
-        .eq('shipment_id', shipment.id)
-        .order('created_at', { ascending: false });
+      const response = await fetch('https://n8n.grupoconfix.com/webhook-test/47827545-77ca-4e68-8b43-9c50467a3f55', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ trackingCode: shipment.tracking_code }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao consultar rastreamento');
+      }
+
+      const data = await response.json();
       
-      if (error) throw error;
-      setStatusHistory(data || []);
+      // Transform webhook response to status history format if needed
+      if (Array.isArray(data)) {
+        setStatusHistory(data);
+      } else if (data.events || data.historico) {
+        setStatusHistory(data.events || data.historico || []);
+      } else {
+        setStatusHistory([data]);
+      }
+      
+      setTrackingModalOpen(true);
     } catch (error) {
-      console.error('Erro ao carregar histórico:', error);
+      console.error('Erro ao buscar rastreio:', error);
+      toast({
+        title: "Erro ao consultar rastreio",
+        description: "Não foi possível consultar o rastreamento. Tente novamente.",
+        variant: "destructive"
+      });
       setStatusHistory([]);
     } finally {
       setLoadingHistory(false);
