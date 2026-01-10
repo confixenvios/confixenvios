@@ -47,6 +47,25 @@ interface Volume {
   merchandiseType: string;
 }
 
+// Faixas de CEP permitidas APENAS para Envio Local (bloqueadas no Nacional)
+const LOCAL_ONLY_CEP_RANGES: [number, number][] = [
+  [74000000, 74899999],
+  [74900000, 74999999],
+  [75000000, 75159999],
+  [75170000, 75174999],
+  [75250000, 75264999],
+  [75340000, 75344999],
+];
+
+// Verifica se o CEP é da área Local (bloqueado para Nacional)
+const isLocalOnlyCep = (cep: string): boolean => {
+  const cleanCep = cep.replace(/\D/g, "");
+  if (cleanCep.length !== 8) return false;
+  
+  const cepNum = parseInt(cleanCep, 10);
+  return LOCAL_ONLY_CEP_RANGES.some(([min, max]) => cepNum >= min && cepNum <= max);
+};
+
 const EXPRESSO_STEPS = 4;
 const CONVENCIONAL_STEPS = 2;
 
@@ -302,6 +321,16 @@ const CotacaoPreview = () => {
   const handleCalculateConvencional = async () => {
     if (!validateCep(destinyCep)) {
       toast({ title: "CEP inválido", description: "Por favor, insira um CEP válido", variant: "destructive" });
+      return;
+    }
+
+    // Bloquear CEPs que são exclusivos do Local (região metropolitana de Goiânia)
+    if (isLocalOnlyCep(destinyCep)) {
+      toast({ 
+        title: "CEP não disponível para Nacional", 
+        description: "Este CEP está na área de atendimento Local. Use a aba 'Local' para envios nesta região.", 
+        variant: "destructive" 
+      });
       return;
     }
 
