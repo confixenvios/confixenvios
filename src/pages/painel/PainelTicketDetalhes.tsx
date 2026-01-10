@@ -174,8 +174,20 @@ const PainelTicketDetalhes = () => {
     return urlData.publicUrl;
   };
 
-  const handleOpenAttachment = (attachmentUrl: string) => {
-    window.open(attachmentUrl, '_blank', 'noopener,noreferrer');
+  const handleOpenAttachment = async (attachmentUrl: string) => {
+    try {
+      // Fetch the file as blob to bypass ad blockers
+      const response = await fetch(attachmentUrl);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank', 'noopener,noreferrer');
+      // Cleanup after a delay
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (error) {
+      console.error('Error opening attachment:', error);
+      // Fallback to direct URL
+      window.open(attachmentUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -377,28 +389,24 @@ const PainelTicketDetalhes = () => {
                   {(msg as any).attachment_url && (
                     <div className="mt-3 pt-3 border-t border-border/50">
                       {(msg as any).attachment_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                        <a 
-                          href={(msg as any).attachment_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block"
+                        <button 
+                          onClick={() => handleOpenAttachment((msg as any).attachment_url)}
+                          className="block cursor-pointer"
                         >
                           <img 
                             src={(msg as any).attachment_url} 
                             alt="Anexo" 
                             className="max-w-full max-h-48 rounded-lg border object-contain hover:opacity-80 transition-opacity"
                           />
-                        </a>
+                        </button>
                       ) : (
-                        <a 
-                          href={(msg as any).attachment_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                        <button 
+                          onClick={() => handleOpenAttachment((msg as any).attachment_url)}
+                          className="inline-flex items-center gap-2 text-sm text-primary hover:underline cursor-pointer"
                         >
                           <FileText className="h-4 w-4" />
                           Ver anexo
-                        </a>
+                        </button>
                       )}
                     </div>
                   )}
