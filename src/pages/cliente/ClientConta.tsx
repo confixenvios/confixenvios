@@ -7,7 +7,7 @@ import { User, Mail, Phone, Calendar, Lock, Key, FileText, Edit } from "lucide-r
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import PaymentMethodsManager from "@/components/PaymentMethodsManager";
+
 import { useState } from "react";
 import {
   Dialog,
@@ -475,10 +475,6 @@ const ClientConta = () => {
         </Card>
       </div>
 
-      {/* Payment Methods Section */}
-      <div className="mt-6">
-        <PaymentMethodsManager />
-      </div>
     </div>
   );
 };
