@@ -54,6 +54,7 @@ interface SavedAddressManagerProps {
   currentAddressData: AddressData;
   onAddressSelect: (addressData: AddressData) => void;
   onAddressSave?: (addressData: AddressData) => void;
+  onNoSavedAddresses?: () => void;
 }
 
 const SavedAddressManager = ({ 
@@ -61,7 +62,8 @@ const SavedAddressManager = ({
   title, 
   currentAddressData, 
   onAddressSelect, 
-  onAddressSave 
+  onAddressSave,
+  onNoSavedAddresses
 }: SavedAddressManagerProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -110,6 +112,9 @@ const SavedAddressManager = ({
           reference: defaultAddress.reference || "",
           inscricaoEstadual: defaultAddress.inscricao_estadual || ""
         });
+      } else if (!data || data.length === 0) {
+        // Notificar que não há endereços salvos
+        onNoSavedAddresses?.();
       }
     } catch (error) {
       console.error(`Erro ao carregar ${type}s:`, error);
