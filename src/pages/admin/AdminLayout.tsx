@@ -15,8 +15,8 @@ import {
   BarChart3,
   Search,
   ChevronDown,
-  Zap,
-  Globe,
+  Car,
+  Truck,
   Ticket
 } from "lucide-react";
 import { NavLink, useLocation } from 'react-router-dom';
@@ -52,8 +52,8 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   ];
 
   const remessasSubItems = [
-    { name: 'Expresso', href: '/admin/remessas-expresso', icon: Zap },
-    { name: 'Nacional', href: '/admin/remessas', icon: Globe },
+    { name: 'Local', href: '/admin/remessas-expresso', icon: Car },
+    { name: 'Nacional', href: '/admin/remessas', icon: Truck },
   ];
 
   const navigationAfterRemessas = [
