@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, 
   Package, 
@@ -10,7 +11,9 @@ import {
   Clock, 
   CheckCircle,
   AlertCircle,
-  Info
+  Info,
+  Zap,
+  MapPin
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +48,27 @@ interface ShipmentInfo {
   weight: number;
   quote_data?: any;
   user_id?: string;
+  type: 'convencional' | 'expresso';
+}
+
+interface B2BShipmentInfo {
+  id: string;
+  tracking_code: string;
+  status: string;
+  created_at: string;
+  total_volumes: number;
+  total_weight: number;
+  total_price: number;
+  delivery_date: string;
+  b2b_client: {
+    company_name: string;
+    email: string;
+  };
+  pickup_address?: {
+    city: string;
+    state: string;
+  };
+  type: 'expresso';
 }
 
 const AdminRastreio = () => {
@@ -52,7 +76,13 @@ const AdminRastreio = () => {
   const [trackingCode, setTrackingCode] = useState("");
   const [shipmentInfo, setShipmentInfo] = useState<ShipmentInfo | null>(null);
   const [loading, setLoading] = useState(false);
-  const [allShipments, setAllShipments] = useState<ShipmentInfo[]>([]);
+  const [activeTab, setActiveTab] = useState<'todas' | 'expresso' | 'convencional'>('todas');
+  
+  // Conventional shipments
+  const [conventionalShipments, setConventionalShipments] = useState<ShipmentInfo[]>([]);
+  // B2B/Express shipments
+  const [b2bShipments, setB2BShipments] = useState<B2BShipmentInfo[]>([]);
+  
   const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([]);
   
   // Carrier tracking modal state
@@ -121,6 +151,7 @@ const AdminRastreio = () => {
 
   useEffect(() => {
     loadAllShipments();
+    loadB2BShipments();
   }, []);
 
   const loadAllShipments = async () => {
@@ -163,7 +194,7 @@ const AdminRastreio = () => {
       
       // Enrich with quote_data if address info is missing
       const enrichedData = data?.map(shipment => {
-        const enrichedShipment = { ...shipment };
+        const enrichedShipment = { ...shipment, type: 'convencional' as const };
         
         if ((!shipment.sender_address?.name || shipment.sender_address.name === "A definir") && 
             shipment.quote_data) {
@@ -200,9 +231,50 @@ const AdminRastreio = () => {
         return enrichedShipment;
       });
       
-      setAllShipments(enrichedData || []);
+      setConventionalShipments(enrichedData || []);
     } catch (error) {
       console.error('Error loading shipments:', error);
+    }
+  };
+
+  const loadB2BShipments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('b2b_shipments')
+        .select(`
+          id,
+          tracking_code,
+          status,
+          created_at,
+          total_volumes,
+          total_weight,
+          total_price,
+          delivery_date,
+          b2b_client:b2b_clients (
+            company_name,
+            email
+          ),
+          pickup_address:b2b_pickup_addresses (
+            city,
+            state
+          )
+        `)
+        .not('tracking_code', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+      
+      const enrichedData = data?.map(shipment => ({
+        ...shipment,
+        type: 'expresso' as const,
+        b2b_client: shipment.b2b_client || { company_name: 'N/A', email: '' },
+        pickup_address: shipment.pickup_address || undefined
+      }));
+      
+      setB2BShipments(enrichedData || []);
+    } catch (error) {
+      console.error('Error loading B2B shipments:', error);
     }
   };
 
@@ -218,7 +290,8 @@ const AdminRastreio = () => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Search in conventional shipments first
+      const { data: conventionalData, error: conventionalError } = await supabase
         .from('shipments')
         .select(`
           id,
@@ -251,60 +324,110 @@ const AdminRastreio = () => {
         .eq('tracking_code', trackingCode.toUpperCase())
         .maybeSingle();
 
-      if (error || !data) {
+      if (conventionalData) {
+        // Enrich with quote_data if address info is missing
+        let enrichedShipment = { ...conventionalData, type: 'convencional' as const };
+        
+        if ((!conventionalData.sender_address?.name || conventionalData.sender_address.name === "A definir") && 
+            conventionalData.quote_data) {
+          const quoteData = conventionalData.quote_data as any;
+          if (quoteData.senderData) {
+            enrichedShipment.sender_address = {
+              name: quoteData.senderData.name || "Nome não informado",
+              city: quoteData.senderData.address?.city || "Cidade não informada",
+              state: quoteData.senderData.address?.state || "Estado não informado",
+              street: quoteData.senderData.address?.street || "",
+              number: quoteData.senderData.address?.number || "",
+              neighborhood: quoteData.senderData.address?.neighborhood || "",
+              cep: quoteData.senderData.address?.cep || ""
+            };
+          }
+        }
+        
+        if ((!conventionalData.recipient_address?.name || conventionalData.recipient_address.name === "A definir") && 
+            conventionalData.quote_data) {
+          const quoteData = conventionalData.quote_data as any;
+          if (quoteData.recipientData) {
+            enrichedShipment.recipient_address = {
+              name: quoteData.recipientData.name || "Nome não informado",
+              city: quoteData.recipientData.address?.city || "Cidade não informada",
+              state: quoteData.recipientData.address?.state || "Estado não informado",
+              street: quoteData.recipientData.address?.street || "",
+              number: quoteData.recipientData.address?.number || "",
+              neighborhood: quoteData.recipientData.address?.neighborhood || "",
+              cep: quoteData.recipientData.address?.cep || ""
+            };
+          }
+        }
+
+        setShipmentInfo(enrichedShipment);
+        await loadTrackingEvents(conventionalData.id, 'convencional');
+        
         toast({
-          title: "Remessa não encontrada",
-          description: "Verifique se o código de rastreio está correto",
-          variant: "destructive"
+          title: "Remessa encontrada!",
+          description: "Remessa convencional carregada com sucesso"
         });
-        setShipmentInfo(null);
         return;
       }
 
-      // Enrich with quote_data if address info is missing
-      let enrichedShipment = { ...data };
-      
-      if ((!data.sender_address?.name || data.sender_address.name === "A definir") && 
-          data.quote_data) {
-        const quoteData = data.quote_data as any;
-        if (quoteData.senderData) {
-          enrichedShipment.sender_address = {
-            name: quoteData.senderData.name || "Nome não informado",
-            city: quoteData.senderData.address?.city || "Cidade não informada",
-            state: quoteData.senderData.address?.state || "Estado não informado",
-            street: quoteData.senderData.address?.street || "",
-            number: quoteData.senderData.address?.number || "",
-            neighborhood: quoteData.senderData.address?.neighborhood || "",
-            cep: quoteData.senderData.address?.cep || ""
-          };
-        }
-      }
-      
-      if ((!data.recipient_address?.name || data.recipient_address.name === "A definir") && 
-          data.quote_data) {
-        const quoteData = data.quote_data as any;
-        if (quoteData.recipientData) {
-          enrichedShipment.recipient_address = {
-            name: quoteData.recipientData.name || "Nome não informado",
-            city: quoteData.recipientData.address?.city || "Cidade não informada",
-            state: quoteData.recipientData.address?.state || "Estado não informado",
-            street: quoteData.recipientData.address?.street || "",
-            number: quoteData.recipientData.address?.number || "",
-            neighborhood: quoteData.recipientData.address?.neighborhood || "",
-            cep: quoteData.recipientData.address?.cep || ""
-          };
-        }
+      // Search in B2B shipments
+      const { data: b2bData, error: b2bError } = await supabase
+        .from('b2b_shipments')
+        .select(`
+          id,
+          tracking_code,
+          status,
+          created_at,
+          total_volumes,
+          total_weight,
+          b2b_client:b2b_clients (
+            company_name
+          ),
+          pickup_address:b2b_pickup_addresses (
+            city,
+            state
+          )
+        `)
+        .eq('tracking_code', trackingCode.toUpperCase())
+        .maybeSingle();
+
+      if (b2bData) {
+        // Convert B2B to ShipmentInfo format for display
+        const b2bAsShipment: ShipmentInfo = {
+          id: b2bData.id,
+          tracking_code: b2bData.tracking_code,
+          status: b2bData.status,
+          created_at: b2bData.created_at,
+          weight: b2bData.total_weight,
+          type: 'expresso',
+          sender_address: {
+            name: b2bData.b2b_client?.company_name || 'Cliente B2B',
+            city: b2bData.pickup_address?.city || 'N/A',
+            state: b2bData.pickup_address?.state || 'N/A'
+          },
+          recipient_address: {
+            name: 'Múltiplos destinatários',
+            city: 'Ver volumes',
+            state: ''
+          }
+        };
+
+        setShipmentInfo(b2bAsShipment);
+        await loadTrackingEvents(b2bData.id, 'expresso');
+        
+        toast({
+          title: "Remessa encontrada!",
+          description: "Remessa expresso/B2B carregada com sucesso"
+        });
+        return;
       }
 
-      setShipmentInfo(enrichedShipment);
-      
-      // Load tracking events from shipment_status_history
-      await loadTrackingEvents(data.id);
-      
       toast({
-        title: "Remessa encontrada!",
-        description: "Informações da remessa carregadas com sucesso"
+        title: "Remessa não encontrada",
+        description: "Verifique se o código de rastreio está correto",
+        variant: "destructive"
       });
+      setShipmentInfo(null);
     } catch (error) {
       console.error('Error tracking shipment:', error);
       toast({
@@ -317,8 +440,8 @@ const AdminRastreio = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
+  const getStatusBadge = (status: string, type?: 'convencional' | 'expresso') => {
+    const statusConfig: Record<string, { variant: string; label: string; icon: any }> = {
       'PENDING_DOCUMENT': { variant: 'destructive', label: 'Aguardando Documento', icon: AlertCircle },
       'PENDING_PAYMENT': { variant: 'destructive', label: 'Aguardando Pagamento', icon: AlertCircle },
       'PAYMENT_CONFIRMED': { variant: 'success', label: 'Pagamento Confirmado', icon: CheckCircle },
@@ -326,10 +449,18 @@ const AdminRastreio = () => {
       'PAGO_AGUARDANDO_ETIQUETA': { variant: 'secondary', label: 'Aguardando Etiqueta', icon: Clock },
       'LABEL_AVAILABLE': { variant: 'success', label: 'Etiqueta Disponível', icon: CheckCircle },
       'IN_TRANSIT': { variant: 'default', label: 'Em Trânsito', icon: Truck },
-      'DELIVERED': { variant: 'success', label: 'Entregue', icon: CheckCircle }
+      'DELIVERED': { variant: 'success', label: 'Entregue', icon: CheckCircle },
+      // B2B statuses
+      'pendente': { variant: 'secondary', label: 'Pendente', icon: Clock },
+      'pago': { variant: 'success', label: 'Pago', icon: CheckCircle },
+      'coletado': { variant: 'default', label: 'Coletado', icon: Package },
+      'em_transito': { variant: 'default', label: 'Em Trânsito', icon: Truck },
+      'saiu_para_entrega': { variant: 'default', label: 'Saiu p/ Entrega', icon: Truck },
+      'entregue': { variant: 'success', label: 'Entregue', icon: CheckCircle },
+      'cancelado': { variant: 'destructive', label: 'Cancelado', icon: AlertCircle }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || { 
+    const config = statusConfig[status] || { 
       variant: 'secondary', 
       label: status, 
       icon: Info 
@@ -345,33 +476,78 @@ const AdminRastreio = () => {
     );
   };
 
-  const loadTrackingEvents = async (shipmentId: string) => {
+  const getTypeBadge = (type: 'convencional' | 'expresso') => {
+    if (type === 'expresso') {
+      return (
+        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 flex items-center gap-1">
+          <Zap className="w-3 h-3" />
+          Expresso
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="bg-muted text-muted-foreground flex items-center gap-1">
+        <MapPin className="w-3 h-3" />
+        Convencional
+      </Badge>
+    );
+  };
+
+  const loadTrackingEvents = async (shipmentId: string, type: 'convencional' | 'expresso') => {
     try {
-      const { data, error } = await supabase
-        .from('shipment_status_history')
-        .select(`
-          id,
-          status,
-          created_at,
-          observacoes,
-          occurrence_data
-        `)
-        .eq('shipment_id', shipmentId)
-        .order('created_at', { ascending: false });
+      if (type === 'convencional') {
+        const { data, error } = await supabase
+          .from('shipment_status_history')
+          .select(`
+            id,
+            status,
+            created_at,
+            observacoes,
+            occurrence_data
+          `)
+          .eq('shipment_id', shipmentId)
+          .order('created_at', { ascending: false });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      const events: TrackingEvent[] = data?.map((event, index) => ({
-        id: event.id,
-        status: event.status,
-        description: getStatusDescription(event.status),
-        location: getLocationFromStatus(event.status, event.occurrence_data),
-        timestamp: event.created_at,
-        observacoes: event.observacoes || undefined,
-        isActive: index === 0
-      })) || [];
+        const events: TrackingEvent[] = data?.map((event, index) => ({
+          id: event.id,
+          status: event.status,
+          description: getStatusDescription(event.status),
+          location: getLocationFromStatus(event.status, event.occurrence_data),
+          timestamp: event.created_at,
+          observacoes: event.observacoes || undefined,
+          isActive: index === 0
+        })) || [];
 
-      setTrackingEvents(events);
+        setTrackingEvents(events);
+      } else {
+        // Load B2B shipment status history
+        const { data, error } = await supabase
+          .from('shipment_status_history')
+          .select(`
+            id,
+            status,
+            created_at,
+            observacoes
+          `)
+          .eq('b2b_shipment_id', shipmentId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const events: TrackingEvent[] = data?.map((event, index) => ({
+          id: event.id,
+          status: event.status,
+          description: getB2BStatusDescription(event.status),
+          location: 'Sistema Confix',
+          timestamp: event.created_at,
+          observacoes: event.observacoes || undefined,
+          isActive: index === 0
+        })) || [];
+
+        setTrackingEvents(events);
+      }
     } catch (error) {
       console.error('Error loading tracking events:', error);
       setTrackingEvents([]);
@@ -379,7 +555,7 @@ const AdminRastreio = () => {
   };
 
   const getStatusDescription = (status: string): string => {
-    const descriptions = {
+    const descriptions: Record<string, string> = {
       'PENDING_DOCUMENT': 'Aguardando documentação',
       'PENDING_PAYMENT': 'Aguardando pagamento',
       'PAYMENT_CONFIRMED': 'Pagamento confirmado',
@@ -393,7 +569,21 @@ const AdminRastreio = () => {
       'EXCEPTION': 'Ocorrência registrada'
     };
     
-    return descriptions[status as keyof typeof descriptions] || status;
+    return descriptions[status] || status;
+  };
+
+  const getB2BStatusDescription = (status: string): string => {
+    const descriptions: Record<string, string> = {
+      'pendente': 'Aguardando processamento',
+      'pago': 'Pagamento confirmado',
+      'coletado': 'Coleta realizada',
+      'em_transito': 'Em trânsito para destino',
+      'saiu_para_entrega': 'Saiu para entrega ao destinatário',
+      'entregue': 'Entrega concluída',
+      'cancelado': 'Remessa cancelada'
+    };
+    
+    return descriptions[status] || status;
   };
 
   const getLocationFromStatus = (status: string, occurrenceData?: any): string => {
@@ -401,7 +591,7 @@ const AdminRastreio = () => {
       return occurrenceData.location;
     }
     
-    const locations = {
+    const locations: Record<string, string> = {
       'PENDING_DOCUMENT': 'Sistema Confix Envios',
       'PENDING_PAYMENT': 'Sistema Confix Envios',
       'PAYMENT_CONFIRMED': 'Sistema Confix Envios',
@@ -415,7 +605,42 @@ const AdminRastreio = () => {
       'EXCEPTION': 'Local da ocorrência'
     };
     
-    return locations[status as keyof typeof locations] || 'Sistema Confix Envios';
+    return locations[status] || 'Sistema Confix Envios';
+  };
+
+  // Combine all shipments for "todas" tab
+  const allShipments = [
+    ...conventionalShipments.map(s => ({ ...s, type: 'convencional' as const })),
+    ...b2bShipments.map(s => ({
+      id: s.id,
+      tracking_code: s.tracking_code,
+      status: s.status,
+      created_at: s.created_at,
+      weight: s.total_weight,
+      type: 'expresso' as const,
+      sender_address: {
+        name: s.b2b_client?.company_name || 'Cliente B2B',
+        city: s.pickup_address?.city || 'N/A',
+        state: s.pickup_address?.state || ''
+      },
+      recipient_address: {
+        name: `${s.total_volumes} volumes`,
+        city: 'Múltiplos destinos',
+        state: ''
+      }
+    }))
+  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 20);
+
+  const filteredShipments = activeTab === 'todas' 
+    ? allShipments 
+    : activeTab === 'expresso'
+    ? allShipments.filter(s => s.type === 'expresso')
+    : allShipments.filter(s => s.type === 'convencional');
+
+  const handleShipmentClick = async (shipment: any) => {
+    setTrackingCode(shipment.tracking_code);
+    setShipmentInfo(shipment);
+    await loadTrackingEvents(shipment.id, shipment.type);
   };
 
   return (
@@ -435,13 +660,13 @@ const AdminRastreio = () => {
             <span>Consultar Rastreamento</span>
           </CardTitle>
           <CardDescription>
-            Digite o código de rastreamento para consultar qualquer remessa
+            Digite o código de rastreamento para consultar qualquer remessa (convencional ou expresso)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-4">
             <Input
-              placeholder="Ex: ID2025ABC123"
+              placeholder="Ex: ID2025ABC123 ou CFX2025XXXXX"
               value={trackingCode}
               onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
               className="flex-1"
@@ -463,70 +688,93 @@ const AdminRastreio = () => {
         </CardContent>
       </Card>
 
-      {/* All Shipments */}
-      {allShipments.length > 0 && (
-        <Card className="border-border/50 shadow-card">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Package className="w-5 h-5" />
-              <span>Remessas Recentes (Todas)</span>
-            </CardTitle>
-            <CardDescription>
-              Clique em qualquer remessa para rastrear
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+      {/* Shipments with Tabs */}
+      <Card className="border-border/50 shadow-card">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Package className="w-5 h-5" />
+            <span>Remessas Recentes</span>
+          </CardTitle>
+          <CardDescription>
+            Clique em qualquer remessa para ver detalhes
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-4">
+              <TabsTrigger value="todas" className="flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                Todas ({allShipments.length})
+              </TabsTrigger>
+              <TabsTrigger value="expresso" className="flex items-center gap-2">
+                <Zap className="w-4 h-4" />
+                Expresso ({allShipments.filter(s => s.type === 'expresso').length})
+              </TabsTrigger>
+              <TabsTrigger value="convencional" className="flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                Convencional ({allShipments.filter(s => s.type === 'convencional').length})
+              </TabsTrigger>
+            </TabsList>
+
             <div className="grid gap-3">
-              {allShipments.map((shipment) => (
-                <div
-                  key={shipment.id}
-                  className="flex items-center justify-between p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={async () => {
-                    setTrackingCode(shipment.tracking_code);
-                    setShipmentInfo(shipment);
-                    await loadTrackingEvents(shipment.id);
-                  }}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-1">
-                      <span className="font-medium text-sm">
-                        {shipment.tracking_code}
-                      </span>
-                      {getStatusBadge(shipment.status)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {shipment.sender_address?.city}, {shipment.sender_address?.state} → {shipment.recipient_address?.city}, {shipment.recipient_address?.state}
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      sendTrackingWebhook(shipment);
-                    }}
-                    className="ml-2"
-                  >
-                    <Search className="w-4 h-4 mr-1" />
-                    Rastreio
-                  </Button>
+              {filteredShipments.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Nenhuma remessa encontrada
                 </div>
-              ))}
+              ) : (
+                filteredShipments.map((shipment) => (
+                  <div
+                    key={shipment.id}
+                    className="flex items-center justify-between p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleShipmentClick(shipment)}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1 flex-wrap gap-1">
+                        <span className="font-medium text-sm">
+                          {shipment.tracking_code}
+                        </span>
+                        {getTypeBadge(shipment.type)}
+                        {getStatusBadge(shipment.status, shipment.type)}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {shipment.sender_address?.city}, {shipment.sender_address?.state} → {shipment.recipient_address?.city} {shipment.recipient_address?.state}
+                      </div>
+                    </div>
+                    {shipment.type === 'convencional' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          sendTrackingWebhook(shipment as ShipmentInfo);
+                        }}
+                        className="ml-2"
+                      >
+                        <Search className="w-4 h-4 mr-1" />
+                        Rastreio
+                      </Button>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </Tabs>
+        </CardContent>
+      </Card>
 
       {/* Shipment Details */}
       {shipmentInfo && (
         <Card className="border-border/50 shadow-card">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="flex items-center space-x-2">
                 <Package className="w-5 h-5" />
                 <span>Detalhes da Remessa</span>
               </CardTitle>
-              {getStatusBadge(shipmentInfo.status)}
+              <div className="flex items-center gap-2">
+                {getTypeBadge(shipmentInfo.type)}
+                {getStatusBadge(shipmentInfo.status, shipmentInfo.type)}
+              </div>
             </div>
             <CardDescription>
               Código: {shipmentInfo.tracking_code}
@@ -552,21 +800,23 @@ const AdminRastreio = () => {
                 </div>
                 <p className="text-sm font-medium">{shipmentInfo.recipient_address?.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {shipmentInfo.recipient_address?.city}, {shipmentInfo.recipient_address?.state}
+                  {shipmentInfo.recipient_address?.city} {shipmentInfo.recipient_address?.state}
                 </p>
               </div>
             </div>
 
-            {/* Consult Button */}
-            <div className="flex justify-center">
-              <Button
-                onClick={() => sendTrackingWebhook(shipmentInfo)}
-                className="gap-2"
-              >
-                <Search className="w-4 h-4" />
-                Consultar Transportadora
-              </Button>
-            </div>
+            {/* Consult Button - only for conventional */}
+            {shipmentInfo.type === 'convencional' && (
+              <div className="flex justify-center">
+                <Button
+                  onClick={() => sendTrackingWebhook(shipmentInfo)}
+                  className="gap-2"
+                >
+                  <Search className="w-4 h-4" />
+                  Consultar Transportadora
+                </Button>
+              </div>
+            )}
 
             {/* Tracking Timeline */}
             {trackingEvents.length > 0 && (
