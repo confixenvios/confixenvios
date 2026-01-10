@@ -81,6 +81,8 @@ const B2BDashboard = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showVolumeModal, setShowVolumeModal] = useState(false);
   const [showLabelModal, setShowLabelModal] = useState(false);
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
+  const [trackingVolume, setTrackingVolume] = useState<B2BVolume | null>(null);
   const [labelVolume, setLabelVolume] = useState<B2BVolume | null>(null);
   const [searchEti, setSearchEti] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -165,6 +167,11 @@ const B2BDashboard = () => {
   const handlePrintLabel = (volume: B2BVolume) => {
     setLabelVolume(volume);
     setShowLabelModal(true);
+  };
+
+  const handleShowTrackingModal = (volume: B2BVolume) => {
+    setTrackingVolume(volume);
+    setShowTrackingModal(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -385,7 +392,7 @@ const B2BDashboard = () => {
                       </div>
                     )}
                     
-                    <div className="flex items-center gap-2 mt-3">
+                    <div className="flex items-center gap-2 mt-3 flex-wrap">
                       <Button
                         variant="outline"
                         size="sm"
@@ -393,6 +400,14 @@ const B2BDashboard = () => {
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         Ver Detalhes
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleShowTrackingModal(volume)}
+                      >
+                        <History className="h-4 w-4 mr-1" />
+                        Rastreio
                       </Button>
                       {!isLabelLocked(volume.status) && (
                         <Button
@@ -561,22 +576,41 @@ const B2BDashboard = () => {
                 <p>{selectedVolume.recipient_city}/{selectedVolume.recipient_state} - CEP: {selectedVolume.recipient_cep}</p>
               </div>
 
-              <hr className="border-border" />
-              <h4 className="font-semibold flex items-center gap-2">
-                <History className="h-4 w-4" />
-                Histórico de Status
-              </h4>
-              <B2BVolumeStatusHistory volumeId={selectedVolume.id} />
-
-              <Button
-                className="w-full"
-                onClick={() => handlePrintLabel(selectedVolume)}
-              >
-                <Printer className="h-4 w-4 mr-2" />
-                Imprimir Etiqueta
-              </Button>
+              {!isLabelLocked(selectedVolume.status) && (
+                <Button
+                  className="w-full"
+                  onClick={() => handlePrintLabel(selectedVolume)}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Imprimir Etiqueta
+                </Button>
+              )}
             </div>
           )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Rastreio */}
+      <Dialog open={showTrackingModal} onOpenChange={setShowTrackingModal}>
+        <DialogContent className="max-w-lg max-h-[85vh] p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Rastreio do Volume
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[calc(85vh-100px)] px-6 py-4">
+            {trackingVolume && (
+              <div className="space-y-4">
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-sm text-muted-foreground">Código ETI</p>
+                  <p className="font-mono font-bold text-lg">{trackingVolume.eti_code}</p>
+                </div>
+                
+                <B2BVolumeStatusHistory volumeId={trackingVolume.id} />
+              </div>
+            )}
           </ScrollArea>
         </DialogContent>
       </Dialog>
