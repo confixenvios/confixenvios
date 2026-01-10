@@ -179,10 +179,8 @@ const SupportBubble = () => {
   };
 
   const openWhatsApp = () => {
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const url = isMobile 
-      ? `https://wa.me/${WHATSAPP_NUMBER}`
-      : `https://web.whatsapp.com/send?phone=${WHATSAPP_NUMBER}`;
+    // Usar wa.me para todos os dispositivos - mais universal e confiável
+    const url = `https://wa.me/${WHATSAPP_NUMBER}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
