@@ -636,33 +636,6 @@ const B2BDashboard = () => {
                 <p>{selectedVolume.recipient_city}/{selectedVolume.recipient_state} - CEP: {selectedVolume.recipient_cep}</p>
               </div>
 
-              {!isLabelLocked(selectedVolume.status) && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button className="w-full">
-                      <Tag className="h-4 w-4 mr-2" />
-                      Etiqueta
-                      <ChevronDown className="h-4 w-4 ml-2" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-full min-w-[200px] bg-white z-50">
-                    <DropdownMenuItem 
-                      onClick={() => handlePrintLabel(selectedVolume)}
-                      className="cursor-pointer"
-                    >
-                      <Printer className="h-4 w-4 mr-2" />
-                      Imprimir Etiqueta
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => handlePrintLabel(selectedVolume)}
-                      className="cursor-pointer"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Baixar PDF da Etiqueta
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             </div>
           )}
           </ScrollArea>

@@ -164,6 +164,12 @@ const ClientRemessas = () => {
     return colorMap[status] || 'bg-gray-50 text-gray-700 border-gray-200';
   };
 
+  // Verifica se a etiqueta está travada (status NO_CD ou posterior)
+  const isLabelLocked = (status: string) => {
+    const lockedStatuses = ['NO_CD', 'EM_ROTA', 'ENTREGUE', 'CONCLUIDO', 'DELIVERED', 'ENTREGA_FINALIZADA', 'DEVOLUCAO', 'IN_TRANSIT'];
+    return lockedStatuses.includes(status);
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -440,12 +446,14 @@ const ClientRemessas = () => {
                       )}
                     </div>
 
-                    {/* Aviso de etiqueta */}
-                    <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                      <p className="text-xs font-semibold text-orange-700 flex items-center gap-1">
-                        ⚠️ Atenção: Por favor cole esta etiqueta no produto
-                      </p>
-                    </div>
+                    {/* Aviso de etiqueta - só mostra se não estiver travada */}
+                    {!isLabelLocked(shipment.status) && (
+                      <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                        <p className="text-xs font-semibold text-orange-700 flex items-center gap-1">
+                          ⚠️ Atenção: Por favor cole esta etiqueta no produto
+                        </p>
+                      </div>
+                    )}
                     
                     <div className="flex items-center gap-2 mt-3 flex-wrap">
                       <Button
@@ -465,7 +473,7 @@ const ClientRemessas = () => {
                         <History className="h-4 w-4 mr-1" />
                         Rastreio
                       </Button>
-                      {shipment.label_pdf_url && (
+                      {shipment.label_pdf_url && !isLabelLocked(shipment.status) && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -573,16 +581,6 @@ const ClientRemessas = () => {
                   <p className="text-muted-foreground">{getRecipientAddress(selectedShipment)}</p>
                 </div>
 
-                {selectedShipment.label_pdf_url && (
-                  <Button
-                    variant="default"
-                    className="w-full"
-                    onClick={() => handleDownloadLabel(selectedShipment)}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Baixar Etiqueta
-                  </Button>
-                )}
               </div>
             )}
           </ScrollArea>
