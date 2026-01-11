@@ -263,6 +263,9 @@ const PainelDashboard = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Spacer for floating bubble */}
+      <div className="h-20 md:h-0" />
     </div>
   );
 };
