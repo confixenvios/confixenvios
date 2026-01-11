@@ -1676,8 +1676,7 @@ const QuoteForm = () => {
                       className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 sm:px-3"
                     >
                       <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span className="hidden xs:inline">Adicionar</span>
-                      <span className="xs:hidden">+</span>
+                      <span>Adicionar Volume</span>
                     </Button>
                   </div>
 
