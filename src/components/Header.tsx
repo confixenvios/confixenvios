@@ -203,8 +203,7 @@ const Header = () => {
                   </div>
                 ) : (
                   <Button 
-                    variant="outline"
-                    className="hidden sm:flex h-10 px-5 border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground font-semibold transition-all duration-200"
+                    className="hidden sm:flex h-10 px-5 bg-primary text-primary-foreground hover:bg-primary font-semibold rounded-md"
                     onClick={() => setLoginModalOpen(true)}
                   >
                     <LogIn className="h-4 w-4 mr-2" />
