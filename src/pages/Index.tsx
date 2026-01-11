@@ -64,7 +64,7 @@ const Index = () => {
   const diferenciais = [
     { number: "01", title: "Experiência", description: "Mais de 10 anos de experiência em Transferência Line Haul e Abastecimento de Lojas" },
     { number: "02", title: "Frota Própria", description: "Garantimos a qualidade e segurança do transporte com nossa frota, veículos reservas e seleção minuciosa de agregados." },
-    { number: "03", title: "Tecnologia", description: "TMS da Brudam para gerenciar a frota e rastrear as cargas, proporcionando total controle e transparência." },
+    { number: "03", title: "Tecnologia", description: "Sistema para gerenciar a frota e rastrear as cargas, proporcionando total controle e transparência." },
     { number: "04", title: "Atendimento Personalizado", description: "Adaptamos nossas soluções às necessidades específicas de cada cliente, buscando o melhor resultado." },
   ];
 
