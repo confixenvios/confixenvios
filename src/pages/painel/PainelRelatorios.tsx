@@ -292,7 +292,7 @@ const PainelRelatorios = () => {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 bg-gradient-to-b from-background to-muted/20 min-h-screen">
+    <div className="p-4 md:p-6 space-y-6 bg-gradient-to-b from-background to-muted/20 min-h-screen pb-24">
       {/* Header */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
@@ -390,35 +390,35 @@ const PainelRelatorios = () => {
 
       {/* Filters Section */}
       <Card className="border-0 shadow-md">
-        <CardContent className="p-4">
-          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'todos' | 'local' | 'nacional')} className="w-full lg:w-auto">
-              <TabsList className="bg-muted/50 p-1 h-auto">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col gap-3 sm:gap-4">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'todos' | 'local' | 'nacional')} className="w-full">
+              <TabsList className="bg-muted/50 p-1 h-auto w-full grid grid-cols-3">
                 <TabsTrigger 
                   value="todos" 
-                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 py-2"
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-2 sm:px-4 py-2 text-xs sm:text-sm"
                 >
-                  <Package className="h-4 w-4 mr-2" />
-                  Todos ({stats.total})
+                  <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden xs:inline">Todos</span> ({stats.total})
                 </TabsTrigger>
                 <TabsTrigger 
                   value="local" 
-                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 py-2"
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-2 sm:px-4 py-2 text-xs sm:text-sm"
                 >
-                  <Car className="h-4 w-4 mr-2 text-emerald-600" />
-                  Local ({stats.local})
+                  <Car className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 text-emerald-600" />
+                  <span className="hidden xs:inline">Local</span> ({stats.local})
                 </TabsTrigger>
                 <TabsTrigger 
                   value="nacional" 
-                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 py-2"
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-2 sm:px-4 py-2 text-xs sm:text-sm"
                 >
-                  <Truck className="h-4 w-4 mr-2 text-blue-600" />
-                  Nacional ({stats.nacional})
+                  <Truck className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 text-blue-600" />
+                  <span className="hidden xs:inline">Nacional</span> ({stats.nacional})
                 </TabsTrigger>
               </TabsList>
             </Tabs>
 
-            <div className="relative w-full lg:w-72">
+            <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por código de rastreio..."
