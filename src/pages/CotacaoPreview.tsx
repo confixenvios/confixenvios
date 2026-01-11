@@ -677,28 +677,6 @@ const CotacaoPreview = () => {
                           </Button>
                         </div>
 
-                        {/* Tipo de mercadoria geral */}
-                        <Card className="bg-accent/10 border-border/50">
-                          <CardContent className="pt-4 pb-4">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                              <Label className="text-sm font-medium whitespace-nowrap">
-                                Aplicar tipo de mercadoria para todos:
-                              </Label>
-                              <Select onValueChange={applyMerchandiseTypeToAll}>
-                                <SelectTrigger className="w-full sm:w-64 h-10">
-                                  <SelectValue placeholder="Selecione um tipo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="normal">Normal</SelectItem>
-                                  <SelectItem value="liquido">Líquido</SelectItem>
-                                  <SelectItem value="quimico">Químico</SelectItem>
-                                  <SelectItem value="inflamavel">Inflamável</SelectItem>
-                                  <SelectItem value="vidro">Vidro</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </CardContent>
-                        </Card>
 
                         {/* Lista de volumes */}
                         <div className="space-y-4">
@@ -779,7 +757,7 @@ const CotacaoPreview = () => {
                                       value={volume.merchandiseType}
                                       onValueChange={(value) => updateVolume(volume.id, "merchandiseType", value)}
                                     >
-                                      <SelectTrigger className="h-12">
+                                      <SelectTrigger className="h-12 border border-input">
                                         <SelectValue placeholder="Selecione" />
                                       </SelectTrigger>
                                       <SelectContent>
