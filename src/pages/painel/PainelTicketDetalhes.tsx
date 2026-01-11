@@ -343,7 +343,19 @@ const PainelTicketDetalhes = () => {
                 Criado em {format(new Date(ticket.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
               </p>
             </div>
-            {getSlaBadge()}
+            <div className="flex flex-col items-end gap-2">
+              {getSlaBadge()}
+              {!isTicketClosed && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCloseTicket}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  Encerrar Ticket
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -485,11 +497,6 @@ const PainelTicketDetalhes = () => {
             />
             
             <div className="flex justify-between items-center gap-2">
-              {ticket.status === "resolved" && (
-                <Button type="button" variant="outline" onClick={handleCloseTicket}>
-                  Fechar Ticket
-                </Button>
-              )}
               <div className="flex-1" />
               
               <Button
