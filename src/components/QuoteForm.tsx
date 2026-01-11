@@ -1764,7 +1764,7 @@ const QuoteForm = () => {
                                 value={volume.merchandiseType}
                                 onValueChange={(value) => updateVolume(volume.id, "merchandiseType", value)}
                               >
-                                <SelectTrigger className="h-10 sm:h-12 text-sm">
+                                <SelectTrigger className="h-10 sm:h-12 text-sm border border-input">
                                   <SelectValue placeholder="Selecione" />
                                 </SelectTrigger>
                                 <SelectContent>
