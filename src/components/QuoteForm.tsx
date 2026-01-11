@@ -1495,37 +1495,59 @@ const QuoteForm = () => {
 
   const renderStepIndicator = () => (
     <div className="mb-6 sm:mb-8">
-      <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible">
-        <div className="flex items-center justify-start sm:justify-center min-w-max sm:min-w-0">
-          <div className="flex items-center gap-1 sm:gap-4 lg:gap-6">
-            {steps.map((step, index) => (
-              <div key={step.number} className="flex items-center">
-                <div
-                  className={`flex flex-col items-center gap-0.5 px-2 py-1.5 sm:px-3 sm:py-3 sm:flex-row sm:gap-2 rounded-lg transition-all duration-300 whitespace-nowrap ${
-                    currentStep === step.number
-                      ? "bg-primary text-primary-foreground shadow-lg"
-                      : currentStep > step.number
-                        ? "bg-success text-success-foreground"
-                        : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {currentStep > step.number ? (
-                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-                  ) : (
-                    <step.icon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-                  )}
-                  <span className="font-medium text-[10px] sm:text-sm text-center leading-tight">{step.title}</span>
-                </div>
-                {index < steps.length - 1 && (
-                  <div
-                    className={`hidden sm:block w-6 lg:w-12 h-0.5 mx-2 transition-all duration-300 ${
-                      currentStep > step.number ? "bg-success" : "bg-muted"
-                    }`}
-                  />
-                )}
-              </div>
-            ))}
+      {/* Mobile: Grid 2x2 */}
+      <div className="grid grid-cols-2 gap-2 sm:hidden">
+        {steps.map((step) => (
+          <div
+            key={step.number}
+            className={`flex items-center gap-2 px-3 py-2.5 rounded-lg transition-all duration-300 ${
+              currentStep === step.number
+                ? "bg-primary text-primary-foreground shadow-lg"
+                : currentStep > step.number
+                  ? "bg-success text-success-foreground"
+                  : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {currentStep > step.number ? (
+              <CheckCircle className="h-4 w-4 shrink-0" />
+            ) : (
+              <step.icon className="h-4 w-4 shrink-0" />
+            )}
+            <span className="font-medium text-xs leading-tight">{step.title}</span>
           </div>
+        ))}
+      </div>
+      
+      {/* Desktop: Horizontal flex */}
+      <div className="hidden sm:flex items-center justify-center">
+        <div className="flex items-center gap-4 lg:gap-6">
+          {steps.map((step, index) => (
+            <div key={step.number} className="flex items-center">
+              <div
+                className={`flex items-center gap-2 px-3 py-3 rounded-lg transition-all duration-300 whitespace-nowrap ${
+                  currentStep === step.number
+                    ? "bg-primary text-primary-foreground shadow-lg"
+                    : currentStep > step.number
+                      ? "bg-success text-success-foreground"
+                      : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {currentStep > step.number ? (
+                  <CheckCircle className="h-5 w-5 shrink-0" />
+                ) : (
+                  <step.icon className="h-5 w-5 shrink-0" />
+                )}
+                <span className="font-medium text-sm">{step.title}</span>
+              </div>
+              {index < steps.length - 1 && (
+                <div
+                  className={`w-6 lg:w-12 h-0.5 mx-2 transition-all duration-300 ${
+                    currentStep > step.number ? "bg-success" : "bg-muted"
+                  }`}
+                />
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </div>
