@@ -177,6 +177,10 @@ const Auth = () => {
           setError('Email inválido. Verifique o formato do email.');
         } else if (result.error.message.includes('Password should be at least')) {
           setError('A senha deve ter pelo menos 6 caracteres');
+        } else if (result.error.message.includes('unique_document') || result.error.message.includes('duplicate key')) {
+          setError('Este CPF/CNPJ já está cadastrado. Tente fazer login ou use outro documento.');
+        } else if (result.error.message.includes('Database error')) {
+          setError('Este CPF/CNPJ ou email já está cadastrado. Tente fazer login.');
         } else {
           setError(`Erro ao criar conta: ${result.error.message}`);
         }
