@@ -1681,28 +1681,6 @@ const QuoteForm = () => {
                     </Button>
                   </div>
 
-                  {/* Tipo de mercadoria geral */}
-                  <Card className="bg-accent/10 border-border/50">
-                    <CardContent className="pt-3 pb-3 sm:pt-4 sm:pb-4 px-3 sm:px-6">
-                      <div className="flex flex-col gap-2 sm:gap-4">
-                        <Label className="text-xs sm:text-sm font-medium">
-                          Aplicar tipo para todos:
-                        </Label>
-                        <Select onValueChange={applyMerchandiseTypeToAll}>
-                          <SelectTrigger className="w-full h-10 text-sm">
-                            <SelectValue placeholder="Selecione um tipo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="normal">Normal</SelectItem>
-                            <SelectItem value="liquido">Líquido</SelectItem>
-                            <SelectItem value="quimico">Químico</SelectItem>
-                            <SelectItem value="inflamavel">Inflamável</SelectItem>
-                            <SelectItem value="vidro">Vidro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </CardContent>
-                  </Card>
 
                   {/* Lista de volumes */}
                   <div className="space-y-3 sm:space-y-4">
