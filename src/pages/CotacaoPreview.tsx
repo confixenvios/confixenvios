@@ -757,7 +757,7 @@ const CotacaoPreview = () => {
                                       value={volume.merchandiseType}
                                       onValueChange={(value) => updateVolume(volume.id, "merchandiseType", value)}
                                     >
-                                      <SelectTrigger className="h-12 border border-input">
+                                      <SelectTrigger className="h-12">
                                         <SelectValue placeholder="Selecione" />
                                       </SelectTrigger>
                                       <SelectContent>
