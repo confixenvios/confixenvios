@@ -1,4 +1,4 @@
-import { User, LogIn, Truck, Menu } from "lucide-react";
+import { User, LogIn, Truck, Menu, Search } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from '@/hooks/useAuth';
 import { useState, useEffect } from 'react';
@@ -202,13 +202,26 @@ const Header = () => {
                     </DropdownMenu>
                   </div>
                 ) : (
-                  <Button 
-                    className="hidden sm:flex h-10 px-5 bg-primary text-primary-foreground hover:bg-primary font-semibold rounded-md"
-                    onClick={() => setLoginModalOpen(true)}
-                  >
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Entrar
-                  </Button>
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      variant="ghost"
+                      size="icon"
+                      className="hidden sm:flex h-10 w-10 text-foreground/70 hover:text-primary hover:bg-primary/5"
+                      onClick={() => {
+                        // TODO: Implement search functionality
+                        console.log('Search clicked');
+                      }}
+                    >
+                      <Search className="h-5 w-5" />
+                    </Button>
+                    <Button 
+                      className="hidden sm:flex h-10 px-5 bg-primary text-primary-foreground hover:bg-primary font-semibold rounded-md"
+                      onClick={() => setLoginModalOpen(true)}
+                    >
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Entrar
+                    </Button>
+                  </div>
                 )}
               </>
             )}
