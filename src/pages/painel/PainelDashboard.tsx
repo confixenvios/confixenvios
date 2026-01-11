@@ -144,7 +144,7 @@ const PainelDashboard = () => {
             >
               <Car className="h-8 w-8 text-orange-500" />
               <div className="text-center">
-                <p className="font-semibold text-foreground">Expresso</p>
+                <p className="font-semibold text-foreground">Local</p>
                 <p className="text-xs text-muted-foreground">Entrega rápida regional</p>
               </div>
             </Button>
