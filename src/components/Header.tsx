@@ -72,7 +72,14 @@ const Header = () => {
             </SheetContent>
           </Sheet>
 
-          <Link to="/" className="flex items-center space-x-2 group">
+          <Link 
+            to="/" 
+            className="flex items-center space-x-2 group"
+            onClick={(e) => {
+              e.preventDefault();
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          >
             <img 
               src={logoConfixEnvios} 
               alt="Confix Envios" 
