@@ -28,8 +28,8 @@ import avodahLogo from "@/assets/clients/avodah-logo.png";
 import magaluLogo from "@/assets/clients/magalu-logo.png";
 import deliveryProfessional from "@/assets/delivery-professional.webp";
 
-// Lazy load background component
-const HeroBackground = lazy(() => import("@/components/animations/HeroBackground"));
+// Import HeroBackground directly (critical for LCP)
+import HeroBackground from "@/components/animations/HeroBackground";
 
 const Index = () => {
   const { loading } = useAuth();
