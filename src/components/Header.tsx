@@ -1,7 +1,7 @@
-import { Package, User, LogIn, Building2, Truck, Menu, X } from "lucide-react";
+import { User, LogIn, Truck, Menu } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from '@/hooks/useAuth';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -32,6 +32,16 @@ const Header = () => {
   const navigate = useNavigate();
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  // Detect scroll for header background effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const navLinks = [
     { href: '#servicos', label: 'Serviços' },
@@ -46,118 +56,122 @@ const Header = () => {
     setMobileMenuOpen(false);
   };
 
-  return (
-    <header className="border-b border-border bg-white fixed top-0 left-0 right-0 z-50 shadow-sm">
-      <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3">
-        <div className="flex items-center justify-between">
-          {/* Mobile Menu Button */}
-          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon" className="mr-2">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-64">
-              <nav className="flex flex-col gap-4 mt-8">
-                {navLinks.map((link) => (
-                  <button
-                    key={link.href}
-                    onClick={() => handleNavClick(link.href)}
-                    className="text-left text-lg font-medium hover:text-primary transition-colors py-2"
-                  >
-                    {link.label}
-                  </button>
-                ))}
-              </nav>
-            </SheetContent>
-          </Sheet>
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
+  return (
+    <header 
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled 
+          ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-border/50' 
+          : 'bg-white shadow-sm border-b border-border'
+      }`}
+    >
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 sm:h-18 md:h-20">
+          
+          {/* Logo */}
           <Link 
             to="/" 
-            className="flex items-center space-x-2 group"
-            onClick={(e) => {
-              e.preventDefault();
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
+            className="flex items-center group flex-shrink-0"
+            onClick={handleLogoClick}
           >
             <img 
               src={logoConfixEnvios} 
               alt="Confix Envios" 
-              className="h-10 sm:h-12 md:h-14 w-auto group-hover:scale-105 transition-transform duration-200"
+              className="h-10 sm:h-11 md:h-12 w-auto transition-transform duration-300 group-hover:scale-105"
             />
           </Link>
-          
-          <nav className="hidden md:flex items-center justify-center flex-1 space-x-8">
-            <Link 
-              to="#servicos" 
-              className="relative text-lg font-normal transition-colors hover:text-primary after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-[-4px] after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
-              style={{ fontFamily: 'Arial, sans-serif', color: '#000000' }}
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById('servicos')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-            >
-              Serviços
-            </Link>
-            <Link 
-              to="#diferencial" 
-              className="relative text-lg font-normal transition-colors hover:text-primary after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-[-4px] after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
-              style={{ fontFamily: 'Arial, sans-serif', color: '#000000' }}
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById('diferencial')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-            >
-              Diferencial
-            </Link>
-            <Link 
-              to="#quemsomos" 
-              className="relative text-lg font-normal transition-colors hover:text-primary after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-[-4px] after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
-              style={{ fontFamily: 'Arial, sans-serif', color: '#000000' }}
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById('quemsomos')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-            >
-              Sobre
-            </Link>
-            <Link 
-              to="#contato" 
-              className="relative text-lg font-normal transition-colors hover:text-primary after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-[-4px] after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
-              style={{ fontFamily: 'Arial, sans-serif', color: '#000000' }}
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById('contato')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-            >
-              Contato
-            </Link>
+
+          {/* Desktop Navigation - Centered */}
+          <nav className="hidden md:flex items-center justify-center flex-1 px-8">
+            <div className="flex items-center space-x-2 lg:space-x-3">
+              {navLinks.map((link) => (
+                <button
+                  key={link.href}
+                  onClick={() => handleNavClick(link.href)}
+                  className="relative px-4 py-2 text-[15px] font-medium text-foreground/80 hover:text-primary transition-colors duration-200 rounded-lg hover:bg-primary/5 group"
+                >
+                  {link.label}
+                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-1/2 rounded-full" />
+                </button>
+              ))}
+            </div>
           </nav>
           
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            
+          {/* Right Section - Auth */}
+          <div className="flex items-center space-x-3">
+            {/* Mobile Menu */}
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild className="md:hidden">
+                <Button variant="ghost" size="icon" className="h-10 w-10">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 pt-12">
+                <div className="flex items-center mb-8">
+                  <img 
+                    src={logoConfixEnvios} 
+                    alt="Confix Envios" 
+                    className="h-10 w-auto"
+                  />
+                </div>
+                <nav className="flex flex-col gap-2">
+                  {navLinks.map((link) => (
+                    <button
+                      key={link.href}
+                      onClick={() => handleNavClick(link.href)}
+                      className="text-left text-base font-medium text-foreground/80 hover:text-primary hover:bg-primary/5 transition-all duration-200 py-3 px-4 rounded-lg"
+                    >
+                      {link.label}
+                    </button>
+                  ))}
+                </nav>
+                <div className="mt-8 pt-8 border-t border-border">
+                  {!user && (
+                    <Button 
+                      className="w-full justify-center"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        setLoginModalOpen(true);
+                      }}
+                    >
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Entrar
+                    </Button>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+
             {!loading && (
               <>
                 {user ? (
-                  <div className="flex items-center space-x-2 sm:space-x-4">
-                    <span className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
-                      Olá, {user.email}
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm text-muted-foreground hidden lg:block max-w-32 truncate">
+                      {user.email}
                     </span>
                     {isAdmin && (
-                      <Badge variant="secondary" className="hidden sm:flex text-xs">
+                      <Badge variant="secondary" className="hidden sm:flex text-xs bg-primary/10 text-primary border-0">
                         <Shield className="w-3 h-3 mr-1" />
                         Admin
                       </Badge>
                     )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 sm:px-3">
-                          <Avatar className="w-5 h-5 sm:w-6 sm:h-6">
-                            <AvatarFallback className="text-xs">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="flex items-center space-x-2 h-10 px-3 hover:bg-primary/5 border border-border/50"
+                        >
+                          <Avatar className="w-7 h-7">
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
                               {user.email?.[0]?.toUpperCase() || 'U'}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="hidden sm:inline">Minha Conta</span>
+                          <span className="hidden sm:inline text-sm font-medium">Conta</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">
@@ -189,12 +203,12 @@ const Header = () => {
                   </div>
                 ) : (
                   <Button 
-                    size="sm" 
-                    className="text-xs sm:text-sm px-3 sm:px-4"
+                    variant="outline"
+                    className="hidden sm:flex h-10 px-5 border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground font-semibold transition-all duration-200"
                     onClick={() => setLoginModalOpen(true)}
                   >
-                    <LogIn className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    <span>Entrar</span>
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Entrar
                   </Button>
                 )}
               </>
