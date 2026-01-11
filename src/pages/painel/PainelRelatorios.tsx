@@ -405,14 +405,14 @@ const PainelRelatorios = () => {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6 bg-gradient-to-b from-background to-muted/20 min-h-screen pb-24 overflow-x-hidden">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6 bg-gradient-to-b from-background to-muted/20 min-h-screen pb-24 overflow-x-hidden w-full max-w-full">
       {/* Header */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-2 w-full">
+        <div className="flex items-center gap-3 w-full">
           <div className="h-10 w-10 md:h-12 md:w-12 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/25 shrink-0">
             <BarChart3 className="h-5 w-5 md:h-6 md:w-6 text-white" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="text-xl md:text-3xl font-bold text-foreground">Relatórios</h1>
             <p className="text-muted-foreground text-xs md:text-base truncate">Acompanhe todos os seus envios em um só lugar</p>
           </div>
@@ -502,49 +502,52 @@ const PainelRelatorios = () => {
       </div>
 
       {/* Filters Section */}
-      <Card className="border-0 shadow-md overflow-hidden">
-        <CardContent className="p-3 md:p-4">
-          <div className="flex flex-col gap-3">
+      <Card className="border-0 shadow-md overflow-hidden w-full">
+        <CardContent className="p-3 md:p-4 w-full">
+          <div className="flex flex-col gap-3 w-full">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'todos' | 'local' | 'nacional')} className="w-full">
               <TabsList className="bg-muted/50 p-1 h-auto w-full grid grid-cols-3">
                 <TabsTrigger 
                   value="todos" 
-                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-2 py-2 text-xs sm:text-sm"
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-1 py-2 text-[10px] sm:text-sm truncate"
                 >
-                  Locais e Nacionais ({stats.total})
+                  <span className="hidden sm:inline">Locais e Nacionais ({stats.total})</span>
+                  <span className="sm:hidden">Todos ({stats.total})</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="local" 
-                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-2 py-2 text-xs sm:text-sm"
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-1 py-2 text-[10px] sm:text-sm"
                 >
                   Locais ({stats.local})
                 </TabsTrigger>
                 <TabsTrigger 
                   value="nacional" 
-                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-2 py-2 text-xs sm:text-sm"
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-1 py-2 text-[10px] sm:text-sm"
                 >
                   Nacionais ({stats.nacional})
                 </TabsTrigger>
               </TabsList>
             </Tabs>
 
-            {/* Date filters */}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="flex-1 flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+            {/* Date filters - stacked on mobile */}
+            <div className="flex items-center gap-2 w-full">
+              <Filter className="h-4 w-4 text-muted-foreground shrink-0 hidden sm:block" />
+              <div className="flex-1 min-w-0">
                 <Input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="bg-muted/30 border-0 focus-visible:ring-primary/20 text-sm"
+                  className="bg-muted/30 border-0 focus-visible:ring-primary/20 text-xs sm:text-sm w-full"
                   placeholder="Data início"
                 />
-                <span className="text-muted-foreground text-sm shrink-0">até</span>
+              </div>
+              <span className="text-muted-foreground text-xs sm:text-sm shrink-0">até</span>
+              <div className="flex-1 min-w-0">
                 <Input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="bg-muted/30 border-0 focus-visible:ring-primary/20 text-sm"
+                  className="bg-muted/30 border-0 focus-visible:ring-primary/20 text-xs sm:text-sm w-full"
                   placeholder="Data fim"
                 />
               </div>
@@ -556,7 +559,7 @@ const PainelRelatorios = () => {
                 placeholder={activeTab === 'local' ? "Buscar por ETI ou código..." : "Buscar por código de rastreio..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-muted/30 border-0 focus-visible:ring-primary/20"
+                className="pl-10 bg-muted/30 border-0 focus-visible:ring-primary/20 w-full"
               />
             </div>
           </div>
@@ -580,7 +583,7 @@ const PainelRelatorios = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2 md:space-y-3">
+        <div className="space-y-2 md:space-y-3 w-full">
           {filteredShipments.map((item, index) => {
             const statusConfig = getStatusConfig(item.status);
             const isLocal = item.type === 'local';
@@ -588,19 +591,19 @@ const PainelRelatorios = () => {
             return (
               <Card 
                 key={item.id} 
-                className="border-0 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group cursor-pointer"
+                className="border-0 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group cursor-pointer w-full"
                 style={{ animationDelay: `${index * 50}ms` }}
                 onClick={() => openDetails(item)}
               >
-                <CardContent className="p-0">
-                  <div className="flex items-stretch">
+                <CardContent className="p-0 w-full">
+                  <div className="flex items-stretch w-full">
                     {/* Type indicator bar */}
                     <div className={`w-1 md:w-1.5 shrink-0 ${isLocal ? 'bg-gradient-to-b from-emerald-400 to-emerald-500' : 'bg-gradient-to-b from-blue-400 to-blue-500'}`} />
                     
-                    <div className="flex-1 p-3 md:p-5 min-w-0">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
-                        {/* Left side - Icon and info */}
-                        <div className="flex items-start gap-3 min-w-0">
+                    <div className="flex-1 p-3 md:p-5 min-w-0 overflow-hidden">
+                      <div className="flex flex-col gap-3">
+                        {/* Top row - Icon, title and type */}
+                        <div className="flex items-start gap-3 min-w-0 w-full">
                           <div className={`h-10 w-10 md:h-12 md:w-12 rounded-xl flex items-center justify-center shrink-0 ${isLocal ? 'bg-emerald-100' : 'bg-blue-100'}`}>
                             {isLocal ? (
                               <Car className="h-5 w-5 md:h-6 md:w-6 text-emerald-600" />
@@ -609,14 +612,14 @@ const PainelRelatorios = () => {
                             )}
                           </div>
                           
-                          <div className="min-w-0 flex-1">
+                          <div className="min-w-0 flex-1 overflow-hidden">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-bold text-foreground text-sm md:text-lg truncate">
+                              <h3 className="font-bold text-foreground text-sm md:text-lg truncate max-w-[150px] sm:max-w-none">
                                 {isLocal ? (item as B2BVolume).eti_code : item.tracking_code || 'Sem código'}
                               </h3>
                               <Badge 
                                 variant="outline" 
-                                className={`text-xs font-medium shrink-0 ${isLocal ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : 'text-blue-600 border-blue-200 bg-blue-50'}`}
+                                className={`text-[10px] sm:text-xs font-medium shrink-0 ${isLocal ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : 'text-blue-600 border-blue-200 bg-blue-50'}`}
                               >
                                 {isLocal ? 'Local' : 'Nacional'}
                               </Badge>
@@ -628,15 +631,11 @@ const PainelRelatorios = () => {
                               <span className="truncate">
                                 {isLocal ? (
                                   <>
-                                    <span className="text-muted-foreground">{(item as B2BVolume).recipient_street}, {(item as B2BVolume).recipient_number} - </span>
                                     <span className="font-medium">{(item as B2BVolume).recipient_city}</span>
                                     <span className="text-muted-foreground">/{(item as B2BVolume).recipient_state}</span>
                                   </>
                                 ) : (
                                   <>
-                                    {(item as NationalShipment).destination_address && (
-                                      <span className="text-muted-foreground">{(item as NationalShipment).destination_address} - </span>
-                                    )}
                                     <span className="font-medium">{(item as NationalShipment).destination_city}</span>
                                     {(item as NationalShipment).destination_state && (
                                       <span className="text-muted-foreground">/{(item as NationalShipment).destination_state}</span>
@@ -646,45 +645,45 @@ const PainelRelatorios = () => {
                               </span>
                             </div>
                             
-                            <div className="flex items-center gap-3 md:gap-4 mt-1.5 md:mt-2 text-xs md:text-sm text-muted-foreground">
+                            <div className="flex items-center gap-2 md:gap-4 mt-1.5 md:mt-2 text-xs md:text-sm text-muted-foreground">
                               <div className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                                <Calendar className="h-3 w-3 md:h-3.5 md:w-3.5 shrink-0" />
                                 <span>{format(new Date(item.created_at), "dd/MM/yy", { locale: ptBR })}</span>
                               </div>
                               <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                                <Clock className="h-3 w-3 md:h-3.5 md:w-3.5 shrink-0" />
                                 <span>{format(new Date(item.created_at), 'HH:mm', { locale: ptBR })}</span>
                               </div>
                             </div>
                           </div>
                         </div>
 
-                        {/* Right side - Status and weight */}
-                        <div className="flex items-center justify-between md:justify-end gap-3 md:gap-4">
+                        {/* Bottom row - Status, weight and action */}
+                        <div className="flex items-center justify-between gap-2 pl-0 md:pl-14">
                           <Badge 
                             variant="outline" 
-                            className={`${statusConfig.bgColor} ${statusConfig.color} border text-xs shrink-0`}
+                            className={`${statusConfig.bgColor} ${statusConfig.color} border text-[10px] sm:text-xs shrink-0 max-w-[140px] sm:max-w-none truncate`}
                           >
                             {statusConfig.label}
                           </Badge>
                           
-                          <div className="text-right shrink-0">
-                            <p className="text-sm md:text-lg font-bold text-foreground">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm md:text-lg font-bold text-foreground shrink-0">
                               {item.weight}kg
                             </p>
-                          </div>
 
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openDetails(item);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDetails(item);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
