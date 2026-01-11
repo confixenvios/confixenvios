@@ -246,6 +246,20 @@ const B2BDashboard = () => {
     });
   }, [shipments, volumes, searchEti, statusFilter]);
 
+  // Obtem a lista de status únicos existentes nos volumes
+  const availableStatuses = useMemo(() => {
+    const statusSet = new Set<string>();
+    volumes.forEach(v => {
+      // Normaliza ENTREGUE para CONCLUIDO
+      if (v.status === 'ENTREGUE' || v.status === 'CONCLUIDO') {
+        statusSet.add('CONCLUIDO');
+      } else {
+        statusSet.add(v.status);
+      }
+    });
+    return Array.from(statusSet);
+  }, [volumes]);
+
   // Filtra volumes individuais e ordena por eti_code crescente
   const filteredVolumes = useMemo(() => {
     return volumes
@@ -256,8 +270,15 @@ const B2BDashboard = () => {
           volume.eti_code.toLowerCase().includes(searchLower) ||
           volume.recipient_name.toLowerCase().includes(searchLower);
         
-        // Filtro por status
-        const matchesStatus = statusFilter === 'all' || volume.status === statusFilter;
+        // Filtro por status - considera ENTREGUE e CONCLUIDO como equivalentes
+        let matchesStatus = statusFilter === 'all';
+        if (!matchesStatus) {
+          if (statusFilter === 'CONCLUIDO' || statusFilter === 'ENTREGUE') {
+            matchesStatus = volume.status === 'CONCLUIDO' || volume.status === 'ENTREGUE';
+          } else {
+            matchesStatus = volume.status === statusFilter;
+          }
+        }
         
         return matchesSearch && matchesStatus;
       })
@@ -315,15 +336,33 @@ const B2BDashboard = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os status</SelectItem>
-                <SelectItem value="AGUARDANDO_ACEITE_COLETA">Aguardando Aceite Coleta</SelectItem>
-                <SelectItem value="COLETA_ACEITA">Coleta Aceita</SelectItem>
-                <SelectItem value="COLETADO">Coletado</SelectItem>
-                <SelectItem value="EM_TRIAGEM">Em Triagem</SelectItem>
-                <SelectItem value="AGUARDANDO_ACEITE_EXPEDICAO">Aguardando Aceite Expedição</SelectItem>
-                <SelectItem value="EXPEDIDO">Expedido</SelectItem>
-                <SelectItem value="EM_ROTA">Em Rota</SelectItem>
-                <SelectItem value="ENTREGUE">Entregue</SelectItem>
-                <SelectItem value="DEVOLUCAO">Devolução</SelectItem>
+                {availableStatuses.includes('AGUARDANDO_ACEITE_COLETA') && (
+                  <SelectItem value="AGUARDANDO_ACEITE_COLETA">Aguardando Aceite Coleta</SelectItem>
+                )}
+                {availableStatuses.includes('COLETA_ACEITA') && (
+                  <SelectItem value="COLETA_ACEITA">Coleta Aceita</SelectItem>
+                )}
+                {availableStatuses.includes('COLETADO') && (
+                  <SelectItem value="COLETADO">Coletado</SelectItem>
+                )}
+                {availableStatuses.includes('EM_TRIAGEM') && (
+                  <SelectItem value="EM_TRIAGEM">Em Triagem</SelectItem>
+                )}
+                {availableStatuses.includes('AGUARDANDO_ACEITE_EXPEDICAO') && (
+                  <SelectItem value="AGUARDANDO_ACEITE_EXPEDICAO">Aguardando Aceite Expedição</SelectItem>
+                )}
+                {availableStatuses.includes('EXPEDIDO') && (
+                  <SelectItem value="EXPEDIDO">Expedido</SelectItem>
+                )}
+                {availableStatuses.includes('EM_ROTA') && (
+                  <SelectItem value="EM_ROTA">Em Rota</SelectItem>
+                )}
+                {availableStatuses.includes('CONCLUIDO') && (
+                  <SelectItem value="CONCLUIDO">Entregue</SelectItem>
+                )}
+                {availableStatuses.includes('DEVOLUCAO') && (
+                  <SelectItem value="DEVOLUCAO">Devolução</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
