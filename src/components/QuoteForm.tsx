@@ -1559,16 +1559,16 @@ const QuoteForm = () => {
                 </div>
 
                 {/* CEP Fields */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-                  <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-4 sm:gap-6">
+                  <div className="space-y-2 sm:space-y-3">
                     {/* Área invisível para teste de webhook */}
                     <div 
                       className="absolute -mt-4 w-20 h-4 cursor-default opacity-0"
                       onClick={handleSecretTestWebhook}
                       aria-hidden="true"
                     />
-                    <Label htmlFor="origin-cep" className="flex items-center space-x-2 text-base font-medium">
-                      <MapPin className="h-5 w-5 text-primary" />
+                    <Label htmlFor="origin-cep" className="flex items-center space-x-2 text-sm sm:text-base font-medium">
+                      <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       <span>CEP de Origem</span>
                     </Label>
                     <Input
@@ -1576,14 +1576,14 @@ const QuoteForm = () => {
                       type="text"
                       value={formData.originCep}
                       disabled
-                      className="border-input-border bg-muted text-muted-foreground h-14 text-lg"
+                      className="border-input-border bg-muted text-muted-foreground h-12 sm:h-14 text-base sm:text-lg"
                     />
-                    <p className="text-sm text-muted-foreground">Goiânia e Região / Origem fixa</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Goiânia e Região / Origem fixa</p>
                   </div>
 
-                  <div className="space-y-3">
-                    <Label htmlFor="destiny-cep" className="flex items-center space-x-2 text-base font-medium">
-                      <MapPin className="h-5 w-5 text-primary" />
+                  <div className="space-y-2 sm:space-y-3">
+                    <Label htmlFor="destiny-cep" className="flex items-center space-x-2 text-sm sm:text-base font-medium">
+                      <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       <span>CEP de Destino</span>
                     </Label>
                     <InputMask
@@ -1597,15 +1597,15 @@ const QuoteForm = () => {
                           id="destiny-cep"
                           type="text"
                           placeholder="00000-000"
-                          className={`border-input-border focus:border-primary focus:ring-primary h-14 text-lg ${
+                          className={`border-input-border focus:border-primary focus:ring-primary h-12 sm:h-14 text-base sm:text-lg ${
                             blockedCepError ? "border-destructive focus:border-destructive focus:ring-destructive" : ""
                           }`}
                         />
                       )}
                     </InputMask>
                     {blockedCepError && (
-                      <p className="text-sm text-destructive font-medium flex items-center gap-1">
-                        <AlertTriangle className="h-4 w-4" />
+                      <p className="text-xs sm:text-sm text-destructive font-medium flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4" />
                         {blockedCepError}
                       </p>
                     )}
@@ -1613,18 +1613,18 @@ const QuoteForm = () => {
                 </div>
 
                 {/* Merchandise Details */}
-                <div className="space-y-6">
-                  <Label className="flex items-center space-x-2 text-lg font-semibold">
-                    <DollarSign className="h-5 w-5 text-primary" />
+                <div className="space-y-4 sm:space-y-6">
+                  <Label className="flex items-center space-x-2 text-base sm:text-lg font-semibold">
+                    <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     <span>Detalhes da Mercadoria</span>
                   </Label>
 
-                  <div className="space-y-3">
-                    <Label htmlFor="totalValue" className="text-base font-medium">
+                  <div className="space-y-2 sm:space-y-3">
+                    <Label htmlFor="totalValue" className="text-sm sm:text-base font-medium">
                       Valor Total Declarado (R$)
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium text-muted-foreground">
+                      <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-base sm:text-lg font-medium text-muted-foreground">
                         R$
                       </span>
                       <Input
@@ -1633,17 +1633,17 @@ const QuoteForm = () => {
                         placeholder="0,00"
                         value={getCurrencyDisplayValue()}
                         onChange={(e) => handleCurrencyChange(e.target.value)}
-                        className="border-input-border focus:border-primary focus:ring-primary h-14 text-lg pl-12"
+                        className="border-input-border focus:border-primary focus:ring-primary h-12 sm:h-14 text-base sm:text-lg pl-10 sm:pl-12"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Volumes Dinâmicos */}
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <Label className="flex items-center space-x-2 text-lg font-semibold">
-                      <Package className="h-5 w-5 text-primary" />
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="flex items-center space-x-2 text-base sm:text-lg font-semibold">
+                      <Package className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       <span>Volumes</span>
                     </Label>
                     <Button
@@ -1651,22 +1651,23 @@ const QuoteForm = () => {
                       onClick={addVolume}
                       variant="outline"
                       size="sm"
-                      className="flex items-center space-x-2"
+                      className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 sm:px-3"
                     >
-                      <Plus className="h-4 w-4" />
-                      <span>Adicionar Volume</span>
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className="hidden xs:inline">Adicionar</span>
+                      <span className="xs:hidden">+</span>
                     </Button>
                   </div>
 
                   {/* Tipo de mercadoria geral */}
                   <Card className="bg-accent/10 border-border/50">
-                    <CardContent className="pt-4 pb-4">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                        <Label className="text-sm font-medium whitespace-nowrap">
-                          Aplicar tipo de mercadoria para todos:
+                    <CardContent className="pt-3 pb-3 sm:pt-4 sm:pb-4 px-3 sm:px-6">
+                      <div className="flex flex-col gap-2 sm:gap-4">
+                        <Label className="text-xs sm:text-sm font-medium">
+                          Aplicar tipo para todos:
                         </Label>
                         <Select onValueChange={applyMerchandiseTypeToAll}>
-                          <SelectTrigger className="w-full sm:w-64 h-10">
+                          <SelectTrigger className="w-full h-10 text-sm">
                             <SelectValue placeholder="Selecione um tipo" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1682,29 +1683,29 @@ const QuoteForm = () => {
                   </Card>
 
                   {/* Lista de volumes */}
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {formData.volumes.map((volume, index) => (
                       <Card key={volume.id} className="border-border/50">
-                        <CardHeader className="pb-3 pt-4 px-4">
+                        <CardHeader className="pb-2 sm:pb-3 pt-3 sm:pt-4 px-3 sm:px-4">
                           <div className="flex items-center justify-between">
-                            <CardTitle className="text-base font-semibold">Volume {index + 1}</CardTitle>
+                            <CardTitle className="text-sm sm:text-base font-semibold">Volume {index + 1}</CardTitle>
                             {formData.volumes.length > 1 && (
                               <Button
                                 type="button"
                                 onClick={() => removeVolume(volume.id)}
                                 variant="ghost"
                                 size="sm"
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             )}
                           </div>
                         </CardHeader>
-                        <CardContent className="px-4 pb-4">
-                          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium">Peso (kg)</Label>
+                        <CardContent className="px-3 sm:px-4 pb-4">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
+                            <div className="space-y-1 sm:space-y-2">
+                              <Label className="text-xs sm:text-sm font-medium">Peso (kg)</Label>
                               <Input
                                 type="text"
                                 inputMode="decimal"
@@ -1721,50 +1722,50 @@ const QuoteForm = () => {
                                   
                                   updateVolume(volume.id, "weight", value, volume.weight);
                                 }}
-                                className="h-12"
+                                className="h-10 sm:h-12 text-sm"
                               />
                             </div>
 
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium">Comp. (cm)</Label>
+                            <div className="space-y-1 sm:space-y-2">
+                              <Label className="text-xs sm:text-sm font-medium">Comp. (cm)</Label>
                               <Input
                                 type="number"
                                 placeholder="20"
                                 value={volume.length}
                                 onChange={(e) => updateVolume(volume.id, "length", e.target.value)}
-                                className="h-12"
+                                className="h-10 sm:h-12 text-sm"
                               />
                             </div>
 
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium">Larg. (cm)</Label>
+                            <div className="space-y-1 sm:space-y-2">
+                              <Label className="text-xs sm:text-sm font-medium">Larg. (cm)</Label>
                               <Input
                                 type="number"
                                 placeholder="15"
                                 value={volume.width}
                                 onChange={(e) => updateVolume(volume.id, "width", e.target.value)}
-                                className="h-12"
+                                className="h-10 sm:h-12 text-sm"
                               />
                             </div>
 
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium">Alt. (cm)</Label>
+                            <div className="space-y-1 sm:space-y-2">
+                              <Label className="text-xs sm:text-sm font-medium">Alt. (cm)</Label>
                               <Input
                                 type="number"
                                 placeholder="10"
                                 value={volume.height}
                                 onChange={(e) => updateVolume(volume.id, "height", e.target.value)}
-                                className="h-12"
+                                className="h-10 sm:h-12 text-sm"
                               />
                             </div>
 
-                            <div className="space-y-2 col-span-2 lg:col-span-1">
-                              <Label className="text-sm font-medium">Tipo de Mercadoria *</Label>
+                            <div className="space-y-1 sm:space-y-2 col-span-2 sm:col-span-2 lg:col-span-1">
+                              <Label className="text-xs sm:text-sm font-medium">Tipo *</Label>
                               <Select
                                 value={volume.merchandiseType}
                                 onValueChange={(value) => updateVolume(volume.id, "merchandiseType", value)}
                               >
-                                <SelectTrigger className="h-12">
+                                <SelectTrigger className="h-10 sm:h-12 text-sm">
                                   <SelectValue placeholder="Selecione" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1779,14 +1780,14 @@ const QuoteForm = () => {
                           </div>
 
                           {/* Mostrar peso cúbico individual */}
-                          <div className="mt-3 text-sm text-muted-foreground">
-                            Peso cúbico deste volume:{" "}
+                          <div className="mt-2 sm:mt-3 text-xs sm:text-sm text-muted-foreground">
+                            Peso cúbico:{" "}
                             <span className="font-medium text-foreground">
                               {calculateCubicWeight(
                                 parseFloat(volume.length) || 0,
                                 parseFloat(volume.width) || 0,
                                 parseFloat(volume.height) || 0,
-                              ).toFixed(3)} kg
+                              ).toFixed(2)} kg
                             </span>
                           </div>
                         </CardContent>
@@ -1814,26 +1815,26 @@ const QuoteForm = () => {
 
                   {/* Resumo dos volumes */}
                   <Card className="bg-primary/5 border-primary/20">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base font-semibold">Resumo dos Volumes</CardTitle>
+                    <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
+                      <CardTitle className="text-sm sm:text-base font-semibold">Resumo dos Volumes</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Quantidade de Volumes</p>
-                          <p className="text-2xl font-bold text-primary">{formData.volumes.length}</p>
+                    <CardContent className="px-3 sm:px-6">
+                      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                        <div className="space-y-0.5 sm:space-y-1">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">Qtd. Volumes</p>
+                          <p className="text-lg sm:text-2xl font-bold text-primary">{formData.volumes.length}</p>
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Peso Total Declarado</p>
-                          <p className="text-2xl font-bold">{calculateTotalWeight().toFixed(3)} kg</p>
+                        <div className="space-y-0.5 sm:space-y-1">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">Peso Declarado</p>
+                          <p className="text-lg sm:text-2xl font-bold">{calculateTotalWeight().toFixed(2)} kg</p>
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Peso Total Cubado</p>
-                          <p className="text-2xl font-bold">{calculateTotalCubicWeight().toFixed(3)} kg</p>
+                        <div className="space-y-0.5 sm:space-y-1">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">Peso Cubado</p>
+                          <p className="text-lg sm:text-2xl font-bold">{calculateTotalCubicWeight().toFixed(2)} kg</p>
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Volume Total</p>
-                          <p className="text-2xl font-bold">{calculateTotalCubicMeters().toFixed(4)} m³</p>
+                        <div className="space-y-0.5 sm:space-y-1">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">Volume Total</p>
+                          <p className="text-lg sm:text-2xl font-bold">{calculateTotalCubicMeters().toFixed(4)} m³</p>
                         </div>
                       </div>
                     </CardContent>
