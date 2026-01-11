@@ -1091,7 +1091,7 @@ const B2BNovaRemessa = () => {
               </div>
 
               {/* Veículo e Data */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="border rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Truck className="h-4 w-4 text-primary" />
@@ -1171,7 +1171,7 @@ const B2BNovaRemessa = () => {
 
       {/* Modal para cadastrar novo endereço de entrega */}
       <Dialog open={showAddressModal} onOpenChange={setShowAddressModal}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto w-[calc(100%-2rem)] sm:w-full mx-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-primary" />
@@ -1194,7 +1194,7 @@ const B2BNovaRemessa = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="addr_recipient_name">Nome do Destinatário *</Label>
                 <Input
@@ -1228,7 +1228,7 @@ const B2BNovaRemessa = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="addr_cep">CEP *</Label>
                 <div className="relative">
@@ -1267,7 +1267,7 @@ const B2BNovaRemessa = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="addr_number">Número *</Label>
                 <Input
@@ -1360,7 +1360,7 @@ const B2BNovaRemessa = () => {
 
       {/* Modal para cadastrar novo endereço de coleta */}
       <Dialog open={showPickupAddressModal} onOpenChange={setShowPickupAddressModal}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto w-[calc(100%-2rem)] sm:w-full mx-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-green-600" />
@@ -1383,7 +1383,7 @@ const B2BNovaRemessa = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="pickup_contact_name">Nome do Contato *</Label>
                 <Input
@@ -1406,7 +1406,7 @@ const B2BNovaRemessa = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="pickup_cep">CEP *</Label>
                 <div className="relative">
@@ -1445,7 +1445,7 @@ const B2BNovaRemessa = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="pickup_number">Número *</Label>
                 <Input
