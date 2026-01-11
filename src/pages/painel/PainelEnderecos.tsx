@@ -226,7 +226,7 @@ const PainelEnderecos = () => {
 
     // Validar se o CEP está na faixa permitida para Local
     if (!isAllowedLocalCep(cleanCep)) {
-      setCepError('CEP fora da área de atendimento Local. Somente região metropolitana de Goiânia.');
+      setCepError('CEP fora da área de atendimento Local. Somente região metropolitana.');
       return;
     }
 
@@ -279,7 +279,7 @@ const PainelEnderecos = () => {
     // Validar CEP antes de salvar
     const cleanCep = sanitizeCep(formData.cep);
     if (!isAllowedLocalCep(cleanCep)) {
-      setCepError('CEP fora da área de atendimento Local. Somente região metropolitana de Goiânia.');
+      setCepError('CEP fora da área de atendimento Local. Somente região metropolitana.');
       toast.error('CEP não permitido para envios locais');
       return;
     }

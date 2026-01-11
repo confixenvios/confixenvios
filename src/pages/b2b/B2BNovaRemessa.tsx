@@ -421,7 +421,7 @@ const B2BNovaRemessa = () => {
 
     // Validar se o CEP está na área de cobertura Local
     if (!isAllowedLocalCep(cleanCep)) {
-      toast.error('CEP fora da área de atendimento Local. Somente região metropolitana de Goiânia.');
+      toast.error('CEP fora da área de atendimento Local. Somente região metropolitana.');
       setNewAddress(prev => ({
         ...prev,
         street: '',
@@ -543,7 +543,7 @@ const B2BNovaRemessa = () => {
 
     // Validar se o CEP está na área de cobertura Local
     if (!isAllowedLocalCep(cleanCep)) {
-      toast.error('CEP fora da área de atendimento Local. Somente região metropolitana de Goiânia.');
+      toast.error('CEP fora da área de atendimento Local. Somente região metropolitana.');
       setNewPickupAddress(prev => ({
         ...prev,
         street: '',
@@ -644,7 +644,7 @@ const B2BNovaRemessa = () => {
     // Validar se o CEP está na área de cobertura Local
     const cleanCep = newPickupAddress.cep.replace(/\D/g, '');
     if (!isAllowedLocalCep(cleanCep)) {
-      toast.error('CEP fora da área de atendimento Local. Somente região metropolitana de Goiânia.');
+      toast.error('CEP fora da área de atendimento Local. Somente região metropolitana.');
       return;
     }
 
@@ -702,7 +702,7 @@ const B2BNovaRemessa = () => {
     // Validar se o CEP está na área de cobertura Local
     const cleanCep = newAddress.cep.replace(/\D/g, '');
     if (!isAllowedLocalCep(cleanCep)) {
-      toast.error('CEP fora da área de atendimento Local. Somente região metropolitana de Goiânia.');
+      toast.error('CEP fora da área de atendimento Local. Somente região metropolitana.');
       return;
     }
 
