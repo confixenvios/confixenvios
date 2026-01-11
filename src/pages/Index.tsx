@@ -78,7 +78,7 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-rose-50 to-red-100 overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-rose-50 to-red-100 overflow-x-hidden pt-16">
       <Header />
       
       {/* Hero Section */}
