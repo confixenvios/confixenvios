@@ -58,10 +58,9 @@ const Index = () => {
   ];
 
   const diferenciais = [
-    { number: "01", title: "EXPERIÊNCIA", description: "+10 anos em transferência, abastecimento e last mile. Rede de parceiros homologados com eficiência e responsabilidade em todo Brasil." },
-    { number: "02", title: "ECOSSISTEMA LOGÍSTICO", description: "Integrados às melhores transportadoras do país. Cobertura nacional com execução orientada pelo nível de serviço." },
-    { number: "03", title: "SEU NEGÓCIO, SUA NECESSIDADE", description: "Adaptamos nossa solução à sua realidade: prazo, custo e performance com governança e acompanhamento contínuo." },
-    { number: "04", title: "TECNOLOGIA PRÓPRIA", description: "Rastreabilidade, controle e transparência em todas as etapas. Acesso em tempo real e relatórios operacionais completos." },
+    { number: "01", title: "ECOSSISTEMA LOGÍSTICO", description: "Integração com múltiplas transportadoras, ampliando capacidade e agilidade. Cobertura nacional com foco em qualidade e eficiência operacional orientada a SLA." },
+    { number: "02", title: "SEU NEGÓCIO, SUA NECESSIDADE", description: "Solução adaptável às particularidades de cada operação, buscando o melhor equilíbrio entre prazo, custo e performance, com governança contínua." },
+    { number: "03", title: "TECNOLOGIA", description: "Plataforma desenvolvida com rastreabilidade, controle e transparência em tempo real. Total controle de todos os envios através de nosso portal como: relatórios, rastreio, histórico de pendências." },
   ];
 
   const clientLogos = [
