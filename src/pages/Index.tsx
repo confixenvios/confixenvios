@@ -241,7 +241,7 @@ const Index = () => {
             ))}
           </StaggerContainer>
           
-          <ScaleIn className="text-center">
+          <ScaleIn className="text-center mt-12">
             <MagneticButton>
               <Button size="lg" className="px-10 shadow-xl" asChild>
                 <Link to="/cotacaopreview">
