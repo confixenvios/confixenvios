@@ -210,46 +210,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Nossos Serviços */}
-      <section id="servicos" className="py-24 px-4 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-red-50/50 to-rose-50/50" />
-        
-        <div className="container mx-auto relative z-10">
-          <FadeInUp className="text-center mb-16">
-            <Badge className="mb-4 px-4 py-2">Soluções Completas</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Nossos Serviços</h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Oferecemos soluções logísticas completas para atender todas as necessidades do seu negócio
-            </p>
-          </FadeInUp>
-          
-          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" staggerDelay={0.1}>
-            {services.map((service, index) => (
-              <StaggerItem key={index}>
-                <motion.div
-                  whileHover={{ y: -8, scale: 1.02 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <Card className="h-full bg-white/80 backdrop-blur-sm border-red-100/50 shadow-lg hover:shadow-2xl transition-shadow">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-3">
-                        <div className="p-3 bg-gradient-to-br from-red-100 to-rose-100 rounded-xl">
-                          <service.icon className="h-6 w-6 text-red-600" />
-                        </div>
-                        <span className="text-lg">{service.title}</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground">{service.description}</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-        </div>
-      </section>
-
       {/* Nosso Diferencial */}
       <section id="diferencial" className="py-24 px-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-red-50 via-rose-50 to-red-100" />
@@ -298,7 +258,45 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Sobre Nós */}
+      {/* Nossos Serviços */}
+      <section id="servicos" className="py-24 px-4 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-red-50/50 to-rose-50/50" />
+        
+        <div className="container mx-auto relative z-10">
+          <FadeInUp className="text-center mb-16">
+            <Badge className="mb-4 px-4 py-2">Soluções Completas</Badge>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">Nossos Serviços</h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              Oferecemos soluções logísticas completas para atender todas as necessidades do seu negócio
+            </p>
+          </FadeInUp>
+          
+          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" staggerDelay={0.1}>
+            {services.map((service, index) => (
+              <StaggerItem key={index}>
+                <motion.div
+                  whileHover={{ y: -8, scale: 1.02 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  <Card className="h-full bg-white/80 backdrop-blur-sm border-red-100/50 shadow-lg hover:shadow-2xl transition-shadow">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-3">
+                        <div className="p-3 bg-gradient-to-br from-red-100 to-rose-100 rounded-xl">
+                          <service.icon className="h-6 w-6 text-red-600" />
+                        </div>
+                        <span className="text-lg">{service.title}</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground">{service.description}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
+        </div>
+      </section>
       <section id="quemsomos" className="py-24 px-4 bg-white/70 backdrop-blur-sm relative overflow-hidden">
         <motion.div
           className="absolute -top-40 -right-40 w-80 h-80 bg-red-200/40 rounded-full blur-3xl"
