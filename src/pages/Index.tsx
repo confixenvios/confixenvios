@@ -53,12 +53,8 @@ const Index = () => {
   }
 
   const services = [
-    { icon: Package, title: "FRACIONADOS", description: "Rede de transporte estruturada que garante a entrega e coletas nos estados onde atua." },
-    { icon: Truck, title: "CARGA DEDICADA", description: "Soluções em cargas dedicadas para todo Brasil, utilizando uma rede de veículos cadastrados e próprios." },
-    { icon: Globe, title: "TRANSFERÊNCIAS", description: "Trabalhamos há mais de 6 anos com transferência entre Centros de Distribuição e Abastecimento de Lojas." },
-    { icon: Truck, title: "FIRST E LAST MILE E-COMMERCE", description: "Processamos mais de 5 mil pacotes e realizamos em média 3 mil entregas diariamente, com performance de 99,5%." },
-    { icon: Building, title: "CROSS DOCKING", description: "Dispomos de estrutura e equipe especializada em armazenamento, processamento e redespacho de mercadorias de parceiros." },
-    { icon: MapPin, title: "TRANSIT POINT", description: "Locamos posições de Palet, com ou sem processamento interno. Uma solução cada vez mais utilizada por empresas parceiras." },
+    { icon: TrendingUp, title: "Cotação Inteligente", description: "Na cotação, você recebe duas opções — melhor preço e menor prazo — e a Confix seleciona a melhor execução com base em regras de roteirização e performance monitorada por SLA." },
+    { icon: Package, title: "Alta Performance", description: "Processamos mais de 5 mil pacotes e realizamos em média 3 mil entregas diariamente, com performance de 98,4%." },
   ];
 
   const diferenciais = [
@@ -259,11 +255,11 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Nossos Serviços */}
+      {/* Soluções */}
       <section id="servicos" className="py-24 px-4 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-red-50/50 to-rose-50/50" />
         
-        <div className="container mx-auto relative z-10">
+        <div className="container mx-auto max-w-5xl relative z-10">
           <FadeInUp className="text-center mb-16">
             <Badge className="mb-4 px-4 py-2">Soluções Completas</Badge>
             <h2 className="text-4xl md:text-5xl font-bold mb-4">Como Simplificamos Sua Logística</h2>
@@ -272,24 +268,24 @@ const Index = () => {
             </p>
           </FadeInUp>
           
-          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" staggerDelay={0.1}>
+          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-8" staggerDelay={0.15}>
             {services.map((service, index) => (
               <StaggerItem key={index}>
                 <motion.div
                   whileHover={{ y: -8, scale: 1.02 }}
                   transition={{ type: "spring", stiffness: 300 }}
+                  className="h-full"
                 >
-                  <Card className="h-full bg-white/80 backdrop-blur-sm border-red-100/50 shadow-lg hover:shadow-2xl transition-shadow">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-3">
-                        <div className="p-3 bg-gradient-to-br from-red-100 to-rose-100 rounded-xl">
-                          <service.icon className="h-6 w-6 text-red-600" />
-                        </div>
-                        <span className="text-lg">{service.title}</span>
-                      </CardTitle>
+                  <Card className="h-full bg-white/90 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all overflow-hidden">
+                    <div className="h-2 bg-gradient-to-r from-red-600 to-red-500" />
+                    <CardHeader className="pb-4">
+                      <div className="w-16 h-16 bg-gradient-to-br from-red-600 to-red-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+                        <service.icon className="h-8 w-8 text-white" />
+                      </div>
+                      <CardTitle className="text-2xl font-bold">{service.title}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-muted-foreground">{service.description}</p>
+                      <p className="text-muted-foreground text-lg leading-relaxed">{service.description}</p>
                     </CardContent>
                   </Card>
                 </motion.div>
