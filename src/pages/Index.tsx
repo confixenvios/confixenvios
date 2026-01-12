@@ -62,10 +62,10 @@ const Index = () => {
   ];
 
   const diferenciais = [
-    { number: "01", title: "Experiência", description: "Mais de 10 anos de experiência em Transferência Line Haul e Abastecimento de Lojas" },
-    { number: "02", title: "Frota Própria", description: "Garantimos a qualidade e segurança do transporte com nossa frota, veículos reservas e seleção minuciosa de agregados." },
-    { number: "03", title: "Tecnologia", description: "Sistema para gerenciar a frota e rastrear as cargas, proporcionando total controle e transparência." },
-    { number: "04", title: "Atendimento Personalizado", description: "Adaptamos nossas soluções às necessidades específicas de cada cliente, buscando o melhor resultado." },
+    { number: "01", title: "EXPERIÊNCIA", description: "+10 anos em transferência, abastecimento e last mile. Rede de parceiros homologados com eficiência e responsabilidade em todo Brasil." },
+    { number: "02", title: "ECOSSISTEMA LOGÍSTICO", description: "Integrados às melhores transportadoras do país. Cobertura nacional com execução orientada pelo nível de serviço." },
+    { number: "03", title: "SEU NEGÓCIO, SUA NECESSIDADE", description: "Adaptamos nossa solução à sua realidade: prazo, custo e performance com governança e acompanhamento contínuo." },
+    { number: "04", title: "TECNOLOGIA PRÓPRIA", description: "Rastreabilidade, controle e transparência em todas as etapas. Acesso em tempo real e relatórios operacionais completos." },
   ];
 
   const clientLogos = [
@@ -214,32 +214,33 @@ const Index = () => {
       <section id="diferencial" className="py-24 px-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-red-50 via-rose-50 to-red-100" />
         
-        <div className="container mx-auto relative z-10">
+        <div className="container mx-auto max-w-5xl relative z-10">
           <FadeInUp className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Excelência logística para operações que exigem <span className="text-red-600">agilidade</span>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
+              <span className="text-red-600">Confix Envios:</span> tecnologia e governança para simplificar a logística <span className="text-red-600">B2B e B2C</span>
             </h2>
-            <p className="text-xl text-muted-foreground max-w-4xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
               Combinamos estrutura própria, tecnologia e atendimento consultivo para oferecer entregas sob medida.
             </p>
           </FadeInUp>
           
-          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12" staggerDelay={0.15}>
+          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12" staggerDelay={0.15}>
             {diferenciais.map((item, index) => (
               <StaggerItem key={index}>
                 <motion.div 
-                  className="text-center p-6"
-                  whileHover={{ y: -5 }}
+                  className="text-center p-8 bg-white/60 backdrop-blur-sm rounded-2xl"
+                  whileHover={{ y: -5, backgroundColor: "rgba(255,255,255,0.8)" }}
+                  transition={{ type: "spring", stiffness: 300 }}
                 >
                   <motion.div 
-                    className="w-20 h-20 bg-gradient-to-br from-red-600 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
+                    className="w-16 h-16 bg-gradient-to-br from-red-600 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg"
                     whileHover={{ rotate: 5, scale: 1.1 }}
                     transition={{ type: "spring", stiffness: 300 }}
                   >
-                    <span className="text-2xl font-bold text-white">{item.number}</span>
+                    <span className="text-xl font-bold text-white">{item.number}</span>
                   </motion.div>
-                  <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
-                  <p className="text-muted-foreground">{item.description}</p>
+                  <h3 className="text-lg font-bold mb-3 uppercase tracking-wide">{item.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{item.description}</p>
                 </motion.div>
               </StaggerItem>
             ))}
