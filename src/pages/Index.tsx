@@ -310,7 +310,7 @@ const Index = () => {
             <FadeInLeft>
               <Badge variant="secondary" className="mb-4">Sobre Nós</Badge>
               <RevealText>
-                <h2 className="text-4xl md:text-5xl font-bold mb-6">CONFIX ENVIOS</h2>
+                <h2 className="text-4xl md:text-5xl font-bold mb-6">Confix Envios</h2>
               </RevealText>
               
               <div className="flex flex-wrap gap-3 mb-8">
