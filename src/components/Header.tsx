@@ -209,13 +209,19 @@ const Header = () => {
   };
 
   const navLinks = [
-    { href: '#servicos', label: 'Serviços' },
+    { href: '/cotacaopreview', label: 'Cotar', isRoute: true },
     { href: '#diferencial', label: 'Diferencial' },
+    { href: '#servicos', label: 'Serviços' },
     { href: '#quemsomos', label: 'Sobre' },
     { href: '#contato', label: 'Contato' },
   ];
 
-  const handleNavClick = (href: string) => {
+  const handleNavClick = (href: string, isRoute?: boolean) => {
+    if (isRoute) {
+      navigate(href);
+      setMobileMenuOpen(false);
+      return;
+    }
     const id = href.replace('#', '');
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
     setMobileMenuOpen(false);
@@ -256,7 +262,7 @@ const Header = () => {
               {navLinks.map((link) => (
                 <button
                   key={link.href}
-                  onClick={() => handleNavClick(link.href)}
+                  onClick={() => handleNavClick(link.href, link.isRoute)}
                   className="relative px-4 py-2 text-[15px] font-medium text-foreground/80 hover:text-primary transition-colors duration-200 rounded-lg hover:bg-primary/5 group"
                 >
                   {link.label}
@@ -287,7 +293,7 @@ const Header = () => {
                   {navLinks.map((link) => (
                     <button
                       key={link.href}
-                      onClick={() => handleNavClick(link.href)}
+                      onClick={() => handleNavClick(link.href, link.isRoute)}
                       className="text-left text-base font-medium text-foreground/80 hover:text-primary hover:bg-primary/5 transition-all duration-200 py-3 px-4 rounded-lg"
                     >
                       {link.label}
