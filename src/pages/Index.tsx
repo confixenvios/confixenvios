@@ -1,11 +1,11 @@
 import Header from "@/components/Header";
 import { Truck, Package, Building, Globe, MapPin, Phone, Mail, DollarSign, Clock, TrendingUp, Instagram, Facebook, CheckCircle, Sparkles, Network, Target, Monitor } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import {
   FadeInUp,
@@ -33,9 +33,24 @@ import HeroBackground from "@/components/animations/HeroBackground";
 
 const Index = () => {
   const { loading } = useAuth();
+  const location = useLocation();
   const { scrollYProgress } = useScroll();
   const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
   const heroScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
+
+  // Handle hash navigation from other pages
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.replace('#', '');
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }, [location.hash]);
 
   if (loading) {
     return (
