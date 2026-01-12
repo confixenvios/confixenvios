@@ -209,9 +209,9 @@ const Header = () => {
   };
 
   const navLinks = [
-    { href: '/cotacaopreview', label: 'Cotar', isRoute: true },
     { href: '#diferencial', label: 'Diferencial' },
     { href: '#servicos', label: 'Serviços' },
+    { href: '/cotacaopreview', label: 'Cotar', isRoute: true },
     { href: '#quemsomos', label: 'Sobre' },
     { href: '#contato', label: 'Contato' },
   ];
