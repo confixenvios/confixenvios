@@ -222,7 +222,18 @@ const Header = () => {
       setMobileMenuOpen(false);
       return;
     }
+    
     const id = href.replace('#', '');
+    const currentPath = window.location.pathname;
+    
+    // Se não estiver na página principal, navega para ela com o hash
+    if (currentPath !== '/') {
+      navigate('/' + href);
+      setMobileMenuOpen(false);
+      return;
+    }
+    
+    // Se já estiver na página principal, faz scroll suave
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
     setMobileMenuOpen(false);
   };
