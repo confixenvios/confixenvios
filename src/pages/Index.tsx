@@ -329,7 +329,7 @@ const Index = () => {
                 também atuando em transferências, first mile, e mais recentemente o fracionado focado no B2B. 
               </p>
               
-              <p className="text-muted-foreground mb-8 leading-relaxed">
+              <p className="text-muted-foreground mb-8 leading-relaxed text-lg">
                 Com atuação em todo o Brasil, temos o propósito de estruturar uma malha logística inteligente e 
                 eficiente, garantindo agilidade e alto desempenho operacional. Mais de 10 anos de experiência em 
                 Transferência Line Haul, Abastecimento de Lojas, Last Mile, First Mile Ecommerce.
