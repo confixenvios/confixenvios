@@ -336,8 +336,11 @@ const Index = () => {
               </p>
               
               <MagneticButton>
-                <Button size="lg" className="shadow-lg" asChild>
-                  <Link to="/cotacaopreview">COTAR FRETE</Link>
+                <Button size="lg" className="px-10 shadow-xl" asChild>
+                  <Link to="/cotacaopreview">
+                    <CheckCircle className="mr-2 h-5 w-5" />
+                    COTAR FRETE
+                  </Link>
                 </Button>
               </MagneticButton>
             </FadeInLeft>
