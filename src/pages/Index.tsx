@@ -266,7 +266,7 @@ const Index = () => {
         <div className="container mx-auto relative z-10">
           <FadeInUp className="text-center mb-16">
             <Badge className="mb-4 px-4 py-2">Soluções Completas</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Nossos Serviços</h2>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">Como Simplificamos Sua Logística</h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               Oferecemos soluções logísticas completas para atender todas as necessidades do seu negócio
             </p>
