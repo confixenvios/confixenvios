@@ -217,7 +217,7 @@ const Index = () => {
         <div className="container mx-auto max-w-5xl relative z-10">
           <FadeInUp className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
-              <span className="text-red-600">Confix Envios:</span> tecnologia e governança para simplificar a logística <span className="text-red-600">B2B e B2C</span>
+              <span className="text-red-600">Confix Envios</span> tecnologia e governança para simplificar a logística <span className="text-red-600">B2B e B2C</span>
             </h2>
             <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
               Combinamos estrutura própria, tecnologia e atendimento consultivo para oferecer entregas sob medida.
