@@ -319,7 +319,7 @@ const Index = () => {
                     transition={{ delay: i * 0.1 }}
                     viewport={{ once: true }}
                   >
-                    <Badge variant="outline" className="px-4 py-2">{tag}</Badge>
+                    <Badge className="px-4 py-2 bg-red-600 text-white hover:bg-red-700">{tag}</Badge>
                   </motion.div>
                 ))}
               </div>
