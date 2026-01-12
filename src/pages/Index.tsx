@@ -250,6 +250,54 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Nosso Diferencial */}
+      <section id="diferencial" className="py-24 px-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-red-50 via-rose-50 to-red-100" />
+        
+        <div className="container mx-auto relative z-10">
+          <FadeInUp className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              Excelência logística para operações que exigem <span className="text-red-600">agilidade</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-4xl mx-auto">
+              Combinamos estrutura própria, tecnologia e atendimento consultivo para oferecer entregas sob medida.
+            </p>
+          </FadeInUp>
+          
+          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12" staggerDelay={0.15}>
+            {diferenciais.map((item, index) => (
+              <StaggerItem key={index}>
+                <motion.div 
+                  className="text-center p-6"
+                  whileHover={{ y: -5 }}
+                >
+                  <motion.div 
+                    className="w-20 h-20 bg-gradient-to-br from-red-600 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
+                    whileHover={{ rotate: 5, scale: 1.1 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    <span className="text-2xl font-bold text-white">{item.number}</span>
+                  </motion.div>
+                  <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
+                  <p className="text-muted-foreground">{item.description}</p>
+                </motion.div>
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
+          
+          <ScaleIn className="text-center">
+            <MagneticButton>
+              <Button size="lg" className="px-10 shadow-xl" asChild>
+                <Link to="/cotacaopreview">
+                  <CheckCircle className="mr-2 h-5 w-5" />
+                  COTAR FRETE
+                </Link>
+              </Button>
+            </MagneticButton>
+          </ScaleIn>
+        </div>
+      </section>
+
       {/* Sobre Nós */}
       <section id="quemsomos" className="py-24 px-4 bg-white/70 backdrop-blur-sm relative overflow-hidden">
         <motion.div
@@ -315,54 +363,6 @@ const Index = () => {
               </ParallaxSection>
             </FadeInRight>
           </div>
-        </div>
-      </section>
-
-      {/* Nosso Diferencial */}
-      <section id="diferencial" className="py-24 px-4 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-red-50 via-rose-50 to-red-100" />
-        
-        <div className="container mx-auto relative z-10">
-          <FadeInUp className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Excelência logística para operações que exigem <span className="text-red-600">agilidade</span>
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-4xl mx-auto">
-              Combinamos estrutura própria, tecnologia e atendimento consultivo para oferecer entregas sob medida.
-            </p>
-          </FadeInUp>
-          
-          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12" staggerDelay={0.15}>
-            {diferenciais.map((item, index) => (
-              <StaggerItem key={index}>
-                <motion.div 
-                  className="text-center p-6"
-                  whileHover={{ y: -5 }}
-                >
-                  <motion.div 
-                    className="w-20 h-20 bg-gradient-to-br from-red-600 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
-                    whileHover={{ rotate: 5, scale: 1.1 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  >
-                    <span className="text-2xl font-bold text-white">{item.number}</span>
-                  </motion.div>
-                  <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
-                  <p className="text-muted-foreground">{item.description}</p>
-                </motion.div>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-          
-          <ScaleIn className="text-center">
-            <MagneticButton>
-              <Button size="lg" className="px-10 shadow-xl" asChild>
-                <Link to="/cotacaopreview">
-                  <CheckCircle className="mr-2 h-5 w-5" />
-                  COTAR FRETE
-                </Link>
-              </Button>
-            </MagneticButton>
-          </ScaleIn>
         </div>
       </section>
 
