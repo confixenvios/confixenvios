@@ -1,10 +1,11 @@
-import { User, LogIn, Truck, Menu, Search } from "lucide-react";
+import { User, LogIn, Truck, Menu, Search, X, ChevronUp, ChevronDown } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from '@/hooks/useAuth';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -33,6 +34,13 @@ const Header = () => {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [matchCount, setMatchCount] = useState(0);
+  const [currentMatch, setCurrentMatch] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const highlightClass = 'bg-yellow-300 text-black';
+  const currentHighlightClass = 'bg-orange-400 text-black';
 
   // Detect scroll for header background effect
   useEffect(() => {
@@ -42,6 +50,163 @@ const Header = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Focus input when search opens
+  useEffect(() => {
+    if (searchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [searchOpen]);
+
+  // Clear highlights when search closes
+  useEffect(() => {
+    if (!searchOpen) {
+      clearHighlights();
+      setSearchQuery('');
+      setMatchCount(0);
+      setCurrentMatch(0);
+    }
+  }, [searchOpen]);
+
+  const clearHighlights = useCallback(() => {
+    const marks = document.querySelectorAll('mark[data-search-highlight]');
+    marks.forEach(mark => {
+      const parent = mark.parentNode;
+      if (parent) {
+        parent.replaceChild(document.createTextNode(mark.textContent || ''), mark);
+        parent.normalize();
+      }
+    });
+  }, []);
+
+  const highlightText = useCallback((query: string) => {
+    clearHighlights();
+    
+    if (!query.trim()) {
+      setMatchCount(0);
+      setCurrentMatch(0);
+      return;
+    }
+
+    const walker = document.createTreeWalker(
+      document.querySelector('main') || document.body,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: (node) => {
+          // Skip script, style, header, and already highlighted elements
+          const parent = node.parentElement;
+          if (!parent) return NodeFilter.FILTER_REJECT;
+          const tagName = parent.tagName.toLowerCase();
+          if (['script', 'style', 'noscript', 'mark', 'input', 'textarea'].includes(tagName)) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          if (parent.closest('header')) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      }
+    );
+
+    const matches: { node: Text; index: number }[] = [];
+    const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    
+    let node: Node | null;
+    while ((node = walker.nextNode())) {
+      const textNode = node as Text;
+      const text = textNode.textContent || '';
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        matches.push({ node: textNode, index: match.index });
+      }
+    }
+
+    // Highlight matches in reverse order to preserve indices
+    const processedNodes = new Set<Text>();
+    matches.reverse().forEach((match, reverseIndex) => {
+      if (processedNodes.has(match.node)) return;
+      
+      const textNode = match.node;
+      const text = textNode.textContent || '';
+      const parent = textNode.parentNode;
+      if (!parent) return;
+
+      const fragment = document.createDocumentFragment();
+      let lastIndex = 0;
+      let localRegex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      let localMatch;
+      
+      while ((localMatch = localRegex.exec(text)) !== null) {
+        if (localMatch.index > lastIndex) {
+          fragment.appendChild(document.createTextNode(text.slice(lastIndex, localMatch.index)));
+        }
+        const mark = document.createElement('mark');
+        mark.setAttribute('data-search-highlight', 'true');
+        mark.className = highlightClass;
+        mark.textContent = localMatch[0];
+        fragment.appendChild(mark);
+        lastIndex = localRegex.lastIndex;
+      }
+      
+      if (lastIndex < text.length) {
+        fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+      }
+      
+      parent.replaceChild(fragment, textNode);
+      processedNodes.add(textNode);
+    });
+
+    const allMarks = document.querySelectorAll('mark[data-search-highlight]');
+    setMatchCount(allMarks.length);
+    
+    if (allMarks.length > 0) {
+      setCurrentMatch(1);
+      updateCurrentHighlight(1, allMarks);
+    } else {
+      setCurrentMatch(0);
+    }
+  }, [clearHighlights, highlightClass]);
+
+  const updateCurrentHighlight = (index: number, marks?: NodeListOf<Element>) => {
+    const allMarks = marks || document.querySelectorAll('mark[data-search-highlight]');
+    allMarks.forEach((mark, i) => {
+      if (i === index - 1) {
+        mark.className = currentHighlightClass;
+        mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        mark.className = highlightClass;
+      }
+    });
+  };
+
+  const goToNextMatch = () => {
+    if (matchCount === 0) return;
+    const next = currentMatch >= matchCount ? 1 : currentMatch + 1;
+    setCurrentMatch(next);
+    updateCurrentHighlight(next);
+  };
+
+  const goToPrevMatch = () => {
+    if (matchCount === 0) return;
+    const prev = currentMatch <= 1 ? matchCount : currentMatch - 1;
+    setCurrentMatch(prev);
+    updateCurrentHighlight(prev);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    highlightText(value);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      if (e.shiftKey) {
+        goToPrevMatch();
+      } else {
+        goToNextMatch();
+      }
+    } else if (e.key === 'Escape') {
+      setSearchOpen(false);
+    }
+  };
 
   const navLinks = [
     { href: '#servicos', label: 'Serviços' },
@@ -203,17 +368,60 @@ const Header = () => {
                   </div>
                 ) : (
                   <div className="flex items-center space-x-2">
-                    <Button 
-                      variant="ghost"
-                      size="icon"
-                      className="hidden sm:flex h-10 w-10 text-foreground/70 hover:text-primary hover:bg-primary/5"
-                      onClick={() => {
-                        // TODO: Implement search functionality
-                        console.log('Search clicked');
-                      }}
-                    >
-                      <Search className="h-5 w-5" />
-                    </Button>
+                    {searchOpen ? (
+                      <div className="flex items-center space-x-1 bg-background border border-border rounded-lg px-2 py-1 shadow-lg animate-in fade-in slide-in-from-right-2 duration-200">
+                        <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <Input
+                          ref={searchInputRef}
+                          type="text"
+                          placeholder="Buscar na página..."
+                          value={searchQuery}
+                          onChange={(e) => handleSearchChange(e.target.value)}
+                          onKeyDown={handleSearchKeyDown}
+                          className="h-8 w-40 sm:w-48 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
+                        />
+                        {matchCount > 0 && (
+                          <span className="text-xs text-muted-foreground whitespace-nowrap px-1">
+                            {currentMatch}/{matchCount}
+                          </span>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={goToPrevMatch}
+                          disabled={matchCount === 0}
+                        >
+                          <ChevronUp className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={goToNextMatch}
+                          disabled={matchCount === 0}
+                        >
+                          <ChevronDown className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setSearchOpen(false)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button 
+                        variant="ghost"
+                        size="icon"
+                        className="hidden sm:flex h-10 w-10 text-foreground/70 hover:text-primary hover:bg-primary/5"
+                        onClick={() => setSearchOpen(true)}
+                      >
+                        <Search className="h-5 w-5" />
+                      </Button>
+                    )}
                     <Button 
                       className="hidden sm:flex h-10 px-5 bg-primary text-primary-foreground hover:bg-primary font-semibold rounded-md"
                       onClick={() => setLoginModalOpen(true)}
