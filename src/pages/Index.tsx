@@ -201,7 +201,7 @@ const Index = () => {
                   <img 
                     src={logo.src} 
                     alt={logo.alt} 
-                    className="max-h-12 max-w-32 object-contain opacity-60 hover:opacity-100 transition-opacity grayscale hover:grayscale-0" 
+                    className="max-h-12 max-w-32 object-contain" 
                   />
                 </div>
               ))}
