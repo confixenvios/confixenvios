@@ -205,55 +205,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Nosso Diferencial */}
-      <section id="diferencial" className="py-24 px-4 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-red-50 via-rose-50 to-red-100" />
-        
-        <div className="container mx-auto max-w-5xl relative z-10">
-          <FadeInUp className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
-              <span className="text-red-600">Confix Envios</span> tecnologia e governança para simplificar a logística <span className="text-red-600">B2B e B2C</span>
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-              Combinamos estrutura própria, tecnologia e atendimento consultivo para oferecer entregas sob medida.
-            </p>
-          </FadeInUp>
-          
-          <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-6" staggerDelay={0.15}>
-            {diferenciais.map((item, index) => (
-              <StaggerItem key={index}>
-                <motion.div 
-                  className="text-center p-8 bg-white/60 backdrop-blur-sm rounded-2xl h-full"
-                  whileHover={{ y: -5, backgroundColor: "rgba(255,255,255,0.8)" }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <motion.div 
-                    className="w-16 h-16 bg-gradient-to-br from-red-600 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg"
-                    whileHover={{ rotate: 5, scale: 1.1 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  >
-                    <item.icon className="h-8 w-8 text-white" />
-                  </motion.div>
-                  <h3 className="text-lg font-bold mb-3 uppercase tracking-wide">{item.title}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">{item.description}</p>
-                </motion.div>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-          
-          <ScaleIn className="text-center mt-12">
-            <MagneticButton>
-              <Button size="lg" className="px-10 shadow-xl" asChild>
-                <Link to="/cotacaopreview">
-                  <CheckCircle className="mr-2 h-5 w-5" />
-                  COTAR FRETE
-                </Link>
-              </Button>
-            </MagneticButton>
-          </ScaleIn>
-        </div>
-      </section>
-
       {/* Soluções */}
       <section id="servicos" className="py-24 px-4 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-red-50/50 to-rose-50/50" />
@@ -291,6 +242,56 @@ const Index = () => {
               </StaggerItem>
             ))}
           </StaggerContainer>
+        </div>
+      </section>
+
+      {/* Nosso Diferencial */}
+      <section id="diferencial" className="py-24 px-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-red-50 via-rose-50 to-red-100" />
+        
+        <div className="container mx-auto max-w-5xl relative z-10">
+          <FadeInUp className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
+              <span className="text-red-600">Confix Envios</span> tecnologia e governança para simplificar a logística <span className="text-red-600">B2B e B2C</span>
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+              Combinamos estrutura própria, tecnologia e atendimento consultivo para oferecer entregas sob medida.
+            </p>
+          </FadeInUp>
+          
+          <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-6" staggerDelay={0.15}>
+            {diferenciais.map((item, index) => (
+              <StaggerItem key={index}>
+                <motion.div 
+                  className="text-center p-8 bg-white/60 backdrop-blur-sm rounded-2xl h-full overflow-hidden relative"
+                  whileHover={{ y: -5, backgroundColor: "rgba(255,255,255,0.8)" }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-red-600 to-red-500" />
+                  <motion.div 
+                    className="w-16 h-16 bg-gradient-to-br from-red-600 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg mt-2"
+                    whileHover={{ rotate: 5, scale: 1.1 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    <item.icon className="h-8 w-8 text-white" />
+                  </motion.div>
+                  <h3 className="text-lg font-bold mb-3 uppercase tracking-wide">{item.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{item.description}</p>
+                </motion.div>
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
+          
+          <ScaleIn className="text-center mt-12">
+            <MagneticButton>
+              <Button size="lg" className="px-10 shadow-xl" asChild>
+                <Link to="/cotacaopreview">
+                  <CheckCircle className="mr-2 h-5 w-5" />
+                  COTAR FRETE
+                </Link>
+              </Button>
+            </MagneticButton>
+          </ScaleIn>
         </div>
       </section>
       <section id="quemsomos" className="py-24 px-4 bg-white/70 backdrop-blur-sm relative overflow-hidden">
