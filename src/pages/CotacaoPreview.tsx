@@ -523,7 +523,7 @@ const CotacaoPreview = () => {
       <Header />
 
       {/* Hero Section */}
-      <section className="relative py-8 sm:py-12 px-2 sm:px-4 overflow-hidden">
+      <section className="relative pt-24 sm:pt-28 md:pt-32 pb-8 sm:pb-12 px-2 sm:px-4 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-glow opacity-30"></div>
         <div className="container mx-auto text-center relative">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 leading-normal">
