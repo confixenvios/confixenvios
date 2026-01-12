@@ -1,5 +1,5 @@
 import Header from "@/components/Header";
-import { Truck, Package, Building, Globe, MapPin, Phone, Mail, DollarSign, Clock, TrendingUp, Instagram, Facebook, CheckCircle, Sparkles } from "lucide-react";
+import { Truck, Package, Building, Globe, MapPin, Phone, Mail, DollarSign, Clock, TrendingUp, Instagram, Facebook, CheckCircle, Sparkles, Network, Target, Monitor } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -58,9 +58,9 @@ const Index = () => {
   ];
 
   const diferenciais = [
-    { number: "01", title: "ECOSSISTEMA LOGÍSTICO", description: "Integração com múltiplas transportadoras, ampliando capacidade e agilidade. Cobertura nacional com foco em qualidade e eficiência operacional orientada a SLA." },
-    { number: "02", title: "SEU NEGÓCIO, SUA NECESSIDADE", description: "Solução adaptável às particularidades de cada operação, buscando o melhor equilíbrio entre prazo, custo e performance, com governança contínua." },
-    { number: "03", title: "TECNOLOGIA", description: "Plataforma desenvolvida com rastreabilidade, controle e transparência em tempo real. Total controle de todos os envios através de nosso portal como: relatórios, rastreio, histórico de pendências." },
+    { icon: Network, title: "ECOSSISTEMA LOGÍSTICO", description: "Integração com múltiplas transportadoras, ampliando capacidade e agilidade. Cobertura nacional com foco em qualidade e eficiência operacional orientada a SLA." },
+    { icon: Target, title: "SEU NEGÓCIO, SUA NECESSIDADE", description: "Solução adaptável às particularidades de cada operação, buscando o melhor equilíbrio entre prazo, custo e performance, com governança contínua." },
+    { icon: Monitor, title: "TECNOLOGIA", description: "Plataforma desenvolvida com rastreabilidade, controle e transparência em tempo real. Total controle de todos os envios através de nosso portal como: relatórios, rastreio, histórico de pendências." },
   ];
 
   const clientLogos = [
@@ -219,11 +219,11 @@ const Index = () => {
             </p>
           </FadeInUp>
           
-          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12" staggerDelay={0.15}>
+          <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-6" staggerDelay={0.15}>
             {diferenciais.map((item, index) => (
               <StaggerItem key={index}>
                 <motion.div 
-                  className="text-center p-8 bg-white/60 backdrop-blur-sm rounded-2xl"
+                  className="text-center p-8 bg-white/60 backdrop-blur-sm rounded-2xl h-full"
                   whileHover={{ y: -5, backgroundColor: "rgba(255,255,255,0.8)" }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
@@ -232,7 +232,7 @@ const Index = () => {
                     whileHover={{ rotate: 5, scale: 1.1 }}
                     transition={{ type: "spring", stiffness: 300 }}
                   >
-                    <span className="text-xl font-bold text-white">{item.number}</span>
+                    <item.icon className="h-8 w-8 text-white" />
                   </motion.div>
                   <h3 className="text-lg font-bold mb-3 uppercase tracking-wide">{item.title}</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">{item.description}</p>
