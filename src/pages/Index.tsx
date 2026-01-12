@@ -304,6 +304,7 @@ const Index = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <FadeInLeft>
               <Badge variant="secondary" className="mb-4">Sobre Nós</Badge>
+              <p className="text-sm uppercase tracking-widest text-muted-foreground mb-2">Como Simplificamos Sua Logística</p>
               <RevealText>
                 <h2 className="text-4xl md:text-5xl font-bold mb-6 text-red-600">Confix Envios</h2>
               </RevealText>
