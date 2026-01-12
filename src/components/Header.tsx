@@ -227,9 +227,8 @@ const Header = () => {
     setMobileMenuOpen(false);
   };
 
-  const handleLogoClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const handleLogoClick = () => {
+    navigate('/');
   };
 
   return (
