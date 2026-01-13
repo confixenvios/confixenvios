@@ -54,6 +54,34 @@ interface Shipment {
   };
 }
 
+interface CarrierTrackingEvent {
+  data: string;
+  status: string;
+  unidade?: string;
+  idOcorrencia?: number;
+}
+
+interface CarrierTrackingData {
+  codigo: string;
+  tracking: {
+    codigo: string;
+    shipmentId: string;
+    dacte?: string;
+    dtEmissao?: string;
+    status: string;
+    valor?: number;
+    peso?: number;
+    eventos: CarrierTrackingEvent[];
+    volumes?: Array<{
+      peso: number;
+      altura: number;
+      largura: number;
+      comprimento: number;
+    }>;
+  };
+  previsaoEntrega?: string;
+}
+
 const ClientRemessas = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -65,6 +93,7 @@ const ClientRemessas = () => {
   const [trackingModalOpen, setTrackingModalOpen] = useState(false);
   const [trackingShipment, setTrackingShipment] = useState<Shipment | null>(null);
   const [statusHistory, setStatusHistory] = useState<any[]>([]);
+  const [carrierTrackingData, setCarrierTrackingData] = useState<CarrierTrackingData | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -251,11 +280,18 @@ const ClientRemessas = () => {
     }
   };
 
+  const getCarrier = (shipment: Shipment): string => {
+    return shipment.quote_data?.deliveryDetails?.selectedCarrier || 
+           shipment.quote_data?.quoteData?.selectedCarrier ||
+           'jadlog';
+  };
+
   const handleShowTracking = async (shipment: Shipment) => {
-    if (!shipment.tracking_code) {
+    // Verificar se tem cte_key (código da transportadora)
+    if (!shipment.cte_key) {
       toast({
-        title: "Código de rastreio não disponível",
-        description: "Esta remessa ainda não possui código de rastreio.",
+        title: "Rastreio não disponível",
+        description: "Esta remessa ainda não possui código de rastreio da transportadora.",
         variant: "destructive"
       });
       return;
@@ -263,22 +299,20 @@ const ClientRemessas = () => {
 
     setLoadingHistory(true);
     setTrackingShipment(shipment);
-    
-    toast({
-      title: "Consultando rastreamento...",
-      description: "Aguarde enquanto buscamos as informações.",
-    });
+    setCarrierTrackingData(null);
+    setTrackingModalOpen(true);
 
     try {
+      const carrier = getCarrier(shipment);
+      
       const response = await fetch('https://webhook.grupoconfix.com/webhook/47827545-77ca-4e68-8b43-9c50467a3f55', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          trackingCode: shipment.tracking_code,
-          shipmentId: shipment.id,
-          codigo: shipment.cte_key
+          codigo: shipment.cte_key,
+          transportadora: carrier
         }),
       });
 
@@ -287,17 +321,29 @@ const ClientRemessas = () => {
       }
 
       const data = await response.json();
+      console.log('📦 Resposta do rastreio:', data);
       
-      // Transform webhook response to status history format if needed
-      if (Array.isArray(data)) {
+      // Parse response - can be array with consulta or direct object
+      if (Array.isArray(data) && data[0]?.consulta) {
+        // Format: [{ consulta: [{ codigo, tracking, previsaoEntrega }] }]
+        const trackingInfo = data[0].consulta[0];
+        setCarrierTrackingData(trackingInfo);
+        setStatusHistory(trackingInfo?.tracking?.eventos || []);
+      } else if (data.consulta) {
+        // Format: { consulta: [{ codigo, tracking, previsaoEntrega }] }
+        const trackingInfo = data.consulta[0];
+        setCarrierTrackingData(trackingInfo);
+        setStatusHistory(trackingInfo?.tracking?.eventos || []);
+      } else if (data.tracking?.eventos) {
+        // Direct tracking format
+        setCarrierTrackingData(data);
+        setStatusHistory(data.tracking.eventos || []);
+      } else if (Array.isArray(data)) {
         setStatusHistory(data);
-      } else if (data.events || data.historico) {
-        setStatusHistory(data.events || data.historico || []);
       } else {
-        setStatusHistory([data]);
+        setStatusHistory([]);
       }
       
-      setTrackingModalOpen(true);
     } catch (error) {
       console.error('Erro ao buscar rastreio:', error);
       toast({
@@ -306,9 +352,33 @@ const ClientRemessas = () => {
         variant: "destructive"
       });
       setStatusHistory([]);
+      setCarrierTrackingData(null);
     } finally {
       setLoadingHistory(false);
     }
+  };
+
+  const getCarrierStatusColor = (status: string) => {
+    const statusUpper = status?.toUpperCase() || '';
+    if (statusUpper.includes('ENTREGUE') || statusUpper.includes('DELIVERED')) {
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    }
+    if (statusUpper.includes('ROTA') || statusUpper.includes('TRANSIT')) {
+      return 'bg-blue-50 text-blue-700 border-blue-200';
+    }
+    if (statusUpper.includes('TRANSFERE') || statusUpper.includes('TRANSFERI')) {
+      return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    }
+    if (statusUpper.includes('ENTRADA')) {
+      return 'bg-purple-50 text-purple-700 border-purple-200';
+    }
+    if (statusUpper.includes('COLETA') || statusUpper.includes('EMISSAO')) {
+      return 'bg-amber-50 text-amber-700 border-amber-200';
+    }
+    if (statusUpper.includes('AUSENTE') || statusUpper.includes('OCORRENCIA')) {
+      return 'bg-red-50 text-red-700 border-red-200';
+    }
+    return 'bg-gray-50 text-gray-700 border-gray-200';
   };
 
   const filteredShipments = shipments
@@ -467,8 +537,9 @@ const ClientRemessas = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        disabled
-                        className="opacity-50 cursor-not-allowed"
+                        onClick={() => handleShowTracking(shipment)}
+                        disabled={!shipment.cte_key}
+                        className={!shipment.cte_key ? "opacity-50 cursor-not-allowed" : ""}
                       >
                         <History className="h-4 w-4 mr-1" />
                         Rastreio
@@ -599,49 +670,98 @@ const ClientRemessas = () => {
           <ScrollArea className="h-[calc(85vh-100px)] px-6 py-4">
             {trackingShipment && (
               <div className="space-y-4">
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                  <p className="text-sm text-muted-foreground">Código de Rastreio</p>
-                  <p className="font-mono font-bold text-lg">
-                    {trackingShipment.tracking_code || `ID${trackingShipment.id.slice(0, 10).toUpperCase()}`}
-                  </p>
+                {/* Informações gerais */}
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Código Confix</p>
+                      <p className="font-mono font-bold text-base">
+                        {trackingShipment.tracking_code || `ID${trackingShipment.id.slice(0, 10).toUpperCase()}`}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Código Transportadora</p>
+                      <p className="font-mono font-semibold text-sm">
+                        {trackingShipment.cte_key || '-'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {carrierTrackingData && (
+                    <>
+                      <hr className="border-border" />
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Status Atual</p>
+                          <Badge className={`text-xs font-medium border ${getCarrierStatusColor(carrierTrackingData.tracking?.status)}`}>
+                            {carrierTrackingData.tracking?.status || 'N/A'}
+                          </Badge>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Previsão Entrega</p>
+                          <p className="font-semibold">
+                            {carrierTrackingData.previsaoEntrega 
+                              ? format(new Date(carrierTrackingData.previsaoEntrega + 'T12:00:00'), 'dd/MM/yyyy')
+                              : 'N/A'}
+                          </p>
+                        </div>
+                        {carrierTrackingData.tracking?.dtEmissao && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Data Emissão</p>
+                            <p className="font-medium">{carrierTrackingData.tracking.dtEmissao}</p>
+                          </div>
+                        )}
+                        {carrierTrackingData.tracking?.peso && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Peso</p>
+                            <p className="font-medium">{carrierTrackingData.tracking.peso} kg</p>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
                 
                 <h4 className="font-semibold flex items-center gap-2">
                   <History className="h-4 w-4" />
-                  Histórico de Status
+                  Histórico de Movimentações
                 </h4>
                 
                 {loadingHistory ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Package className="h-6 w-6 animate-pulse text-primary" />
+                  <div className="flex flex-col items-center justify-center py-8 gap-2">
+                    <Package className="h-8 w-8 animate-pulse text-primary" />
+                    <p className="text-sm text-muted-foreground">Consultando transportadora...</p>
                   </div>
                 ) : statusHistory.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>Nenhum histórico disponível</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {statusHistory.map((history, index) => (
+                  <div className="space-y-2">
+                    {[...statusHistory].reverse().map((event, index) => (
                       <div 
-                        key={history.id} 
-                        className="relative pl-6 pb-4 border-l-2 border-primary/30 last:border-l-0"
+                        key={`${event.data}-${index}`} 
+                        className="relative pl-6 pb-3 border-l-2 border-primary/30 last:border-l-0"
                       >
-                        <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-primary border-2 border-white" />
+                        <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-white ${
+                          index === 0 ? 'bg-primary' : 'bg-muted-foreground/40'
+                        }`} />
                         <div className="bg-muted/50 p-3 rounded-lg">
-                          <Badge className={`text-xs font-medium border ${getStatusColor(history.status)}`}>
-                            {getStatusLabel(history.status)}
+                          <Badge className={`text-xs font-medium border ${getCarrierStatusColor(event.status)}`}>
+                            {event.status}
                           </Badge>
                           <p className="text-xs text-muted-foreground mt-2">
-                            {format(new Date(history.created_at), 'dd/MM/yyyy')} às {format(new Date(history.created_at), 'HH:mm')}
+                            {event.data}
                           </p>
-                          {history.status_description && (
-                            <p className="text-sm mt-1 text-muted-foreground italic">
-                              {history.status_description}
+                          {event.unidade && (
+                            <p className="text-xs mt-1 text-muted-foreground flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {event.unidade}
                             </p>
                           )}
-                          {history.observacoes && (
-                            <p className="text-sm mt-1 text-muted-foreground italic">
-                              {history.observacoes}
+                          {event.idOcorrencia && (
+                            <p className="text-xs mt-1 text-amber-600 font-medium">
+                              Ocorrência #{event.idOcorrencia}
                             </p>
                           )}
                         </div>
