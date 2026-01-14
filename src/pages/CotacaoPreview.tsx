@@ -445,10 +445,12 @@ const CotacaoPreview = () => {
         const maisBaratoPreco = apiData.maisbarato_preco ? parseFloat(apiData.maisbarato_preco) : null;
         const maisBaratoPrazo = apiData.maisbarato_prazo ? parseInt(apiData.maisbarato_prazo) : 7;
         const maisBaratoUf = apiData.maisbarato_uf || null;
+        const maisBaratoTransportadora = apiData.maisbarato_transportadora || null;
 
         const maisRapidoPreco = apiData.maisrapido_preco ? parseFloat(apiData.maisrapido_preco) : null;
         const maisRapidoPrazo = apiData.maisrapido_prazo ? parseInt(apiData.maisrapido_prazo) : 5;
         const maisRapidoUf = apiData.maisrapido_uf || null;
+        const maisRapidoTransportadora = apiData.maisrapido_transportadora || null;
 
         const maisBaratoDisponivel = maisBaratoPreco !== null && !isNaN(maisBaratoPreco) && maisBaratoPreco > 0;
         const maisRapidoDisponivel = maisRapidoPreco !== null && !isNaN(maisRapidoPreco) && maisRapidoPreco > 0;
@@ -456,10 +458,10 @@ const CotacaoPreview = () => {
         setQuoteResult({
           type: "convencional",
           maisBarato: maisBaratoDisponivel
-            ? { permitido: true, preco_total: maisBaratoPreco, prazo: maisBaratoPrazo, uf: maisBaratoUf }
+            ? { permitido: true, preco_total: maisBaratoPreco, prazo: maisBaratoPrazo, uf: maisBaratoUf, transportadora: maisBaratoTransportadora }
             : { permitido: false },
           maisRapido: maisRapidoDisponivel
-            ? { permitido: true, preco_total: maisRapidoPreco, prazo: maisRapidoPrazo, uf: maisRapidoUf }
+            ? { permitido: true, preco_total: maisRapidoPreco, prazo: maisRapidoPrazo, uf: maisRapidoUf, transportadora: maisRapidoTransportadora }
             : { permitido: false },
           totalWeight,
           totalCubicWeight,

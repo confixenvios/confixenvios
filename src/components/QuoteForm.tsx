@@ -971,9 +971,11 @@ const QuoteForm = () => {
       let maisBaratoPreco: number | null = null;
       let maisBaratoPrazo: number = 7;
       let maisBaratoUf: string | null = null;
+      let maisBaratoTransportadora: string | null = null;
       let maisRapidoPreco: number | null = null;
       let maisRapidoPrazo: number = 5;
       let maisRapidoUf: string | null = null;
+      let maisRapidoTransportadora: string | null = null;
 
       if (Array.isArray(webhookResponse) && webhookResponse.length > 0) {
         const apiData = webhookResponse[0];
@@ -983,6 +985,7 @@ const QuoteForm = () => {
           maisBaratoPreco = parseFloat(apiData.maisbarato_preco);
           maisBaratoPrazo = parseInt(apiData.maisbarato_prazo) || 7;
           maisBaratoUf = apiData.maisbarato_uf || null;
+          maisBaratoTransportadora = apiData.maisbarato_transportadora || null;
         }
         
         // Extrair dados do mais rápido
@@ -990,6 +993,7 @@ const QuoteForm = () => {
           maisRapidoPreco = parseFloat(apiData.maisrapido_preco);
           maisRapidoPrazo = parseInt(apiData.maisrapido_prazo) || 5;
           maisRapidoUf = apiData.maisrapido_uf || null;
+          maisRapidoTransportadora = apiData.maisrapido_transportadora || null;
         }
       } else if (webhookResponse && typeof webhookResponse === 'object') {
         // Objeto único
@@ -997,20 +1001,22 @@ const QuoteForm = () => {
           maisBaratoPreco = parseFloat(webhookResponse.maisbarato_preco);
           maisBaratoPrazo = parseInt(webhookResponse.maisbarato_prazo) || 7;
           maisBaratoUf = webhookResponse.maisbarato_uf || null;
+          maisBaratoTransportadora = webhookResponse.maisbarato_transportadora || null;
         }
         
         if (webhookResponse.maisrapido_preco) {
           maisRapidoPreco = parseFloat(webhookResponse.maisrapido_preco);
           maisRapidoPrazo = parseInt(webhookResponse.maisrapido_prazo) || 5;
           maisRapidoUf = webhookResponse.maisrapido_uf || null;
+          maisRapidoTransportadora = webhookResponse.maisrapido_transportadora || null;
         }
       }
 
       const ufDestino = maisBaratoUf || maisRapidoUf || null;
       
       console.log("🗺️ UF do destino extraída da API:", ufDestino);
-      console.log("💰 Mais barato - Preço:", maisBaratoPreco, "Prazo:", maisBaratoPrazo, "UF:", maisBaratoUf);
-      console.log("⚡ Mais rápido - Preço:", maisRapidoPreco, "Prazo:", maisRapidoPrazo, "UF:", maisRapidoUf);
+      console.log("💰 Mais barato - Preço:", maisBaratoPreco, "Prazo:", maisBaratoPrazo, "UF:", maisBaratoUf, "Transportadora:", maisBaratoTransportadora);
+      console.log("⚡ Mais rápido - Preço:", maisRapidoPreco, "Prazo:", maisRapidoPrazo, "UF:", maisRapidoUf, "Transportadora:", maisRapidoTransportadora);
 
       // Verificar se pelo menos uma opção está disponível
       const maisBaratoDisponivel = maisBaratoPreco !== null && !isNaN(maisBaratoPreco) && maisBaratoPreco > 0;
@@ -1020,18 +1026,18 @@ const QuoteForm = () => {
       const newQuoteData = {
         // Novo formato: maisbarato e maisrapido diretamente do webhook
         maisBarato: maisBaratoDisponivel
-          ? { permitido: true, preco_total: maisBaratoPreco, prazo: maisBaratoPrazo, uf: maisBaratoUf }
+          ? { permitido: true, preco_total: maisBaratoPreco, prazo: maisBaratoPrazo, uf: maisBaratoUf, transportadora: maisBaratoTransportadora }
           : { permitido: false, motivo: "Não disponível" },
         maisRapido: maisRapidoDisponivel
-          ? { permitido: true, preco_total: maisRapidoPreco, prazo: maisRapidoPrazo, uf: maisRapidoUf }
+          ? { permitido: true, preco_total: maisRapidoPreco, prazo: maisRapidoPrazo, uf: maisRapidoUf, transportadora: maisRapidoTransportadora }
           : { permitido: false, motivo: "Não disponível" },
         // Manter shippingQuote para compatibilidade (estrutura legada)
         shippingQuote: {
           maisbarato: maisBaratoDisponivel
-            ? { permitido: true, preco_total: maisBaratoPreco, prazo: maisBaratoPrazo }
+            ? { permitido: true, preco_total: maisBaratoPreco, prazo: maisBaratoPrazo, transportadora: maisBaratoTransportadora }
             : { permitido: false, motivo: "Não disponível" },
           maisrapido: maisRapidoDisponivel
-            ? { permitido: true, preco_total: maisRapidoPreco, prazo: maisRapidoPrazo }
+            ? { permitido: true, preco_total: maisRapidoPreco, prazo: maisRapidoPrazo, transportadora: maisRapidoTransportadora }
             : { permitido: false, motivo: "Não disponível" },
         },
         destinyCep: formData.destinyCep.replace(/\D/g, ""),
