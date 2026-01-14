@@ -139,6 +139,7 @@ serve(async (req) => {
       
       // Prazo e transportadora
       remessa_prazo: String(deliveryDays),
+      selected_carrier: selectedCarrier, // Campo esperado pelo n8n
       transportadora_nome: selectedCarrier,
       transportadora_servico: quoteData?.deliveryDetails?.selectedOption || 'economic',
       cnpjTransportadorDestinto: '',
