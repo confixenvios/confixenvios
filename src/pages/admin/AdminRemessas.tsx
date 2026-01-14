@@ -1494,18 +1494,22 @@ const AdminRemessas = () => {
                                       <FileText className="h-4 w-4 text-blue-600" />
                                     </Button>
                                   )}
-                                  {shipment.cte_emission.uuid_cte && (
+                                  {shipment.cte_emission.dacte_url && (
                                      <Button
                                        variant="ghost"
                                        size="sm"
                                        onClick={() => {
-                                         window.open(
-                                           `https://webhook.grupoconfix.com/webhook/baixar-cte?uuid=${shipment.cte_emission!.uuid_cte}`,
-                                           '_blank'
-                                         );
+                                         // Baixar DACTE diretamente da URL da Webmania
+                                         const link = document.createElement('a');
+                                         link.href = shipment.cte_emission!.dacte_url!;
+                                         link.target = '_blank';
+                                         link.download = `DACTE-${shipment.cte_emission!.chave_cte || shipment.tracking_code}.pdf`;
+                                         document.body.appendChild(link);
+                                         link.click();
+                                         document.body.removeChild(link);
                                        }}
                                        className="h-8 w-8 p-0 hover:bg-primary/10"
-                                       title="Visualizar DACTE (PDF)"
+                                       title="Baixar DACTE (PDF)"
                                      >
                                        <Receipt className="h-4 w-4 text-green-600" />
                                      </Button>
