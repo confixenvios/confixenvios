@@ -150,18 +150,28 @@ const NationalLabelGenerator = ({
 
     try {
       const canvas = await html2canvas(labelRef.current, {
-        scale: 2,
+        scale: 3,
         backgroundColor: '#ffffff',
       });
 
       const imgData = canvas.toDataURL('image/png');
+      
+      // Criar PDF A4 e centralizar a etiqueta
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: [100, 140],
+        format: 'a4',
       });
 
-      pdf.addImage(imgData, 'PNG', 0, 0, 100, 140);
+      const pageWidth = 210; // A4 width in mm
+      const labelWidth = 100; // Label width in mm
+      const labelHeight = 140; // Label height in mm
+      
+      // Centralizar horizontalmente e adicionar margem no topo
+      const xOffset = (pageWidth - labelWidth) / 2;
+      const yOffset = 15; // Margem do topo
+
+      pdf.addImage(imgData, 'PNG', xOffset, yOffset, labelWidth, labelHeight);
       pdf.save(`etiqueta-${trackingCode}.pdf`);
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
