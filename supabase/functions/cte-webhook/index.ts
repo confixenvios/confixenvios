@@ -301,6 +301,24 @@ serve(async (req) => {
 
     console.log(`CTE Webhook - Successfully ${result.action} CTE emission:`, result.data.id);
 
+    // Se temos um shipment_id, atualizar o cte_key na tabela shipments para garantir associação
+    if (shipmentId && webhookData.status === 'aprovado') {
+      console.log('CTE Webhook - Atualizando cte_key no shipment:', shipmentId);
+      const { error: updateShipmentError } = await supabase
+        .from('shipments')
+        .update({ 
+          cte_key: webhookData.chave_cte,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', shipmentId);
+      
+      if (updateShipmentError) {
+        console.error('CTE Webhook - Erro ao atualizar cte_key no shipment:', updateShipmentError);
+      } else {
+        console.log('CTE Webhook - cte_key atualizado com sucesso no shipment');
+      }
+    }
+
     // Se o CTe foi aprovado e temos um shipment_id, disparar automaticamente o webhook da Jadlog
     let jadlogResult = null;
     if (webhookData.status === 'aprovado' && shipmentId) {
