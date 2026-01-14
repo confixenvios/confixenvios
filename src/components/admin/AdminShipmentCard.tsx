@@ -251,12 +251,17 @@ const AdminShipmentCard = ({
                 <Badge variant="outline" className="text-[10px]">{shipment.pricing_table_name}</Badge>
               </div>
             )}
-            {shipment.selected_option && (
+            {/* Transportadora - pegar do quote_data.deliveryDetails.selectedCarrier */}
+            {(shipment.quote_data?.deliveryDetails?.selectedCarrier || shipment.quote_data?.shippingQuote) && (
               <div className="flex items-center gap-1">
                 <Truck className="h-3 w-3 text-primary" />
                 <span className="text-muted-foreground">Transportadora:</span>
-                <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20">
-                  {shipment.selected_option}
+                <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20 uppercase">
+                  {shipment.quote_data?.deliveryDetails?.selectedCarrier || 
+                   (shipment.quote_data?.shippingQuote?.jadlog?.permitido ? 'Jadlog' : 
+                    shipment.quote_data?.shippingQuote?.magalog?.permitido ? 'Magalog' : 
+                    shipment.quote_data?.shippingQuote?.alfa?.permitido ? 'Alfa' : 
+                    shipment.selected_option)}
                 </Badge>
               </div>
             )}
