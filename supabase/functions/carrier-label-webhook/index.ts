@@ -139,11 +139,43 @@ serve(async (req) => {
 
     // Decode base64 PDF
     let pdfBuffer: Uint8Array;
+    let barcode: string | null = null;
     try {
       // Remove data URL prefix if present
       const base64Data = etiquetaBase64.replace(/^data:application\/pdf;base64,/, '');
       pdfBuffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
       console.log('✅ Decoded PDF, size:', pdfBuffer.length, 'bytes');
+      
+      // Try to extract barcode number from PDF content
+      // PDFs contain readable text, we look for the Jadlog barcode pattern
+      // Pattern: sequences of digits that match Jadlog format (e.g., 1409480000002700107231001010)
+      const pdfText = new TextDecoder('latin1').decode(pdfBuffer);
+      
+      // Look for 25-28 digit sequences (Jadlog barcode format)
+      const barcodePatterns = [
+        /\b(\d{4}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{2})\b/g, // With spaces
+        /\b(\d{26,28})\b/g, // Without spaces - continuous digits
+        /\((\d{26,28})\)/g, // In parentheses
+      ];
+      
+      for (const pattern of barcodePatterns) {
+        const matches = pdfText.match(pattern);
+        if (matches && matches.length > 0) {
+          // Get the last match (usually the barcode at bottom of label)
+          const rawMatch = matches[matches.length - 1];
+          // Clean: remove spaces and non-digits
+          barcode = rawMatch.replace(/\D/g, '');
+          if (barcode.length >= 25 && barcode.length <= 28) {
+            console.log('✅ Extracted barcode from PDF:', barcode);
+            break;
+          }
+          barcode = null;
+        }
+      }
+      
+      if (!barcode) {
+        console.log('⚠️ Could not extract barcode from PDF, will use codigo as fallback');
+      }
     } catch (decodeError) {
       console.error('❌ Failed to decode base64 PDF:', decodeError);
       return new Response(
@@ -190,9 +222,13 @@ serve(async (req) => {
       updated_at: new Date().toISOString()
     };
 
-    // If carrier returned a tracking code (codigo), save it
-    if (codigo) {
+    // Save barcode extracted from PDF, or fallback to codigo
+    if (barcode) {
+      updateData.cte_key = barcode;
+      console.log('📊 Saving extracted barcode as cte_key:', barcode);
+    } else if (codigo) {
       updateData.cte_key = codigo;
+      console.log('📊 Saving codigo as cte_key (fallback):', codigo);
     }
 
     const { error: updateError } = await supabase
