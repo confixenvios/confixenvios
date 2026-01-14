@@ -242,14 +242,25 @@ const AdminShipmentCard = ({
             </div>
           </div>
 
-          {/* Tabela de preços */}
-          {shipment.pricing_table_name && (
-            <div className="flex items-center gap-1 text-xs">
-              <FileText className="h-3 w-3 text-primary" />
-              <span className="text-muted-foreground">Tabela:</span>
-              <Badge variant="outline" className="text-[10px]">{shipment.pricing_table_name}</Badge>
-            </div>
-          )}
+          {/* Tabela de preços e Transportadora */}
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            {shipment.pricing_table_name && (
+              <div className="flex items-center gap-1">
+                <FileText className="h-3 w-3 text-primary" />
+                <span className="text-muted-foreground">Tabela:</span>
+                <Badge variant="outline" className="text-[10px]">{shipment.pricing_table_name}</Badge>
+              </div>
+            )}
+            {shipment.selected_option && (
+              <div className="flex items-center gap-1">
+                <Truck className="h-3 w-3 text-primary" />
+                <span className="text-muted-foreground">Transportadora:</span>
+                <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20">
+                  {shipment.selected_option}
+                </Badge>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Badges de etiqueta e webhook */}
