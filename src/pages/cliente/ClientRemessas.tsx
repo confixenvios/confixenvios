@@ -674,17 +674,19 @@ const ClientRemessas = () => {
                 <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-xs text-muted-foreground">Código Confix</p>
+                      <p className="text-xs text-muted-foreground">Código do Pedido</p>
                       <p className="font-mono font-bold text-base">
-                        {trackingShipment.tracking_code || `ID${trackingShipment.id.slice(0, 10).toUpperCase()}`}
+                        {trackingShipment.tracking_code}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Código Transportadora</p>
-                      <p className="font-mono font-semibold text-sm">
-                        {trackingShipment.cte_key || '-'}
-                      </p>
-                    </div>
+                    {trackingShipment.cte_key && trackingShipment.cte_key !== trackingShipment.tracking_code && (
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Código Transportadora</p>
+                        <p className="font-mono font-semibold text-sm">
+                          {trackingShipment.cte_key}
+                        </p>
+                      </div>
+                    )}
                   </div>
                   
                   {carrierTrackingData && (

@@ -54,6 +54,9 @@ verify_jwt = false
 [functions.auto-webhook-dispatcher]
 verify_jwt = false
 
+[functions.auto-label-dispatch]
+verify_jwt = false
+
 [functions.test-webhook-url]
 verify_jwt = false
 

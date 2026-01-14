@@ -192,42 +192,53 @@ const PaymentSuccess = () => {
 
         setTrackingCode(updatedShipment?.tracking_code || '');
 
-        // Preparar dados para webhook usando dados do banco ou storage
-        const completePayload = {
-          shipmentId: shipment.id,
-          paymentData,
-          documentData: documentData || {},
-          selectedQuote: selectedQuote || shipment.quote_data || {},
-          shipmentData: shipmentData || {
-            id: shipment.id,
-            quoteData: shipment.quote_data,
-            weight: shipment.weight,
-            totalPrice: paymentData.amount
-          }
-        };
-
-        // Dispatch webhook to external TMS system with all collected data
-        const { data: webhookResult, error: webhookError } = await supabase.functions
-          .invoke('webhook-dispatch', {
-            body: completePayload
+        // Disparar webhook automático para gerar etiqueta
+        console.log('🔔 Disparando webhook automático para gerar etiqueta...');
+        
+        const { data: labelResult, error: labelError } = await supabase.functions
+          .invoke('auto-label-dispatch', {
+            body: {
+              shipmentId: shipment.id,
+              shipmentData: {
+                id: shipment.id,
+                quoteData: shipment.quote_data,
+                weight: shipment.weight,
+                totalPrice: paymentData.amount
+              }
+            }
           });
 
-        if (webhookError) {
-          console.error('Webhook dispatch error:', webhookError);
+        if (labelError) {
+          console.error('⚠️ Erro ao chamar auto-label-dispatch:', labelError);
           toast({
             title: "Atenção",
             description: "Pagamento confirmado, mas houve problema na comunicação com o sistema de etiquetas.",
             variant: "destructive"
           });
+        } else if (labelResult?.success && labelResult?.codigo) {
+          // Atualizar tracking code exibido com o código retornado
+          setTrackingCode(labelResult.codigo);
+          console.log('✅ Etiqueta gerada com código:', labelResult.codigo);
+          toast({
+            title: "Sucesso",
+            description: `Etiqueta gerada! Código: ${labelResult.codigo}`,
+          });
+          setShipmentStatus('LABEL_GENERATED');
+        } else if (labelResult?.pending) {
+          console.log('⏳ Etiqueta pendente, aguardando retorno...');
+          toast({
+            title: "Sucesso",
+            description: "Pagamento confirmado! Aguardando geração da etiqueta.",
+          });
+          setShipmentStatus('PAGO_AGUARDANDO_ETIQUETA');
         } else {
-          console.log('Webhook dispatched successfully:', webhookResult);
+          console.log('⚠️ Resposta do auto-label-dispatch:', labelResult);
           toast({
             title: "Sucesso",
             description: "Pagamento confirmado e dados enviados para processamento!",
           });
+          setShipmentStatus('PAGO_AGUARDANDO_ETIQUETA');
         }
-
-        setShipmentStatus('PAGO_AGUARDANDO_ETIQUETA');
         
         // Clean up both session and local storage
         sessionStorage.clear();
