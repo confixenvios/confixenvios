@@ -93,48 +93,7 @@ serve(async (req) => {
     console.log('Shipment webhook dispatch - Sender personal data:', senderPersonalData);
     console.log('Shipment webhook dispatch - Recipient personal data:', recipientPersonalData);
 
-    // Get pricing table information (for CNPJ do transportador)
-    // Try to get table ID from shipment or from quote_data
-    const tableId = fullShipment.pricing_table_id || 
-                    fullShipment.quote_data?.quoteData?.shippingQuote?.tableId ||
-                    fullShipment.quote_data?.shippingQuote?.tableId;
-    
-    console.log('Pricing table ID found:', tableId);
-    
-    let transportadorCNPJ = '';
-    
-    if (tableId) {
-      const { data: pricingTable, error: pricingTableError } = await supabaseService
-        .from('pricing_tables')
-        .select('cnpj, name')
-        .eq('id', tableId)
-        .single();
-      
-      if (pricingTableError) {
-        console.error('Error fetching pricing table:', pricingTableError);
-      } else if (pricingTable) {
-        transportadorCNPJ = pricingTable.cnpj || '';
-        console.log('✓ Transportador CNPJ encontrado:', transportadorCNPJ, 'da tabela:', pricingTable.name);
-      } else {
-        console.log('⚠ Pricing table not found for ID:', tableId);
-      }
-    } else {
-      console.log('⚠ No pricing table ID available in shipment data');
-    }
-    
-    // CRITICAL VALIDATION: CNPJ do transportador é obrigatório
-    // Try to get CNPJ from quote_data if not found in pricing table
-    if (!transportadorCNPJ || transportadorCNPJ.trim() === '') {
-      transportadorCNPJ = fullShipment.quote_data?.quoteData?.shippingQuote?.cnpj ||
-                         fullShipment.quote_data?.shippingQuote?.cnpj ||
-                         fullShipment.quote_data?.quote?.cnpj || '';
-      
-      if (transportadorCNPJ && transportadorCNPJ.trim() !== '') {
-        console.log('✓ CNPJ encontrado no quote_data:', transportadorCNPJ);
-      }
-    }
-    
-    // Get company branches data (required information - needed for fallback CNPJ)
+    // Get company branches data (required for Expedidor info)
     const { data: branches, error: branchesError } = await supabaseService
       .from('company_branches')
       .select('*')
@@ -152,33 +111,6 @@ serve(async (req) => {
       console.error('Shipment webhook dispatch - No company branch found');
       throw new Error('No company branch configured - required for CTE dispatch');
     }
-    
-    // Final fallback: Use main branch CNPJ if transportador CNPJ not found
-    if (!transportadorCNPJ || transportadorCNPJ.trim() === '') {
-      transportadorCNPJ = mainBranch.cnpj || '';
-      if (transportadorCNPJ) {
-        console.log('✓ Using main branch CNPJ as fallback:', transportadorCNPJ);
-      }
-    }
-    
-    // Final validation - CNPJ is required
-    if (!transportadorCNPJ || transportadorCNPJ.trim() === '') {
-      console.error('❌ ERRO CRÍTICO: CNPJ do transportador não encontrado!');
-      console.error('Shipment ID:', shipmentId);
-      console.error('Pricing table ID:', tableId);
-      console.error('Pricing table name:', fullShipment.pricing_table_name);
-      
-      // Log error
-      await supabaseService.from('webhook_logs').insert({
-        event_type: 'webhook_dispatch_failed',
-        shipment_id: shipmentId,
-        payload: { error: 'CNPJ transportador obrigatório', tableId, pricing_table_name: fullShipment.pricing_table_name },
-        response_status: 400,
-        response_body: { error: 'CNPJ do transportador não encontrado - campo obrigatório' }
-      });
-      
-      throw new Error('CNPJ do transportador é obrigatório mas não foi encontrado. Verifique se a tabela de preços tem CNPJ cadastrado.');
-    }
 
     // Extract data from fullShipment.quote_data
     const quoteData = fullShipment.quote_data || {};
@@ -187,97 +119,65 @@ serve(async (req) => {
     const deliveryDetails = quoteData.deliveryDetails || {};
     
     // Get volumes information - can be array with detailed volumes or just quantity
-    const volumesData = quoteData.volumes || quoteData.quoteData?.volumes || [];
+    const volumesData = quoteData.volumes || quoteData.quoteData?.volumes || merchandiseDetails.volumes || [];
     const quantityVolumes = Array.isArray(volumesData) && volumesData.length > 0 
       ? volumesData.length 
       : (quoteData.quantity || 1);
     
     console.log('Volumes data found:', Array.isArray(volumesData) ? `${volumesData.length} volumes` : 'using quantity', quantityVolumes);
     
-    // Get NFe key from multiple possible locations
-    // If document type is declaracao_conteudo, use a fictional key
-    const nfeKey = fullShipment.document_type === 'declaracao_conteudo' 
-      ? '99999999999999999999999999999999999999999999' 
-      : (quoteData.fiscalData?.nfeAccessKey || 
-         quoteData.nfeKey || 
-         quoteData.nfeChave || 
-         quoteData.documentData?.nfeKey ||
-         quoteData.documentData?.fiscalData?.nfeAccessKey || '');
+    // Get NFe key (only used when tipo = 1)
+    const nfeKey = quoteData.fiscalData?.nfeAccessKey || 
+                   quoteData.nfeKey || 
+                   quoteData.nfeChave || 
+                   quoteData.documentData?.nfeKey ||
+                   quoteData.documentData?.fiscalData?.nfeAccessKey || '';
 
-    // Helper function to extract document from different formats  
-    const extractDocument = (doc: string) => {
-      if (!doc) return '';
-      return doc.replace(/[^\d]/g, ''); // Remove formatting
-    };
+    // Helper function to clean numbers
+    const onlyNumbers = (str: string) => str ? str.replace(/[^\d]/g, '') : '';
 
-    // Helper function to format address for CTE
-    const formatAddress = (address: any, personalData: any) => ({
-      cpf: extractDocument(personalData.document || '').length === 11 ? extractDocument(personalData.document || '') : '',
-      cnpj: extractDocument(personalData.document || '').length === 14 ? extractDocument(personalData.document || '') : '',
-      inscricaoEstadual: personalData.inscricaoEstadual || '',
-      nome: address?.name || '',
-      razaoSocial: address?.name || '',
-      telefone: personalData.phone || '',
-      email: personalData.email || '',
-      Endereco: {
-        cep: address?.cep?.replace(/[^\d]/g, '') || '',
-        logradouro: address?.street || '',
-        numero: address?.number || '',
-        complemento: address?.complement || '',
-        pontoReferencia: address?.reference || '',
-        bairro: address?.neighborhood || '',
-        nomeCidade: address?.city || '',
-        siglaEstado: address?.state || '',
-        idCidadeIBGE: '',
-        pais: 'Brasil',
-        lat: '',
-        lng: ''
-      }
-    });
+    // Get shipping price
+    const valorFrete = deliveryDetails.shippingPrice || 
+      deliveryDetails.totalPrice || 
+      (fullShipment.selected_option === 'express' 
+        ? (quoteData.quoteData?.shippingQuote?.expressPrice || quoteData.shippingQuote?.expressPrice || 0)
+        : (quoteData.quoteData?.shippingQuote?.economicPrice || quoteData.shippingQuote?.economicPrice || 0));
+
+    // Get declared value
+    const valorDeclarado = merchandiseDetails.totalValue || 
+                          quoteData.quoteData?.totalMerchandiseValue || 
+                          quoteData.totalMerchandiseValue || 0;
+
+    // Get estimated days
+    const prazo = deliveryDetails.estimatedDays || 
+                  quoteData.quoteData?.shippingQuote?.deliveryDays || 
+                  quoteData.shippingQuote?.deliveryDays || 5;
+
+    // Get carrier info
+    const transportadoraNome = quoteData.quoteData?.shippingQuote?.tableName || 
+                               quoteData.shippingQuote?.tableName || 
+                               fullShipment.pricing_table_name || 'magalog';
     
-    // Helper function to format Juri Express address (company branch)
-    const formatJuriExpressAddress = (branch: any) => ({
-      cpf: '',
-      cnpj: branch.cnpj?.replace(/[^\d]/g, '') || '',
-      inscricaoEstadual: branch.inscricao_estadual || '',
-      nome: branch.fantasy_name || branch.name || '',
-      razaoSocial: branch.name || '',
-      telefone: branch.phone || '',
-      email: branch.email || '',
-      Endereco: {
-        cep: branch.cep?.replace(/[^\d]/g, '') || '',
-        logradouro: branch.street || '',
-        numero: branch.number || '',
-        complemento: branch.complement || '',
-        pontoReferencia: '',
-        bairro: branch.neighborhood || '',
-        nomeCidade: branch.city || '',
-        siglaEstado: branch.state || '',
-        idCidadeIBGE: '',
-        pais: 'Brasil',
-        lat: '',
-        lng: ''
-      }
-    });
+    const transportadoraServico = fullShipment.selected_option || 'express';
 
-    // Get total cubagem from quote data (already calculated in cotação form)
+    // Get merchandise description
+    const descricaoMercadoria = quoteData.merchandiseDescription || 
+                                quoteData.documentData?.merchandiseDescription || 
+                                quoteData.fiscalData?.contentDescription || 
+                                merchandiseDetails.description ||
+                                'Mercadoria diversa';
+
+    // Calculate total cubagem
     let totalCubagem = 0;
-    
-    // First try to get from merchandiseDetails (most reliable)
     if (merchandiseDetails.cubicWeight) {
       totalCubagem = parseFloat(merchandiseDetails.cubicWeight);
-    } 
-    // Otherwise sum from individual volumes if they have cubicWeight
-    else if (merchandiseDetails.volumes && Array.isArray(merchandiseDetails.volumes)) {
+    } else if (merchandiseDetails.volumes && Array.isArray(merchandiseDetails.volumes)) {
       totalCubagem = merchandiseDetails.volumes.reduce((sum: number, vol: any) => {
         return sum + (parseFloat(vol.cubicWeight) || 0);
       }, 0);
-    }
-    // Fallback: calculate from dimensions
-    else {
+    } else {
       for (let i = 0; i < quantityVolumes; i++) {
         const specificVolume = Array.isArray(volumesData) && volumesData[i];
-        
         if (specificVolume) {
           const altura = parseFloat(specificVolume.height) / 100;
           const largura = parseFloat(specificVolume.width) / 100;
@@ -289,162 +189,115 @@ serve(async (req) => {
         }
       }
     }
-    
-    // Limit to 3 decimal places
     totalCubagem = parseFloat(totalCubagem.toFixed(3));
-    console.log('Total cubagem from quote data:', totalCubagem);
 
-    // Build CTE payload in the exact format requested
-    const webhookPayload = {
-      idLote: fullShipment.tracking_code || '',
-      // tipo na raiz: "1" = Nota Fiscal, "3" = Declaração de Conteúdo (como string)
-      tipo: fullShipment.document_type === 'declaracao_conteudo' ? "3" : "1",
-      cnpjEmbarcadorOrigem: mainBranch.cnpj.replace(/[^\d]/g, ''),
+    // Determine tipo: "1" = Nota Fiscal, "3" = Declaração de Conteúdo
+    const tipo = fullShipment.document_type === 'declaracao_conteudo' ? "3" : "1";
+
+    // Build FLAT webhook payload (format expected by n8n)
+    const webhookPayload: Record<string, any> = {
+      // Valores principais
+      valorTotal: valorFrete,
+      mercadoria_valorDeclarado: valorDeclarado,
+      remessa_prazo: prazo,
+      transportadora_nome: transportadoraNome,
+      transportadora_servico: transportadoraServico,
       cnpjTransportadorDestinto: '',
-      sincPLP: 0,
-      retornoEDI: true,
-      listaSolicitacoes: [
-        {
-          idSolicitacaoInterno: fullShipment.tracking_code || '',
-          idServico: fullShipment.selected_option === 'express' ? 1 : 2,
-          vlfrete: deliveryDetails.shippingPrice || 
-            deliveryDetails.totalPrice || 
-            (fullShipment.selected_option === 'express' 
-              ? (quoteData.quoteData?.shippingQuote?.expressPrice || quoteData.shippingQuote?.expressPrice || 0)
-              : (quoteData.quoteData?.shippingQuote?.economicPrice || quoteData.shippingQuote?.economicPrice || 0)),
-          vlicms: 0,
-          vladicional: 0,
-          tpvalor: true,
-          nrordencargaexterno: 1,
-          QtCarga: 1,
-          tpgeramdfe: false,
-          dtPrazoInicio: new Date().toISOString(),
-          dtPrazoFim: new Date(Date.now() + (deliveryDetails.estimatedDays || 5) * 24 * 60 * 60 * 1000).toISOString(),
-          
-          // Tomador do Serviço (quem paga o frete - sempre o remetente)
-          TomadorServico: formatAddress(fullShipment.sender_address, senderPersonalData),
-          
-          // Remetente (cliente que está enviando)
-          Remetente: formatAddress(fullShipment.sender_address, senderPersonalData),
-          
-          // Destinatário  
-          Destinatario: formatAddress(fullShipment.recipient_address, recipientPersonalData),
-          
-          // Recebedor (mesmo que destinatário)
-          Recebedor: formatAddress(fullShipment.recipient_address, recipientPersonalData),
-          
-          // Expedidor (sempre Juri Express - quem despacha a mercadoria)
-          Expedidor: formatJuriExpressAddress(mainBranch),
-          
-         LogisticaReversa: {
-            flagColetaPortaria: fullShipment.pickup_option === 'dropoff',
-            flagColetaSemEmbalagem: false
-          },
-          
-          DadosAgendamento: {
-            dtAgendamento: new Date().toISOString().split('T')[0],
-            periodo: 1
-          },
-          
-           listaOperacoes: [
-             {
-               idTipoDocumento: 0,
-               nroNotaFiscal: 0,
-               serieNotaFiscal: 0,
-               dtEmissaoNotaFiscal: new Date().toISOString(),
-               chaveNotaFiscal: nfeKey || '',
-               nroCarga: fullShipment.tracking_code || '',
-               nroPedido: fullShipment.tracking_code || '',
-               qtdeVolumes: quantityVolumes,
-               qtdeItens: 1,
-               pesoTotal: fullShipment.weight || 0,
-               cubagemTotal: totalCubagem,
-                valorMercadoria: merchandiseDetails.totalValue || quoteData.quoteData?.totalMerchandiseValue || 0,
-                valorICMS: 0,
-                valorPendenteCompra: 0,
-                vlfrete: deliveryDetails.shippingPrice || 
-                  deliveryDetails.totalPrice || 
-                  (fullShipment.selected_option === 'express' 
-                    ? (quoteData.quoteData?.shippingQuote?.expressPrice || quoteData.shippingQuote?.expressPrice || 0)
-                    : (quoteData.quoteData?.shippingQuote?.economicPrice || quoteData.shippingQuote?.economicPrice || 0)),
-               
-                 listaVolumes: Array.from({ length: quantityVolumes }, (_, index) => {
-                  const volumeNumber = index + 1;
-                  const trackingCode = fullShipment.tracking_code || '';
-                  
-                  // Get volume data from merchandiseDetails if available (most reliable)
-                  const merchandiseVolume = merchandiseDetails.volumes && merchandiseDetails.volumes[index];
-                  const specificVolume = Array.isArray(volumesData) && volumesData[index];
-                  
-                  let pesoVolume, cubagemVolume, altura, largura, comprimento;
-                  
-                  if (merchandiseVolume) {
-                    // Use pre-calculated values from merchandiseDetails (from quote form)
-                    pesoVolume = parseFloat(merchandiseVolume.weight) || 0;
-                    cubagemVolume = parseFloat((merchandiseVolume.cubicWeight || 0).toFixed(3));
-                    altura = parseFloat(merchandiseVolume.height) / 100; // Convert cm to m
-                    largura = parseFloat(merchandiseVolume.width) / 100;
-                    comprimento = parseFloat(merchandiseVolume.length) / 100;
-                  } else if (specificVolume) {
-                    // Fallback: use specificVolume data
-                    pesoVolume = parseFloat(specificVolume.weight) || 0;
-                    altura = parseFloat(specificVolume.height) / 100;
-                    largura = parseFloat(specificVolume.width) / 100;
-                    comprimento = parseFloat(specificVolume.length) / 100;
-                    cubagemVolume = parseFloat((altura * largura * comprimento).toFixed(3));
-                  } else {
-                    // Dividir igualmente entre volumes
-                    pesoVolume = (fullShipment.weight || 0) / quantityVolumes;
-                    cubagemVolume = parseFloat((totalCubagem / quantityVolumes).toFixed(3));
-                    altura = (fullShipment.height || 0) / 100;
-                    largura = (fullShipment.width || 0) / 100;
-                    comprimento = (fullShipment.length || 0) / 100;
-                  }
-                 
-                 const contentDescription = quoteData.merchandiseDescription || 
-                                           quoteData.documentData?.merchandiseDescription || 
-                                           quoteData.fiscalData?.contentDescription || 
-                                           'Mercadoria diversa';
-                 
-                 return {
-                   idVolume: volumeNumber,
-                   nroEtiqueta: `${trackingCode}-${volumeNumber}`,
-                   codigoBarras: `${trackingCode}-${volumeNumber}`,
-                   pesoVolume: pesoVolume,
-                   cubagemVolume: cubagemVolume,
-                   altura: altura,
-                   largura: largura,
-                   comprimento: comprimento,
-                   conteudo: contentDescription
-                 };
-               }),
-              
-              listaItens: [
-                {
-                  idItem: 1,
-                  nroEtiqueta: fullShipment.tracking_code || '',
-                  codigoItem: 'ITEM001',
-                  descricaoItem: quoteData.merchandiseDescription || 
-                                quoteData.documentData?.merchandiseDescription || 
-                                quoteData.fiscalData?.contentDescription || 
-                                'Mercadoria diversa',
-                  tipoItem: 'GERAL',
-                  qtde: '1'
-                }
-              ],
-              
-              chaveCTeAnterior: '',
-              linkCTe: '',
-              base64CTe: ''
-            }
-          ]
-        }
-      ]
+      expedidor: mainBranch.fantasy_name || mainBranch.name || 'Juri Express',
+      
+      // Remetente
+      remetente_nome: fullShipment.sender_address?.name || '',
+      remetente_documento: senderPersonalData.document || '',
+      remetente_inscricaoEstadual: senderPersonalData.inscricaoEstadual || '',
+      remetente_email: senderPersonalData.email || '',
+      remetente_telefone: senderPersonalData.phone || '',
+      remetente_endereco: fullShipment.sender_address?.street || '',
+      remetente_numero: fullShipment.sender_address?.number || '',
+      remetente_complemento: fullShipment.sender_address?.complement || '',
+      remetente_bairro: fullShipment.sender_address?.neighborhood || '',
+      remetente_cidade: fullShipment.sender_address?.city || '',
+      remetente_estado: fullShipment.sender_address?.state || '',
+      remetente_cep: fullShipment.sender_address?.cep || '',
+      
+      // Destinatário
+      destinatario_nome: fullShipment.recipient_address?.name || '',
+      destinatario_documento: recipientPersonalData.document || '',
+      destinatario_inscricaoEstadual: recipientPersonalData.inscricaoEstadual || '',
+      destinatario_email: recipientPersonalData.email || '',
+      destinatario_telefone: recipientPersonalData.phone || '',
+      destinatario_endereco: fullShipment.recipient_address?.street || '',
+      destinatario_numero: fullShipment.recipient_address?.number || '',
+      destinatario_complemento: fullShipment.recipient_address?.complement || '',
+      destinatario_bairro: fullShipment.recipient_address?.neighborhood || '',
+      destinatario_cidade: fullShipment.recipient_address?.city || '',
+      destinatario_estado: fullShipment.recipient_address?.state || '',
+      destinatario_cep: fullShipment.recipient_address?.cep || '',
+      
+      // Tipo documento: "1" = Nota, "3" = Declaração
+      tipo: tipo,
+      
+      // Chave da nota fiscal (só usado quando tipo = "1")
+      chaveNotaFiscal: tipo === "1" ? nfeKey : '',
+      
+      // Descrição da mercadoria
+      descricaoMercadoria: descricaoMercadoria,
+      
+      // Dados da remessa
+      remessa_peso: fullShipment.weight || 0,
+      remessa_cubagemTotal: totalCubagem,
+      remessa_largura: fullShipment.width || 0,
+      remessa_comprimento: fullShipment.length || 0,
+      remessa_altura: fullShipment.height || 0,
+      remessa_formato: fullShipment.format || 'normal',
+      
+      // IDs
+      shipmentId: shipmentId,
+      trackingCode: fullShipment.tracking_code || ''
     };
 
-    console.log('Shipment webhook dispatch - Payload prepared:', JSON.stringify(webhookPayload, null, 2));
+    // Add volume-specific data dynamically (volume1_, volume2_, volume3_, etc.)
+    for (let i = 0; i < quantityVolumes && i < 10; i++) {
+      const volumeNum = i + 1;
+      const merchandiseVolume = merchandiseDetails.volumes && merchandiseDetails.volumes[i];
+      const specificVolume = Array.isArray(volumesData) && volumesData[i];
+      
+      let pesoVolume, cubagemVolume, altura, largura, comprimento, tipoMercadoria;
+      
+      if (merchandiseVolume) {
+        pesoVolume = parseFloat(merchandiseVolume.weight) || 0;
+        cubagemVolume = parseFloat((merchandiseVolume.cubicWeight || 0).toFixed(3));
+        altura = parseFloat(merchandiseVolume.height) || 0;
+        largura = parseFloat(merchandiseVolume.width) || 0;
+        comprimento = parseFloat(merchandiseVolume.length) || 0;
+        tipoMercadoria = merchandiseVolume.type || fullShipment.format || 'normal';
+      } else if (specificVolume) {
+        pesoVolume = parseFloat(specificVolume.weight) || 0;
+        altura = parseFloat(specificVolume.height) || 0;
+        largura = parseFloat(specificVolume.width) || 0;
+        comprimento = parseFloat(specificVolume.length) || 0;
+        cubagemVolume = parseFloat(((altura/100) * (largura/100) * (comprimento/100)).toFixed(3));
+        tipoMercadoria = specificVolume.type || fullShipment.format || 'normal';
+      } else {
+        pesoVolume = (fullShipment.weight || 0) / quantityVolumes;
+        cubagemVolume = parseFloat((totalCubagem / quantityVolumes).toFixed(3));
+        altura = fullShipment.height || 0;
+        largura = fullShipment.width || 0;
+        comprimento = fullShipment.length || 0;
+        tipoMercadoria = fullShipment.format || 'normal';
+      }
 
-    // Dispatch webhook
+      webhookPayload[`volume${volumeNum}_peso`] = pesoVolume;
+      webhookPayload[`volume${volumeNum}_comprimento`] = comprimento;
+      webhookPayload[`volume${volumeNum}_largura`] = largura;
+      webhookPayload[`volume${volumeNum}_altura`] = altura;
+      webhookPayload[`volume${volumeNum}_cubagemVolume`] = cubagemVolume;
+      webhookPayload[`volume${volumeNum}_tipoMercadoria`] = tipoMercadoria;
+    }
+
+    console.log('Shipment webhook dispatch - FLAT Payload prepared:', JSON.stringify(webhookPayload, null, 2));
+
+    // Dispatch webhook as query parameters (form data style for n8n)
+    // n8n expects data in query.* format, so we send as JSON but n8n will parse it
     const webhookResponse = await fetch(integration.webhook_url, {
       method: 'POST',
       headers: {
