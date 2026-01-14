@@ -1498,15 +1498,26 @@ const AdminRemessas = () => {
                                      <Button
                                        variant="ghost"
                                        size="sm"
-                                       onClick={() => {
-                                         // Baixar DACTE diretamente da URL da Webmania
-                                         const link = document.createElement('a');
-                                         link.href = shipment.cte_emission!.dacte_url!;
-                                         link.target = '_blank';
-                                         link.download = `DACTE-${shipment.cte_emission!.chave_cte || shipment.tracking_code}.pdf`;
-                                         document.body.appendChild(link);
-                                         link.click();
-                                         document.body.removeChild(link);
+                                       onClick={async () => {
+                                         try {
+                                           // Baixar DACTE via fetch e forçar download
+                                           const response = await fetch(shipment.cte_emission!.dacte_url!);
+                                           if (!response.ok) throw new Error('Erro ao baixar DACTE');
+                                           const blob = await response.blob();
+                                           const url = window.URL.createObjectURL(blob);
+                                           const link = document.createElement('a');
+                                           link.href = url;
+                                           link.download = `DACTE-${shipment.cte_emission!.numero_cte || shipment.tracking_code}.pdf`;
+                                           document.body.appendChild(link);
+                                           link.click();
+                                           document.body.removeChild(link);
+                                           window.URL.revokeObjectURL(url);
+                                           // Download successful
+                                         } catch (error) {
+                                           console.error('Erro ao baixar DACTE:', error);
+                                           // Fallback: abrir em nova aba
+                                           window.open(shipment.cte_emission!.dacte_url!, '_blank');
+                                         }
                                        }}
                                        className="h-8 w-8 p-0 hover:bg-primary/10"
                                        title="Baixar DACTE (PDF)"
