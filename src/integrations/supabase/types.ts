@@ -1600,6 +1600,8 @@ export type Database = {
       }
       shipments: {
         Row: {
+          carrier_barcode: string | null
+          carrier_order_id: string | null
           created_at: string
           cte_key: string | null
           document_type: string | null
@@ -1627,6 +1629,8 @@ export type Database = {
           width: number
         }
         Insert: {
+          carrier_barcode?: string | null
+          carrier_order_id?: string | null
           created_at?: string
           cte_key?: string | null
           document_type?: string | null
@@ -1654,6 +1658,8 @@ export type Database = {
           width: number
         }
         Update: {
+          carrier_barcode?: string | null
+          carrier_order_id?: string | null
           created_at?: string
           cte_key?: string | null
           document_type?: string | null

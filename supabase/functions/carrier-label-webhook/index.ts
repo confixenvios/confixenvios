@@ -216,19 +216,22 @@ serve(async (req) => {
     const labelPdfUrl = publicUrlData.publicUrl;
     console.log('🔗 Public URL:', labelPdfUrl);
 
-    // Update shipment with label URL and carrier code
+    // Update shipment with label URL and carrier data
     const updateData: any = {
       label_pdf_url: labelPdfUrl,
       updated_at: new Date().toISOString()
     };
 
-    // Save barcode extracted from PDF, or fallback to codigo
+    // Save carrier_order_id (codigo from Jadlog = order ID)
+    if (codigo) {
+      updateData.carrier_order_id = codigo;
+      console.log('📊 Saving carrier_order_id:', codigo);
+    }
+
+    // Save carrier_barcode (extracted from PDF)
     if (barcode) {
-      updateData.cte_key = barcode;
-      console.log('📊 Saving extracted barcode as cte_key:', barcode);
-    } else if (codigo) {
-      updateData.cte_key = codigo;
-      console.log('📊 Saving codigo as cte_key (fallback):', codigo);
+      updateData.carrier_barcode = barcode;
+      console.log('📊 Saving carrier_barcode:', barcode);
     }
 
     const { error: updateError } = await supabase
