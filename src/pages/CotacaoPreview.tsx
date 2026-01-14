@@ -77,7 +77,7 @@ const CotacaoPreview = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [quoteResult, setQuoteResult] = useState<any>(null);
-  const [selectedCarrier, setSelectedCarrier] = useState<"jadlog" | "magalog" | null>(null);
+  const [selectedCarrier, setSelectedCarrier] = useState<"maisbarato" | "maisrapido" | null>(null);
   
   // Convencional Steps
   const [convencionalStep, setConvencionalStep] = useState(1);
@@ -432,7 +432,7 @@ const CotacaoPreview = () => {
       const webhookResponse = await response.json();
       console.log("Webhook response:", webhookResponse);
 
-      // Handle both array and object responses
+      // NOVO FORMATO: webhook retorna maisbarato_* e maisrapido_* diretamente
       let apiData = null;
       if (Array.isArray(webhookResponse) && webhookResponse.length > 0) {
         apiData = webhookResponse[0];
@@ -441,23 +441,26 @@ const CotacaoPreview = () => {
       }
 
       if (apiData) {
-        // Map the webhook response format to our expected format
-        const jadlogResult = apiData.preco_total_frete_jadlog ? {
-          permitido: true,
-          preco_total: parseFloat(apiData.preco_total_frete_jadlog),
-          prazo: apiData.prazo_frete_jadlog,
-        } : apiData.jadlog || null;
+        // Extrair dados do mais barato e mais rápido diretamente do webhook
+        const maisBaratoPreco = apiData.maisbarato_preco ? parseFloat(apiData.maisbarato_preco) : null;
+        const maisBaratoPrazo = apiData.maisbarato_prazo ? parseInt(apiData.maisbarato_prazo) : 7;
+        const maisBaratoUf = apiData.maisbarato_uf || null;
 
-        const magalogResult = apiData.preco_total_frete_magalog ? {
-          permitido: true,
-          preco_total: parseFloat(apiData.preco_total_frete_magalog),
-          prazo: apiData.prazo_frete_magalog,
-        } : apiData.magalog || null;
+        const maisRapidoPreco = apiData.maisrapido_preco ? parseFloat(apiData.maisrapido_preco) : null;
+        const maisRapidoPrazo = apiData.maisrapido_prazo ? parseInt(apiData.maisrapido_prazo) : 5;
+        const maisRapidoUf = apiData.maisrapido_uf || null;
+
+        const maisBaratoDisponivel = maisBaratoPreco !== null && !isNaN(maisBaratoPreco) && maisBaratoPreco > 0;
+        const maisRapidoDisponivel = maisRapidoPreco !== null && !isNaN(maisRapidoPreco) && maisRapidoPreco > 0;
 
         setQuoteResult({
           type: "convencional",
-          jadlog: jadlogResult,
-          magalog: magalogResult,
+          maisBarato: maisBaratoDisponivel
+            ? { permitido: true, preco_total: maisBaratoPreco, prazo: maisBaratoPrazo, uf: maisBaratoUf }
+            : { permitido: false },
+          maisRapido: maisRapidoDisponivel
+            ? { permitido: true, preco_total: maisRapidoPreco, prazo: maisRapidoPrazo, uf: maisRapidoUf }
+            : { permitido: false },
           totalWeight,
           totalCubicWeight,
           consideredWeight: Math.max(totalWeight, totalCubicWeight),
@@ -906,17 +909,16 @@ const CotacaoPreview = () => {
                       
                       <h3 className="text-xl font-semibold text-center">Opções de Frete Disponíveis</h3>
                       
-                      {quoteResult.magalog && !quoteResult.magalog.permitido &&
-                       quoteResult.jadlog && !quoteResult.jadlog.permitido ? (
+                      {(!quoteResult.maisBarato?.permitido && !quoteResult.maisRapido?.permitido) ? (
                         <div className="p-6 bg-destructive/10 border-2 border-destructive/20 rounded-lg">
                           <div className="flex flex-col items-center space-y-3 text-center">
                             <AlertTriangle className="h-12 w-12 text-destructive" />
                             <div>
                               <h3 className="text-lg font-semibold text-destructive mb-2">
-                                Nenhuma transportadora disponível
+                                Nenhuma opção de frete disponível
                               </h3>
                               <p className="text-sm text-muted-foreground">
-                                Não há transportadoras disponíveis para as especificações informadas.
+                                Não há opções de frete disponíveis para as especificações informadas.
                               </p>
                             </div>
                           </div>
@@ -932,68 +934,39 @@ const CotacaoPreview = () => {
                       ) : (
                         <>
                           {(() => {
-                            // Determinar qual é mais barato e mais rápido
-                            const magalog = quoteResult.magalog;
-                            const jadlog = quoteResult.jadlog;
+                            const maisBarato = quoteResult.maisBarato;
+                            const maisRapido = quoteResult.maisRapido;
                             
-                            if (!magalog?.permitido && !jadlog?.permitido) return null;
+                            const maisBaratoDisponivel = maisBarato?.permitido;
+                            const maisRapidoDisponivel = maisRapido?.permitido;
                             
-                            let opcaoMaisBarata = null;
-                            let opcaoMaisRapida = null;
-                            let maisBarataKey = "";
-                            let maisRapidaKey = "";
+                            if (!maisBaratoDisponivel && !maisRapidoDisponivel) return null;
                             
-                            const options = [];
-                            if (magalog?.permitido) options.push({ key: "magalog", data: magalog });
-                            if (jadlog?.permitido) options.push({ key: "jadlog", data: jadlog });
+                            // Verificar se são a mesma opção (preço e prazo iguais)
+                            const mesmaOpcao = maisBaratoDisponivel && maisRapidoDisponivel &&
+                              maisBarato.preco_total === maisRapido.preco_total &&
+                              maisBarato.prazo === maisRapido.prazo;
                             
-                            if (options.length === 1) {
-                              // Apenas uma opção disponível
-                              opcaoMaisBarata = options[0].data;
-                              opcaoMaisRapida = options[0].data;
-                              maisBarataKey = options[0].key;
-                              maisRapidaKey = options[0].key;
-                            } else if (options.length === 2) {
-                              // Comparar preços
-                              if (options[0].data.preco_total <= options[1].data.preco_total) {
-                                opcaoMaisBarata = options[0].data;
-                                maisBarataKey = options[0].key;
-                              } else {
-                                opcaoMaisBarata = options[1].data;
-                                maisBarataKey = options[1].key;
-                              }
-                              // Comparar prazos
-                              if (options[0].data.prazo <= options[1].data.prazo) {
-                                opcaoMaisRapida = options[0].data;
-                                maisRapidaKey = options[0].key;
-                              } else {
-                                opcaoMaisRapida = options[1].data;
-                                maisRapidaKey = options[1].key;
-                              }
-                            }
-                            
-                            // Se são a mesma opção, mostrar apenas um card
-                            if (maisBarataKey === maisRapidaKey) {
+                            if (mesmaOpcao || (maisBaratoDisponivel && !maisRapidoDisponivel) || (!maisBaratoDisponivel && maisRapidoDisponivel)) {
+                              const opcao = maisBaratoDisponivel ? maisBarato : maisRapido;
                               return (
                                 <div className="grid grid-cols-1 gap-4 max-w-md mx-auto">
-                                  <Card
-                                    className={`shadow-card cursor-pointer transition-all duration-200 border-primary ring-2 ring-primary`}
-                                  >
+                                  <Card className="shadow-card cursor-pointer transition-all duration-200 border-primary ring-2 ring-primary">
                                     <CardHeader>
                                       <CardTitle className="flex items-center space-x-2 text-base">
                                         <DollarSign className="h-4 w-4 text-success" />
                                         <Zap className="h-4 w-4 text-primary" />
-                                        <span>Mais barato e mais rápido</span>
+                                        <span>{mesmaOpcao ? "Mais barato e mais rápido" : "Opção disponível"}</span>
                                       </CardTitle>
                                     </CardHeader>
                                     <CardContent>
                                       <div className="space-y-3">
                                         <div className="flex items-center justify-between">
                                           <span className="text-3xl font-bold text-primary">
-                                            R$ {opcaoMaisBarata.preco_total.toFixed(2)}
+                                            R$ {opcao.preco_total.toFixed(2)}
                                           </span>
                                           <div className="text-right">
-                                            <div className="text-lg font-semibold">{opcaoMaisBarata.prazo} dias</div>
+                                            <div className="text-lg font-semibold">{opcao.prazo} dias</div>
                                             <div className="text-xs text-muted-foreground">úteis</div>
                                           </div>
                                         </div>
@@ -1006,14 +979,13 @@ const CotacaoPreview = () => {
                             
                             return (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Opção Mais Barato */}
                                 <Card
                                   className={`shadow-card cursor-pointer transition-all duration-200 ${
-                                    selectedCarrier === maisBarataKey
+                                    selectedCarrier === "maisbarato"
                                       ? "border-primary ring-2 ring-primary"
                                       : "border-border hover:border-primary/50"
                                   }`}
-                                  onClick={() => setSelectedCarrier(maisBarataKey as any)}
+                                  onClick={() => setSelectedCarrier("maisbarato")}
                                 >
                                   <CardHeader>
                                     <CardTitle className="flex items-center space-x-2 text-base">
@@ -1022,28 +994,25 @@ const CotacaoPreview = () => {
                                     </CardTitle>
                                   </CardHeader>
                                   <CardContent>
-                                    <div className="space-y-3">
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-3xl font-bold text-primary">
-                                          R$ {opcaoMaisBarata.preco_total.toFixed(2)}
-                                        </span>
-                                        <div className="text-right">
-                                          <div className="text-lg font-semibold">{opcaoMaisBarata.prazo} dias</div>
-                                          <div className="text-xs text-muted-foreground">úteis</div>
-                                        </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-3xl font-bold text-primary">
+                                        R$ {maisBarato.preco_total.toFixed(2)}
+                                      </span>
+                                      <div className="text-right">
+                                        <div className="text-lg font-semibold">{maisBarato.prazo} dias</div>
+                                        <div className="text-xs text-muted-foreground">úteis</div>
                                       </div>
                                     </div>
                                   </CardContent>
                                 </Card>
 
-                                {/* Opção Mais Rápido */}
                                 <Card
                                   className={`shadow-card cursor-pointer transition-all duration-200 ${
-                                    selectedCarrier === maisRapidaKey
+                                    selectedCarrier === "maisrapido"
                                       ? "border-primary ring-2 ring-primary"
                                       : "border-border hover:border-primary/50"
                                   }`}
-                                  onClick={() => setSelectedCarrier(maisRapidaKey as any)}
+                                  onClick={() => setSelectedCarrier("maisrapido")}
                                 >
                                   <CardHeader>
                                     <CardTitle className="flex items-center space-x-2 text-base">
@@ -1052,15 +1021,13 @@ const CotacaoPreview = () => {
                                     </CardTitle>
                                   </CardHeader>
                                   <CardContent>
-                                    <div className="space-y-3">
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-3xl font-bold text-primary">
-                                          R$ {opcaoMaisRapida.preco_total.toFixed(2)}
-                                        </span>
-                                        <div className="text-right">
-                                          <div className="text-lg font-semibold">{opcaoMaisRapida.prazo} dias</div>
-                                          <div className="text-xs text-muted-foreground">úteis</div>
-                                        </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-3xl font-bold text-primary">
+                                        R$ {maisRapido.preco_total.toFixed(2)}
+                                      </span>
+                                      <div className="text-right">
+                                        <div className="text-lg font-semibold">{maisRapido.prazo} dias</div>
+                                        <div className="text-xs text-muted-foreground">úteis</div>
                                       </div>
                                     </div>
                                   </CardContent>
@@ -1069,7 +1036,7 @@ const CotacaoPreview = () => {
                             );
                           })()}
 
-                          {(quoteResult.magalog?.permitido || quoteResult.jadlog?.permitido) && (
+                          {(quoteResult.maisBarato?.permitido || quoteResult.maisRapido?.permitido) && (
                             <div className="space-y-4 pt-4">
                               <Separator />
                               <div className="text-center space-y-2">

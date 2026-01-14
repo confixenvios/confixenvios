@@ -297,8 +297,8 @@ const QuoteForm = () => {
   // Step 2: Resultados e opções
   const [quoteData, setQuoteData] = useState<any>(null);
   const [pickupOption, setPickupOption] = useState<string>("");
-  // Armazena a transportadora selecionada internamente (jadlog/magalog)
-  const [selectedCarrier, setSelectedCarrier] = useState<"jadlog" | "magalog" | null>(null);
+  // Armazena a opção de frete selecionada (maisbarato/maisrapido)
+  const [selectedCarrier, setSelectedCarrier] = useState<"maisbarato" | "maisrapido" | null>(null);
 
   // Step 3: Dados da etiqueta
   const [senderData, setSenderData] = useState<AddressData>({
@@ -555,14 +555,17 @@ const QuoteForm = () => {
     return merchandiseValue * 0.013;
   };
 
-  // Obtém preço e prazo da transportadora selecionada
+  // Obtém preço e prazo da opção selecionada (maisbarato/maisrapido)
   const getSelectedCarrierData = () => {
-    if (!quoteData?.shippingQuote || !selectedCarrier) return { price: 0, days: 0 };
-    const carrierData = quoteData.shippingQuote[selectedCarrier];
-    if (!carrierData || !carrierData.permitido) return { price: 0, days: 0 };
+    if (!quoteData || !selectedCarrier) return { price: 0, days: 0 };
+    
+    // Novo formato: usar maisBarato ou maisRapido diretamente
+    const opcaoData = selectedCarrier === "maisbarato" ? quoteData.maisBarato : quoteData.maisRapido;
+    if (!opcaoData || !opcaoData.permitido) return { price: 0, days: 0 };
+    
     return {
-      price: carrierData.preco_total || 0,
-      days: carrierData.prazo || 0,
+      price: opcaoData.preco_total || 0,
+      days: opcaoData.prazo || 0,
     };
   };
 
@@ -964,122 +967,75 @@ const QuoteForm = () => {
       const webhookResponse = await response.json();
       console.log("📥 Webhook resposta:", webhookResponse);
 
-      // Verificar se a resposta é o novo formato (array) ou o antigo
-      let precoJadlog: number | null = null;
-      let precoMagalog: number | null = null;
-      let prazoJadlog: number = 5;
-      let prazoMagalog: number = 7;
-      let ufDestino: string | null = null;
+      // NOVO FORMATO: webhook retorna maisbarato_* e maisrapido_* diretamente
+      let maisBaratoPreco: number | null = null;
+      let maisBaratoPrazo: number = 7;
+      let maisBaratoUf: string | null = null;
+      let maisRapidoPreco: number | null = null;
+      let maisRapidoPrazo: number = 5;
+      let maisRapidoUf: string | null = null;
 
       if (Array.isArray(webhookResponse) && webhookResponse.length > 0) {
-        // Novo formato: array com objetos jadlog, magalog, maisbarato, maisRapido
         const apiData = webhookResponse[0];
         
-        if (apiData.jadlog && apiData.jadlog.permitido) {
-          precoJadlog = parseFloat(apiData.jadlog.preco_total);
-          prazoJadlog = parseInt(apiData.jadlog.prazo) || 5;
-          ufDestino = apiData.jadlog.uf || null;
+        // Extrair dados do mais barato
+        if (apiData.maisbarato_preco) {
+          maisBaratoPreco = parseFloat(apiData.maisbarato_preco);
+          maisBaratoPrazo = parseInt(apiData.maisbarato_prazo) || 7;
+          maisBaratoUf = apiData.maisbarato_uf || null;
         }
         
-        if (apiData.magalog && apiData.magalog.permitido) {
-          precoMagalog = parseFloat(apiData.magalog.preco_total);
-          prazoMagalog = parseInt(apiData.magalog.prazo) || 7;
-          if (!ufDestino) {
-            ufDestino = apiData.magalog.uf || null;
-          }
+        // Extrair dados do mais rápido
+        if (apiData.maisrapido_preco) {
+          maisRapidoPreco = parseFloat(apiData.maisrapido_preco);
+          maisRapidoPrazo = parseInt(apiData.maisrapido_prazo) || 5;
+          maisRapidoUf = apiData.maisrapido_uf || null;
         }
-
-        // Fallback para maisbarato/maisRapido para pegar UF
-        if (!ufDestino && apiData.maisbarato?.uf) {
-          ufDestino = apiData.maisbarato.uf;
+      } else if (webhookResponse && typeof webhookResponse === 'object') {
+        // Objeto único
+        if (webhookResponse.maisbarato_preco) {
+          maisBaratoPreco = parseFloat(webhookResponse.maisbarato_preco);
+          maisBaratoPrazo = parseInt(webhookResponse.maisbarato_prazo) || 7;
+          maisBaratoUf = webhookResponse.maisbarato_uf || null;
         }
-        if (!ufDestino && apiData.maisRapido?.uf) {
-          ufDestino = apiData.maisRapido.uf;
-        }
-      } else {
-        // Formato antigo: objeto com preco_total_frete_jadlog, etc.
-        precoJadlog = webhookResponse.preco_total_frete_jadlog 
-          ? parseFloat(webhookResponse.preco_total_frete_jadlog) 
-          : null;
-        precoMagalog = webhookResponse.preco_total_frete_magalog 
-          ? parseFloat(webhookResponse.preco_total_frete_magalog) 
-          : null;
-        prazoJadlog = webhookResponse.prazo_frete_jadlog 
-          ? parseInt(webhookResponse.prazo_frete_jadlog) 
-          : 5;
-        prazoMagalog = webhookResponse.prazo_frete_magalog 
-          ? parseInt(webhookResponse.prazo_frete_magalog) 
-          : 7;
         
-        // Extrair UF do formato antigo (local_uf_jadlog ou local_uf_magalog)
-        ufDestino = webhookResponse.local_uf_jadlog || webhookResponse.local_uf_magalog || null;
+        if (webhookResponse.maisrapido_preco) {
+          maisRapidoPreco = parseFloat(webhookResponse.maisrapido_preco);
+          maisRapidoPrazo = parseInt(webhookResponse.maisrapido_prazo) || 5;
+          maisRapidoUf = webhookResponse.maisrapido_uf || null;
+        }
       }
+
+      const ufDestino = maisBaratoUf || maisRapidoUf || null;
       
       console.log("🗺️ UF do destino extraída da API:", ufDestino);
+      console.log("💰 Mais barato - Preço:", maisBaratoPreco, "Prazo:", maisBaratoPrazo, "UF:", maisBaratoUf);
+      console.log("⚡ Mais rápido - Preço:", maisRapidoPreco, "Prazo:", maisRapidoPrazo, "UF:", maisRapidoUf);
 
-      console.log("💰 Preços extraídos - Jadlog:", precoJadlog, "Magalog:", precoMagalog);
-      console.log("📅 Prazos extraídos - Jadlog:", prazoJadlog, "Magalog:", prazoMagalog);
+      // Verificar se pelo menos uma opção está disponível
+      const maisBaratoDisponivel = maisBaratoPreco !== null && !isNaN(maisBaratoPreco) && maisBaratoPreco > 0;
+      const maisRapidoDisponivel = maisRapidoPreco !== null && !isNaN(maisRapidoPreco) && maisRapidoPreco > 0;
 
-      // Aplicar regras de dimensão e peso no frontend
-      // Jadlog: não exibir se dimensão > 170cm ou soma > 240cm
-      // Magalog: não exibir se dimensão > 80cm ou soma > 200cm ou peso total > 30kg
-      let jadlogPermitido = precoJadlog !== null && !isNaN(precoJadlog);
-      let magalogPermitido = precoMagalog !== null && !isNaN(precoMagalog);
-      let jadlogMotivo = "";
-      let magalogMotivo = "";
-
-      // Calcular peso total para regra de peso Magalog
-      const pesoTotal = volumesData.reduce((acc, vol) => acc + vol.peso, 0);
-
-      // Regra Magalog: peso máximo 30kg
-      if (magalogPermitido && pesoTotal > 30) {
-        magalogPermitido = false;
-        magalogMotivo = "Peso total excede 30kg";
-      }
-
-      // Verificar dimensões de cada volume
-      for (const vol of volumesData) {
-        const maxDimensao = Math.max(vol.comprimento, vol.largura, vol.altura);
-        const somaDimensoes = vol.comprimento + vol.largura + vol.altura;
-
-        // Regra Jadlog: dimensão > 170cm ou soma > 240cm
-        if (jadlogPermitido) {
-          if (maxDimensao > 170) {
-            jadlogPermitido = false;
-            jadlogMotivo = "Dimensão excede 170cm";
-          } else if (somaDimensoes > 240) {
-            jadlogPermitido = false;
-            jadlogMotivo = "Soma das dimensões excede 240cm";
-          }
-        }
-
-        // Regra Magalog: dimensão > 80cm ou soma > 200cm
-        if (magalogPermitido) {
-          if (maxDimensao > 80) {
-            magalogPermitido = false;
-            magalogMotivo = "Dimensão excede 80cm";
-          } else if (somaDimensoes > 200) {
-            magalogPermitido = false;
-            magalogMotivo = "Soma das dimensões excede 200cm";
-          }
-        }
-      }
-
-      console.log("🚚 Jadlog permitido:", jadlogPermitido, jadlogMotivo);
-      console.log("🚚 Magalog permitido:", magalogPermitido, magalogMotivo);
-
-      // Montar quoteData para o Step 2
+      // Montar quoteData para o Step 2 usando o novo formato
       const newQuoteData = {
+        // Novo formato: maisbarato e maisrapido diretamente do webhook
+        maisBarato: maisBaratoDisponivel
+          ? { permitido: true, preco_total: maisBaratoPreco, prazo: maisBaratoPrazo, uf: maisBaratoUf }
+          : { permitido: false, motivo: "Não disponível" },
+        maisRapido: maisRapidoDisponivel
+          ? { permitido: true, preco_total: maisRapidoPreco, prazo: maisRapidoPrazo, uf: maisRapidoUf }
+          : { permitido: false, motivo: "Não disponível" },
+        // Manter shippingQuote para compatibilidade (estrutura legada)
         shippingQuote: {
-          jadlog: jadlogPermitido && precoJadlog
-            ? { permitido: true, preco_total: precoJadlog, prazo: prazoJadlog }
-            : { permitido: false, motivo: jadlogMotivo || "Não disponível" },
-          magalog: magalogPermitido && precoMagalog
-            ? { permitido: true, preco_total: precoMagalog, prazo: prazoMagalog }
-            : { permitido: false, motivo: magalogMotivo || "Não disponível" },
+          maisbarato: maisBaratoDisponivel
+            ? { permitido: true, preco_total: maisBaratoPreco, prazo: maisBaratoPrazo }
+            : { permitido: false, motivo: "Não disponível" },
+          maisrapido: maisRapidoDisponivel
+            ? { permitido: true, preco_total: maisRapidoPreco, prazo: maisRapidoPrazo }
+            : { permitido: false, motivo: "Não disponível" },
         },
         destinyCep: formData.destinyCep.replace(/\D/g, ""),
-        destinyUf: ufDestino, // UF retornada pela API
+        destinyUf: ufDestino,
         formData: formData,
         volumes: volumesData,
         totalWeight: totalWeight,
@@ -1357,23 +1313,9 @@ const QuoteForm = () => {
 
         // === DADOS DE ENTREGA E COLETA ===
         deliveryDetails: {
-          // Determinar se é economic ou express baseado nos dados reais da API
-          selectedOption: (() => {
-            const jadlog = quoteData?.shippingQuote?.jadlog;
-            const magalog = quoteData?.shippingQuote?.magalog;
-            if (!jadlog || !magalog || !selectedCarrier) return "standard";
-            
-            // Determinar qual é mais barata e qual é mais rápida
-            const maisBarataCarrier = magalog.preco_total <= jadlog.preco_total ? "magalog" : "jadlog";
-            const maisRapidaCarrier = magalog.prazo <= jadlog.prazo ? "magalog" : "jadlog";
-            
-            // Se o usuário selecionou a mais barata, é "economic"
-            // Se selecionou a mais rápida, é "express"
-            if (selectedCarrier === maisBarataCarrier) return "economic";
-            if (selectedCarrier === maisRapidaCarrier) return "express";
-            return "standard";
-          })(),
-          selectedCarrier: selectedCarrier, // Transportadora selecionada (jadlog/magalog)
+          // Determinar se é economic ou express baseado na seleção
+          selectedOption: selectedCarrier === "maisbarato" ? "economic" : "express",
+          selectedCarrier: selectedCarrier, // Opção selecionada (maisbarato/maisrapido)
           shippingPrice: getSelectedCarrierData().price,
           pickupOption: pickupOption,
           pickupCost: getPickupCost(pickupOption),
@@ -1865,44 +1807,25 @@ const QuoteForm = () => {
                 {(() => {
                   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                   console.log("🖼️ [Step 2] RENDERIZANDO TELA");
-                  console.log("📦 Magalog:");
-                  if (quoteData.shippingQuote.magalog) {
-                    console.log("   - preco_total:", quoteData.shippingQuote.magalog.preco_total);
-                    console.log("   - peso_real:", quoteData.shippingQuote.magalog.peso_real);
-                    console.log("   - peso_cubado:", quoteData.shippingQuote.magalog.peso_cubado);
-                    console.log("   - prazo:", quoteData.shippingQuote.magalog.prazo);
-                  } else {
-                    console.log("   - Não disponível");
-                  }
-                  console.log("📦 Jadlog:");
-                  if (quoteData.shippingQuote.jadlog) {
-                    console.log("   - preco_total:", quoteData.shippingQuote.jadlog.preco_total);
-                    console.log("   - peso_real:", quoteData.shippingQuote.jadlog.peso_real);
-                    console.log("   - peso_cubado:", quoteData.shippingQuote.jadlog.peso_cubado);
-                    console.log("   - prazo:", quoteData.shippingQuote.jadlog.prazo);
-                  } else {
-                    console.log("   - Não disponível");
-                  }
+                  console.log("📦 Mais Barato:", quoteData.maisBarato);
+                  console.log("⚡ Mais Rápido:", quoteData.maisRapido);
                   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                   return null;
                 })()}
 
-                {/* Freight Options - Magalog e Jadlog */}
+                {/* Freight Options - Mais Barato e Mais Rápido */}
                 <div className="mb-6">
-                  {/* Verificar se ambas transportadoras falharam */}
-                  {quoteData.shippingQuote.magalog &&
-                  !quoteData.shippingQuote.magalog.permitido &&
-                  quoteData.shippingQuote.jadlog &&
-                  !quoteData.shippingQuote.jadlog.permitido ? (
+                  {/* Verificar se nenhuma opção está disponível */}
+                  {(!quoteData.maisBarato?.permitido && !quoteData.maisRapido?.permitido) ? (
                     <div className="p-6 bg-destructive/10 border-2 border-destructive/20 rounded-lg">
                       <div className="flex flex-col items-center space-y-3 text-center">
                         <AlertTriangle className="h-12 w-12 text-destructive" />
                         <div>
                           <h3 className="text-lg font-semibold text-destructive mb-2">
-                            Nenhuma transportadora disponível
+                            Nenhuma opção de frete disponível
                           </h3>
                           <p className="text-sm text-muted-foreground">
-                            Não há transportadoras disponíveis para as especificações informadas.
+                            Não há opções de frete disponíveis para as especificações informadas.
                           </p>
                         </div>
                       </div>
@@ -1911,97 +1834,85 @@ const QuoteForm = () => {
                     <>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {(() => {
-                          const magalog = quoteData.shippingQuote.magalog;
-                          const jadlog = quoteData.shippingQuote.jadlog;
+                          const maisBarato = quoteData.maisBarato;
+                          const maisRapido = quoteData.maisRapido;
 
-                          // Verificar quais estão disponíveis
-                          const magalogDisponivel = magalog && magalog.permitido && magalog.preco_total !== null;
-                          const jadlogDisponivel = jadlog && jadlog.permitido && jadlog.preco_total !== null;
+                          const maisBaratoDisponivel = maisBarato && maisBarato.permitido;
+                          const maisRapidoDisponivel = maisRapido && maisRapido.permitido;
 
-                          if (!magalogDisponivel && !jadlogDisponivel) return null;
+                          if (!maisBaratoDisponivel && !maisRapidoDisponivel) return null;
 
-                          // Se só uma está disponível, mostrar apenas ela e auto-selecionar
-                          if (magalogDisponivel && !jadlogDisponivel) {
-                            // Auto-selecionar se ainda não há seleção
-                            if (!selectedCarrier) setSelectedCarrier("magalog");
-                            return (
-                              <Card
-                                className="shadow-card cursor-pointer transition-all duration-200 border-primary ring-2 ring-primary"
-                                onClick={() => setSelectedCarrier("magalog")}
-                              >
-                                <CardHeader>
-                                  <CardTitle className="flex items-center space-x-2 text-base">
-                                    <DollarSign className="h-4 w-4 text-success" />
-                                    <Zap className="h-4 w-4 text-primary" />
-                                    <span>Mais barato e mais rápido</span>
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-xl font-bold text-primary">
-                                        R$ {magalog.preco_total.toFixed(2)}
-                                      </span>
-                                      <div className="text-right">
-                                        <div className="text-lg font-semibold">{magalog.prazo} dias</div>
-                                        <div className="text-xs text-muted-foreground">úteis</div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            );
-                          }
-
-                          if (jadlogDisponivel && !magalogDisponivel) {
-                            // Auto-selecionar se ainda não há seleção
-                            if (!selectedCarrier) setSelectedCarrier("jadlog");
-                            return (
-                              <Card
-                                className="shadow-card cursor-pointer transition-all duration-200 border-primary ring-2 ring-primary"
-                                onClick={() => setSelectedCarrier("jadlog")}
-                              >
-                                <CardHeader>
-                                  <CardTitle className="flex items-center space-x-2 text-base">
-                                    <DollarSign className="h-4 w-4 text-success" />
-                                    <Zap className="h-4 w-4 text-primary" />
-                                    <span>Mais barato e mais rápido</span>
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-xl font-bold text-primary">
-                                        R$ {jadlog.preco_total.toFixed(2)}
-                                      </span>
-                                      <div className="text-right">
-                                        <div className="text-lg font-semibold">{jadlog.prazo} dias</div>
-                                        <div className="text-xs text-muted-foreground">úteis</div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            );
-                          }
-
-                          // Ambas disponíveis - determinar qual é mais barata e qual é mais rápida
-                          const maisBarataCarrier: "magalog" | "jadlog" = magalog.preco_total <= jadlog.preco_total ? "magalog" : "jadlog";
-                          const maisRapidaCarrier: "magalog" | "jadlog" = magalog.prazo <= jadlog.prazo ? "magalog" : "jadlog";
-
-                          // Se a mesma transportadora é mais barata E mais rápida, mostrar apenas um cartão
-                          const mesmaTransportadora = maisBarataCarrier === maisRapidaCarrier;
-
-                          const opcaoMaisBarata = maisBarataCarrier === "magalog" ? magalog : jadlog;
-                          const opcaoMaisRapida = maisRapidaCarrier === "magalog" ? magalog : jadlog;
-
-                          // Se for a mesma transportadora, mostrar apenas um cartão e auto-selecionar
-                          if (mesmaTransportadora) {
-                            if (!selectedCarrier) setSelectedCarrier(maisBarataCarrier);
+                          // Se só uma está disponível
+                          if (maisBaratoDisponivel && !maisRapidoDisponivel) {
+                            if (!selectedCarrier) setSelectedCarrier("maisbarato");
                             return (
                               <Card
                                 className="shadow-card cursor-pointer transition-all duration-200 border-primary ring-2 ring-primary md:col-span-2"
-                                onClick={() => setSelectedCarrier(maisBarataCarrier)}
+                                onClick={() => setSelectedCarrier("maisbarato")}
+                              >
+                                <CardHeader>
+                                  <CardTitle className="flex items-center space-x-2 text-base">
+                                    <DollarSign className="h-4 w-4 text-success" />
+                                    <span>Opção disponível</span>
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xl font-bold text-primary">
+                                        R$ {maisBarato.preco_total.toFixed(2)}
+                                      </span>
+                                      <div className="text-right">
+                                        <div className="text-lg font-semibold">{maisBarato.prazo} dias</div>
+                                        <div className="text-xs text-muted-foreground">úteis</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          }
+
+                          if (maisRapidoDisponivel && !maisBaratoDisponivel) {
+                            if (!selectedCarrier) setSelectedCarrier("maisrapido");
+                            return (
+                              <Card
+                                className="shadow-card cursor-pointer transition-all duration-200 border-primary ring-2 ring-primary md:col-span-2"
+                                onClick={() => setSelectedCarrier("maisrapido")}
+                              >
+                                <CardHeader>
+                                  <CardTitle className="flex items-center space-x-2 text-base">
+                                    <Zap className="h-4 w-4 text-primary" />
+                                    <span>Opção disponível</span>
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xl font-bold text-primary">
+                                        R$ {maisRapido.preco_total.toFixed(2)}
+                                      </span>
+                                      <div className="text-right">
+                                        <div className="text-lg font-semibold">{maisRapido.prazo} dias</div>
+                                        <div className="text-xs text-muted-foreground">úteis</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          }
+
+                          // Verificar se são preços/prazos iguais (mesma opção)
+                          const mesmaOpcao = maisBarato.preco_total === maisRapido.preco_total && 
+                                            maisBarato.prazo === maisRapido.prazo;
+
+                          if (mesmaOpcao) {
+                            if (!selectedCarrier) setSelectedCarrier("maisbarato");
+                            return (
+                              <Card
+                                className="shadow-card cursor-pointer transition-all duration-200 border-primary ring-2 ring-primary md:col-span-2"
+                                onClick={() => setSelectedCarrier("maisbarato")}
                               >
                                 <CardHeader>
                                   <CardTitle className="flex items-center space-x-2 text-base">
@@ -2014,10 +1925,10 @@ const QuoteForm = () => {
                                   <div className="space-y-3">
                                     <div className="flex items-center justify-between">
                                       <span className="text-xl font-bold text-primary">
-                                        R$ {opcaoMaisBarata.preco_total.toFixed(2)}
+                                        R$ {maisBarato.preco_total.toFixed(2)}
                                       </span>
                                       <div className="text-right">
-                                        <div className="text-lg font-semibold">{opcaoMaisBarata.prazo} dias</div>
+                                        <div className="text-lg font-semibold">{maisBarato.prazo} dias</div>
                                         <div className="text-xs text-muted-foreground">úteis</div>
                                       </div>
                                     </div>
@@ -2027,16 +1938,17 @@ const QuoteForm = () => {
                             );
                           }
 
+                          // Ambas disponíveis e diferentes
                           return (
                             <>
                               {/* Opção Mais Barato */}
                               <Card
                                 className={`shadow-card cursor-pointer transition-all duration-200 ${
-                                  selectedCarrier === maisBarataCarrier
+                                  selectedCarrier === "maisbarato"
                                     ? "border-primary ring-2 ring-primary"
                                     : "border-border hover:border-primary/50"
                                 }`}
-                                onClick={() => setSelectedCarrier(maisBarataCarrier)}
+                                onClick={() => setSelectedCarrier("maisbarato")}
                               >
                                 <CardHeader>
                                   <CardTitle className="flex items-center space-x-2 text-base">
@@ -2048,10 +1960,10 @@ const QuoteForm = () => {
                                   <div className="space-y-3">
                                     <div className="flex items-center justify-between">
                                       <span className="text-xl font-bold text-primary">
-                                        R$ {opcaoMaisBarata.preco_total.toFixed(2)}
+                                        R$ {maisBarato.preco_total.toFixed(2)}
                                       </span>
                                       <div className="text-right">
-                                        <div className="text-lg font-semibold">{opcaoMaisBarata.prazo} dias</div>
+                                        <div className="text-lg font-semibold">{maisBarato.prazo} dias</div>
                                         <div className="text-xs text-muted-foreground">úteis</div>
                                       </div>
                                     </div>
@@ -2062,11 +1974,11 @@ const QuoteForm = () => {
                               {/* Opção Mais Rápido */}
                               <Card
                                 className={`shadow-card cursor-pointer transition-all duration-200 ${
-                                  selectedCarrier === maisRapidaCarrier
+                                  selectedCarrier === "maisrapido"
                                     ? "border-primary ring-2 ring-primary"
                                     : "border-border hover:border-primary/50"
                                 }`}
-                                onClick={() => setSelectedCarrier(maisRapidaCarrier)}
+                                onClick={() => setSelectedCarrier("maisrapido")}
                               >
                                 <CardHeader>
                                   <CardTitle className="flex items-center space-x-2 text-base">
@@ -2078,10 +1990,10 @@ const QuoteForm = () => {
                                   <div className="space-y-3">
                                     <div className="flex items-center justify-between">
                                       <span className="text-xl font-bold text-primary">
-                                        R$ {opcaoMaisRapida.preco_total.toFixed(2)}
+                                        R$ {maisRapido.preco_total.toFixed(2)}
                                       </span>
                                       <div className="text-right">
-                                        <div className="text-lg font-semibold">{opcaoMaisRapida.prazo} dias</div>
+                                        <div className="text-lg font-semibold">{maisRapido.prazo} dias</div>
                                         <div className="text-xs text-muted-foreground">úteis</div>
                                       </div>
                                     </div>
