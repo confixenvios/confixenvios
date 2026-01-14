@@ -176,19 +176,14 @@ const NationalLabelGenerator = ({
         className="border-2 border-foreground p-3 bg-white text-black rounded"
         style={{ width: '100%', maxWidth: '350px', margin: '0 auto' }}
       >
-        {/* Header com Logo e Transportadora */}
-        <div className="flex items-center justify-between border-b-2 border-black pb-2 mb-2">
+        {/* Header com Logo centralizada */}
+        <div className="flex items-center justify-center border-b-2 border-black pb-2 mb-2">
           <div className="flex items-center gap-2">
             <img src={confixLogo} alt="Confix Logo" className="w-6 h-6" />
-            <div>
+            <div className="text-center">
               <h2 className="font-bold text-sm leading-tight">CONFIX ENVIOS</h2>
               <p className="text-[8px] leading-tight text-gray-600">Nacional Express</p>
             </div>
-          </div>
-          <div className="text-right">
-            <span className="bg-black text-white px-2 py-0.5 text-[10px] font-bold rounded">
-              {carrier}
-            </span>
           </div>
         </div>
 
