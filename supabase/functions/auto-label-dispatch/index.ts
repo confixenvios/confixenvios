@@ -131,86 +131,95 @@ serve(async (req) => {
       totalCubagem += l * w * h;
     });
     
-    // Preparar payload no formato exato esperado
-    const webhookData: Record<string, string> = {
-      // Valores e preços
-      valorTotal: String(totalPrice),
-      'mercadoria_valorDeclarado': String(merchandiseValue),
+    // Buscar CTe mais recente para esta remessa
+    const { data: cteData } = await supabaseService
+      .from('cte_emissoes')
+      .select('*')
+      .eq('shipment_id', shipmentId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    console.log('📄 [AUTO-LABEL] CTe encontrado:', cteData ? cteData.chave_cte : 'Nenhum');
+
+    // Preparar volumes no formato esperado pelo n8n
+    const volumesFormatted = volumes.map((vol: any, index: number) => ({
+      id: index + 1,
+      volumeNumero: index + 1,
+      peso: Number(vol.weight) || Number(vol.peso) || 1,
+      comprimento: Number(vol.length) || Number(vol.comprimento) || 10,
+      largura: Number(vol.width) || Number(vol.largura) || 10,
+      altura: Number(vol.height) || Number(vol.altura) || 10,
+      pesoCubado: ((Number(vol.length) || Number(vol.comprimento) || 10) / 100) * 
+                  ((Number(vol.width) || Number(vol.largura) || 10) / 100) * 
+                  ((Number(vol.height) || Number(vol.altura) || 10) / 100) * 300,
+      tipoMercadoria: vol.merchandiseType || vol.tipoMercadoria || 'normal'
+    }));
+
+    // Preparar payload no formato ESPERADO PELO N8N (campos em inglês)
+    const webhookData: Record<string, any> = {
+      // Valores e preços - campos que n8n espera
+      valor_total: totalPrice,
+      valor_mercadoria: merchandiseValue,
+      peso_total: totalWeight,
+      
+      // Tracking e IDs
+      tracking_code: shipment.tracking_code || '',
+      shipment_id: shipment.id,
+      
+      // CTe dados (para o campo dfe no n8n)
+      cte_chave: cteData?.chave_cte || '',
+      cte_numero: cteData?.numero_cte || '',
+      cte_serie: cteData?.serie || '1',
       
       // Prazo e transportadora
-      remessa_prazo: String(deliveryDays),
-      selected_carrier: selectedCarrier, // Campo esperado pelo n8n
-      transportadora_nome: selectedCarrier,
-      transportadora_servico: quoteData?.deliveryDetails?.selectedOption || 'economic',
-      cnpjTransportadorDestinto: '',
+      prazo: deliveryDays,
+      selected_carrier: selectedCarrier,
       
-      // Expedidor (empresa emissora)
-      expedidor: pricingTableData?.name || 'Juri Express',
+      // Descrição da mercadoria
+      content_description: merchandiseDescription,
       
-      // Remetente
-      remetente_nome: shipment.sender_address?.name || '',
-      remetente_documento: quoteData?.addressData?.sender?.document || '',
-      remetente_inscricaoEstadual: quoteData?.addressData?.sender?.inscricaoEstadual || '',
-      remetente_email: quoteData?.addressData?.sender?.email || '',
-      remetente_telefone: quoteData?.addressData?.sender?.phone || '',
-      remetente_endereco: shipment.sender_address?.street || '',
-      remetente_numero: shipment.sender_address?.number || '',
-      remetente_complemento: shipment.sender_address?.complement || '',
-      remetente_bairro: shipment.sender_address?.neighborhood || '',
-      remetente_cidade: shipment.sender_address?.city || '',
-      remetente_estado: shipment.sender_address?.state || '',
-      remetente_cep: shipment.sender_address?.cep || '',
+      // Destinatário - campos em inglês que n8n espera
+      recipient_name: shipment.recipient_address?.name || '',
+      recipient_document: quoteData?.addressData?.recipient?.document || '',
+      recipient_inscricao_estadual: quoteData?.addressData?.recipient?.inscricaoEstadual || '',
+      recipient_email: quoteData?.addressData?.recipient?.email || '',
+      recipient_phone: quoteData?.addressData?.recipient?.phone || '',
+      recipient_street: shipment.recipient_address?.street || '',
+      recipient_number: shipment.recipient_address?.number || '',
+      recipient_complement: shipment.recipient_address?.complement || '',
+      recipient_neighborhood: shipment.recipient_address?.neighborhood || '',
+      recipient_city: shipment.recipient_address?.city || '',
+      recipient_state: shipment.recipient_address?.state || '',
+      recipient_cep: shipment.recipient_address?.cep || '',
       
-      // Destinatário
-      destinatario_nome: shipment.recipient_address?.name || '',
-      destinatario_documento: quoteData?.addressData?.recipient?.document || '',
-      destinatario_inscricaoEstadual: quoteData?.addressData?.recipient?.inscricaoEstadual || '',
-      destinatario_email: quoteData?.addressData?.recipient?.email || '',
-      destinatario_telefone: quoteData?.addressData?.recipient?.phone || '',
-      destinatario_endereco: shipment.recipient_address?.street || '',
-      destinatario_numero: shipment.recipient_address?.number || '',
-      destinatario_complemento: shipment.recipient_address?.complement || '',
-      destinatario_bairro: shipment.recipient_address?.neighborhood || '',
-      destinatario_cidade: shipment.recipient_address?.city || '',
-      destinatario_estado: shipment.recipient_address?.state || '',
-      destinatario_cep: shipment.recipient_address?.cep || '',
+      // Remetente - campos em inglês
+      sender_name: shipment.sender_address?.name || '',
+      sender_document: quoteData?.addressData?.sender?.document || '',
+      sender_inscricao_estadual: quoteData?.addressData?.sender?.inscricaoEstadual || '',
+      sender_email: quoteData?.addressData?.sender?.email || '',
+      sender_phone: quoteData?.addressData?.sender?.phone || '',
+      sender_street: shipment.sender_address?.street || '',
+      sender_number: shipment.sender_address?.number || '',
+      sender_complement: shipment.sender_address?.complement || '',
+      sender_neighborhood: shipment.sender_address?.neighborhood || '',
+      sender_city: shipment.sender_address?.city || '',
+      sender_state: shipment.sender_address?.state || '',
+      sender_cep: shipment.sender_address?.cep || '',
       
-      // Tipo de documento e chave
-      tipo: tipoDoc,
-      chaveNotaFiscal: nfeKey || '99999999999999999999999999999999999999999999',
-      descricaoMercadoria: merchandiseDescription,
+      // Dimensões gerais
+      largura: shipment.width || 10,
+      comprimento: shipment.length || 10,
+      altura: shipment.height || 10,
+      formato: shipment.format || 'pacote',
       
-      // Peso e dimensões gerais
-      remessa_peso: String(totalWeight),
-      remessa_cubagemTotal: totalCubagem.toFixed(3),
-      remessa_largura: String(shipment.width || 0),
-      remessa_comprimento: String(shipment.length || 0),
-      remessa_altura: String(shipment.height || 0),
-      remessa_formato: shipment.format || 'pacote',
-      
-      // IDs
-      shipmentId: shipment.id,
-      trackingCode: shipment.tracking_code || '',
+      // Quote data estruturado para o n8n acessar volumes
+      quote_data: {
+        quoteData: {
+          volumes: volumesFormatted
+        }
+      }
     };
-
-    // Adicionar volumes no formato esperado
-    // Volumes já foram calculados acima
-    
-    volumes.forEach((vol: any, index: number) => {
-      const num = index + 1;
-      const volPeso = Number(vol.weight) || Number(vol.peso) || 0;
-      const volComp = Number(vol.length) || Number(vol.comprimento) || 0;
-      const volLarg = Number(vol.width) || Number(vol.largura) || 0;
-      const volAlt = Number(vol.height) || Number(vol.altura) || 0;
-      const volCubagem = (volComp / 100) * (volLarg / 100) * (volAlt / 100);
-      
-      webhookData[`volume${num}_peso`] = String(volPeso);
-      webhookData[`volume${num}_comprimento`] = String(volComp);
-      webhookData[`volume${num}_largura`] = String(volLarg);
-      webhookData[`volume${num}_altura`] = String(volAlt);
-      webhookData[`volume${num}_cubagemVolume`] = volCubagem.toFixed(3);
-      webhookData[`volume${num}_tipoMercadoria`] = vol.merchandiseType || vol.tipoMercadoria || shipment.format || 'normal';
-    });
 
     console.log('📤 [AUTO-LABEL] Payload formatado:', JSON.stringify(webhookData, null, 2));
 
