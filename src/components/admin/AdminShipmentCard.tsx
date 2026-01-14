@@ -260,8 +260,7 @@ const AdminShipmentCard = ({
                   {shipment.quote_data?.deliveryDetails?.selectedCarrier || 
                    (shipment.quote_data?.shippingQuote?.jadlog?.permitido ? 'Jadlog' : 
                     shipment.quote_data?.shippingQuote?.magalog?.permitido ? 'Magalog' : 
-                    shipment.quote_data?.shippingQuote?.alfa?.permitido ? 'Alfa' : 
-                    shipment.selected_option)}
+                    'N/A')}
                 </Badge>
               </div>
             )}
