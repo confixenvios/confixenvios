@@ -30,6 +30,8 @@ export interface BaseShipment {
   payment_data: any;
   label_pdf_url?: string | null;
   cte_key?: string | null;
+  carrier_order_id?: string | null;
+  carrier_barcode?: string | null;
   sender_address: ShipmentAddress;
   recipient_address: ShipmentAddress;
   pricing_table_name?: string;
@@ -168,6 +170,8 @@ export const getAdminShipments = async (): Promise<AdminShipment[]> => {
       created_at,
       label_pdf_url,
       cte_key,
+      carrier_order_id,
+      carrier_barcode,
       user_id,
       motorista_id,
       pricing_table_id,
@@ -823,6 +827,8 @@ function normalizeShipmentData(item: any): BaseShipment {
     payment_data: item.payment_data,
     label_pdf_url: item.label_pdf_url,
     cte_key: item.cte_key,
+    carrier_order_id: item.carrier_order_id,
+    carrier_barcode: item.carrier_barcode,
     pricing_table_name: item.pricing_table_name,
     pricing_table_id: item.pricing_table_id,
     document_type: item.document_type,

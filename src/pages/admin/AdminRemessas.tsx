@@ -66,6 +66,8 @@ interface Shipment {
   created_at: string;
   label_pdf_url: string | null;
   cte_key: string | null;
+  carrier_order_id: string | null;
+  carrier_barcode: string | null;
   motoristas?: {
     nome: string;
     telefone: string;
@@ -1727,11 +1729,14 @@ const AdminRemessas = () => {
                                 )}
                                 <div className="flex items-center gap-2 text-xs mt-1">
                                   {/* Verificar se é remessa Jadlog/Nacional para mostrar botão de etiqueta Confix */}
-                                  {shipment.pricing_table_name?.toLowerCase().includes('jadlog') || 
+                                  {/* Verificar se é remessa Jadlog/Nacional: por pricing_table_name OU por carrier_order_id/carrier_barcode */}
+                                  {(shipment.pricing_table_name?.toLowerCase().includes('jadlog') || 
                                    shipment.pricing_table_name?.toLowerCase().includes('magalog') ||
-                                   shipment.pricing_table_name?.toLowerCase().includes('alfa') ? (
+                                   shipment.pricing_table_name?.toLowerCase().includes('alfa') ||
+                                   shipment.carrier_order_id || 
+                                   shipment.carrier_barcode) ? (
                                     <>
-                                      {shipment.status === 'LABEL_AVAILABLE' || shipment.label_pdf_url ? (
+                                      {shipment.status === 'LABEL_AVAILABLE' || shipment.label_pdf_url || shipment.carrier_order_id ? (
                                         <>
                                           <Badge variant="default" className="text-xs bg-green-100 text-green-700">
                                             Etiqueta Disponível
