@@ -490,7 +490,8 @@ const CotacaoPreview = () => {
       setShowAuthModal(true);
     } else {
       if (activeTab === "convencional") {
-        navigate("/cotacao");
+        // Redirecionar para o painel externo
+        window.location.href = "https://confixenvios.com.br/painel/convencional/cotacoes";
       } else {
         navigate("/painel/expresso/novo-envio");
       }
