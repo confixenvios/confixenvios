@@ -216,9 +216,11 @@ serve(async (req) => {
     const labelPdfUrl = publicUrlData.publicUrl;
     console.log('🔗 Public URL:', labelPdfUrl);
 
-    // Update shipment with label URL and carrier data
+    // Update shipment with carrier data
+    // IMPORTANTE: NÃO salvamos o PDF da Jadlog como label_pdf_url
+    // O frontend usa o NationalLabelGenerator para criar a etiqueta Confix customizada
+    // O PDF da Jadlog é salvo apenas como referência/backup no webhook_logs
     const updateData: any = {
-      label_pdf_url: labelPdfUrl,
       updated_at: new Date().toISOString(),
       status: 'LABEL_AVAILABLE' // Status válido no constraint
     };
@@ -241,6 +243,7 @@ serve(async (req) => {
     }
 
     console.log('📊 Updating shipment with data:', JSON.stringify(updateData, null, 2));
+    console.log('📦 PDF da Jadlog salvo em storage (backup):', labelPdfUrl);
 
     const { error: updateError } = await supabase
       .from('shipments')
@@ -261,13 +264,20 @@ serve(async (req) => {
 
     console.log('✅ Shipment updated successfully');
 
-    // Log the webhook
+    // Log the webhook - salvar URL do PDF da Jadlog como referência
     await supabase.from('webhook_logs').insert({
       shipment_id: shipment.id,
       event_type: 'carrier_label_received',
-      payload: { codigo, status, etiqueta_size: etiquetaBase64.length, original_shipmentId: shipmentId },
+      payload: { 
+        codigo, 
+        status, 
+        etiqueta_size: etiquetaBase64.length, 
+        original_shipmentId: shipmentId,
+        jadlog_pdf_url: labelPdfUrl, // URL do PDF original da Jadlog (backup)
+        carrier_barcode: finalBarcode
+      },
       response_status: 200,
-      response_body: { label_pdf_url: labelPdfUrl }
+      response_body: { jadlog_pdf_url: labelPdfUrl, carrier_barcode: finalBarcode }
     });
 
     return new Response(
