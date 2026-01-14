@@ -90,107 +90,128 @@ serve(async (req) => {
     const selectedCarrier = getSelectedCarrier();
     console.log('🚛 [AUTO-LABEL] Transportadora selecionada:', selectedCarrier);
 
-    // Preparar payload para o webhook
+    // Preparar payload no formato exato esperado pelo webhook de etiqueta
+    const quoteData = shipment.quote_data as any;
+    const pricingTableName = shipment.pricing_table_name || quoteData?.deliveryDetails?.selectedCarrier || selectedCarrier;
+    
+    // Extrair dados da cotação
+    const shippingQuote = quoteData?.quoteData?.shippingQuote;
+    const selectedQuote = shippingQuote?.[selectedCarrier] || shippingQuote?.jadlog;
+    const totalPrice = quoteData?.deliveryDetails?.totalPrice || (shipment.payment_data as any)?.amount || 0;
+    const merchandiseValue = quoteData?.quoteData?.totalMerchandiseValue || quoteData?.fiscalData?.merchandise_value || 0;
+    const deliveryDays = quoteData?.deliveryDetails?.deliveryDays || selectedQuote?.prazo || 5;
+    
+    // Dados do documento
+    const documentType = shipment.document_type || quoteData?.documentType || quoteData?.fiscalData?.type || 'declaracao_conteudo';
+    const nfeKey = quoteData?.nfeKey || quoteData?.fiscalData?.nfe_key || quoteData?.nfeChave || '';
+    const merchandiseDescription = quoteData?.merchandiseDescription || quoteData?.descricaoMercadoria || 
+                                   quoteData?.fiscalData?.contentDescription || 'MERCADORIA';
+    
+    // Determinar tipo de documento para o campo 'tipo' (1=NFe, 2=CTe, 3=Declaração)
+    let tipoDoc = '3'; // Default: Declaração
+    if (documentType === 'nfe' || nfeKey) {
+      tipoDoc = '1';
+    } else if (documentType === 'cte') {
+      tipoDoc = '2';
+    }
+    
+    // Calcular peso e cubagem
+    const volumes = quoteData?.merchandiseDetails?.volumes || 
+                   quoteData?.technicalData?.volumes || 
+                   quoteData?.quoteData?.volumes || [];
+    
+    const totalWeight = volumes.reduce((sum: number, vol: any) => 
+      sum + (Number(vol.weight) || Number(vol.peso) || 0), 0) || shipment.weight || 1;
+    
+    let totalCubagem = 0;
+    volumes.forEach((vol: any) => {
+      const l = (Number(vol.length) || Number(vol.comprimento) || 0) / 100;
+      const w = (Number(vol.width) || Number(vol.largura) || 0) / 100;
+      const h = (Number(vol.height) || Number(vol.altura) || 0) / 100;
+      totalCubagem += l * w * h;
+    });
+    
+    // Preparar payload no formato exato esperado
     const webhookData: Record<string, string> = {
-      shipment_id: shipment.id,
-      tracking_code: shipment.tracking_code || '',
-      status: shipment.status || '',
-      created_at: shipment.created_at || '',
+      // Valores e preços
+      valorTotal: String(totalPrice),
+      'mercadoria_valorDeclarado': String(merchandiseValue),
       
-      // Dimensões e peso
-      weight: String(shipment.weight || 0),
-      length: String(shipment.length || 0),
-      width: String(shipment.width || 0),
-      height: String(shipment.height || 0),
-      format: shipment.format || '',
+      // Prazo e transportadora
+      remessa_prazo: String(deliveryDays),
+      transportadora_nome: selectedCarrier,
+      transportadora_servico: quoteData?.deliveryDetails?.selectedOption || 'economic',
+      cnpjTransportadorDestinto: '',
       
-      // Opções de envio
-      selected_option: shipment.selected_option || '',
-      pickup_option: shipment.pickup_option || '',
-      document_type: shipment.document_type || '',
-      pricing_table_name: shipment.pricing_table_name || '',
-      pricing_table_id: shipment.pricing_table_id || '',
-      selected_carrier: selectedCarrier,
-      
-      // CTE
-      cte_key: shipment.cte_key || '',
-      label_pdf_url: shipment.label_pdf_url || '',
+      // Expedidor (empresa emissora)
+      expedidor: pricingTableData?.name || 'Juri Express',
       
       // Remetente
-      sender_name: shipment.sender_address?.name || '',
-      sender_street: shipment.sender_address?.street || '',
-      sender_number: shipment.sender_address?.number || '',
-      sender_complement: shipment.sender_address?.complement || '',
-      sender_neighborhood: shipment.sender_address?.neighborhood || '',
-      sender_city: shipment.sender_address?.city || '',
-      sender_state: shipment.sender_address?.state || '',
-      sender_cep: shipment.sender_address?.cep || '',
-      sender_phone: (shipment.quote_data as any)?.addressData?.sender?.phone || '',
-      sender_document: (shipment.quote_data as any)?.addressData?.sender?.document || '',
-      sender_email: (shipment.quote_data as any)?.addressData?.sender?.email || '',
-      sender_inscricao_estadual: (shipment.quote_data as any)?.addressData?.sender?.inscricaoEstadual || '',
+      remetente_nome: shipment.sender_address?.name || '',
+      remetente_documento: quoteData?.addressData?.sender?.document || '',
+      remetente_inscricaoEstadual: quoteData?.addressData?.sender?.inscricaoEstadual || '',
+      remetente_email: quoteData?.addressData?.sender?.email || '',
+      remetente_telefone: quoteData?.addressData?.sender?.phone || '',
+      remetente_endereco: shipment.sender_address?.street || '',
+      remetente_numero: shipment.sender_address?.number || '',
+      remetente_complemento: shipment.sender_address?.complement || '',
+      remetente_bairro: shipment.sender_address?.neighborhood || '',
+      remetente_cidade: shipment.sender_address?.city || '',
+      remetente_estado: shipment.sender_address?.state || '',
+      remetente_cep: shipment.sender_address?.cep || '',
       
       // Destinatário
-      recipient_name: shipment.recipient_address?.name || '',
-      recipient_street: shipment.recipient_address?.street || '',
-      recipient_number: shipment.recipient_address?.number || '',
-      recipient_complement: shipment.recipient_address?.complement || '',
-      recipient_neighborhood: shipment.recipient_address?.neighborhood || '',
-      recipient_city: shipment.recipient_address?.city || '',
-      recipient_state: shipment.recipient_address?.state || '',
-      recipient_cep: shipment.recipient_address?.cep || '',
-      recipient_phone: (shipment.quote_data as any)?.addressData?.recipient?.phone || '',
-      recipient_document: (shipment.quote_data as any)?.addressData?.recipient?.document || '',
-      recipient_email: (shipment.quote_data as any)?.addressData?.recipient?.email || '',
-      recipient_inscricao_estadual: (shipment.quote_data as any)?.addressData?.recipient?.inscricaoEstadual || '',
+      destinatario_nome: shipment.recipient_address?.name || '',
+      destinatario_documento: quoteData?.addressData?.recipient?.document || '',
+      destinatario_inscricaoEstadual: quoteData?.addressData?.recipient?.inscricaoEstadual || '',
+      destinatario_email: quoteData?.addressData?.recipient?.email || '',
+      destinatario_telefone: quoteData?.addressData?.recipient?.phone || '',
+      destinatario_endereco: shipment.recipient_address?.street || '',
+      destinatario_numero: shipment.recipient_address?.number || '',
+      destinatario_complemento: shipment.recipient_address?.complement || '',
+      destinatario_bairro: shipment.recipient_address?.neighborhood || '',
+      destinatario_cidade: shipment.recipient_address?.city || '',
+      destinatario_estado: shipment.recipient_address?.state || '',
+      destinatario_cep: shipment.recipient_address?.cep || '',
       
-      // Descrição do conteúdo
-      content_description: (shipment.quote_data as any)?.fiscalData?.contentDescription || 
-                          (shipment.quote_data as any)?.documentData?.merchandiseDescription ||
-                          (shipment.quote_data as any)?.descricaoMercadoria || '',
+      // Tipo de documento e chave
+      tipo: tipoDoc,
+      chaveNotaFiscal: nfeKey || '99999999999999999999999999999999999999999999',
+      descricaoMercadoria: merchandiseDescription,
       
-      // Dados como JSON
-      quote_data: shipment.quote_data ? JSON.stringify(shipment.quote_data) : '',
-      payment_data: shipment.payment_data ? JSON.stringify(shipment.payment_data) : '',
-      pricing_table_data: pricingTableData ? JSON.stringify(pricingTableData) : '',
+      // Peso e dimensões gerais
+      remessa_peso: String(totalWeight),
+      remessa_cubagemTotal: totalCubagem.toFixed(3),
+      remessa_largura: String(shipment.width || 0),
+      remessa_comprimento: String(shipment.length || 0),
+      remessa_altura: String(shipment.height || 0),
+      remessa_formato: shipment.format || 'pacote',
       
-      // Peso total e valor total
-      peso_total: String((shipment.quote_data as any)?.quoteData?.totalWeight || shipment.weight || 0),
-      valor_total: String((shipment.quote_data as any)?.deliveryDetails?.totalPrice || 
-                         (shipment.payment_data as any)?.amount || 0),
-      valor_mercadoria: String((shipment.quote_data as any)?.quoteData?.totalMerchandiseValue || 0),
-      prazo: String((shipment.quote_data as any)?.deliveryDetails?.deliveryDays || 5),
+      // IDs
+      shipmentId: shipment.id,
+      trackingCode: shipment.tracking_code || '',
     };
 
-    // Adicionar volumes
-    const volumes = (shipment.quote_data as any)?.merchandiseDetails?.volumes || 
-                   (shipment.quote_data as any)?.technicalData?.volumes || 
-                   (shipment.quote_data as any)?.quoteData?.volumes || [];
-    
-    webhookData['total_volumes'] = String(volumes.length || 1);
+    // Adicionar volumes no formato esperado
+    // Volumes já foram calculados acima
     
     volumes.forEach((vol: any, index: number) => {
       const num = index + 1;
-      webhookData[`volume${num}_peso`] = String(vol.weight || vol.peso || 0);
-      webhookData[`volume${num}_comprimento`] = String(vol.length || vol.comprimento || 0);
-      webhookData[`volume${num}_largura`] = String(vol.width || vol.largura || 0);
-      webhookData[`volume${num}_altura`] = String(vol.height || vol.altura || 0);
-      webhookData[`volume${num}_tipo`] = vol.merchandiseType || vol.tipoMercadoria || 'normal';
+      const volPeso = Number(vol.weight) || Number(vol.peso) || 0;
+      const volComp = Number(vol.length) || Number(vol.comprimento) || 0;
+      const volLarg = Number(vol.width) || Number(vol.largura) || 0;
+      const volAlt = Number(vol.height) || Number(vol.altura) || 0;
+      const volCubagem = (volComp / 100) * (volLarg / 100) * (volAlt / 100);
+      
+      webhookData[`volume${num}_peso`] = String(volPeso);
+      webhookData[`volume${num}_comprimento`] = String(volComp);
+      webhookData[`volume${num}_largura`] = String(volLarg);
+      webhookData[`volume${num}_altura`] = String(volAlt);
+      webhookData[`volume${num}_cubagemVolume`] = volCubagem.toFixed(3);
+      webhookData[`volume${num}_tipoMercadoria`] = vol.merchandiseType || vol.tipoMercadoria || shipment.format || 'normal';
     });
 
-    // Calcular peso real e cubado
-    const quoteInfo = (shipment.quote_data as any)?.quoteData?.shippingQuote;
-    let userInputWeight = volumes.reduce((sum: number, vol: any) => sum + (Number(vol.weight) || Number(vol.peso) || 0), 0) || shipment.weight || 0;
-    let carrierPesoCubado = 0;
-    
-    if (selectedCarrier === 'jadlog' && quoteInfo?.jadlog) {
-      carrierPesoCubado = quoteInfo.jadlog.peso_cubado || 0;
-    } else if (selectedCarrier === 'magalog' && quoteInfo?.magalog) {
-      carrierPesoCubado = quoteInfo.magalog.peso_cubado || 0;
-    }
-    
-    webhookData['peso_real'] = String(userInputWeight);
-    webhookData['peso_cubado'] = String(carrierPesoCubado);
+    console.log('📤 [AUTO-LABEL] Payload formatado:', JSON.stringify(webhookData, null, 2));
 
     console.log('📤 [AUTO-LABEL] Enviando para webhook:', LABEL_WEBHOOK_URL);
 
