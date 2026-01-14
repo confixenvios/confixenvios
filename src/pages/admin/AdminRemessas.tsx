@@ -786,6 +786,26 @@ const AdminRemessas = () => {
     }
   };
 
+  // Função para fazer download da etiqueta PDF
+  const handleDownloadLabel = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `etiqueta_${filename}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Erro ao baixar etiqueta:', error);
+      // Fallback: abre em nova aba se o download falhar
+      window.open(url, '_blank');
+    }
+  };
+
   // Função para obter badge do status do webhook
   const getWebhookStatusBadge = (shipment: AdminShipment) => {
     const status = webhookStatuses[shipment.id];
@@ -1621,7 +1641,7 @@ const AdminRemessas = () => {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => window.open(shipment.label_pdf_url!, '_blank')}
+                                        onClick={() => handleDownloadLabel(shipment.label_pdf_url!, shipment.tracking_code || shipment.id)}
                                         className="h-6 px-2 text-xs hover:bg-primary/10"
                                       >
                                         <Download className="w-3 h-3 mr-1" />
@@ -2107,7 +2127,7 @@ const AdminRemessas = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => window.open(selectedShipmentDetails.label_pdf_url!, '_blank')}
+                            onClick={() => handleDownloadLabel(selectedShipmentDetails.label_pdf_url!, selectedShipmentDetails.tracking_code || selectedShipmentDetails.id)}
                             className="h-8"
                           >
                             <Download className="w-4 h-4 mr-2" />
