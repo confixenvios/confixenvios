@@ -60,13 +60,14 @@ const NationalLabelGenerator = ({
 }: NationalLabelGeneratorProps) => {
   const labelRef = useRef<HTMLDivElement>(null);
 
-  // ID do pedido na transportadora (ex: codigo Jadlog)
-  const carrierOrderId = shipment.carrier_order_id || shipment.cte_key || null;
+  // ID do pedido na transportadora (ex: codigo Jadlog - usado como tracking principal)
+  const carrierOrderId = shipment.carrier_order_id || null;
   
-  // Código de barras da transportadora (extraído do PDF)
+  // Código de barras da transportadora (código longo para leitura - ex: 14094800000031...)
+  // Este é o código que deve aparecer no código de barras da etiqueta
   const carrierBarcode = shipment.carrier_barcode || carrierOrderId || shipment.tracking_code;
   
-  // Código de rastreio principal (Confix)
+  // Código de rastreio principal (pode ser o código Jadlog ou o TEMP se ainda não tiver)
   const trackingCode = shipment.tracking_code;
   
   // Determinar transportadora
