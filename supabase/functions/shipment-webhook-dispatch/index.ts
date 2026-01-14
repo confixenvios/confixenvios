@@ -17,6 +17,11 @@ serve(async (req) => {
     
     console.log('Shipment webhook dispatch - Starting for shipment ID:', shipmentId);
     console.log('Shipment webhook dispatch - Data:', shipmentData);
+    
+    // Delay de 5 segundos para garantir que o CTE já foi gerado pela Webmania
+    console.log('Shipment webhook dispatch - Aguardando 5 segundos para CTE ser processado...');
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    console.log('Shipment webhook dispatch - Delay concluído, continuando processamento...');
 
     // Create Supabase service client
     const supabaseService = createClient(
