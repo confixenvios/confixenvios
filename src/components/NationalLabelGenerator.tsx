@@ -9,7 +9,9 @@ import confixLogo from '@/assets/confix-logo-label.ico';
 interface ShipmentData {
   id: string;
   tracking_code: string;
-  cte_key?: string | null;
+  carrier_order_id?: string | null;
+  carrier_barcode?: string | null;
+  cte_key?: string | null; // deprecated, kept for backwards compatibility
   weight: number;
   length: number;
   width: number;
@@ -58,8 +60,14 @@ const NationalLabelGenerator = ({
 }: NationalLabelGeneratorProps) => {
   const labelRef = useRef<HTMLDivElement>(null);
 
-  // Código da transportadora (Jadlog) - usar como ID principal
-  const carrierCode = shipment.cte_key || shipment.tracking_code;
+  // ID do pedido na transportadora (ex: codigo Jadlog)
+  const carrierOrderId = shipment.carrier_order_id || shipment.cte_key || null;
+  
+  // Código de barras da transportadora (extraído do PDF)
+  const carrierBarcode = shipment.carrier_barcode || carrierOrderId || shipment.tracking_code;
+  
+  // Código de rastreio principal (Confix)
+  const trackingCode = shipment.tracking_code;
   
   // Determinar transportadora
   const getCarrier = () => {
@@ -93,7 +101,7 @@ const NationalLabelGenerator = ({
         <!DOCTYPE html>
         <html>
           <head>
-            <title>Etiqueta ${carrierCode}</title>
+            <title>Etiqueta ${trackingCode}</title>
             <style>
               @page { 
                 size: A4; 
@@ -153,7 +161,7 @@ const NationalLabelGenerator = ({
       });
 
       pdf.addImage(imgData, 'PNG', 0, 0, 100, 140);
-      pdf.save(`etiqueta-${carrierCode}.pdf`);
+      pdf.save(`etiqueta-${trackingCode}.pdf`);
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
     }
@@ -227,20 +235,27 @@ const NationalLabelGenerator = ({
           </p>
         </div>
 
-        {/* Código Principal (da Transportadora) - Grande */}
-        <div className="text-center my-3 py-2 bg-gray-100 rounded">
-          <p className="text-[8px] uppercase text-gray-600 mb-1">Código de Rastreio</p>
-          <p className="text-2xl font-bold tracking-wider font-mono">{carrierCode}</p>
+        {/* Código de Rastreio Confix */}
+        <div className="text-center my-2 py-2 bg-gray-100 rounded">
+          <p className="text-[8px] uppercase text-gray-600 mb-0.5">Rastreio Confix</p>
+          <p className="text-lg font-bold tracking-wider font-mono">{trackingCode}</p>
         </div>
 
-        {/* Código de Barras Code128 */}
-        <div className="flex justify-center my-2">
+        {/* ID do Pedido Jadlog (se disponível) */}
+        {carrierOrderId && carrierOrderId !== trackingCode && (
+          <div className="text-center mb-2">
+            <p className="text-[8px] uppercase text-gray-600">ID Jadlog: <span className="font-bold">{carrierOrderId}</span></p>
+          </div>
+        )}
+
+        {/* Código de Barras Code128 (barcode da transportadora) */}
+        <div className="flex flex-col items-center my-2">
           <Barcode 
-            value={carrierCode}
-            width={1.8}
-            height={45}
-            fontSize={10}
-            displayValue={false}
+            value={carrierBarcode}
+            width={1.5}
+            height={40}
+            fontSize={8}
+            displayValue={true}
             format="CODE128"
           />
         </div>
