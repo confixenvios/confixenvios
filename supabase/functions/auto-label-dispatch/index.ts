@@ -18,6 +18,11 @@ serve(async (req) => {
     const { shipmentId, shipmentData } = await req.json();
     
     console.log('🚀 [AUTO-LABEL] Iniciando disparo automático para shipment:', shipmentId);
+    
+    // Delay de 5 segundos para garantir que o CTE já foi gerado pela Webmania
+    console.log('⏳ [AUTO-LABEL] Aguardando 5 segundos para CTE ser processado...');
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    console.log('✅ [AUTO-LABEL] Delay concluído, continuando processamento...');
 
     const supabaseService = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
