@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
+import NationalLabelGenerator from "@/components/NationalLabelGenerator";
 
 interface Shipment {
   id: string;
@@ -28,6 +29,9 @@ interface Shipment {
   created_at: string;
   label_pdf_url: string | null;
   cte_key: string | null;
+  carrier_order_id: string | null;
+  carrier_barcode: string | null;
+  pricing_table_name: string | null;
   quote_data: any;
   payment_data: any;
   sender_address: {
@@ -97,6 +101,8 @@ const ClientRemessas = () => {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [labelModalOpen, setLabelModalOpen] = useState(false);
+  const [labelShipment, setLabelShipment] = useState<Shipment | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -131,6 +137,9 @@ const ClientRemessas = () => {
           created_at,
           label_pdf_url,
           cte_key,
+          carrier_order_id,
+          carrier_barcode,
+          pricing_table_name,
           quote_data,
           payment_data,
           sender_address:addresses!sender_address_id (
@@ -545,35 +554,86 @@ const ClientRemessas = () => {
                         Rastreio
                       </Button>
                       {shipment.label_pdf_url && !isLabelLocked(shipment.status) && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="bg-primary hover:bg-primary/90"
-                            >
-                              <Tag className="h-4 w-4 mr-1" />
-                              Etiqueta
-                              <ChevronDown className="h-3 w-3 ml-1" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="bg-white z-50">
-                            <DropdownMenuItem 
-                              onClick={() => window.print()}
-                              className="cursor-pointer"
-                            >
-                              <Printer className="h-4 w-4 mr-2" />
-                              Imprimir Etiqueta
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleDownloadLabel(shipment)}
-                              className="cursor-pointer"
-                            >
-                              <Download className="h-4 w-4 mr-2" />
-                              Baixar PDF
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        (() => {
+                          // Check if it's a Jadlog/Nacional shipment - use same logic as admin
+                          const isNacionalLabel = shipment.pricing_table_name?.toLowerCase().includes('jadlog') ||
+                            shipment.pricing_table_name?.toLowerCase().includes('nacional') ||
+                            shipment.carrier_order_id ||
+                            shipment.carrier_barcode;
+                          
+                          if (isNacionalLabel) {
+                            return (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="bg-primary hover:bg-primary/90"
+                                  >
+                                    <Tag className="h-4 w-4 mr-1" />
+                                    Etiqueta
+                                    <ChevronDown className="h-3 w-3 ml-1" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="bg-white z-50">
+                                  <DropdownMenuItem 
+                                    onClick={() => {
+                                      setLabelShipment(shipment);
+                                      setLabelModalOpen(true);
+                                    }}
+                                    className="cursor-pointer"
+                                  >
+                                    <Printer className="h-4 w-4 mr-2" />
+                                    Imprimir Etiqueta
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => {
+                                      setLabelShipment(shipment);
+                                      setLabelModalOpen(true);
+                                    }}
+                                    className="cursor-pointer"
+                                  >
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Baixar PDF
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            );
+                          }
+                          
+                          // For other labels, use the original behavior
+                          return (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  className="bg-primary hover:bg-primary/90"
+                                >
+                                  <Tag className="h-4 w-4 mr-1" />
+                                  Etiqueta
+                                  <ChevronDown className="h-3 w-3 ml-1" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="bg-white z-50">
+                                <DropdownMenuItem 
+                                  onClick={() => window.print()}
+                                  className="cursor-pointer"
+                                >
+                                  <Printer className="h-4 w-4 mr-2" />
+                                  Imprimir Etiqueta
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleDownloadLabel(shipment)}
+                                  className="cursor-pointer"
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Baixar PDF
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          );
+                        })()
                       )}
                     </div>
                   </div>
@@ -774,6 +834,33 @@ const ClientRemessas = () => {
               </div>
             )}
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Etiqueta Nacional */}
+      <Dialog open={labelModalOpen} onOpenChange={setLabelModalOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Etiqueta de Envio</DialogTitle>
+          </DialogHeader>
+          {labelShipment && (
+            <NationalLabelGenerator
+              shipment={{
+                id: labelShipment.id,
+                tracking_code: labelShipment.tracking_code,
+                carrier_order_id: labelShipment.carrier_order_id || labelShipment.cte_key,
+                carrier_barcode: labelShipment.carrier_barcode,
+                weight: labelShipment.weight,
+                width: labelShipment.width,
+                height: labelShipment.height,
+                length: labelShipment.length,
+                format: labelShipment.format,
+                quote_data: labelShipment.quote_data,
+                sender_address: labelShipment.sender_address,
+                recipient_address: labelShipment.recipient_address
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
