@@ -301,6 +301,156 @@ serve(async (req) => {
 
     console.log(`CTE Webhook - Successfully ${result.action} CTE emission:`, result.data.id);
 
+    // Se o CTe foi aprovado e temos um shipment_id, disparar automaticamente o webhook da Jadlog
+    let jadlogResult = null;
+    if (webhookData.status === 'aprovado' && shipmentId) {
+      console.log('CTE Webhook - CTe aprovado, disparando webhook Jadlog automaticamente para shipment:', shipmentId);
+      
+      try {
+        // Buscar dados completos do shipment para enviar à Jadlog
+        const { data: shipmentData, error: shipmentFetchError } = await supabase
+          .from('shipments')
+          .select(`
+            *,
+            sender:sender_address_id(
+              id, name, street, number, complement, neighborhood, city, state, cep
+            ),
+            recipient:recipient_address_id(
+              id, name, street, number, complement, neighborhood, city, state, cep
+            )
+          `)
+          .eq('id', shipmentId)
+          .maybeSingle();
+
+        if (shipmentFetchError || !shipmentData) {
+          console.error('CTE Webhook - Erro ao buscar dados do shipment para Jadlog:', shipmentFetchError);
+        } else {
+          // Buscar dados pessoais criptografados
+          let senderPersonalData = { document: '', phone: '', email: '' };
+          let recipientPersonalData = { document: '', phone: '', email: '' };
+
+          // Buscar dados do remetente
+          const { data: senderSecure } = await supabase
+            .from('secure_personal_data')
+            .select('*')
+            .eq('address_id', shipmentData.sender_address_id)
+            .maybeSingle();
+
+          if (senderSecure) {
+            try {
+              const { data: decrypted } = await supabase.rpc('decrypt_personal_data', { data_id: senderSecure.id });
+              if (decrypted && decrypted.length > 0) {
+                senderPersonalData = decrypted[0];
+              }
+            } catch (e) {
+              console.log('CTE Webhook - Could not decrypt sender data');
+            }
+          }
+
+          // Buscar dados do destinatário
+          const { data: recipientSecure } = await supabase
+            .from('secure_personal_data')
+            .select('*')
+            .eq('address_id', shipmentData.recipient_address_id)
+            .maybeSingle();
+
+          if (recipientSecure) {
+            try {
+              const { data: decrypted } = await supabase.rpc('decrypt_personal_data', { data_id: recipientSecure.id });
+              if (decrypted && decrypted.length > 0) {
+                recipientPersonalData = decrypted[0];
+              }
+            } catch (e) {
+              console.log('CTE Webhook - Could not decrypt recipient data');
+            }
+          }
+
+          // Buscar integração ativa da Jadlog
+          const { data: integration } = await supabase
+            .from('integrations')
+            .select('*')
+            .eq('name', 'Jadlog')
+            .eq('active', true)
+            .maybeSingle();
+
+          if (integration && integration.webhook_url) {
+            const quoteData = shipmentData.quote_data || {};
+            
+            // Preparar payload para Jadlog
+            const jadlogPayload = {
+              shipmentId: shipmentId,
+              tracking_code: trackingCode,
+              remetente: {
+                nome: shipmentData.sender?.name || '',
+                documento: senderPersonalData.document || '',
+                telefone: senderPersonalData.phone || '',
+                email: senderPersonalData.email || '',
+                endereco: shipmentData.sender?.street || '',
+                numero: shipmentData.sender?.number || '',
+                complemento: shipmentData.sender?.complement || '',
+                bairro: shipmentData.sender?.neighborhood || '',
+                cidade: shipmentData.sender?.city || '',
+                estado: shipmentData.sender?.state || '',
+                cep: shipmentData.sender?.cep || ''
+              },
+              destinatario: {
+                nome: shipmentData.recipient?.name || '',
+                documento: recipientPersonalData.document || '',
+                telefone: recipientPersonalData.phone || '',
+                email: recipientPersonalData.email || '',
+                endereco: shipmentData.recipient?.street || '',
+                numero: shipmentData.recipient?.number || '',
+                complemento: shipmentData.recipient?.complement || '',
+                bairro: shipmentData.recipient?.neighborhood || '',
+                cidade: shipmentData.recipient?.city || '',
+                estado: shipmentData.recipient?.state || '',
+                cep: shipmentData.recipient?.cep || ''
+              },
+              pacote: {
+                peso: shipmentData.weight || 1,
+                altura: shipmentData.height || 10,
+                largura: shipmentData.width || 10,
+                comprimento: shipmentData.length || 10,
+                formato: shipmentData.format || 'pacote'
+              },
+              valor_declarado: quoteData.declaredValue || quoteData.mercadoria_valorDeclarado || 100,
+              valor_frete: quoteData.price || quoteData.valorTotal || 20,
+              cte_chave: result.data.chave_cte
+            };
+
+            console.log('CTE Webhook - Enviando para Jadlog:', JSON.stringify(jadlogPayload, null, 2));
+
+            const jadlogResponse = await fetch(integration.webhook_url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(jadlogPayload)
+            });
+
+            jadlogResult = {
+              status: jadlogResponse.status,
+              success: jadlogResponse.ok
+            };
+
+            console.log('CTE Webhook - Resposta Jadlog:', jadlogResult.status);
+
+            // Log do webhook Jadlog
+            await supabase.from('webhook_logs').insert({
+              shipment_id: shipmentId,
+              event_type: 'jadlog_auto_dispatch',
+              payload: jadlogPayload,
+              response_status: jadlogResponse.status,
+              response_body: { auto_triggered: true, from_cte_webhook: true }
+            });
+          } else {
+            console.log('CTE Webhook - Integração Jadlog não encontrada ou inativa');
+          }
+        }
+      } catch (jadlogError) {
+        console.error('CTE Webhook - Erro ao disparar Jadlog:', jadlogError);
+        jadlogResult = { error: jadlogError.message };
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -310,7 +460,8 @@ serve(async (req) => {
         status: result.data.status,
         chave_cte: result.data.chave_cte,
         shipment_id: shipmentId,
-        tracking_code: trackingCode
+        tracking_code: trackingCode,
+        jadlog_auto_dispatch: jadlogResult
       }),
       { 
         status: 200, 
