@@ -152,6 +152,27 @@ serve(async (req) => {
       }
     }
     
+    // ESTRATÉGIA 2.5: Buscar por carrier_order_id (código da Jadlog)
+    // Isso é útil quando o CTe é processado após o carrier-label-webhook já ter atualizado o carrier_order_id
+    if (!shipmentId && trackingCode) {
+      console.log('CTE Webhook - Strategy 2.5: Looking up by carrier_order_id:', trackingCode);
+      const { data: shipment, error: shipmentError } = await supabase
+        .from('shipments')
+        .select('id, tracking_code')
+        .eq('carrier_order_id', trackingCode)
+        .maybeSingle();
+
+      if (shipmentError) {
+        console.error('CTE Webhook - Error finding shipment by carrier_order_id:', shipmentError);
+      } else if (shipment) {
+        shipmentId = shipment.id;
+        trackingCode = shipment.tracking_code;
+        console.log('CTE Webhook - Found shipment via carrier_order_id:', { id: shipmentId, tracking_code: trackingCode });
+      } else {
+        console.warn('CTE Webhook - No shipment found for carrier_order_id:', trackingCode);
+      }
+    }
+    
     // ESTRATÉGIA 3: Buscar a remessa mais recente com status PAID/PAYMENT_CONFIRMED que ainda não tem CT-e
     // Esta é a estratégia de fallback quando o n8n não passa o shipmentId corretamente
     if (!shipmentId && !trackingCode) {

@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 
 import { ShipmentOccurrencesModal } from '@/components/admin/ShipmentOccurrencesModal';
 import B2BLabelGenerator from '@/components/b2b/B2BLabelGenerator';
+import NationalLabelGenerator from '@/components/NationalLabelGenerator';
 
 interface Shipment {
   id: string;
@@ -120,6 +121,11 @@ const AdminRemessas = () => {
   const [b2bClientData, setB2bClientData] = useState<any>(null);
   const [sendingB2BWhatsapp, setSendingB2BWhatsapp] = useState<Record<string, boolean>>({});
   const [b2bStatusHistory, setB2bStatusHistory] = useState<any[]>([]);
+  
+  // Estado para modal de etiqueta Confix
+  const [labelModalOpen, setLabelModalOpen] = useState(false);
+  const [selectedShipmentLabel, setSelectedShipmentLabel] = useState<AdminShipment | null>(null);
+  const [labelPersonalData, setLabelPersonalData] = useState<{senderPhone?: string; senderDocument?: string; recipientPhone?: string; recipientDocument?: string}>({});
 
   // Função para enviar dados B2B via WhatsApp webhook
   const handleSendB2BWhatsAppWebhook = async (shipment: AdminShipment) => {
@@ -786,7 +792,79 @@ const AdminRemessas = () => {
     }
   };
 
-  // Função para fazer download da etiqueta PDF
+  // Função para abrir modal de etiqueta Confix (para remessas Jadlog/Nacionais)
+  const handleOpenLabelModal = async (shipment: AdminShipment) => {
+    setSelectedShipmentLabel(shipment);
+    setLabelPersonalData({});
+    
+    // Buscar dados pessoais para preencher na etiqueta
+    try {
+      // Buscar o shipment original para obter os IDs dos endereços
+      const { data: shipmentData } = await supabase
+        .from('shipments')
+        .select('sender_address_id, recipient_address_id, carrier_order_id, carrier_barcode')
+        .eq('id', shipment.id)
+        .maybeSingle();
+      
+      if (shipmentData) {
+        // Atualizar os dados do shipment selecionado com carrier_order_id e carrier_barcode
+        setSelectedShipmentLabel(prev => prev ? {
+          ...prev,
+          quote_data: {
+            ...prev.quote_data,
+            carrier_order_id: shipmentData.carrier_order_id,
+            carrier_barcode: shipmentData.carrier_barcode
+          }
+        } : null);
+        
+        // Buscar dados do remetente
+        if (shipmentData.sender_address_id) {
+          const { data: senderSecure } = await supabase
+            .from('secure_personal_data')
+            .select('*')
+            .eq('address_id', shipmentData.sender_address_id)
+            .maybeSingle();
+
+          if (senderSecure) {
+            const { data: decrypted } = await supabase.rpc('decrypt_personal_data', { data_id: senderSecure.id });
+            if (decrypted && decrypted.length > 0) {
+              setLabelPersonalData(prev => ({
+                ...prev,
+                senderPhone: decrypted[0].phone,
+                senderDocument: decrypted[0].document
+              }));
+            }
+          }
+        }
+
+        // Buscar dados do destinatário
+        if (shipmentData.recipient_address_id) {
+          const { data: recipientSecure } = await supabase
+            .from('secure_personal_data')
+            .select('*')
+            .eq('address_id', shipmentData.recipient_address_id)
+            .maybeSingle();
+
+          if (recipientSecure) {
+            const { data: decrypted } = await supabase.rpc('decrypt_personal_data', { data_id: recipientSecure.id });
+            if (decrypted && decrypted.length > 0) {
+              setLabelPersonalData(prev => ({
+                ...prev,
+                recipientPhone: decrypted[0].phone,
+                recipientDocument: decrypted[0].document
+              }));
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao buscar dados pessoais:', error);
+    }
+    
+    setLabelModalOpen(true);
+  };
+
+  // Função para fazer download da etiqueta PDF (legado - para PDFs já existentes)
   const handleDownloadLabel = async (url: string, filename: string) => {
     try {
       const response = await fetch(url);
@@ -1633,7 +1711,33 @@ const AdminRemessas = () => {
                                   </div>
                                 )}
                                 <div className="flex items-center gap-2 text-xs mt-1">
-                                  {shipment.label_pdf_url ? (
+                                  {/* Verificar se é remessa Jadlog/Nacional para mostrar botão de etiqueta Confix */}
+                                  {shipment.pricing_table_name?.toLowerCase().includes('jadlog') || 
+                                   shipment.pricing_table_name?.toLowerCase().includes('magalog') ||
+                                   shipment.pricing_table_name?.toLowerCase().includes('alfa') ? (
+                                    <>
+                                      {shipment.status === 'LABEL_AVAILABLE' || shipment.label_pdf_url ? (
+                                        <>
+                                          <Badge variant="default" className="text-xs bg-green-100 text-green-700">
+                                            Etiqueta Disponível
+                                          </Badge>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleOpenLabelModal(shipment)}
+                                            className="h-6 px-2 text-xs hover:bg-primary/10"
+                                          >
+                                            <FileText className="w-3 h-3 mr-1" />
+                                            Etiqueta
+                                          </Button>
+                                        </>
+                                      ) : (
+                                        <Badge variant="outline" className="text-xs">
+                                          Aguardando Etiqueta
+                                        </Badge>
+                                      )}
+                                    </>
+                                  ) : shipment.label_pdf_url ? (
                                     <>
                                       <Badge variant="default" className="text-xs bg-green-100 text-green-700">
                                         Etiqueta Emitida
@@ -2380,6 +2484,41 @@ const AdminRemessas = () => {
         onClose={() => setOccurrencesModalOpen(false)}
         shipment={selectedShipmentOccurrences}
       />
+
+      {/* Modal de Etiqueta Confix (para remessas Jadlog/Nacionais) */}
+      <Dialog open={labelModalOpen} onOpenChange={setLabelModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Etiqueta Confix - {selectedShipmentLabel?.tracking_code}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedShipmentLabel && (
+            <NationalLabelGenerator
+              shipment={{
+                id: selectedShipmentLabel.id,
+                tracking_code: selectedShipmentLabel.tracking_code || '',
+                carrier_order_id: selectedShipmentLabel.quote_data?.carrier_order_id || null,
+                carrier_barcode: selectedShipmentLabel.quote_data?.carrier_barcode || null,
+                weight: Number(selectedShipmentLabel.weight),
+                length: Number(selectedShipmentLabel.length),
+                width: Number(selectedShipmentLabel.width),
+                height: Number(selectedShipmentLabel.height),
+                format: selectedShipmentLabel.format,
+                pricing_table_name: selectedShipmentLabel.pricing_table_name,
+                quote_data: selectedShipmentLabel.quote_data,
+                sender_address: selectedShipmentLabel.sender_address,
+                recipient_address: selectedShipmentLabel.recipient_address
+              }}
+              senderPhone={labelPersonalData.senderPhone}
+              senderDocument={labelPersonalData.senderDocument}
+              recipientPhone={labelPersonalData.recipientPhone}
+              recipientDocument={labelPersonalData.recipientDocument}
+              estimatedDeliveryDays={selectedShipmentLabel.quote_data?.deliveryDays || selectedShipmentLabel.quote_data?.prazo || 5}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
