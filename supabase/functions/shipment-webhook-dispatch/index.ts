@@ -59,6 +59,22 @@ serve(async (req) => {
       throw new Error('Shipment not found');
     }
 
+    // Get CTE data from cte_emissoes table
+    const { data: cteData, error: cteError } = await supabaseService
+      .from('cte_emissoes')
+      .select('chave_cte, numero_cte, serie, status, uuid_cte')
+      .eq('shipment_id', shipmentId)
+      .eq('status', 'aprovado')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (cteError) {
+      console.log('Shipment webhook dispatch - Error fetching CTE data (non-blocking):', cteError);
+    }
+    
+    console.log('Shipment webhook dispatch - CTE data found:', cteData);
+
     // Extract personal data from quote_data (where it's usually stored)
     const senderPersonalData = {
       document: fullShipment.quote_data?.addressData?.sender?.document || 
@@ -250,9 +266,12 @@ serve(async (req) => {
       remessa_altura: fullShipment.height || 0,
       remessa_formato: fullShipment.format || 'normal',
       
-      // IDs
+      // IDs e CTE
       shipmentId: shipmentId,
-      trackingCode: fullShipment.tracking_code || ''
+      trackingCode: fullShipment.tracking_code || '',
+      cte_chave: cteData?.chave_cte || fullShipment.cte_key || '',
+      cte_numero: cteData?.numero_cte || '',
+      cte_serie: cteData?.serie || '1'
     };
 
     // Add volume-specific data dynamically (volume1_, volume2_, volume3_, etc.)
