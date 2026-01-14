@@ -220,24 +220,27 @@ serve(async (req) => {
     const updateData: any = {
       label_pdf_url: labelPdfUrl,
       updated_at: new Date().toISOString(),
-      status: 'LABEL_GENERATED' // Atualizar status para indicar que etiqueta foi gerada
+      status: 'LABEL_AVAILABLE' // Status válido no constraint
     };
 
     // Save carrier_order_id (codigo from Jadlog = order ID)
     if (codigo) {
       updateData.carrier_order_id = codigo;
-      console.log('📊 Saving carrier_order_id:', codigo);
+      // IMPORTANTE: Atualizar o tracking_code para o código da Jadlog
+      // Isso permite que o rastreio seja feito pelo código da transportadora
+      updateData.tracking_code = codigo;
+      console.log('📊 Saving carrier_order_id and updating tracking_code to:', codigo);
     }
 
-    // Save carrier_barcode (extracted from PDF)
-    if (barcode) {
-      updateData.carrier_barcode = barcode;
-      console.log('📊 Saving carrier_barcode:', barcode);
+    // Save carrier_barcode (extracted from PDF or use shipmentId as fallback)
+    // O shipmentId do Jadlog geralmente é o código de barras completo (ex: 14094800000031)
+    const finalBarcode = barcode || (shipmentId && shipmentId.length > 10 ? shipmentId : null);
+    if (finalBarcode) {
+      updateData.carrier_barcode = finalBarcode;
+      console.log('📊 Saving carrier_barcode:', finalBarcode);
     }
 
-    // Se o tracking_code ainda é TEMP e recebemos shipmentId do Jadlog, podemos considerar usar como referência
-    // Mas não alteramos o tracking_code principal - ele deve continuar sendo nosso código interno
-    console.log('📊 Updating shipment with label data. Current tracking:', shipment.tracking_code);
+    console.log('📊 Updating shipment with data:', JSON.stringify(updateData, null, 2));
 
     const { error: updateError } = await supabase
       .from('shipments')
