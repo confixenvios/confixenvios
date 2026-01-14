@@ -111,8 +111,8 @@ const PixPaymentSuccess = () => {
         throw recipientError;
       }
 
-      // 2. Criar remessa com TODOS os dados do formulário
-      const trackingCode = `ID${new Date().getFullYear()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      // 2. Criar remessa com tracking_code temporário (será substituído pelo código da transportadora)
+      const tempTrackingCode = `TEMP${new Date().getFullYear()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
       
       // Incluir dados do documento no quote_data
       const enrichedQuoteData = {
@@ -146,7 +146,7 @@ const PixPaymentSuccess = () => {
         : null;
       
       const newShipmentData = {
-        tracking_code: trackingCode,
+        tracking_code: tempTrackingCode,
         user_id: user?.id || null,
         session_id: user ? null : completeShipmentData.metadata?.session_id,
         sender_address_id: senderAddress.id,
@@ -189,140 +189,37 @@ const PixPaymentSuccess = () => {
       console.log('✅ Remessa criada com sucesso:', newShipment);
       setShipmentId(newShipment.id);
       
-      // ===== DISPARAR WEBHOOK APÓS PAGAMENTO CONFIRMADO =====
+      // ===== DISPARAR WEBHOOK AUTOMÁTICO PARA GERAR ETIQUETA =====
+      let finalTrackingCode = tempTrackingCode;
       try {
-        console.log('🔔 Disparando webhook após pagamento confirmado...');
+        console.log('🔔 Disparando webhook automático para gerar etiqueta...');
         
-        // Preparar dados para o webhook
-        const addressData = completeShipmentData.addressData || {};
-        const technicalData = completeShipmentData.technicalData || {};
-        const deliveryDetails = completeShipmentData.deliveryDetails || {};
-        const shippingQuote = completeShipmentData.shippingQuote || {};
-        
-        // Dados pessoais estão dentro de addressData.sender e addressData.recipient
-        const sender = addressData.sender || {};
-        const recipient = addressData.recipient || {};
-        
-        const queryParams = new URLSearchParams();
-        
-        // Valor total do frete - pegar do deliveryDetails ou do amount pago
-        const valorFrete = deliveryDetails.totalPrice || amount || 0;
-        queryParams.append('valorTotal', String(valorFrete));
-        
-        // Valor declarado da mercadoria - pegar dos dados do formulário original
-        const valorDeclarado = completeShipmentData.quoteData?.totalMerchandiseValue || 
-                              completeShipmentData.originalFormData?.totalMerchandiseValue || 0;
-        queryParams.append('mercadoria_valorDeclarado', String(valorDeclarado));
-        
-        // Prazo de entrega
-        queryParams.append('remessa_prazo', String(deliveryDetails.deliveryDays || shippingQuote.deliveryDays || 5));
-        
-        // Dados da transportadora selecionada
-        queryParams.append('transportadora_nome', shippingQuote.carrierName || deliveryDetails.selectedCarrier || 'Confix');
-        queryParams.append('transportadora_servico', deliveryDetails.selectedOption || 'standard');
-        
-        // CNPJ do transportador destino (sempre vazio)
-        queryParams.append('cnpjTransportadorDestinto', '');
-        
-        // Expedidor (sempre "Juri Express")
-        queryParams.append('expedidor', 'Juri Express');
-        
-        // Dados do remetente (TOMADOR DO SERVIÇO)
-        queryParams.append('remetente_nome', sender.name || '');
-        queryParams.append('remetente_documento', sender.document || '');
-        queryParams.append('remetente_inscricaoEstadual', sender.inscricaoEstadual || '');
-        queryParams.append('remetente_email', sender.email || '');
-        queryParams.append('remetente_telefone', sender.phone || '');
-        queryParams.append('remetente_endereco', sender.street || '');
-        queryParams.append('remetente_numero', sender.number || '');
-        queryParams.append('remetente_complemento', sender.complement || '');
-        queryParams.append('remetente_bairro', sender.neighborhood || '');
-        queryParams.append('remetente_cidade', sender.city || '');
-        queryParams.append('remetente_estado', sender.state || '');
-        queryParams.append('remetente_cep', sender.cep || '');
-        
-        // Dados do destinatário
-        queryParams.append('destinatario_nome', recipient.name || '');
-        queryParams.append('destinatario_documento', recipient.document || '');
-        queryParams.append('destinatario_inscricaoEstadual', recipient.inscricaoEstadual || '');
-        queryParams.append('destinatario_email', recipient.email || '');
-        queryParams.append('destinatario_telefone', recipient.phone || '');
-        queryParams.append('destinatario_endereco', recipient.street || '');
-        queryParams.append('destinatario_numero', recipient.number || '');
-        queryParams.append('destinatario_complemento', recipient.complement || '');
-        queryParams.append('destinatario_bairro', recipient.neighborhood || '');
-        queryParams.append('destinatario_cidade', recipient.city || '');
-        queryParams.append('destinatario_estado', recipient.state || '');
-        queryParams.append('destinatario_cep', recipient.cep || '');
-        
-        // Dados do documento fiscal
-        if (documentData.documentType === 'nfe') {
-          queryParams.append('tipo', '1'); // Nota Fiscal Eletrônica
-          queryParams.append('chaveNotaFiscal', documentData.nfeKey || '');
-        } else {
-          queryParams.append('tipo', '3'); // Declaração de Conteúdo
-          // Para declaração de conteúdo, enviar chave fictícia
-          queryParams.append('chaveNotaFiscal', '99999999999999999999999999999999999999999999');
-          queryParams.append('descricaoMercadoria', documentData.merchandiseDescription || 'Mercadoria Geral');
-        }
-        
-        // Dados técnicos da remessa
-        const primeiroVolume = technicalData.volumes?.[0] || technicalData;
-        queryParams.append('remessa_peso', String(technicalData.consideredWeight || technicalData.weight || 1));
-        queryParams.append('remessa_cubagemTotal', (technicalData.totalCubicWeight || 0).toFixed(3));
-        queryParams.append('remessa_largura', String(primeiroVolume.width || technicalData.width || 15));
-        queryParams.append('remessa_comprimento', String(primeiroVolume.length || technicalData.length || 20));
-        queryParams.append('remessa_altura', String(primeiroVolume.height || technicalData.height || 10));
-        queryParams.append('remessa_formato', primeiroVolume.merchandiseType || 'caixa');
-        
-        // Informações detalhadas de cada volume
-        const volumes = technicalData.volumes || [technicalData];
-        volumes.forEach((volume, index) => {
-          const volumeNumber = index + 1;
-          const volumePrefix = `volume${volumeNumber}`;
-          
-          // Dados básicos do volume
-          queryParams.append(`${volumePrefix}_peso`, String(volume.weight || 1));
-          queryParams.append(`${volumePrefix}_comprimento`, String(volume.length || 20));
-          queryParams.append(`${volumePrefix}_largura`, String(volume.width || 15));
-          queryParams.append(`${volumePrefix}_altura`, String(volume.height || 10));
-          
-          // Cubagem individual do volume (calculada em m³)
-          const volumeCubagem = ((volume.length || 20) * (volume.width || 15) * (volume.height || 10)) / 1000000;
-          queryParams.append(`${volumePrefix}_cubagemVolume`, volumeCubagem.toFixed(3));
-          
-          // Tipo de mercadoria do volume
-          queryParams.append(`${volumePrefix}_tipoMercadoria`, volume.merchandiseType || 'Normal');
-        });
-        
-        // Adicionar shipmentId e trackingCode para o webhook poder associar o CT-e
-        queryParams.append('shipmentId', newShipment.id);
-        queryParams.append('trackingCode', trackingCode);
-        
-        const webhookUrl = `https://webhook.grupoconfix.com/webhook/cd6d1d7d-b6a0-483d-8314-662e54dda78b?${queryParams.toString()}`;
-        
-        console.log('🌐 URL do webhook:', webhookUrl);
-
-        // Fazer chamada ao webhook
-        const webhookResponse = await fetch(webhookUrl, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
+        const { data: labelResult, error: labelError } = await supabase.functions.invoke('auto-label-dispatch', {
+          body: {
+            shipmentId: newShipment.id,
+            shipmentData: newShipmentData
           }
         });
 
-        console.log('📡 Resposta do webhook:', webhookResponse.status, webhookResponse.statusText);
-        
-        if (webhookResponse.ok) {
-          console.log('✅ Webhook disparado com sucesso! CT-e será processado pelo n8n.');
+        if (labelError) {
+          console.error('⚠️ Erro ao chamar auto-label-dispatch:', labelError);
+        } else if (labelResult?.success && labelResult?.codigo) {
+          // Atualizar tracking code com o código retornado pela transportadora
+          finalTrackingCode = labelResult.codigo;
+          console.log('✅ Etiqueta gerada com código:', finalTrackingCode);
+          
+          toast({
+            title: "Etiqueta Gerada!",
+            description: `Código do pedido: ${finalTrackingCode}`,
+          });
+        } else if (labelResult?.pending) {
+          console.log('⏳ Etiqueta pendente, aguardando retorno...');
         } else {
-          const errorText = await webhookResponse.text();
-          console.error('⚠️ Erro na resposta do webhook:', errorText);
-          // Não falhar a criação da remessa por erro no webhook
+          console.log('⚠️ Resposta inesperada do auto-label-dispatch:', labelResult);
         }
         
       } catch (webhookError) {
-        console.error('⚠️ Erro ao disparar webhook (não bloqueante):', webhookError);
+        console.error('⚠️ Erro ao disparar webhook automático (não bloqueante):', webhookError);
         // Não falhar a criação da remessa por erro no webhook
       }
       
@@ -334,7 +231,7 @@ const PixPaymentSuccess = () => {
       
       toast({
         title: "🎉 Remessa criada com sucesso!",
-        description: `Código de rastreio: ${trackingCode}`
+        description: `Código de rastreio: ${finalTrackingCode}`
       });
 
     } catch (error) {
