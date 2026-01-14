@@ -219,7 +219,8 @@ serve(async (req) => {
     // Update shipment with label URL and carrier data
     const updateData: any = {
       label_pdf_url: labelPdfUrl,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      status: 'LABEL_GENERATED' // Atualizar status para indicar que etiqueta foi gerada
     };
 
     // Save carrier_order_id (codigo from Jadlog = order ID)
@@ -233,6 +234,10 @@ serve(async (req) => {
       updateData.carrier_barcode = barcode;
       console.log('📊 Saving carrier_barcode:', barcode);
     }
+
+    // Se o tracking_code ainda é TEMP e recebemos shipmentId do Jadlog, podemos considerar usar como referência
+    // Mas não alteramos o tracking_code principal - ele deve continuar sendo nosso código interno
+    console.log('📊 Updating shipment with label data. Current tracking:', shipment.tracking_code);
 
     const { error: updateError } = await supabase
       .from('shipments')
