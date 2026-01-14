@@ -297,8 +297,8 @@ serve(async (req) => {
     // Build CTE payload in the exact format requested
     const webhookPayload = {
       idLote: fullShipment.tracking_code || '',
-      // tipo na raiz: 1 = Nota Fiscal, 3 = Declaração de Conteúdo
-      tipo: fullShipment.document_type === 'declaracao_conteudo' ? 3 : 1,
+      // tipo na raiz: "1" = Nota Fiscal, "3" = Declaração de Conteúdo (como string)
+      tipo: fullShipment.document_type === 'declaracao_conteudo' ? "3" : "1",
       cnpjEmbarcadorOrigem: mainBranch.cnpj.replace(/[^\d]/g, ''),
       cnpjTransportadorDestinto: '',
       sincPLP: 0,
