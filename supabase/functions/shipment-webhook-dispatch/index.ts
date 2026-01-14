@@ -346,6 +346,8 @@ serve(async (req) => {
           
            listaOperacoes: [
              {
+               // tipo: 1 = Nota Fiscal, 3 = Declaração de Conteúdo
+               tipo: fullShipment.document_type === 'declaracao_conteudo' ? 3 : 1,
                idTipoDocumento: 0,
                nroNotaFiscal: 0,
                serieNotaFiscal: 0,
