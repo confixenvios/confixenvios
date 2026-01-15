@@ -60,17 +60,7 @@ const NationalLabelGenerator = ({
 }: NationalLabelGeneratorProps) => {
   const labelRef = useRef<HTMLDivElement>(null);
 
-  // ID do pedido na transportadora (ex: codigo Jadlog - usado como tracking principal)
-  // Este código será usado tanto para exibição quanto para o barcode Code128
-  const carrierOrderId = shipment.carrier_order_id || null;
-  
-  // Código de rastreio principal (pode ser o código Jadlog ou o TEMP se ainda não tiver)
-  const trackingCode = shipment.tracking_code;
-  
-  // Barcode Code128: usa o carrier_order_id (codigo do pedido) se disponível
-  const barcodeValue = carrierOrderId || shipment.tracking_code;
-  
-  // Determinar transportadora
+  // Determinar transportadora primeiro (necessário para lógica de barcode)
   const getCarrier = () => {
     const pricingTable = shipment.pricing_table_name?.toLowerCase() || '';
     if (pricingTable.includes('jadlog')) return 'JADLOG';
@@ -80,6 +70,19 @@ const NationalLabelGenerator = ({
   };
 
   const carrier = getCarrier();
+  
+  // ID do pedido na transportadora (ex: codigo Jadlog)
+  const carrierOrderId = shipment.carrier_order_id || null;
+  
+  // Código de rastreio principal
+  const trackingCode = shipment.tracking_code;
+  
+  // Barcode Code128: 
+  // - Para JADLOG: usa o carrier_order_id (codigo do pedido) 
+  // - Para outras transportadoras: usa o tracking_code padrão
+  const barcodeValue = carrier === 'JADLOG' && carrierOrderId 
+    ? carrierOrderId 
+    : shipment.tracking_code;
 
   // Calcular data estimada de entrega
   const estimatedDate = new Date();
