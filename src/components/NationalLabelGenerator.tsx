@@ -61,14 +61,14 @@ const NationalLabelGenerator = ({
   const labelRef = useRef<HTMLDivElement>(null);
 
   // ID do pedido na transportadora (ex: codigo Jadlog - usado como tracking principal)
+  // Este código será usado tanto para exibição quanto para o barcode Code128
   const carrierOrderId = shipment.carrier_order_id || null;
-  
-  // Código de barras da transportadora (código longo para leitura - ex: 14094800000031...)
-  // Este é o código que deve aparecer no código de barras da etiqueta
-  const carrierBarcode = shipment.carrier_barcode || carrierOrderId || shipment.tracking_code;
   
   // Código de rastreio principal (pode ser o código Jadlog ou o TEMP se ainda não tiver)
   const trackingCode = shipment.tracking_code;
+  
+  // Barcode Code128: usa o carrier_order_id (codigo do pedido) se disponível
+  const barcodeValue = carrierOrderId || shipment.tracking_code;
   
   // Determinar transportadora
   const getCarrier = () => {
@@ -254,13 +254,13 @@ const NationalLabelGenerator = ({
           </div>
         )}
 
-        {/* Código de Barras Code128 (barcode da transportadora) */}
+        {/* Código de Barras Code128 (carrier_order_id / codigo do pedido) */}
         <div className="flex flex-col items-center my-2">
           <Barcode 
-            value={carrierBarcode}
+            value={barcodeValue}
             width={1.5}
             height={40}
-            fontSize={8}
+            fontSize={10}
             displayValue={true}
             format="CODE128"
           />
