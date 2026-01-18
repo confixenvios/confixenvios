@@ -808,6 +808,48 @@ export type Database = {
           },
         ]
       }
+      carrier_partners: {
+        Row: {
+          cnpj: string | null
+          company_name: string
+          contact_name: string | null
+          created_at: string
+          email: string
+          id: string
+          logo_url: string | null
+          password_hash: string
+          phone: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          cnpj?: string | null
+          company_name: string
+          contact_name?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          logo_url?: string | null
+          password_hash: string
+          phone?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cnpj?: string | null
+          company_name?: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          logo_url?: string | null
+          password_hash?: string
+          phone?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cd_users: {
         Row: {
           cpf: string | null
@@ -2051,6 +2093,19 @@ export type Database = {
       accept_shipment: {
         Args: { p_motorista_uuid?: string; p_shipment_id: string }
         Returns: Json
+      }
+      authenticate_carrier_partner: {
+        Args: { p_email: string; p_password: string }
+        Returns: {
+          cnpj: string
+          company_name: string
+          contact_name: string
+          email: string
+          id: string
+          logo_url: string
+          phone: string
+          status: string
+        }[]
       }
       authenticate_cd_user: {
         Args: { p_email: string; p_password: string }
