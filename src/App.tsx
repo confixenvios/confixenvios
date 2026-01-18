@@ -94,6 +94,17 @@ import PainelEnderecos from "./pages/painel/PainelEnderecos";
 import PainelCadastros from "./pages/painel/PainelCadastros";
 import PainelRelatorios from "./pages/painel/PainelRelatorios";
 
+// Parceiros (Carrier Partners) pages
+import ParceirosAuth from "./pages/parceiros/ParceirosAuth";
+import ParceirosLayout from "./pages/parceiros/ParceirosLayout";
+import ParceirosDashboard from "./pages/parceiros/ParceirosDashboard";
+import ParceirosPendentes from "./pages/parceiros/ParceirosPendentes";
+import ParceirosEmTransito from "./pages/parceiros/ParceirosEmTransito";
+import ParceirosRealizadas from "./pages/parceiros/ParceirosRealizadas";
+import ParceirosOcorrencias from "./pages/parceiros/ParceirosOcorrencias";
+import ParceirosRelatorios from "./pages/parceiros/ParceirosRelatorios";
+import ParceirosConfiguracoes from "./pages/parceiros/ParceirosConfiguracoes";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -224,6 +235,18 @@ const App = () => (
             <Route path="/b2b-expresso" element={<B2BAuth />} />
             <Route path="/b2b-expresso/registro" element={<B2BRegistro />} />
             <Route path="/b2b-expresso/*" element={<Navigate to="/painel" replace />} />
+
+            {/* Parceiros (Carrier Partners) Routes */}
+            <Route path="/parceiros" element={<ParceirosAuth />} />
+            <Route path="/parceiros/*" element={<ParceirosLayout />}>
+              <Route path="dashboard" element={<ParceirosDashboard />} />
+              <Route path="pendentes" element={<ParceirosPendentes />} />
+              <Route path="em-transito" element={<ParceirosEmTransito />} />
+              <Route path="realizadas" element={<ParceirosRealizadas />} />
+              <Route path="ocorrencias" element={<ParceirosOcorrencias />} />
+              <Route path="relatorios" element={<ParceirosRelatorios />} />
+              <Route path="configuracoes" element={<ParceirosConfiguracoes />} />
+            </Route>
 
             {/* Legacy redirects */}
             <Route path="/dashboard/*" element={<Navigate to="/painel" replace />} />
