@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { getStatusTranslation } from '@/utils/shipmentStatusTranslations';
 import { 
   Package, 
   Truck, 
@@ -147,16 +148,7 @@ const ParceirosDashboard = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-      pending: { label: 'Pendente', variant: 'secondary' },
-      paid: { label: 'Pago', variant: 'default' },
-      accepted: { label: 'Aceito', variant: 'default' },
-      in_transit: { label: 'Em Trânsito', variant: 'default' },
-      delivered: { label: 'Entregue', variant: 'secondary' },
-      cancelled: { label: 'Cancelado', variant: 'destructive' }
-    };
-    
-    const config = statusConfig[status] || { label: status, variant: 'outline' as const };
+    const config = getStatusTranslation(status);
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
