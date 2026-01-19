@@ -63,11 +63,11 @@ const ParceirosAuth = () => {
   return (
     <div className="min-h-screen flex">
       {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary to-red-700 relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-64 h-64 bg-primary/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+          <div className="absolute top-20 left-10 w-64 h-64 bg-white/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
           <div className="absolute top-1/2 left-1/4 w-32 h-32 border border-white/10 rounded-2xl rotate-45" />
           <div className="absolute bottom-1/3 right-1/4 w-24 h-24 border border-white/10 rounded-full" />
           {/* Grid pattern */}
@@ -85,10 +85,10 @@ const ParceirosAuth = () => {
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-4">
-              <Building2 className="h-8 w-8 text-primary" />
+              <Truck className="h-8 w-8 text-white" />
               <h1 className="text-4xl font-bold text-white">Portal de Parceiros</h1>
             </div>
-            <p className="text-white/70 text-lg max-w-md">
+            <p className="text-white/80 text-lg max-w-md">
               Acesso exclusivo para transportadoras parceiras da Confix Envios
             </p>
           </div>
@@ -110,7 +110,7 @@ const ParceirosAuth = () => {
       </div>
 
       {/* Right side - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-6 bg-gradient-to-br from-slate-100 to-slate-50">
+      <div className="flex-1 flex items-center justify-center p-6 bg-gradient-to-br from-slate-50 to-white">
         <div className="w-full max-w-md">
           <Link 
             to="/" 
@@ -126,13 +126,13 @@ const ParceirosAuth = () => {
           </div>
           
           <Card className="border-0 shadow-xl overflow-hidden">
-            {/* Accent bar at top */}
-            <div className="h-1.5 bg-gradient-to-r from-slate-700 to-slate-900" />
+            {/* Red accent bar at top */}
+            <div className="h-1.5 bg-gradient-to-r from-primary to-red-600" />
             <CardHeader className="space-y-1 text-center pb-4 pt-6">
-              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-slate-900">
-                <Building2 className="h-6 w-6 text-white" />
+              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary">
+                <Truck className="h-6 w-6 text-primary-foreground" />
               </div>
-              <CardTitle className="text-2xl text-slate-900">Portal de Parceiros</CardTitle>
+              <CardTitle className="text-2xl text-primary">Portal de Parceiros</CardTitle>
               <CardDescription>
                 Acesse o painel de gestão da sua transportadora
               </CardDescription>
@@ -173,7 +173,7 @@ const ParceirosAuth = () => {
                 </div>
                 <Button 
                   type="submit" 
-                  className="w-full bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black shadow-lg" 
+                  className="w-full bg-gradient-to-r from-primary to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg shadow-primary/20" 
                   disabled={loading}
                 >
                   {loading ? (
@@ -186,10 +186,10 @@ const ParceirosAuth = () => {
                   )}
                 </Button>
 
-                <p className="text-center text-xs text-muted-foreground pt-2">
+                <p className="text-center text-sm text-muted-foreground pt-2">
                   Acesso restrito para transportadoras parceiras.
                   <br />
-                  Entre em contato para solicitar credenciais.
+                  <span className="text-primary">Entre em contato para solicitar credenciais.</span>
                 </p>
               </form>
             </CardContent>
