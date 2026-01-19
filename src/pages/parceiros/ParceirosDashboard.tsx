@@ -166,10 +166,10 @@ const ParceirosDashboard = () => {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-slate-200 rounded w-1/3"></div>
+          <div className="h-8 bg-red-100 rounded w-1/3"></div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-32 bg-slate-200 rounded-lg"></div>
+              <div key={i} className="h-32 bg-red-50 rounded-lg"></div>
             ))}
           </div>
         </div>
@@ -182,7 +182,7 @@ const ParceirosDashboard = () => {
       {/* Welcome Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">
             Bem-vindo ao portal de parceiros, {partner?.company_name}
           </p>
@@ -209,7 +209,7 @@ const ParceirosDashboard = () => {
             <Clock className="h-5 w-5 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-900">{stats.pending}</div>
+            <div className="text-3xl font-bold text-foreground">{stats.pending}</div>
             <p className="text-xs text-muted-foreground mt-1">Aguardando coleta</p>
           </CardContent>
         </Card>
@@ -223,7 +223,7 @@ const ParceirosDashboard = () => {
             <Truck className="h-5 w-5 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-900">{stats.inTransit}</div>
+            <div className="text-3xl font-bold text-foreground">{stats.inTransit}</div>
             <p className="text-xs text-muted-foreground mt-1">Em transporte</p>
           </CardContent>
         </Card>
@@ -237,7 +237,7 @@ const ParceirosDashboard = () => {
             <CheckCircle className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-900">{stats.delivered}</div>
+            <div className="text-3xl font-bold text-foreground">{stats.delivered}</div>
             <p className="text-xs text-muted-foreground mt-1">Finalizadas</p>
           </CardContent>
         </Card>
@@ -251,7 +251,7 @@ const ParceirosDashboard = () => {
             <AlertCircle className="h-5 w-5 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-900">{stats.occurrences}</div>
+            <div className="text-3xl font-bold text-foreground">{stats.occurrences}</div>
             <p className="text-xs text-muted-foreground mt-1">Requer atenção</p>
           </CardContent>
         </Card>
@@ -262,37 +262,37 @@ const ParceirosDashboard = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-slate-700" />
+              <TrendingUp className="h-5 w-5 text-primary" />
               Resumo do Período
             </CardTitle>
             <CardDescription>Visão geral das entregas</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                    <Package className="h-5 w-5 text-blue-600" />
+                  <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <Package className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">Hoje</p>
+                    <p className="font-medium text-foreground">Hoje</p>
                     <p className="text-xs text-muted-foreground">Entregas solicitadas</p>
                   </div>
                 </div>
-                <span className="text-2xl font-bold text-slate-900">{stats.totalToday}</span>
+                <span className="text-2xl font-bold text-foreground">{stats.totalToday}</span>
               </div>
               
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
                     <Calendar className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">Este Mês</p>
+                    <p className="font-medium text-foreground">Este Mês</p>
                     <p className="text-xs text-muted-foreground">Total de entregas</p>
                   </div>
                 </div>
-                <span className="text-2xl font-bold text-slate-900">{stats.totalMonth}</span>
+                <span className="text-2xl font-bold text-foreground">{stats.totalMonth}</span>
               </div>
             </div>
           </CardContent>
@@ -321,14 +321,14 @@ const ParceirosDashboard = () => {
                 {recentShipments.map((shipment) => (
                   <div 
                     key={shipment.id} 
-                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                    className="flex items-center justify-between p-3 bg-red-50/50 rounded-lg hover:bg-red-100/50 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center">
-                        <Package className="h-4 w-4 text-slate-600" />
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Package className="h-4 w-4 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium text-sm text-slate-900">{shipment.tracking_code}</p>
+                        <p className="font-medium text-sm text-foreground">{shipment.tracking_code}</p>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <MapPin className="h-3 w-3" />
                           {shipment.recipient_city}/{shipment.recipient_state}

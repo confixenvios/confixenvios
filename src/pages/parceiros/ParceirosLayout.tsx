@@ -73,8 +73,8 @@ const ParceirosLayout = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -82,7 +82,7 @@ const ParceirosLayout = () => {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Header do Sidebar */}
-      <div className="p-4 bg-gradient-to-r from-slate-800 to-slate-900">
+      <div className="p-4 bg-gradient-to-r from-primary to-red-700">
         <div className="grid grid-cols-2 gap-3 items-start">
           <div className="bg-white rounded-lg p-2 flex items-center justify-center">
             <img src={confixLogo} alt="Confix Envios" className="h-8" />
@@ -97,13 +97,13 @@ const ParceirosLayout = () => {
 
       {/* Partner Info Card */}
       <div className="px-3 py-4">
-        <div className="bg-gradient-to-r from-slate-100 to-slate-50 rounded-lg p-3 border border-slate-200">
+        <div className="bg-gradient-to-r from-red-50 to-white rounded-lg p-3 border border-red-100">
           <div className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-full bg-slate-800 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
               <Truck className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900 truncate">{partner?.company_name}</p>
+              <p className="text-sm font-semibold text-foreground truncate">{partner?.company_name}</p>
               <p className="text-xs text-muted-foreground truncate">{partner?.cnpj || 'CNPJ não informado'}</p>
             </div>
           </div>
@@ -121,8 +121,8 @@ const ParceirosLayout = () => {
               onClick={() => setMenuOpen(false)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
                 isActive(item.url)
-                  ? 'bg-slate-900 text-white shadow-md'
-                  : 'text-foreground hover:bg-slate-100'
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-foreground hover:bg-red-50'
               }`}
             >
               <item.icon className="h-4 w-4" />
@@ -148,7 +148,7 @@ const ParceirosLayout = () => {
   );
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-slate-100 to-slate-50">
+    <div className="min-h-screen flex bg-gradient-to-br from-red-50/50 to-white">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 flex-col bg-white border-r shadow-sm">
         <SidebarContent />
@@ -157,7 +157,7 @@ const ParceirosLayout = () => {
       {/* Mobile Header & Content */}
       <div className="flex-1 flex flex-col">
         {/* Mobile Header */}
-        <header className="sticky top-0 z-40 bg-gradient-to-r from-slate-800 to-slate-900 shadow-lg md:hidden">
+        <header className="sticky top-0 z-40 bg-gradient-to-r from-primary to-red-700 shadow-lg md:hidden">
           <div className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-3">
               <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -183,7 +183,7 @@ const ParceirosLayout = () => {
         {/* Desktop Header */}
         <header className="hidden md:flex sticky top-0 z-40 bg-white border-b shadow-sm h-14 items-center px-6 justify-between">
           <div className="flex items-center gap-3">
-            <Package className="h-5 w-5 text-slate-700" />
+            <Package className="h-5 w-5 text-primary" />
             <span className="font-semibold text-foreground">Portal de Parceiros - Envios Nacionais</span>
           </div>
           <div className="flex items-center gap-4">
