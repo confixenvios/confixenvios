@@ -111,7 +111,10 @@ const ParceirosDashboard = () => {
       // Calculate total freight value
       const totalValue = shipments?.reduce((sum, s) => {
         const quoteData = s.quote_data as any;
-        const price = quoteData?.deliveryDetails?.price || quoteData?.price || 0;
+        const price = quoteData?.deliveryDetails?.totalPrice || 
+                      quoteData?.deliveryDetails?.shippingPrice || 
+                      quoteData?.quoteData?.shippingQuote?.jadlog?.preco_total ||
+                      0;
         return sum + Number(price);
       }, 0) || 0;
 
@@ -135,7 +138,10 @@ const ParceirosDashboard = () => {
             .single();
 
           const quoteData = shipment.quote_data as any;
-          const freightValue = quoteData?.deliveryDetails?.price || quoteData?.price || 0;
+          const freightValue = quoteData?.deliveryDetails?.totalPrice || 
+                               quoteData?.deliveryDetails?.shippingPrice || 
+                               quoteData?.quoteData?.shippingQuote?.jadlog?.preco_total ||
+                               0;
 
           recentWithAddresses.push({
             id: shipment.id,
