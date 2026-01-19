@@ -62,9 +62,7 @@ const ParceirosLayout = () => {
   const menuItems = [
     { title: 'Dashboard', url: '/parceiros/dashboard', icon: LayoutDashboard },
     { title: 'Entregas Pendentes', url: '/parceiros/pendentes', icon: Clock },
-    { title: 'Em Trânsito', url: '/parceiros/em-transito', icon: Truck },
     { title: 'Entregas Realizadas', url: '/parceiros/realizadas', icon: CheckCircle },
-    { title: 'Ocorrências', url: '/parceiros/ocorrencias', icon: AlertCircle },
     { title: 'Relatórios', url: '/parceiros/relatorios', icon: BarChart3 },
     { title: 'Configurações', url: '/parceiros/configuracoes', icon: Settings },
   ];
