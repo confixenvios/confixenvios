@@ -30,11 +30,10 @@ interface CarrierPartner {
 
 interface DashboardStats {
   pending: number;
-  inTransit: number;
   delivered: number;
-  occurrences: number;
   totalToday: number;
   totalMonth: number;
+  totalValue: number;
 }
 
 interface RecentShipment {
@@ -44,6 +43,7 @@ interface RecentShipment {
   created_at: string;
   recipient_city: string;
   recipient_state: string;
+  freight_value: number;
 }
 
 const ParceirosDashboard = () => {
@@ -51,11 +51,10 @@ const ParceirosDashboard = () => {
   const { partner } = useOutletContext<{ partner: CarrierPartner }>();
   const [stats, setStats] = useState<DashboardStats>({
     pending: 0,
-    inTransit: 0,
     delivered: 0,
-    occurrences: 0,
     totalToday: 0,
-    totalMonth: 0
+    totalMonth: 0,
+    totalValue: 0
   });
   const [recentShipments, setRecentShipments] = useState<RecentShipment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,9 +93,10 @@ const ParceirosDashboard = () => {
 
       if (error) throw error;
 
-      // Calculate stats
-      const pending = shipments?.filter(s => s.status === 'pending' || s.status === 'paid').length || 0;
-      const inTransit = shipments?.filter(s => s.status === 'in_transit' || s.status === 'accepted').length || 0;
+      // Calculate stats - pending includes all non-delivered (em processo)
+      const pending = shipments?.filter(s => 
+        s.status !== 'delivered' && s.status !== 'cancelled'
+      ).length || 0;
       const delivered = shipments?.filter(s => s.status === 'delivered').length || 0;
       
       // Count today's shipments
@@ -108,13 +108,19 @@ const ParceirosDashboard = () => {
       const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       const totalMonth = shipments?.filter(s => new Date(s.created_at) >= firstOfMonth).length || 0;
 
+      // Calculate total freight value
+      const totalValue = shipments?.reduce((sum, s) => {
+        const quoteData = s.quote_data as any;
+        const price = quoteData?.deliveryDetails?.price || quoteData?.price || 0;
+        return sum + Number(price);
+      }, 0) || 0;
+
       setStats({
         pending,
-        inTransit,
         delivered,
-        occurrences: 0, // TODO: implement occurrences count
         totalToday,
-        totalMonth
+        totalMonth,
+        totalValue
       });
 
       // Get recent shipments with address info
@@ -128,13 +134,17 @@ const ParceirosDashboard = () => {
             .eq('id', shipment.recipient_address_id)
             .single();
 
+          const quoteData = shipment.quote_data as any;
+          const freightValue = quoteData?.deliveryDetails?.price || quoteData?.price || 0;
+
           recentWithAddresses.push({
             id: shipment.id,
             tracking_code: shipment.tracking_code || 'N/A',
             status: shipment.status,
             created_at: shipment.created_at,
             recipient_city: address?.city || 'N/A',
-            recipient_state: address?.state || 'N/A'
+            recipient_state: address?.state || 'N/A',
+            freight_value: Number(freightValue)
           });
         }
 
@@ -199,32 +209,18 @@ const ParceirosDashboard = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card 
           className="cursor-pointer hover:shadow-lg transition-all border-l-4 border-l-amber-500"
           onClick={() => navigate('/parceiros/pendentes')}
         >
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pendentes</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Em Processo</CardTitle>
             <Clock className="h-5 w-5 text-amber-500" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-foreground">{stats.pending}</div>
-            <p className="text-xs text-muted-foreground mt-1">Aguardando coleta</p>
-          </CardContent>
-        </Card>
-
-        <Card 
-          className="cursor-pointer hover:shadow-lg transition-all border-l-4 border-l-blue-500"
-          onClick={() => navigate('/parceiros/em-transito')}
-        >
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Em Trânsito</CardTitle>
-            <Truck className="h-5 w-5 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-foreground">{stats.inTransit}</div>
-            <p className="text-xs text-muted-foreground mt-1">Em transporte</p>
+            <p className="text-xs text-muted-foreground mt-1">Aguardando ou em trânsito</p>
           </CardContent>
         </Card>
 
@@ -242,17 +238,16 @@ const ParceirosDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card 
-          className="cursor-pointer hover:shadow-lg transition-all border-l-4 border-l-red-500"
-          onClick={() => navigate('/parceiros/ocorrencias')}
-        >
+        <Card className="border-l-4 border-l-primary">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Ocorrências</CardTitle>
-            <AlertCircle className="h-5 w-5 text-red-500" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Valor Total</CardTitle>
+            <TrendingUp className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground">{stats.occurrences}</div>
-            <p className="text-xs text-muted-foreground mt-1">Requer atenção</p>
+            <div className="text-3xl font-bold text-foreground">
+              {stats.totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Frete acumulado</p>
           </CardContent>
         </Card>
       </div>
@@ -333,6 +328,9 @@ const ParceirosDashboard = () => {
                           <MapPin className="h-3 w-3" />
                           {shipment.recipient_city}/{shipment.recipient_state}
                         </div>
+                        <p className="text-xs font-medium text-primary mt-0.5">
+                          {shipment.freight_value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
