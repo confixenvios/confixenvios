@@ -11,7 +11,8 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  Settings
+  Settings,
+  MessageSquare
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import confixLogo from '@/assets/confix-logo-black.png';
@@ -64,6 +65,7 @@ const ParceirosLayout = () => {
     { title: 'Entregas Pendentes', url: '/parceiros/pendentes', icon: Clock },
     { title: 'Entregas Realizadas', url: '/parceiros/realizadas', icon: CheckCircle },
     { title: 'Relatórios', url: '/parceiros/relatorios', icon: BarChart3 },
+    { title: 'Suporte', url: '/parceiros/suporte', icon: MessageSquare },
     { title: 'Configurações', url: '/parceiros/configuracoes', icon: Settings },
   ];
 

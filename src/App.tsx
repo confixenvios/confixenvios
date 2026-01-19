@@ -104,6 +104,7 @@ import ParceirosRealizadas from "./pages/parceiros/ParceirosRealizadas";
 import ParceirosOcorrencias from "./pages/parceiros/ParceirosOcorrencias";
 import ParceirosRelatorios from "./pages/parceiros/ParceirosRelatorios";
 import ParceirosConfiguracoes from "./pages/parceiros/ParceirosConfiguracoes";
+import ParceirosSuporte from "./pages/parceiros/ParceirosSuporte";
 
 const queryClient = new QueryClient();
 
@@ -245,6 +246,7 @@ const App = () => (
               <Route path="realizadas" element={<ParceirosRealizadas />} />
               <Route path="ocorrencias" element={<ParceirosOcorrencias />} />
               <Route path="relatorios" element={<ParceirosRelatorios />} />
+              <Route path="suporte" element={<ParceirosSuporte />} />
               <Route path="configuracoes" element={<ParceirosConfiguracoes />} />
             </Route>
 
