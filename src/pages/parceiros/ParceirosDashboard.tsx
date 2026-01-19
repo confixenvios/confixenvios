@@ -67,9 +67,8 @@ const ParceirosDashboard = () => {
 
   const loadDashboardData = async () => {
     try {
-      // For now, we'll load shipments that use Jadlog (based on pricing_table_name)
-      // In production, this would filter by the partner's carrier_id
-      const { data: shipments, error } = await supabase
+      // Load all shipments and filter by selectedCarrier in quote_data
+      const { data: allShipments, error } = await supabase
         .from('shipments')
         .select(`
           id,
@@ -77,11 +76,20 @@ const ParceirosDashboard = () => {
           status,
           created_at,
           recipient_address_id,
-          pricing_table_name
+          quote_data
         `)
-        .ilike('pricing_table_name', '%jadlog%')
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(500);
+
+      if (error) throw error;
+
+      // Filter shipments that have jadlog as selectedCarrier
+      const shipments = allShipments?.filter(s => {
+        const quoteData = s.quote_data as any;
+        const selectedCarrier = quoteData?.deliveryDetails?.selectedCarrier || 
+                                quoteData?.selectedCarrier;
+        return selectedCarrier?.toLowerCase() === 'jadlog';
+      }) || [];
 
       if (error) throw error;
 
