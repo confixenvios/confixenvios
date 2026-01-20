@@ -417,7 +417,7 @@ const CotacaoPreview = () => {
         dataHora: new Date().toISOString(),
       };
 
-      const WEBHOOK_URL = "https://webhook.grupoconfix.com/webhook/470b0b62-d2ea-4f66-80c3-5dc013710241";
+      const WEBHOOK_URL = "https://n8n.grupoconfix.com/webhook-test/470b0b62-d2ea-4f66-80c3-5dc013710241";
 
       const response = await fetch(WEBHOOK_URL, {
         method: "POST",
