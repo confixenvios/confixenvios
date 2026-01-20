@@ -298,6 +298,7 @@ const PixPaymentSuccess = () => {
           
           // Dados fiscais/documento
           fiscal: {
+            tipo: (documentData.documentType === 'nfe' || documentData.fiscalData?.type === 'nota_fiscal_eletronica') ? '1' : '3', // 1 = NFe, 3 = Declaração
             documentType: documentData.documentType || documentData.fiscalData?.type || 'declaracao_conteudo',
             nfeKey: documentData.nfeKey || null,
             merchandiseDescription: documentData.merchandiseDescription || null,
