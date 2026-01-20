@@ -227,23 +227,11 @@ const ParceirosDashboard = () => {
             onChange={setPeriodFilter}
             customRange={customDateRange}
             onCustomRangeChange={setCustomDateRange}
+            onClear={() => {
+              setPeriodFilter('month');
+              setCustomDateRange({ from: undefined, to: undefined });
+            }}
           />
-          
-          {/* Clear Filter Button */}
-          {periodFilter !== 'month' && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setPeriodFilter('month');
-                setCustomDateRange({ from: undefined, to: undefined });
-              }}
-              className="gap-2"
-            >
-              <X className="h-4 w-4" />
-              Limpar Filtro
-            </Button>
-          )}
           
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4" />
