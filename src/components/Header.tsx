@@ -489,8 +489,7 @@ const Header = () => {
 
             <Button
               size="lg"
-              variant="outline"
-              className="h-auto py-6 flex flex-col gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              className="h-auto py-6 flex flex-col gap-2"
               onClick={() => {
                 setLoginModalOpen(false);
                 navigate('/parceiros');
