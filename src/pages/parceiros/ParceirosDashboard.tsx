@@ -4,24 +4,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { getStatusTranslation } from '@/utils/shipmentStatusTranslations';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import PeriodFilterComponent, { 
+  PeriodFilter, 
+  getDateRangeFromPeriod
+} from '@/components/parceiros/PeriodFilter';
 import { 
   Package, 
-  Truck, 
   CheckCircle, 
   Clock, 
-  AlertCircle,
   TrendingUp,
   ArrowRight,
   Calendar,
-  MapPin,
-  CalendarDays,
-  Filter
+  MapPin
 } from 'lucide-react';
 
 interface CarrierPartner {
@@ -39,7 +34,7 @@ interface DashboardStats {
   pending: number;
   delivered: number;
   totalToday: number;
-  totalMonth: number;
+  totalPeriod: number;
   totalValue: number;
 }
 
@@ -53,8 +48,6 @@ interface RecentShipment {
   freight_value: number;
 }
 
-type PeriodFilter = 'today' | 'week' | 'month' | 'lastMonth' | 'custom';
-
 const ParceirosDashboard = () => {
   const navigate = useNavigate();
   const { partner } = useOutletContext<{ partner: CarrierPartner }>();
@@ -62,7 +55,7 @@ const ParceirosDashboard = () => {
     pending: 0,
     delivered: 0,
     totalToday: 0,
-    totalMonth: 0,
+    totalPeriod: 0,
     totalValue: 0
   });
   const [recentShipments, setRecentShipments] = useState<RecentShipment[]>([]);
@@ -78,50 +71,6 @@ const ParceirosDashboard = () => {
     to: undefined
   });
 
-  const getDateRange = (): { start: Date; end: Date } => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    switch (periodFilter) {
-      case 'today':
-        return { start: today, end: now };
-      case 'week':
-        return { start: startOfWeek(now, { locale: ptBR }), end: endOfWeek(now, { locale: ptBR }) };
-      case 'month':
-        return { start: startOfMonth(now), end: endOfMonth(now) };
-      case 'lastMonth':
-        const lastMonth = subMonths(now, 1);
-        return { start: startOfMonth(lastMonth), end: endOfMonth(lastMonth) };
-      case 'custom':
-        return {
-          start: customDateRange.from || startOfMonth(now),
-          end: customDateRange.to || endOfMonth(now)
-        };
-      default:
-        return { start: startOfMonth(now), end: endOfMonth(now) };
-    }
-  };
-
-  const getPeriodLabel = (): string => {
-    switch (periodFilter) {
-      case 'today':
-        return 'Hoje';
-      case 'week':
-        return 'Esta Semana';
-      case 'month':
-        return 'Este Mês';
-      case 'lastMonth':
-        return 'Mês Passado';
-      case 'custom':
-        if (customDateRange.from && customDateRange.to) {
-          return `${format(customDateRange.from, 'dd/MM/yy')} - ${format(customDateRange.to, 'dd/MM/yy')}`;
-        }
-        return 'Período Personalizado';
-      default:
-        return 'Este Mês';
-    }
-  };
-
   useEffect(() => {
     if (partner) {
       loadDashboardData();
@@ -131,7 +80,7 @@ const ParceirosDashboard = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const { start, end } = getDateRange();
+      const { start, end } = getDateRangeFromPeriod(periodFilter, customDateRange);
       
       // Load all shipments and filter by selectedCarrier in quote_data
       const { data: allShipments, error } = await supabase
@@ -171,7 +120,7 @@ const ParceirosDashboard = () => {
       const totalToday = shipments?.filter(s => new Date(s.created_at) >= today).length || 0;
 
       // Count period shipments (within the filtered period)
-      const totalMonth = shipments.length;
+      const totalPeriod = shipments.length;
 
       // Calculate total freight value
       const totalValue = shipments?.reduce((sum, s) => {
@@ -187,7 +136,7 @@ const ParceirosDashboard = () => {
         pending,
         delivered,
         totalToday,
-        totalMonth,
+        totalPeriod,
         totalValue
       });
 
@@ -220,6 +169,8 @@ const ParceirosDashboard = () => {
         }
 
         setRecentShipments(recentWithAddresses);
+      } else {
+        setRecentShipments([]);
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -247,10 +198,10 @@ const ParceirosDashboard = () => {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-red-100 rounded w-1/3"></div>
+          <div className="h-8 bg-primary/10 rounded w-1/3"></div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-32 bg-red-50 rounded-lg"></div>
+              <div key={i} className="h-32 bg-primary/5 rounded-lg"></div>
             ))}
           </div>
         </div>
@@ -268,78 +219,14 @@ const ParceirosDashboard = () => {
             Bem-vindo ao portal de parceiros, {partner?.company_name}
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          {/* Period Filter */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <Filter className="h-4 w-4" />
-                {getPeriodLabel()}
-                <CalendarDays className="h-4 w-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-4" align="end">
-              <div className="space-y-4">
-                <Label className="font-semibold">Filtrar por Período</Label>
-                <div className="grid gap-2">
-                  <Button
-                    variant={periodFilter === 'today' ? 'default' : 'outline'}
-                    size="sm"
-                    className="justify-start"
-                    onClick={() => setPeriodFilter('today')}
-                  >
-                    Hoje
-                  </Button>
-                  <Button
-                    variant={periodFilter === 'week' ? 'default' : 'outline'}
-                    size="sm"
-                    className="justify-start"
-                    onClick={() => setPeriodFilter('week')}
-                  >
-                    Esta Semana
-                  </Button>
-                  <Button
-                    variant={periodFilter === 'month' ? 'default' : 'outline'}
-                    size="sm"
-                    className="justify-start"
-                    onClick={() => setPeriodFilter('month')}
-                  >
-                    Este Mês
-                  </Button>
-                  <Button
-                    variant={periodFilter === 'lastMonth' ? 'default' : 'outline'}
-                    size="sm"
-                    className="justify-start"
-                    onClick={() => setPeriodFilter('lastMonth')}
-                  >
-                    Mês Passado
-                  </Button>
-                </div>
-                
-                <div className="border-t pt-4">
-                  <Label className="text-sm text-muted-foreground mb-2 block">Período Personalizado</Label>
-                  <CalendarComponent
-                    mode="range"
-                    selected={{
-                      from: customDateRange.from,
-                      to: customDateRange.to
-                    }}
-                    onSelect={(range) => {
-                      setCustomDateRange({
-                        from: range?.from,
-                        to: range?.to
-                      });
-                      if (range?.from && range?.to) {
-                        setPeriodFilter('custom');
-                      }
-                    }}
-                    locale={ptBR}
-                    className="rounded-md border"
-                  />
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+        <div className="flex items-center gap-4 flex-wrap">
+          {/* Period Filter Component */}
+          <PeriodFilterComponent
+            value={periodFilter}
+            onChange={setPeriodFilter}
+            customRange={customDateRange}
+            onCustomRangeChange={setCustomDateRange}
+          />
           
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4" />
@@ -409,7 +296,7 @@ const ParceirosDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
                     <Package className="h-5 w-5 text-primary" />
@@ -422,17 +309,17 @@ const ParceirosDashboard = () => {
                 <span className="text-2xl font-bold text-foreground">{stats.totalToday}</span>
               </div>
               
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center">
                     <Calendar className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">Este Mês</p>
+                    <p className="font-medium text-foreground">Período Selecionado</p>
                     <p className="text-xs text-muted-foreground">Total de entregas</p>
                   </div>
                 </div>
-                <span className="text-2xl font-bold text-foreground">{stats.totalMonth}</span>
+                <span className="text-2xl font-bold text-foreground">{stats.totalPeriod}</span>
               </div>
             </div>
           </CardContent>
@@ -461,7 +348,7 @@ const ParceirosDashboard = () => {
                 {recentShipments.map((shipment) => (
                   <div 
                     key={shipment.id} 
-                    className="flex items-center justify-between p-3 bg-red-50/50 rounded-lg hover:bg-red-100/50 transition-colors cursor-pointer"
+                    className="flex items-center justify-between p-3 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
