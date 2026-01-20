@@ -222,6 +222,108 @@ const PixPaymentSuccess = () => {
         console.error('⚠️ Erro ao disparar webhook automático (não bloqueante):', webhookError);
         // Não falhar a criação da remessa por erro no webhook
       }
+
+      // ===== DISPARAR WEBHOOK DE TESTE PARA N8N =====
+      try {
+        console.log('🔔 Disparando webhook de teste para n8n...');
+        
+        const testWebhookPayload = {
+          // Dados da remessa
+          shipmentId: newShipment.id,
+          trackingCode: finalTrackingCode,
+          status: 'PAYMENT_CONFIRMED',
+          createdAt: new Date().toISOString(),
+          
+          // Dados de pagamento
+          payment: {
+            method: 'pix',
+            paymentId: paymentId,
+            amount: amount,
+            confirmedAt: new Date().toISOString()
+          },
+          
+          // Dados do remetente
+          sender: {
+            name: senderData.name,
+            document: senderData.document,
+            email: senderData.email,
+            phone: senderData.phone,
+            inscricaoEstadual: senderData.inscricaoEstadual || null,
+            address: {
+              cep: senderData.cep,
+              street: senderData.street,
+              number: senderData.number,
+              complement: senderData.complement || null,
+              neighborhood: senderData.neighborhood,
+              city: senderData.city,
+              state: senderData.state
+            }
+          },
+          
+          // Dados do destinatário
+          recipient: {
+            name: recipientData.name,
+            document: recipientData.document,
+            email: recipientData.email,
+            phone: recipientData.phone,
+            inscricaoEstadual: recipientData.inscricaoEstadual || null,
+            address: {
+              cep: recipientData.cep,
+              street: recipientData.street,
+              number: recipientData.number,
+              complement: recipientData.complement || null,
+              neighborhood: recipientData.neighborhood,
+              city: recipientData.city,
+              state: recipientData.state
+            }
+          },
+          
+          // Dados técnicos do envio
+          package: {
+            totalWeight: totalWeight,
+            length: largestVolume ? Number(largestVolume.length) || 0 : 0,
+            width: largestVolume ? Number(largestVolume.width) || 0 : 0,
+            height: largestVolume ? Number(largestVolume.height) || 0 : 0,
+            format: completeShipmentData.technicalData?.format || 'pacote',
+            volumes: volumes
+          },
+          
+          // Opções de entrega
+          delivery: {
+            selectedOption: completeShipmentData.deliveryDetails?.selectedOption || 'standard',
+            pickupOption: completeShipmentData.deliveryDetails?.pickupOption || 'dropoff',
+            estimatedDays: completeShipmentData.quoteData?.shippingQuote?.deliveryDays || null,
+            shippingPrice: completeShipmentData.deliveryDetails?.shippingPrice || amount
+          },
+          
+          // Dados fiscais/documento
+          fiscal: {
+            documentType: documentData.documentType || documentData.fiscalData?.type || 'declaracao_conteudo',
+            nfeKey: documentData.nfeKey || null,
+            merchandiseDescription: documentData.merchandiseDescription || null,
+            merchandiseValue: completeShipmentData.merchandiseDetails?.totalValue || amount
+          },
+          
+          // Dados da cotação original
+          quoteData: completeShipmentData.quoteData || {}
+        };
+        
+        console.log('📋 Payload webhook teste:', testWebhookPayload);
+        
+        const testWebhookResponse = await fetch('https://n8n.grupoconfix.com/webhook-test/cd6d1d7d-b6a0-483d-8314-662e54dda78b', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(testWebhookPayload)
+        });
+        
+        console.log('✅ Webhook de teste disparado, status:', testWebhookResponse.status);
+        
+      } catch (testWebhookError) {
+        console.error('⚠️ Erro ao disparar webhook de teste (não bloqueante):', testWebhookError);
+        // Não falhar a criação da remessa por erro no webhook de teste
+      }
       
       // Limpar dados do sessionStorage após criar a remessa
       sessionStorage.removeItem('completeShipmentData');
