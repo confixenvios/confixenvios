@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, X } from 'lucide-react';
 
 export type PeriodFilter = 'today' | 'yesterday' | 'week' | 'month' | 'lastMonth' | 'last7days' | 'last30days' | 'custom';
 
@@ -15,6 +15,7 @@ interface PeriodFilterProps {
   customRange: { from: Date | undefined; to: Date | undefined };
   onCustomRangeChange: (range: { from: Date | undefined; to: Date | undefined }) => void;
   className?: string;
+  onClear?: () => void;
 }
 
 const periodOptions: { value: PeriodFilter; label: string }[] = [
@@ -79,7 +80,8 @@ const PeriodFilterComponent = ({
   onChange,
   customRange,
   onCustomRangeChange,
-  className
+  className,
+  onClear
 }: PeriodFilterProps) => {
   const [startOpen, setStartOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
@@ -124,43 +126,19 @@ const PeriodFilterComponent = ({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0 bg-background" align="start">
-          <div className="flex">
-            {/* Quick select options */}
-            <div className="border-r p-2 min-w-[140px]">
-              <p className="text-xs text-muted-foreground mb-2 px-2 font-medium">Período rápido</p>
-              <div className="space-y-1">
-                {periodOptions.map((option) => (
-                  <Button
-                    key={option.value}
-                    variant={value === option.value ? 'default' : 'ghost'}
-                    size="sm"
-                    className="w-full justify-start text-sm"
-                    onClick={() => {
-                      onChange(option.value);
-                      setStartOpen(false);
-                    }}
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            
-            {/* Calendar */}
-            <div className="p-2">
-              <p className="text-xs text-muted-foreground mb-2 px-2">Data inicial</p>
-              <Calendar
-                mode="single"
-                selected={customRange.from || dateRange.start}
-                onSelect={handleStartDateSelect}
-                locale={ptBR}
-                showOutsideDays={false}
-                className={cn("rounded-md pointer-events-auto")}
-                modifiersClassNames={{
-                  today: ''
-                }}
-              />
-            </div>
+          <div className="p-2">
+            <p className="text-xs text-muted-foreground mb-2 px-2">Data inicial</p>
+            <Calendar
+              mode="single"
+              selected={customRange.from || dateRange.start}
+              onSelect={handleStartDateSelect}
+              locale={ptBR}
+              showOutsideDays={false}
+              className={cn("rounded-md pointer-events-auto")}
+              modifiersClassNames={{
+                today: ''
+              }}
+            />
           </div>
         </PopoverContent>
       </Popover>
@@ -198,6 +176,17 @@ const PeriodFilterComponent = ({
           </div>
         </PopoverContent>
       </Popover>
+
+      {/* Clear Filter Button - Always visible */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onClear}
+        className="gap-1 text-muted-foreground hover:text-foreground"
+      >
+        <X className="h-4 w-4" />
+        Limpar
+      </Button>
     </div>
   );
 };
