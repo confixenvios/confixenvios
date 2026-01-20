@@ -417,7 +417,7 @@ const CotacaoPreview = () => {
         dataHora: new Date().toISOString(),
       };
 
-      const WEBHOOK_URL = "https://n8n.grupoconfix.com/webhook-test/470b0b62-d2ea-4f66-80c3-5dc013710241";
+      const WEBHOOK_URL = "https://webhook.grupoconfix.com/webhook/470b0b62-d2ea-4f66-80c3-5dc013710241";
 
       const response = await fetch(WEBHOOK_URL, {
         method: "POST",
@@ -432,7 +432,7 @@ const CotacaoPreview = () => {
       const webhookResponse = await response.json();
       console.log("Webhook response:", webhookResponse);
 
-      // NOVO FORMATO: webhook retorna maisbarato_* e maisrapido_* diretamente
+      // Extrair dados da resposta (pode ser array ou objeto)
       let apiData = null;
       if (Array.isArray(webhookResponse) && webhookResponse.length > 0) {
         apiData = webhookResponse[0];
@@ -441,16 +441,45 @@ const CotacaoPreview = () => {
       }
 
       if (apiData) {
-        // Extrair dados do mais barato e mais rápido diretamente do webhook
-        const maisBaratoPreco = apiData.maisbarato_preco ? parseFloat(apiData.maisbarato_preco) : null;
-        const maisBaratoPrazo = apiData.maisbarato_prazo ? parseInt(apiData.maisbarato_prazo) : 7;
-        const maisBaratoUf = apiData.maisbarato_uf || null;
-        const maisBaratoTransportadora = apiData.maisbarato_transportadora || null;
+        let maisBaratoPreco: number | null = null;
+        let maisBaratoPrazo: number = 7;
+        let maisBaratoUf: string | null = null;
+        let maisBaratoTransportadora: string | null = null;
 
-        const maisRapidoPreco = apiData.maisrapido_preco ? parseFloat(apiData.maisrapido_preco) : null;
-        const maisRapidoPrazo = apiData.maisrapido_prazo ? parseInt(apiData.maisrapido_prazo) : 5;
-        const maisRapidoUf = apiData.maisrapido_uf || null;
-        const maisRapidoTransportadora = apiData.maisrapido_transportadora || null;
+        let maisRapidoPreco: number | null = null;
+        let maisRapidoPrazo: number = 5;
+        let maisRapidoUf: string | null = null;
+        let maisRapidoTransportadora: string | null = null;
+
+        // Verificar se é resultado único (tipo_resultado: "unico")
+        if (apiData.tipo_resultado === "unico") {
+          // Quando ambos são iguais, usa os campos maisrapidoemaisbarato_*
+          const precoUnico = apiData.maisrapidoemaisbarato_frete ? parseFloat(apiData.maisrapidoemaisbarato_frete) : null;
+          const prazoUnico = apiData.maisrapidoemaisbarato_prazo ? parseInt(apiData.maisrapidoemaisbarato_prazo) : 5;
+          const ufUnico = apiData.maisrapidoemaisbarato_uf || null;
+          const nomeUnico = apiData.maisrapidoemaisbarato_nome || null;
+
+          maisBaratoPreco = precoUnico;
+          maisBaratoPrazo = prazoUnico;
+          maisBaratoUf = ufUnico;
+          maisBaratoTransportadora = nomeUnico;
+
+          maisRapidoPreco = precoUnico;
+          maisRapidoPrazo = prazoUnico;
+          maisRapidoUf = ufUnico;
+          maisRapidoTransportadora = nomeUnico;
+        } else {
+          // Resultado com duas opções diferentes
+          maisBaratoPreco = apiData.maisbaratofrete ? parseFloat(apiData.maisbaratofrete) : null;
+          maisBaratoPrazo = apiData.maisbaratoprazo ? parseInt(apiData.maisbaratoprazo) : 7;
+          maisBaratoUf = apiData.maisbaratouf || null;
+          maisBaratoTransportadora = apiData.maisbaratonome || null;
+
+          maisRapidoPreco = apiData.maisrapidofrete ? parseFloat(apiData.maisrapidofrete) : null;
+          maisRapidoPrazo = apiData.maisrapidoprazo ? parseInt(apiData.maisrapidoprazo) : 5;
+          maisRapidoUf = apiData.maisrapidouf || null;
+          maisRapidoTransportadora = apiData.maisrapidnome || null; // Note: "maisrapidnome" sem "o" conforme o payload
+        }
 
         const maisBaratoDisponivel = maisBaratoPreco !== null && !isNaN(maisBaratoPreco) && maisBaratoPreco > 0;
         const maisRapidoDisponivel = maisRapidoPreco !== null && !isNaN(maisRapidoPreco) && maisRapidoPreco > 0;
