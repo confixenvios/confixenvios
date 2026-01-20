@@ -182,10 +182,9 @@ const PeriodFilterComponent = ({
         variant="ghost"
         size="sm"
         onClick={onClear}
-        className="gap-1 text-muted-foreground hover:text-foreground"
+        className="text-muted-foreground hover:text-foreground"
       >
-        <X className="h-4 w-4" />
-        Limpar
+        Limpar Filtro
       </Button>
     </div>
   );
