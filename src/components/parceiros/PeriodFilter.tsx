@@ -154,7 +154,11 @@ const PeriodFilterComponent = ({
                 selected={customRange.from || dateRange.start}
                 onSelect={handleStartDateSelect}
                 locale={ptBR}
+                showOutsideDays={false}
                 className={cn("rounded-md pointer-events-auto")}
+                modifiersClassNames={{
+                  today: ''
+                }}
               />
             </div>
           </div>
@@ -184,8 +188,12 @@ const PeriodFilterComponent = ({
               selected={customRange.to || dateRange.end}
               onSelect={handleEndDateSelect}
               locale={ptBR}
+              showOutsideDays={false}
               disabled={(date) => customRange.from ? date < customRange.from : false}
               className={cn("rounded-md pointer-events-auto")}
+              modifiersClassNames={{
+                today: ''
+              }}
             />
           </div>
         </PopoverContent>
