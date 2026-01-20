@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarDays, ChevronDown } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
 
 export type PeriodFilter = 'today' | 'yesterday' | 'week' | 'month' | 'lastMonth' | 'last7days' | 'last30days' | 'custom';
 
@@ -81,75 +81,116 @@ const PeriodFilterComponent = ({
   onCustomRangeChange,
   className
 }: PeriodFilterProps) => {
-  const [open, setOpen] = useState(false);
+  const [startOpen, setStartOpen] = useState(false);
+  const [endOpen, setEndOpen] = useState(false);
 
-  const handlePeriodSelect = (period: PeriodFilter) => {
-    onChange(period);
-    if (period !== 'custom') {
-      setOpen(false);
+  const handleStartDateSelect = (date: Date | undefined) => {
+    if (date) {
+      onCustomRangeChange({
+        from: date,
+        to: customRange.to
+      });
+      onChange('custom');
+      setStartOpen(false);
     }
   };
 
+  const handleEndDateSelect = (date: Date | undefined) => {
+    if (date) {
+      onCustomRangeChange({
+        from: customRange.from,
+        to: date
+      });
+      onChange('custom');
+      setEndOpen(false);
+    }
+  };
+
+  const dateRange = getDateRangeFromPeriod(value, customRange);
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button 
-          variant="outline" 
-          className={cn("gap-2 min-w-[180px] justify-between", className)}
-        >
-          <div className="flex items-center gap-2">
+    <div className={cn("flex items-center gap-2", className)}>
+      {/* Start Date Picker */}
+      <Popover open={startOpen} onOpenChange={setStartOpen}>
+        <PopoverTrigger asChild>
+          <Button 
+            variant="outline" 
+            className="gap-2 min-w-[140px] justify-start"
+          >
             <CalendarDays className="h-4 w-4 text-primary" />
-            <span className="font-medium">{getPeriodLabel(value, customRange)}</span>
-          </div>
-          <ChevronDown className="h-4 w-4 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="end">
-        <div className="flex">
-          {/* Quick select options */}
-          <div className="border-r p-2 min-w-[140px]">
-            <div className="space-y-1">
-              {periodOptions.map((option) => (
-                <Button
-                  key={option.value}
-                  variant={value === option.value ? 'default' : 'ghost'}
-                  size="sm"
-                  className="w-full justify-start text-sm"
-                  onClick={() => handlePeriodSelect(option.value)}
-                >
-                  {option.label}
-                </Button>
-              ))}
+            <span className="font-medium text-sm">
+              {format(dateRange.start, 'dd/MM/yyyy', { locale: ptBR })}
+            </span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 bg-background" align="start">
+          <div className="flex">
+            {/* Quick select options */}
+            <div className="border-r p-2 min-w-[140px]">
+              <p className="text-xs text-muted-foreground mb-2 px-2 font-medium">Período rápido</p>
+              <div className="space-y-1">
+                {periodOptions.map((option) => (
+                  <Button
+                    key={option.value}
+                    variant={value === option.value ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start text-sm"
+                    onClick={() => {
+                      onChange(option.value);
+                      setStartOpen(false);
+                    }}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Calendar */}
+            <div className="p-2">
+              <p className="text-xs text-muted-foreground mb-2 px-2">Data inicial</p>
+              <Calendar
+                mode="single"
+                selected={customRange.from || dateRange.start}
+                onSelect={handleStartDateSelect}
+                locale={ptBR}
+                className={cn("rounded-md pointer-events-auto")}
+              />
             </div>
           </div>
-          
-          {/* Calendar for custom range */}
+        </PopoverContent>
+      </Popover>
+
+      <span className="text-muted-foreground">até</span>
+
+      {/* End Date Picker */}
+      <Popover open={endOpen} onOpenChange={setEndOpen}>
+        <PopoverTrigger asChild>
+          <Button 
+            variant="outline" 
+            className="gap-2 min-w-[140px] justify-start"
+          >
+            <CalendarDays className="h-4 w-4 text-primary" />
+            <span className="font-medium text-sm">
+              {format(dateRange.end, 'dd/MM/yyyy', { locale: ptBR })}
+            </span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 bg-background" align="end">
           <div className="p-2">
-            <p className="text-xs text-muted-foreground mb-2 px-2">Período personalizado</p>
+            <p className="text-xs text-muted-foreground mb-2 px-2">Data final</p>
             <Calendar
-              mode="range"
-              selected={{
-                from: customRange.from,
-                to: customRange.to
-              }}
-              onSelect={(range) => {
-                onCustomRangeChange({
-                  from: range?.from,
-                  to: range?.to
-                });
-                if (range?.from && range?.to) {
-                  onChange('custom');
-                  setOpen(false);
-                }
-              }}
+              mode="single"
+              selected={customRange.to || dateRange.end}
+              onSelect={handleEndDateSelect}
               locale={ptBR}
-              numberOfMonths={1}
+              disabled={(date) => customRange.from ? date < customRange.from : false}
               className={cn("rounded-md pointer-events-auto")}
             />
           </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 };
 
