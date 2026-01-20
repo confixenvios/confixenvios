@@ -967,7 +967,7 @@ const QuoteForm = () => {
       const webhookResponse = await response.json();
       console.log("📥 Webhook resposta:", webhookResponse);
 
-      // NOVO FORMATO: webhook retorna maisbarato_* e maisrapido_* diretamente
+      // NOVO FORMATO: webhook retorna múltiplas transportadoras (jadlog, magalog, neto, angil, jt)
       let maisBaratoPreco: number | null = null;
       let maisBaratoPrazo: number = 7;
       let maisBaratoUf: string | null = null;
@@ -977,38 +977,71 @@ const QuoteForm = () => {
       let maisRapidoUf: string | null = null;
       let maisRapidoTransportadora: string | null = null;
 
+      // Extrair dados do objeto retornado
+      let apiData: Record<string, unknown> | null = null;
       if (Array.isArray(webhookResponse) && webhookResponse.length > 0) {
-        const apiData = webhookResponse[0];
-        
-        // Extrair dados do mais barato
-        if (apiData.maisbarato_preco) {
-          maisBaratoPreco = parseFloat(apiData.maisbarato_preco);
-          maisBaratoPrazo = parseInt(apiData.maisbarato_prazo) || 7;
-          maisBaratoUf = apiData.maisbarato_uf || null;
-          maisBaratoTransportadora = apiData.maisbarato_transportadora || null;
-        }
-        
-        // Extrair dados do mais rápido
-        if (apiData.maisrapido_preco) {
-          maisRapidoPreco = parseFloat(apiData.maisrapido_preco);
-          maisRapidoPrazo = parseInt(apiData.maisrapido_prazo) || 5;
-          maisRapidoUf = apiData.maisrapido_uf || null;
-          maisRapidoTransportadora = apiData.maisrapido_transportadora || null;
-        }
+        apiData = webhookResponse[0];
       } else if (webhookResponse && typeof webhookResponse === 'object') {
-        // Objeto único
-        if (webhookResponse.maisbarato_preco) {
-          maisBaratoPreco = parseFloat(webhookResponse.maisbarato_preco);
-          maisBaratoPrazo = parseInt(webhookResponse.maisbarato_prazo) || 7;
-          maisBaratoUf = webhookResponse.maisbarato_uf || null;
-          maisBaratoTransportadora = webhookResponse.maisbarato_transportadora || null;
-        }
+        apiData = webhookResponse;
+      }
+
+      if (apiData) {
+        // Definir transportadoras suportadas
+        const transportadoras = ['jadlog', 'magalog', 'neto', 'angil', 'jt'];
         
-        if (webhookResponse.maisrapido_preco) {
-          maisRapidoPreco = parseFloat(webhookResponse.maisrapido_preco);
-          maisRapidoPrazo = parseInt(webhookResponse.maisrapido_prazo) || 5;
-          maisRapidoUf = webhookResponse.maisrapido_uf || null;
-          maisRapidoTransportadora = webhookResponse.maisrapido_transportadora || null;
+        // Coletar transportadoras válidas (onde precototal não é null)
+        const transportadorasValidas: Array<{
+          nome: string;
+          preco: number;
+          prazo: number;
+          uf: string;
+        }> = [];
+
+        for (const transp of transportadoras) {
+          const precoKey = `${transp}_precototal`;
+          const prazoKey = `${transp}_prazo`;
+          const ufKey = `${transp}_UF`;
+
+          const preco = apiData[precoKey] as number | null | undefined;
+          const prazo = apiData[prazoKey] as number | string | null | undefined;
+          const uf = apiData[ufKey] as string | null | undefined;
+
+          // Só processar se preco não for null
+          if (preco !== null && preco !== undefined) {
+            transportadorasValidas.push({
+              nome: transp.charAt(0).toUpperCase() + transp.slice(1), // Capitalizar nome
+              preco: parseFloat(String(preco)),
+              prazo: parseInt(String(prazo)) || 0,
+              uf: uf || '',
+            });
+          }
+        }
+
+        console.log("📦 Transportadoras válidas:", transportadorasValidas);
+
+        if (transportadorasValidas.length > 0) {
+          // Encontrar mais barato (menor preço)
+          const maisBaratoObj = transportadorasValidas.reduce((prev, curr) => 
+            prev.preco < curr.preco ? prev : curr
+          );
+
+          // Encontrar mais rápido (menor prazo)
+          const maisRapidoObj = transportadorasValidas.reduce((prev, curr) => 
+            prev.prazo < curr.prazo ? prev : curr
+          );
+
+          maisBaratoPreco = maisBaratoObj.preco;
+          maisBaratoPrazo = maisBaratoObj.prazo;
+          maisBaratoUf = maisBaratoObj.uf;
+          maisBaratoTransportadora = maisBaratoObj.nome;
+
+          maisRapidoPreco = maisRapidoObj.preco;
+          maisRapidoPrazo = maisRapidoObj.prazo;
+          maisRapidoUf = maisRapidoObj.uf;
+          maisRapidoTransportadora = maisRapidoObj.nome;
+
+          console.log("💰 Mais barato:", maisBaratoObj);
+          console.log("⚡ Mais rápido:", maisRapidoObj);
         }
       }
 
