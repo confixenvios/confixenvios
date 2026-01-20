@@ -139,131 +139,124 @@ const Document = () => {
         description: "Dados salvos. Redirecionando para pagamento...",
       });
 
-      // ========== WEBHOOK DE TESTE (DEBUG) ==========
+      // ========== WEBHOOK DE TESTE (DEBUG) - MESMO PAYLOAD DO PIX ==========
       try {
-        console.log('🔍 Disparando webhook de teste para debug...');
+        console.log('🔔 Disparando webhook de teste para n8n (mesmo payload do PIX)...');
         
-        // Recuperar dados completos (mesma estrutura do webhook PIX)
-        const completeShipmentData = JSON.parse(sessionStorage.getItem('completeShipmentData') || '{}');
+        // Recuperar dados completos
+        const completeData = JSON.parse(sessionStorage.getItem('completeShipmentData') || '{}');
+        const addressData = completeData.addressData || {};
+        const technicalData = completeData.technicalData || {};
+        const deliveryDetails = completeData.deliveryDetails || {};
+        const senderData = addressData.sender || {};
+        const recipientData = addressData.recipient || {};
         
-        console.log('📦 Dados completos recuperados:', completeShipmentData);
-        
-        // Extrair estruturas de dados
-        const addressData = completeShipmentData.addressData || {};
-        const technicalData = completeShipmentData.technicalData || {};
-        const deliveryDetails = completeShipmentData.deliveryDetails || {};
-        const shippingQuote = completeShipmentData.shippingQuote || {};
-        
-        // Dados pessoais estão dentro de addressData.sender e addressData.recipient
-        const sender = addressData.sender || {};
-        const recipient = addressData.recipient || {};
-        
-        console.log('👤 Sender:', sender);
-        console.log('👤 Recipient:', recipient);
-        
-        const queryParams = new URLSearchParams();
-        
-        // Valor total do frete
-        const valorFrete = deliveryDetails.totalPrice || currentShipment.price || 0;
-        queryParams.append('valorTotal', String(valorFrete));
-        
-        // Valor declarado da mercadoria
-        const valorDeclarado = completeShipmentData.quoteData?.totalMerchandiseValue || 
-                              completeShipmentData.originalFormData?.totalMerchandiseValue || 
-                              currentShipment.declaredValue || 0;
-        queryParams.append('mercadoria_valorDeclarado', String(valorDeclarado));
-        
-        // Prazo de entrega
-        queryParams.append('remessa_prazo', String(deliveryDetails.deliveryDays || shippingQuote.deliveryDays || currentShipment.deliveryTime || 5));
-        
-        // Dados da transportadora selecionada
-        queryParams.append('transportadora_nome', shippingQuote.carrierName || deliveryDetails.selectedCarrier || currentShipment.carrier || 'Confix');
-        queryParams.append('transportadora_servico', deliveryDetails.selectedOption || currentShipment.serviceType || 'standard');
-        
-        // CNPJ do transportador destino (sempre vazio)
-        queryParams.append('cnpjTransportadorDestinto', '');
-        
-        // Expedidor (sempre "Juri Express")
-        queryParams.append('expedidor', 'Juri Express');
-        
-        // Dados do remetente (TOMADOR DO SERVIÇO)
-        queryParams.append('remetente_nome', sender.name || '');
-        queryParams.append('remetente_documento', sender.document || '');
-        queryParams.append('remetente_inscricaoEstadual', sender.inscricaoEstadual || '');
-        queryParams.append('remetente_email', sender.email || '');
-        queryParams.append('remetente_telefone', sender.phone || '');
-        queryParams.append('remetente_endereco', sender.street || '');
-        queryParams.append('remetente_numero', sender.number || '');
-        queryParams.append('remetente_complemento', sender.complement || '');
-        queryParams.append('remetente_bairro', sender.neighborhood || '');
-        queryParams.append('remetente_cidade', sender.city || '');
-        queryParams.append('remetente_estado', sender.state || '');
-        queryParams.append('remetente_cep', sender.cep || '');
-        
-        // Dados do destinatário
-        queryParams.append('destinatario_nome', recipient.name || '');
-        queryParams.append('destinatario_documento', recipient.document || '');
-        queryParams.append('destinatario_inscricaoEstadual', recipient.inscricaoEstadual || '');
-        queryParams.append('destinatario_email', recipient.email || '');
-        queryParams.append('destinatario_telefone', recipient.phone || '');
-        queryParams.append('destinatario_endereco', recipient.street || '');
-        queryParams.append('destinatario_numero', recipient.number || '');
-        queryParams.append('destinatario_complemento', recipient.complement || '');
-        queryParams.append('destinatario_bairro', recipient.neighborhood || '');
-        queryParams.append('destinatario_cidade', recipient.city || '');
-        queryParams.append('destinatario_estado', recipient.state || '');
-        queryParams.append('destinatario_cep', recipient.cep || '');
-        
-        // Dados do documento fiscal
-        if (documentType === 'nfe') {
-          queryParams.append('tipo', '1'); // Nota Fiscal Eletrônica
-          queryParams.append('chaveNotaFiscal', nfeKey || '');
-          // Produto predominante da NFe vai como descricaoMercadoria/content_description
-          queryParams.append('descricaoMercadoria', nfePredominantProduct || 'Mercadoria Geral');
-        } else {
-          queryParams.append('tipo', '3'); // Declaração de Conteúdo
-          // Para declaração de conteúdo, enviar chave fictícia
-          queryParams.append('chaveNotaFiscal', '99999999999999999999999999999999999999999999');
-          queryParams.append('descricaoMercadoria', merchandiseDescription || 'Mercadoria Geral');
-        }
-        
-        // Dados técnicos da remessa
-        const primeiroVolume = technicalData.volumes?.[0] || technicalData;
-        queryParams.append('remessa_peso', String(technicalData.consideredWeight || technicalData.weight || 1));
-        queryParams.append('remessa_cubagemTotal', (technicalData.totalCubicWeight || 0).toFixed(3));
-        queryParams.append('remessa_largura', String(primeiroVolume.width || technicalData.width || 15));
-        queryParams.append('remessa_comprimento', String(primeiroVolume.length || technicalData.length || 20));
-        queryParams.append('remessa_altura', String(primeiroVolume.height || technicalData.height || 10));
-        queryParams.append('remessa_formato', primeiroVolume.merchandiseType || 'caixa');
-        
-        // Informações detalhadas de cada volume
+        // Volumes
         const volumes = technicalData.volumes || [technicalData];
-        volumes.forEach((volume: any, index: number) => {
-          const volumeNumber = index + 1;
-          const volumePrefix = `volume${volumeNumber}`;
+        const totalWeight = volumes.reduce((sum: number, v: any) => sum + (Number(v.weight) || 1), 0);
+        const largestVolume = volumes.length > 0 ? volumes.reduce((max: any, v: any) => {
+          const maxVol = (Number(max.length) || 0) * (Number(max.width) || 0) * (Number(max.height) || 0);
+          const currVol = (Number(v.length) || 0) * (Number(v.width) || 0) * (Number(v.height) || 0);
+          return currVol > maxVol ? v : max;
+        }) : null;
+        
+        const testWebhookPayload = {
+          // Dados da remessa (sem ID ainda - será criada após pagamento)
+          shipmentId: null,
+          trackingCode: null,
+          status: 'PENDING_PAYMENT',
+          createdAt: new Date().toISOString(),
           
-          queryParams.append(`${volumePrefix}_peso`, String(volume.weight || 1));
-          queryParams.append(`${volumePrefix}_comprimento`, String(volume.length || 20));
-          queryParams.append(`${volumePrefix}_largura`, String(volume.width || 15));
-          queryParams.append(`${volumePrefix}_altura`, String(volume.height || 10));
+          // Dados de pagamento (pendente)
+          payment: {
+            method: 'pix',
+            paymentId: null,
+            amount: deliveryDetails.totalPrice || currentShipment?.price || 0,
+            confirmedAt: null,
+            status: 'pending'
+          },
           
-          const volumeCubagem = ((volume.length || 20) * (volume.width || 15) * (volume.height || 10)) / 1000000;
-          queryParams.append(`${volumePrefix}_cubagemVolume`, volumeCubagem.toFixed(3));
-          queryParams.append(`${volumePrefix}_tipoMercadoria`, volume.merchandiseType || 'Normal');
-        });
+          // Dados do remetente
+          sender: {
+            name: senderData.name || '',
+            document: senderData.document || '',
+            email: senderData.email || '',
+            phone: senderData.phone || '',
+            inscricaoEstadual: senderData.inscricaoEstadual || null,
+            address: {
+              cep: senderData.cep || '',
+              street: senderData.street || '',
+              number: senderData.number || '',
+              complement: senderData.complement || null,
+              neighborhood: senderData.neighborhood || '',
+              city: senderData.city || '',
+              state: senderData.state || ''
+            }
+          },
+          
+          // Dados do destinatário
+          recipient: {
+            name: recipientData.name || '',
+            document: recipientData.document || '',
+            email: recipientData.email || '',
+            phone: recipientData.phone || '',
+            inscricaoEstadual: recipientData.inscricaoEstadual || null,
+            address: {
+              cep: recipientData.cep || '',
+              street: recipientData.street || '',
+              number: recipientData.number || '',
+              complement: recipientData.complement || null,
+              neighborhood: recipientData.neighborhood || '',
+              city: recipientData.city || '',
+              state: recipientData.state || ''
+            }
+          },
+          
+          // Dados técnicos do envio
+          package: {
+            totalWeight: totalWeight,
+            length: largestVolume ? Number(largestVolume.length) || 0 : 0,
+            width: largestVolume ? Number(largestVolume.width) || 0 : 0,
+            height: largestVolume ? Number(largestVolume.height) || 0 : 0,
+            format: technicalData.format || 'pacote',
+            volumes: volumes
+          },
+          
+          // Opções de entrega
+          delivery: {
+            selectedOption: deliveryDetails.selectedOption || 'standard',
+            pickupOption: deliveryDetails.pickupOption || 'dropoff',
+            estimatedDays: deliveryDetails.deliveryDays || completeData.quoteData?.shippingQuote?.deliveryDays || null,
+            shippingPrice: deliveryDetails.totalPrice || currentShipment?.price || 0
+          },
+          
+          // Dados fiscais/documento
+          fiscal: {
+            documentType: documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo',
+            nfeKey: documentType === 'nfe' ? nfeKey : null,
+            merchandiseDescription: documentType === 'declaration' ? merchandiseDescription : nfePredominantProduct,
+            merchandiseValue: completeData.quoteData?.totalMerchandiseValue || completeData.originalFormData?.totalMerchandiseValue || 0
+          },
+          
+          // Dados da cotação original
+          quoteData: completeData.quoteData || {}
+        };
         
-        // URL de teste
-        const testWebhookUrl = `https://n8n.grupoconfix.com/webhook-test/cd6d1d7d-b6a0-483d-8314-662e54dda78b?${queryParams.toString()}`;
+        console.log('📋 Payload webhook teste (mesmo formato do PIX):', testWebhookPayload);
         
-        console.log('🔍 Query params construídos:', Object.fromEntries(queryParams.entries()));
-        console.log('🔍 URL completa:', testWebhookUrl);
-        
-        // Disparar webhook (não aguardar resposta para não bloquear)
-        fetch(testWebhookUrl, { method: 'GET' }).catch(err => {
+        // Disparar webhook POST (não bloqueia o fluxo)
+        fetch('https://n8n.grupoconfix.com/webhook-test/cd6d1d7d-b6a0-483d-8314-662e54dda78b', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(testWebhookPayload)
+        }).then(response => {
+          console.log('✅ Webhook de teste disparado, status:', response.status);
+        }).catch(err => {
           console.warn('⚠️ Erro ao disparar webhook de teste (não crítico):', err);
         });
         
-        console.log('✅ Webhook de teste disparado com sucesso');
       } catch (testError) {
         console.error('❌ Erro ao disparar webhook de teste:', testError);
         // Não bloqueia o fluxo normal
