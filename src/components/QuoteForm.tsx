@@ -2047,6 +2047,13 @@ const QuoteForm = () => {
                   )}
                 </div>
 
+                {/* Informative Message */}
+                <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-warning-foreground text-center">
+                    Pedidos serão coletados até 12h do mesmo dia, após as 12h será coletado no dia seguinte.
+                  </p>
+                </div>
+
                 {/* Quote Summary with Selected Option */}
                 <Card className="bg-accent/20 border-primary/20 mb-6">
                   <CardContent className="pt-4">
@@ -2072,11 +2079,15 @@ const QuoteForm = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <Circle
-                          className={`h-4 w-4 ${pickupOption === "dropoff" ? "text-primary" : "text-muted-foreground"}`}
-                        />
+                        <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
+                          pickupOption === "dropoff" ? "border-primary" : "border-muted-foreground"
+                        }`}>
+                          {pickupOption === "dropoff" && (
+                            <div className="h-2 w-2 rounded-full bg-primary" />
+                          )}
+                        </div>
                         <div>
-                          <h4 className="font-medium">Postar no ponto de coleta</h4>
+                          <h4 className="font-medium">Postar na agência Confix</h4>
                           <p className="text-sm text-muted-foreground">Leve até uma agência parceira (imediato)</p>
                         </div>
                       </div>
@@ -2085,22 +2096,18 @@ const QuoteForm = () => {
                   </div>
 
                   <div
-                    className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 hover-scale ${
-                      pickupOption === "pickup"
-                        ? "border-primary bg-accent/20 ring-2 ring-primary"
-                        : "border-border hover:border-primary/50"
+                    className={`p-4 border rounded-lg transition-all duration-200 opacity-50 cursor-not-allowed ${
+                      "border-border"
                     }`}
-                    onClick={() => setPickupOption("pickup")}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <Circle
-                          className={`h-4 w-4 ${pickupOption === "pickup" ? "text-primary" : "text-muted-foreground"}`}
-                        />
+                        <div className="h-4 w-4 rounded-full border-2 border-muted-foreground flex items-center justify-center">
+                        </div>
                         <div>
-                          <h4 className="font-medium">Coletar no meu local</h4>
+                          <h4 className="font-medium text-muted-foreground">Coletar no meu local</h4>
                           <p className="text-sm text-muted-foreground">
-                            Buscamos em seu endereço (Região Metropolitana de Goiânia e Anápolis)
+                            Buscamos em seu endereço (Região Metropolitana de Goiânia e Anápolis) - Em breve
                           </p>
                         </div>
                       </div>
