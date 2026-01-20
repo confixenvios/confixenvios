@@ -65,33 +65,64 @@ serve(async (req) => {
       });
     }
 
-    const url = `https://api.abacatepay.com/v1/pixQrCode/check?id=${paymentId}`;
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${abacateApiKey}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return new Response(JSON.stringify({ 
-        success: false,
-        error: 'Erro ao consultar status do pagamento',
-        details: errorText,
-        status: response.status
-      }), {
-        status: response.status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    const data = await response.json();
-    const paymentData = data.data;
-    const isPaid = paymentData?.status === 'PAID';
+    // Tentar múltiplas vezes com pequeno delay para contornar latência da API
+    const maxRetries = 3;
+    let paymentData = null;
+    let isPaid = false;
+    let lastStatus = 'UNKNOWN';
     
-    console.log(`💰 Status: ${paymentData?.status} - Pago: ${isPaid}`);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const url = `https://api.abacatepay.com/v1/pixQrCode/check?id=${paymentId}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${abacateApiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Tentativa ${attempt} falhou:`, errorText);
+        
+        if (attempt === maxRetries) {
+          return new Response(JSON.stringify({ 
+            success: false,
+            error: 'Erro ao consultar status do pagamento',
+            details: errorText,
+            status: response.status
+          }), {
+            status: response.status,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        
+        // Aguardar antes de tentar novamente
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        continue;
+      }
+
+      const data = await response.json();
+      paymentData = data.data;
+      lastStatus = paymentData?.status || 'UNKNOWN';
+      isPaid = lastStatus === 'PAID';
+      
+      console.log(`💰 Tentativa ${attempt}/${maxRetries} - Status: ${lastStatus} - Pago: ${isPaid}`);
+      console.log(`📋 Resposta completa:`, JSON.stringify(data));
+      
+      if (isPaid) {
+        console.log('✅ Pagamento confirmado na tentativa', attempt);
+        break;
+      }
+      
+      // Se ainda PENDING e não é última tentativa, aguardar
+      if (attempt < maxRetries && lastStatus === 'PENDING') {
+        console.log(`⏳ Aguardando 1.5s antes da próxima tentativa...`);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+    }
+    
+    console.log(`💰 Status final: ${lastStatus} - Pago: ${isPaid}`);
 
     // =====================================================
     // FLUXO B2B: Criar 1 shipment + N volumes na b2b_volumes
