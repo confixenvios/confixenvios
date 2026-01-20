@@ -2047,16 +2047,12 @@ const QuoteForm = () => {
                   )}
                 </div>
 
-                {/* Informative Message */}
-                <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 mb-4">
-                  <p className="text-sm text-warning-foreground text-center">
-                    Pedidos serão coletados até 12h do mesmo dia, após as 12h será coletado no dia seguinte.
-                  </p>
-                </div>
-
-                {/* Quote Summary with Selected Option */}
+                {/* Quote Summary with Selected Option and Informative Message */}
                 <Card className="bg-accent/20 border-primary/20 mb-6">
-                  <CardContent className="pt-4">
+                  <CardContent className="pt-4 space-y-3">
+                    <p className="text-sm text-center">
+                      Pedidos serão coletados até 12h do mesmo dia, após as 12h será coletado no dia seguinte.
+                    </p>
                     <div className="flex items-center justify-center space-x-2 text-sm">
                       <MapPin className="h-4 w-4 text-primary" />
                       <span className="text-muted-foreground">Destino:</span>
