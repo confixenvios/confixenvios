@@ -417,7 +417,7 @@ const CotacaoPreview = () => {
         dataHora: new Date().toISOString(),
       };
 
-      const WEBHOOK_URL = "https://n8n.grupoconfix.com/webhook-test/470b0b62-d2ea-4f66-80c3-5dc013710241";
+      const WEBHOOK_URL = "https://webhook.grupoconfix.com/webhook/470b0b62-d2ea-4f66-80c3-5dc013710241";
 
       const response = await fetch(WEBHOOK_URL, {
         method: "POST",
@@ -441,56 +441,67 @@ const CotacaoPreview = () => {
       }
 
       if (apiData) {
-        let maisBaratoPreco: number | null = null;
-        let maisBaratoPrazo: number = 7;
-        let maisBaratoUf: string | null = null;
-        let maisBaratoTransportadora: string | null = null;
+        // Definir transportadoras suportadas
+        const transportadoras = ['jadlog', 'magalog', 'neto', 'angil', 'jt'];
+        
+        // Coletar transportadoras válidas (onde precototal não é null)
+        const transportadorasValidas: Array<{
+          nome: string;
+          preco: number;
+          prazo: number;
+          uf: string;
+        }> = [];
 
-        let maisRapidoPreco: number | null = null;
-        let maisRapidoPrazo: number = 5;
-        let maisRapidoUf: string | null = null;
-        let maisRapidoTransportadora: string | null = null;
+        for (const transp of transportadoras) {
+          const precoKey = `${transp}_precototal`;
+          const prazoKey = `${transp}_prazo`;
+          const ufKey = `${transp}_UF`;
 
-        // Verificar se é resultado único (tipo_resultado: "unico")
-        if (apiData.tipo_resultado === "unico") {
-          // Quando ambos são iguais, usa os campos maisrapidoemaisbarato_*
-          const precoUnico = apiData.maisrapidoemaisbarato_frete ? parseFloat(apiData.maisrapidoemaisbarato_frete) : null;
-          const prazoUnico = apiData.maisrapidoemaisbarato_prazo ? parseInt(apiData.maisrapidoemaisbarato_prazo) : 5;
-          const ufUnico = apiData.maisrapidoemaisbarato_uf || null;
-          const nomeUnico = apiData.maisrapidoemaisbarato_nome || null;
+          const preco = apiData[precoKey];
+          const prazo = apiData[prazoKey];
+          const uf = apiData[ufKey];
 
-          maisBaratoPreco = precoUnico;
-          maisBaratoPrazo = prazoUnico;
-          maisBaratoUf = ufUnico;
-          maisBaratoTransportadora = nomeUnico;
-
-          maisRapidoPreco = precoUnico;
-          maisRapidoPrazo = prazoUnico;
-          maisRapidoUf = ufUnico;
-          maisRapidoTransportadora = nomeUnico;
-        } else {
-          // Resultado com duas opções diferentes
-          maisBaratoPreco = apiData.maisbaratofrete ? parseFloat(apiData.maisbaratofrete) : null;
-          maisBaratoPrazo = apiData.maisbaratoprazo ? parseInt(apiData.maisbaratoprazo) : 7;
-          maisBaratoUf = apiData.maisbaratouf || null;
-          maisBaratoTransportadora = apiData.maisbaratonome || null;
-
-          maisRapidoPreco = apiData.maisrapidofrete ? parseFloat(apiData.maisrapidofrete) : null;
-          maisRapidoPrazo = apiData.maisrapidoprazo ? parseInt(apiData.maisrapidoprazo) : 5;
-          maisRapidoUf = apiData.maisrapidouf || null;
-          maisRapidoTransportadora = apiData.maisrapidnome || null; // Note: "maisrapidnome" sem "o" conforme o payload
+          // Só processar se preco não for null
+          if (preco !== null && preco !== undefined) {
+            transportadorasValidas.push({
+              nome: transp.charAt(0).toUpperCase() + transp.slice(1), // Capitalizar nome
+              preco: parseFloat(preco),
+              prazo: parseInt(prazo) || 0,
+              uf: uf || '',
+            });
+          }
         }
 
-        const maisBaratoDisponivel = maisBaratoPreco !== null && !isNaN(maisBaratoPreco) && maisBaratoPreco > 0;
-        const maisRapidoDisponivel = maisRapidoPreco !== null && !isNaN(maisRapidoPreco) && maisRapidoPreco > 0;
+        console.log("Transportadoras válidas:", transportadorasValidas);
+
+        let maisBarato: typeof transportadorasValidas[0] | null = null;
+        let maisRapido: typeof transportadorasValidas[0] | null = null;
+
+        if (transportadorasValidas.length > 0) {
+          // Encontrar mais barato (menor preço)
+          maisBarato = transportadorasValidas.reduce((prev, curr) => 
+            prev.preco < curr.preco ? prev : curr
+          );
+
+          // Encontrar mais rápido (menor prazo)
+          maisRapido = transportadorasValidas.reduce((prev, curr) => 
+            prev.prazo < curr.prazo ? prev : curr
+          );
+
+          console.log("Mais barato:", maisBarato);
+          console.log("Mais rápido:", maisRapido);
+        }
+
+        const maisBaratoDisponivel = maisBarato !== null;
+        const maisRapidoDisponivel = maisRapido !== null;
 
         setQuoteResult({
           type: "convencional",
           maisBarato: maisBaratoDisponivel
-            ? { permitido: true, preco_total: maisBaratoPreco, prazo: maisBaratoPrazo, uf: maisBaratoUf, transportadora: maisBaratoTransportadora }
+            ? { permitido: true, preco_total: maisBarato!.preco, prazo: maisBarato!.prazo, uf: maisBarato!.uf, transportadora: maisBarato!.nome }
             : { permitido: false },
           maisRapido: maisRapidoDisponivel
-            ? { permitido: true, preco_total: maisRapidoPreco, prazo: maisRapidoPrazo, uf: maisRapidoUf, transportadora: maisRapidoTransportadora }
+            ? { permitido: true, preco_total: maisRapido!.preco, prazo: maisRapido!.prazo, uf: maisRapido!.uf, transportadora: maisRapido!.nome }
             : { permitido: false },
           totalWeight,
           totalCubicWeight,
