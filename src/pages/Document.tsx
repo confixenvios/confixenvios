@@ -232,6 +232,7 @@ const Document = () => {
           
           // Dados fiscais/documento
           fiscal: {
+            tipo: documentType === 'nfe' ? '1' : '3', // 1 = NFe, 3 = Declaração
             documentType: documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo',
             nfeKey: documentType === 'nfe' ? nfeKey : null,
             merchandiseDescription: documentType === 'declaration' ? merchandiseDescription : nfePredominantProduct,
