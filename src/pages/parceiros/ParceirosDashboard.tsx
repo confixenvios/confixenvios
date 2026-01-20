@@ -4,7 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { getStatusTranslation } from '@/utils/shipmentStatusTranslations';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { 
   Package, 
   Truck, 
@@ -14,7 +19,9 @@ import {
   TrendingUp,
   ArrowRight,
   Calendar,
-  MapPin
+  MapPin,
+  CalendarDays,
+  Filter
 } from 'lucide-react';
 
 interface CarrierPartner {
@@ -46,6 +53,8 @@ interface RecentShipment {
   freight_value: number;
 }
 
+type PeriodFilter = 'today' | 'week' | 'month' | 'lastMonth' | 'custom';
+
 const ParceirosDashboard = () => {
   const navigate = useNavigate();
   const { partner } = useOutletContext<{ partner: CarrierPartner }>();
@@ -58,15 +67,72 @@ const ParceirosDashboard = () => {
   });
   const [recentShipments, setRecentShipments] = useState<RecentShipment[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Period filter states
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('month');
+  const [customDateRange, setCustomDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: undefined,
+    to: undefined
+  });
+
+  const getDateRange = (): { start: Date; end: Date } => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (periodFilter) {
+      case 'today':
+        return { start: today, end: now };
+      case 'week':
+        return { start: startOfWeek(now, { locale: ptBR }), end: endOfWeek(now, { locale: ptBR }) };
+      case 'month':
+        return { start: startOfMonth(now), end: endOfMonth(now) };
+      case 'lastMonth':
+        const lastMonth = subMonths(now, 1);
+        return { start: startOfMonth(lastMonth), end: endOfMonth(lastMonth) };
+      case 'custom':
+        return {
+          start: customDateRange.from || startOfMonth(now),
+          end: customDateRange.to || endOfMonth(now)
+        };
+      default:
+        return { start: startOfMonth(now), end: endOfMonth(now) };
+    }
+  };
+
+  const getPeriodLabel = (): string => {
+    switch (periodFilter) {
+      case 'today':
+        return 'Hoje';
+      case 'week':
+        return 'Esta Semana';
+      case 'month':
+        return 'Este Mês';
+      case 'lastMonth':
+        return 'Mês Passado';
+      case 'custom':
+        if (customDateRange.from && customDateRange.to) {
+          return `${format(customDateRange.from, 'dd/MM/yy')} - ${format(customDateRange.to, 'dd/MM/yy')}`;
+        }
+        return 'Período Personalizado';
+      default:
+        return 'Este Mês';
+    }
+  };
 
   useEffect(() => {
     if (partner) {
       loadDashboardData();
     }
-  }, [partner]);
+  }, [partner, periodFilter, customDateRange]);
 
   const loadDashboardData = async () => {
     try {
+      setLoading(true);
+      const { start, end } = getDateRange();
+      
       // Load all shipments and filter by selectedCarrier in quote_data
       const { data: allShipments, error } = await supabase
         .from('shipments')
@@ -78,6 +144,8 @@ const ParceirosDashboard = () => {
           recipient_address_id,
           quote_data
         `)
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString())
         .order('created_at', { ascending: false })
         .limit(500);
 
@@ -91,8 +159,6 @@ const ParceirosDashboard = () => {
         return selectedCarrier?.toLowerCase() === 'jadlog';
       }) || [];
 
-      if (error) throw error;
-
       // Calculate stats - pending includes all non-delivered (em processo)
       const pending = shipments?.filter(s => 
         s.status !== 'delivered' && s.status !== 'cancelled'
@@ -104,9 +170,8 @@ const ParceirosDashboard = () => {
       today.setHours(0, 0, 0, 0);
       const totalToday = shipments?.filter(s => new Date(s.created_at) >= today).length || 0;
 
-      // Count this month's shipments
-      const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const totalMonth = shipments?.filter(s => new Date(s.created_at) >= firstOfMonth).length || 0;
+      // Count period shipments (within the filtered period)
+      const totalMonth = shipments.length;
 
       // Calculate total freight value
       const totalValue = shipments?.reduce((sum, s) => {
@@ -203,14 +268,88 @@ const ParceirosDashboard = () => {
             Bem-vindo ao portal de parceiros, {partner?.company_name}
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Calendar className="h-4 w-4" />
-          {new Date().toLocaleDateString('pt-BR', { 
-            weekday: 'long', 
-            day: 'numeric', 
-            month: 'long', 
-            year: 'numeric' 
-          })}
+        <div className="flex items-center gap-4">
+          {/* Period Filter */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Filter className="h-4 w-4" />
+                {getPeriodLabel()}
+                <CalendarDays className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-4" align="end">
+              <div className="space-y-4">
+                <Label className="font-semibold">Filtrar por Período</Label>
+                <div className="grid gap-2">
+                  <Button
+                    variant={periodFilter === 'today' ? 'default' : 'outline'}
+                    size="sm"
+                    className="justify-start"
+                    onClick={() => setPeriodFilter('today')}
+                  >
+                    Hoje
+                  </Button>
+                  <Button
+                    variant={periodFilter === 'week' ? 'default' : 'outline'}
+                    size="sm"
+                    className="justify-start"
+                    onClick={() => setPeriodFilter('week')}
+                  >
+                    Esta Semana
+                  </Button>
+                  <Button
+                    variant={periodFilter === 'month' ? 'default' : 'outline'}
+                    size="sm"
+                    className="justify-start"
+                    onClick={() => setPeriodFilter('month')}
+                  >
+                    Este Mês
+                  </Button>
+                  <Button
+                    variant={periodFilter === 'lastMonth' ? 'default' : 'outline'}
+                    size="sm"
+                    className="justify-start"
+                    onClick={() => setPeriodFilter('lastMonth')}
+                  >
+                    Mês Passado
+                  </Button>
+                </div>
+                
+                <div className="border-t pt-4">
+                  <Label className="text-sm text-muted-foreground mb-2 block">Período Personalizado</Label>
+                  <CalendarComponent
+                    mode="range"
+                    selected={{
+                      from: customDateRange.from,
+                      to: customDateRange.to
+                    }}
+                    onSelect={(range) => {
+                      setCustomDateRange({
+                        from: range?.from,
+                        to: range?.to
+                      });
+                      if (range?.from && range?.to) {
+                        setPeriodFilter('custom');
+                      }
+                    }}
+                    locale={ptBR}
+                    className="rounded-md border"
+                  />
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            {new Date().toLocaleDateString('pt-BR', { 
+              weekday: 'long', 
+              day: 'numeric', 
+              month: 'long', 
+              year: 'numeric' 
+            })}
+          </div>
         </div>
       </div>
 

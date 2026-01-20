@@ -1,4 +1,4 @@
-import { User, LogIn, Truck, Menu, Search, X, ChevronUp, ChevronDown } from "lucide-react";
+import { User, LogIn, Truck, Menu, Search, X, ChevronUp, ChevronDown, Handshake } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from '@/hooks/useAuth';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -485,6 +485,19 @@ const Header = () => {
             >
               <Truck className="h-8 w-8" />
               <div className="font-semibold text-lg">Motorista</div>
+            </Button>
+
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-auto py-6 flex flex-col gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              onClick={() => {
+                setLoginModalOpen(false);
+                navigate('/parceiros');
+              }}
+            >
+              <Handshake className="h-8 w-8" />
+              <div className="font-semibold text-lg">Parceiros</div>
             </Button>
           </div>
         </DialogContent>
