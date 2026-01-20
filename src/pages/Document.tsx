@@ -139,9 +139,9 @@ const Document = () => {
         description: "Dados salvos. Redirecionando para pagamento...",
       });
 
-      // ========== WEBHOOK DE TESTE (DEBUG) - MESMO PAYLOAD DO PIX ==========
+      // ========== WEBHOOK DE TESTE (DEBUG) - FORMATO FLAT PARA N8N ==========
       try {
-        console.log('🔔 Disparando webhook de teste para n8n (mesmo payload do PIX)...');
+        console.log('🔔 Disparando webhook de teste para n8n (formato flat)...');
         
         // Recuperar dados completos
         const completeData = JSON.parse(sessionStorage.getItem('completeShipmentData') || '{}');
@@ -154,96 +154,74 @@ const Document = () => {
         // Volumes
         const volumes = technicalData.volumes || [technicalData];
         const totalWeight = volumes.reduce((sum: number, v: any) => sum + (Number(v.weight) || 1), 0);
-        const largestVolume = volumes.length > 0 ? volumes.reduce((max: any, v: any) => {
-          const maxVol = (Number(max.length) || 0) * (Number(max.width) || 0) * (Number(max.height) || 0);
-          const currVol = (Number(v.length) || 0) * (Number(v.width) || 0) * (Number(v.height) || 0);
-          return currVol > maxVol ? v : max;
-        }) : null;
         
-        const testWebhookPayload = {
-          // Dados da remessa (sem ID ainda - será criada após pagamento)
+        // Construir payload no formato FLAT que o n8n espera
+        const flatPayload: Record<string, any> = {
+          // Dados da remessa (pendente)
           shipmentId: null,
           trackingCode: null,
           status: 'PENDING_PAYMENT',
           createdAt: new Date().toISOString(),
           
-          // Dados de pagamento (pendente)
-          payment: {
-            method: 'pix',
-            paymentId: null,
-            amount: deliveryDetails.totalPrice || currentShipment?.price || 0,
-            confirmedAt: null,
-            status: 'pending'
-          },
+          // Valores principais
+          valorTotal: deliveryDetails.totalPrice || currentShipment?.price || 0,
+          mercadoria_valorDeclarado: completeData.quoteData?.totalMerchandiseValue || completeData.originalFormData?.totalMerchandiseValue || 0,
+          descricaoMercadoria: documentType === 'declaration' ? merchandiseDescription : nfePredominantProduct || 'Mercadoria',
+          remessa_prazo: deliveryDetails.deliveryDays || completeData.quoteData?.shippingQuote?.deliveryDays || 5,
           
-          // Dados do remetente
-          sender: {
-            name: senderData.name || '',
-            document: senderData.document || '',
-            email: senderData.email || '',
-            phone: senderData.phone || '',
-            inscricaoEstadual: senderData.inscricaoEstadual || null,
-            address: {
-              cep: senderData.cep || '',
-              street: senderData.street || '',
-              number: senderData.number || '',
-              complement: senderData.complement || null,
-              neighborhood: senderData.neighborhood || '',
-              city: senderData.city || '',
-              state: senderData.state || ''
-            }
-          },
+          // Tipo fiscal: 1 = NFe, 3 = Declaração de Conteúdo
+          fiscal_tipo: documentType === 'nfe' ? '1' : '3',
+          nfeKey: documentType === 'nfe' ? nfeKey : null,
           
-          // Dados do destinatário
-          recipient: {
-            name: recipientData.name || '',
-            document: recipientData.document || '',
-            email: recipientData.email || '',
-            phone: recipientData.phone || '',
-            inscricaoEstadual: recipientData.inscricaoEstadual || null,
-            address: {
-              cep: recipientData.cep || '',
-              street: recipientData.street || '',
-              number: recipientData.number || '',
-              complement: recipientData.complement || null,
-              neighborhood: recipientData.neighborhood || '',
-              city: recipientData.city || '',
-              state: recipientData.state || ''
-            }
-          },
+          // Dados do remetente (flat)
+          remetente_nome: senderData.name || '',
+          remetente_documento: senderData.document || '',
+          remetente_email: senderData.email || '',
+          remetente_telefone: senderData.phone || '',
+          remetente_inscricaoEstadual: senderData.inscricaoEstadual || null,
+          remetente_cep: senderData.cep || '',
+          remetente_endereco: senderData.street || '',
+          remetente_numero: senderData.number || '',
+          remetente_complemento: senderData.complement || '',
+          remetente_bairro: senderData.neighborhood || '',
+          remetente_cidade: senderData.city || '',
+          remetente_estado: senderData.state || '',
           
-          // Dados técnicos do envio
-          package: {
-            totalWeight: totalWeight,
-            length: largestVolume ? Number(largestVolume.length) || 0 : 0,
-            width: largestVolume ? Number(largestVolume.width) || 0 : 0,
-            height: largestVolume ? Number(largestVolume.height) || 0 : 0,
-            format: technicalData.format || 'pacote',
-            volumes: volumes
-          },
+          // Dados do destinatário (flat)
+          destinatario_nome: recipientData.name || '',
+          destinatario_documento: recipientData.document || '',
+          destinatario_email: recipientData.email || '',
+          destinatario_telefone: recipientData.phone || '',
+          destinatario_inscricaoEstadual: recipientData.inscricaoEstadual || null,
+          destinatario_cep: recipientData.cep || '',
+          destinatario_endereco: recipientData.street || '',
+          destinatario_numero: recipientData.number || '',
+          destinatario_complemento: recipientData.complement || '',
+          destinatario_bairro: recipientData.neighborhood || '',
+          destinatario_cidade: recipientData.city || '',
+          destinatario_estado: recipientData.state || '',
           
-          // Opções de entrega
-          delivery: {
-            selectedOption: deliveryDetails.selectedOption || 'standard',
-            pickupOption: deliveryDetails.pickupOption || 'dropoff',
-            estimatedDays: deliveryDetails.deliveryDays || completeData.quoteData?.shippingQuote?.deliveryDays || null,
-            shippingPrice: deliveryDetails.totalPrice || currentShipment?.price || 0
-          },
-          
-          // Dados fiscais/documento
-          fiscal: {
-            tipo: documentType === 'nfe' ? '1' : '3', // 1 = NFe, 3 = Declaração
-            documentType: documentType === 'nfe' ? 'nota_fiscal_eletronica' : 'declaracao_conteudo',
-            nfeKey: documentType === 'nfe' ? nfeKey : null,
-            merchandiseDescription: documentType === 'declaration' ? merchandiseDescription : nfePredominantProduct,
-            merchandiseValue: completeData.quoteData?.totalMerchandiseValue || completeData.originalFormData?.totalMerchandiseValue || 0
-          },
-          
-          // Dados da cotação original
-          quoteData: completeData.quoteData || {}
+          // Dados técnicos
+          formato: technicalData.format || 'pacote',
+          opcao_coleta: deliveryDetails.pickupOption || 'dropoff',
+          opcao_entrega: deliveryDetails.selectedOption || 'standard',
+          peso_total: totalWeight
         };
         
-        console.log('📋 Payload webhook teste (mesmo formato do PIX):', testWebhookPayload);
+        // Adicionar volumes dinamicamente (flat)
+        volumes.forEach((vol: any, index: number) => {
+          const volNum = index + 1;
+          flatPayload[`volume${volNum}_peso`] = Number(vol.weight) || 0;
+          flatPayload[`volume${volNum}_comprimento`] = Number(vol.length) || 0;
+          flatPayload[`volume${volNum}_largura`] = Number(vol.width) || 0;
+          flatPayload[`volume${volNum}_altura`] = Number(vol.height) || 0;
+          // Calcular cubagem: (C x L x A) / 6000
+          const cubagem = ((Number(vol.length) || 0) * (Number(vol.width) || 0) * (Number(vol.height) || 0)) / 6000;
+          flatPayload[`volume${volNum}_cubagemVolume`] = cubagem;
+          flatPayload[`volume${volNum}_tipoMercadoria`] = vol.merchandiseType || 'normal';
+        });
+        
+        console.log('📋 Payload webhook teste (flat):', flatPayload);
         
         // Disparar webhook POST (não bloqueia o fluxo)
         fetch('https://n8n.grupoconfix.com/webhook-test/cd6d1d7d-b6a0-483d-8314-662e54dda78b', {
@@ -251,7 +229,7 @@ const Document = () => {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(testWebhookPayload)
+          body: JSON.stringify(flatPayload)
         }).then(response => {
           console.log('✅ Webhook de teste disparado, status:', response.status);
         }).catch(err => {
