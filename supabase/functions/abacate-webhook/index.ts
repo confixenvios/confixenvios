@@ -15,6 +15,23 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Handle GET requests (Abacate Pay verifica a URL antes de salvar)
+  if (req.method === "GET") {
+    console.log('🔍 Requisição GET recebida - validação de webhook');
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: 'Webhook endpoint ativo',
+        service: 'confix-envios',
+        timestamp: new Date().toISOString()
+      }),
+      { 
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  }
+
   try {
     const webhookData = await req.json();
     console.log('📩 Webhook recebido da Abacate Pay:', JSON.stringify(webhookData, null, 2));
