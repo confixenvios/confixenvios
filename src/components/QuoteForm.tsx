@@ -2075,11 +2075,11 @@ const QuoteForm = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
+                        <div className={`w-5 h-5 min-w-5 min-h-5 rounded-full border-2 flex items-center justify-center ${
                           pickupOption === "dropoff" ? "border-primary" : "border-muted-foreground"
                         }`}>
                           {pickupOption === "dropoff" && (
-                            <div className="h-2 w-2 rounded-full bg-primary" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-primary" />
                           )}
                         </div>
                         <div>
