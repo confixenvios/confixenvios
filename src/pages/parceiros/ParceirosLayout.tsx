@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { 
   LayoutDashboard, 
   Truck, 
-  Package, 
+  Handshake, 
   BarChart3, 
   LogOut, 
   Menu, 
@@ -183,7 +183,7 @@ const ParceirosLayout = () => {
         {/* Desktop Header */}
         <header className="hidden md:flex sticky top-0 z-40 bg-white border-b shadow-sm h-14 items-center px-6 justify-between">
           <div className="flex items-center gap-3">
-            <Package className="h-5 w-5 text-primary" />
+            <Handshake className="h-5 w-5 text-primary" />
             <span className="font-semibold text-foreground">Portal de Parceiros - Envios Nacionais</span>
           </div>
           <div className="flex items-center gap-4">

@@ -16,7 +16,8 @@ import {
   TrendingUp,
   ArrowRight,
   Calendar,
-  MapPin
+  MapPin,
+  X
 } from 'lucide-react';
 
 interface CarrierPartner {
@@ -227,6 +228,22 @@ const ParceirosDashboard = () => {
             customRange={customDateRange}
             onCustomRangeChange={setCustomDateRange}
           />
+          
+          {/* Clear Filter Button */}
+          {periodFilter !== 'month' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setPeriodFilter('month');
+                setCustomDateRange({ from: undefined, to: undefined });
+              }}
+              className="gap-2"
+            >
+              <X className="h-4 w-4" />
+              Limpar Filtro
+            </Button>
+          )}
           
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4" />
