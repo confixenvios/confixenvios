@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Calculator,
   MapPin,
@@ -2085,6 +2086,28 @@ const QuoteForm = () => {
                         <div>
                           <h4 className="font-medium">Postar na agência Confix</h4>
                           <p className="text-sm text-muted-foreground">Leve até uma agência parceira (imediato)</p>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button type="button" className="text-sm text-primary underline hover:text-primary/80 mt-1 cursor-pointer">
+                                Ver endereços das agências
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 p-4" align="start">
+                              <div className="space-y-3">
+                                <h4 className="font-semibold text-sm">Endereços das Agências</h4>
+                                <div className="space-y-2">
+                                  <div className="p-2 bg-muted/50 rounded-md">
+                                    <p className="text-xs font-medium text-primary">Local 1:</p>
+                                    <p className="text-xs text-muted-foreground">Rua 210 Quadra 79 Lote 21 Sala 4 Setor Coimbra Nº 159</p>
+                                  </div>
+                                  <div className="p-2 bg-muted/50 rounded-md">
+                                    <p className="text-xs font-medium text-primary">Local 2:</p>
+                                    <p className="text-xs text-muted-foreground">Avenida Primeira Avenida SN Quadra 5B Lote 03 e 01 Cond. Empresarial Village</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         </div>
                       </div>
                       <Badge variant="secondary">Gratuito</Badge>
