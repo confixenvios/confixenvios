@@ -2102,7 +2102,7 @@ const QuoteForm = () => {
                                   </div>
                                   <div className="p-2 bg-muted/50 rounded-md">
                                     <p className="text-xs font-medium text-primary">Local 2:</p>
-                                    <p className="text-xs text-muted-foreground">Avenida Primeira Avenida SN Quadra 5B Lote 03 e 01 Cond. Empresarial Village</p>
+                                    <p className="text-xs text-muted-foreground">Avenida Rio Verde SN Quadra 5B Lote 03 e 01 Cond. Empresarial Village</p>
                                   </div>
                                 </div>
                               </div>
