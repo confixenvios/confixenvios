@@ -332,15 +332,8 @@ serve(async (req) => {
       externalReference: externalId,
     };
 
-    // Add credit card data if applicable
-    if (billingType === 'CREDIT_CARD' && creditCard) {
-      paymentPayload.creditCard = creditCard;
-      paymentPayload.creditCardHolderInfo = creditCardHolderInfo;
-      if (installmentCount && installmentCount > 1) {
-        paymentPayload.installmentCount = installmentCount;
-        paymentPayload.installmentValue = parseFloat((amount / installmentCount).toFixed(2));
-      }
-    }
+    // For CREDIT_CARD, we'll create a payment link (more secure - hosted checkout)
+    // No need to collect credit card data on our site
 
     console.log('📤 Enviando para Asaas:', JSON.stringify({ ...paymentPayload, creditCard: creditCard ? '***' : undefined }, null, 2));
 
@@ -435,6 +428,7 @@ serve(async (req) => {
       billingType: billingType,
       status: paymentData.status,
       externalReference: externalId,
+      invoiceUrl: paymentData.invoiceUrl, // Link hospedado do Asaas (checkout seguro)
     };
 
     if (billingType === 'PIX' && pixData) {
@@ -447,11 +441,9 @@ serve(async (req) => {
       responseData.identificationField = boletoData.identificationField;
       responseData.dueDate = paymentData.dueDate;
     } else if (billingType === 'CREDIT_CARD') {
+      // For credit card, use invoiceUrl for secure hosted checkout
+      responseData.invoiceUrl = paymentData.invoiceUrl;
       responseData.confirmedDate = paymentData.confirmedDate;
-      responseData.creditCard = {
-        creditCardBrand: paymentData.creditCard?.creditCardBrand,
-        creditCardNumber: paymentData.creditCard?.creditCardNumber,
-      };
     }
 
     return new Response(
