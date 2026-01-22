@@ -97,8 +97,8 @@ const PixPayment = () => {
 
       console.log('Dados do PIX antes do envio:', pixData);
 
-      const { data, error } = await supabase.functions.invoke('create-pix-payment', {
-        body: pixData
+      const { data, error } = await supabase.functions.invoke('create-asaas-payment', {
+        body: { ...pixData, billingType: 'PIX' }
       });
 
       console.log('Resposta da função:', { data, error });
@@ -158,7 +158,7 @@ const PixPayment = () => {
       setIsCheckingPayment(true);
       console.log('🔍 Verificando status do PIX:', paymentIntent.paymentId);
       
-      const { data, error } = await supabase.functions.invoke('check-pix-status', {
+      const { data, error } = await supabase.functions.invoke('check-asaas-status', {
         body: { paymentId: paymentIntent.paymentId }
       });
 
@@ -208,7 +208,7 @@ const PixPayment = () => {
         description: "Aguarde enquanto verificamos o status do PIX."
       });
       
-      const { data, error } = await supabase.functions.invoke('check-pix-status', {
+      const { data, error } = await supabase.functions.invoke('check-asaas-status', {
         body: { paymentId: paymentIntent.paymentId }
       });
 
@@ -314,7 +314,7 @@ const PixPayment = () => {
         console.log('⚠️ CONCLUIR: Pagamento não confirmado, verificando status final...');
         
         // Fazer uma verificação final do status
-        const { data } = await supabase.functions.invoke('check-pix-status', {
+        const { data } = await supabase.functions.invoke('check-asaas-status', {
           body: { paymentId: paymentIntent.paymentId }
         });
         
