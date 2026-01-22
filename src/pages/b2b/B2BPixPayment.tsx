@@ -101,8 +101,8 @@ const B2BPixPayment = () => {
         }
       };
 
-      const { data, error } = await supabase.functions.invoke('create-pix-payment', {
-        body: pixData
+      const { data, error } = await supabase.functions.invoke('create-asaas-payment', {
+        body: { ...pixData, billingType: 'PIX' }
       });
 
       if (error) {
@@ -155,7 +155,7 @@ const B2BPixPayment = () => {
     try {
       setIsCheckingPayment(true);
       
-      const { data, error } = await supabase.functions.invoke('check-pix-status', {
+      const { data, error } = await supabase.functions.invoke('check-asaas-status', {
         body: { paymentId: paymentIntent.paymentId, isB2B: true }
       });
 
@@ -188,7 +188,7 @@ const B2BPixPayment = () => {
         description: "Aguarde enquanto verificamos o status do PIX."
       });
       
-      const { data, error } = await supabase.functions.invoke('check-pix-status', {
+      const { data, error } = await supabase.functions.invoke('check-asaas-status', {
         body: { paymentId: paymentIntent.paymentId, isB2B: true }
       });
 
@@ -234,7 +234,7 @@ const B2BPixPayment = () => {
     try {
       setIsProcessing(true);
       
-      const { data } = await supabase.functions.invoke('check-pix-status', {
+      const { data } = await supabase.functions.invoke('check-asaas-status', {
         body: { paymentId: paymentIntent.paymentId, isB2B: true }
       });
       
