@@ -186,7 +186,8 @@ serve(async (req) => {
       name, phone, email, cpf, amount, description, userId, 
       quoteData, documentData, isB2B, b2bData,
       billingType = 'PIX', // PIX, BOLETO, CREDIT_CARD
-      creditCard, creditCardHolderInfo, installmentCount
+      creditCard, creditCardHolderInfo, installmentCount,
+      callbackUrl // URL to redirect after payment
     } = requestBody;
 
     // Get Asaas API key
@@ -331,6 +332,17 @@ serve(async (req) => {
       description: description || 'Pagamento - Confix Envios',
       externalReference: externalId,
     };
+
+    // Add callback URL for redirect after payment (Asaas hosted checkout)
+    if (callbackUrl) {
+      // Append externalReference to callback URL for tracking
+      const callbackWithRef = `${callbackUrl}?externalReference=${externalId}`;
+      paymentPayload.callback = {
+        successUrl: callbackWithRef,
+        autoRedirect: true
+      };
+      console.log('📍 Callback URL configurado:', callbackWithRef);
+    }
 
     // For CREDIT_CARD, we'll create a payment link (more secure - hosted checkout)
     // No need to collect credit card data on our site

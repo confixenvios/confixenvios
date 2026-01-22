@@ -124,6 +124,10 @@ const PaymentDataModal: React.FC<PaymentDataModalProps> = ({
       const completeShipmentData = JSON.parse(sessionStorage.getItem('completeShipmentData') || '{}');
       const documentData = JSON.parse(sessionStorage.getItem('documentData') || '{}');
 
+      // Get current origin for callback URL (works in both preview and production)
+      const currentOrigin = window.location.origin;
+      const callbackUrl = `${currentOrigin}/payment-success-stripe`;
+
       const paymentPayload = {
         amount: parseFloat(amount.toFixed(2)),
         name: formData.name,
@@ -133,6 +137,7 @@ const PaymentDataModal: React.FC<PaymentDataModalProps> = ({
         billingType: billingType,
         description: `Pagamento de frete - R$ ${amount.toFixed(2)}`,
         userId: user?.id || null,
+        callbackUrl: callbackUrl, // URL to redirect after Asaas payment
         quoteData: {
           senderData: completeShipmentData.addressData?.sender || {},
           recipientData: completeShipmentData.addressData?.recipient || {},
