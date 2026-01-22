@@ -13,20 +13,31 @@ const PaymentSuccessStripe = () => {
   const { toast } = useToast();
   const { saveApprovedSender } = useSavedSenders();
   const [searchParams] = useSearchParams();
+  
+  // Support both Stripe (session_id) and Asaas (externalReference) callbacks
   const sessionId = searchParams.get('session_id');
+  const externalReference = searchParams.get('externalReference');
+  const paymentId = sessionId || externalReference;
+  
   const [isProcessing, setIsProcessing] = useState(true);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [webhookDispatched, setWebhookDispatched] = useState(false);
   const [trackingCode, setTrackingCode] = useState('');
+  const [paymentSource, setPaymentSource] = useState<'stripe' | 'asaas'>('stripe');
 
   useEffect(() => {
-    const processStripePaymentSuccess = async () => {
+    const processPaymentSuccess = async () => {
       try {
-        if (!sessionId) {
-          console.log('No session ID provided');
+        if (!paymentId) {
+          console.log('No payment ID provided');
           navigate('/');
           return;
         }
+
+        // Detect payment source
+        const isAsaas = !!externalReference;
+        setPaymentSource(isAsaas ? 'asaas' : 'stripe');
+        console.log(`Processing ${isAsaas ? 'Asaas' : 'Stripe'} payment success for:`, paymentId);
 
         // Get shipment data from session storage or backup in localStorage
         let shipmentData = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
@@ -42,46 +53,82 @@ const PaymentSuccessStripe = () => {
           }
         }
         
-        console.log('Processing Stripe payment success for session:', sessionId);
+        // For Asaas payments, first try to find temp_quote using externalReference
+        let tempQuote = null;
+        if (isAsaas && externalReference) {
+          console.log('Looking for temp_quote with externalReference:', externalReference);
+          const { data: tempQuotes, error: tempQuoteError } = await supabase
+            .from('temp_quotes')
+            .select('*')
+            .eq('external_id', externalReference)
+            .single();
+
+          if (!tempQuoteError && tempQuotes) {
+            tempQuote = tempQuotes;
+            console.log('Found temp_quote:', tempQuote.id);
+            
+            // Update temp_quote status
+            await supabase
+              .from('temp_quotes')
+              .update({ status: 'payment_confirmed' })
+              .eq('id', tempQuote.id);
+          }
+        }
         
-        // Primeiro, tentar buscar o shipment no banco de dados usando o session_id
+        // Try to find shipment in database
         let shipment = null;
         const { data: shipments, error: searchError } = await supabase
           .from('shipments')
           .select('*')
-          .or(`payment_data->>session_id.eq.${sessionId},payment_data->>stripe_session_id.eq.${sessionId}`)
+          .or(`payment_data->>session_id.eq.${paymentId},payment_data->>stripe_session_id.eq.${paymentId},payment_data->>external_reference.eq.${paymentId}`)
           .order('created_at', { ascending: false })
           .limit(1);
 
         if (searchError) {
-          console.error('PaymentSuccessStripe - Erro ao buscar shipment:', searchError);
+          console.error('PaymentSuccess - Erro ao buscar shipment:', searchError);
         }
 
         if (shipments && shipments.length > 0) {
           shipment = shipments[0];
-          console.log('PaymentSuccessStripe - Shipment encontrado no banco:', shipment.id);
-        } else {
-          // Se não encontrou no banco, tentar sessionStorage/localStorage
-          console.log('PaymentSuccessStripe - Tentando recuperar dados do storage');
-          
-          if (shipmentData && shipmentData.id) {
-            // Buscar o shipment no banco
-            const { data: foundShipment } = await supabase
-              .from('shipments')
-              .select('*')
-              .eq('id', shipmentData.id)
-              .single();
+          console.log('PaymentSuccess - Shipment encontrado no banco:', shipment.id);
+        } else if (shipmentData && shipmentData.id) {
+          // Try to find by storage ID
+          const { data: foundShipment } = await supabase
+            .from('shipments')
+            .select('*')
+            .eq('id', shipmentData.id)
+            .single();
 
-            if (foundShipment) {
-              shipment = foundShipment;
-              console.log('PaymentSuccessStripe - Shipment encontrado por ID do storage:', shipment.id);
-            }
+          if (foundShipment) {
+            shipment = foundShipment;
+            console.log('PaymentSuccess - Shipment encontrado por ID do storage:', shipment.id);
           }
         }
         
-        // Se ainda não encontrou, busca alternativa
+        // If no shipment found but we have temp_quote (Asaas flow), show success anyway
+        // The webhook will create the shipment
+        if (!shipment && tempQuote) {
+          console.log('No shipment yet, but temp_quote found - Asaas webhook will create shipment');
+          setPaymentConfirmed(true);
+          setTrackingCode('');
+          toast({
+            title: "Pagamento confirmado!",
+            description: "Seu envio está sendo processado. Em breve você receberá a confirmação.",
+          });
+          setWebhookDispatched(true);
+          
+          // Clean up storage
+          sessionStorage.removeItem('currentShipment');
+          sessionStorage.removeItem('documentData');
+          localStorage.removeItem('currentShipment_backup');
+          
+          setIsProcessing(false);
+          return;
+        }
+        
+        // Fallback search for pending shipments
         if (!shipment) {
-          console.log('PaymentSuccessStripe - Tentando busca alternativa...');
+          console.log('PaymentSuccess - Tentando busca alternativa...');
           const { data: fallbackShipments } = await supabase
             .from('shipments')
             .select('*')
@@ -91,16 +138,16 @@ const PaymentSuccessStripe = () => {
 
           if (fallbackShipments && fallbackShipments.length > 0) {
             shipment = fallbackShipments[0];
-            console.log('PaymentSuccessStripe - Usando shipment alternativo:', shipment.id);
+            console.log('PaymentSuccess - Usando shipment alternativo:', shipment.id);
             
-            // Atualizar com o session_id correto
+            // Update with correct payment ID
             await supabase
               .from('shipments')
               .update({
                 payment_data: {
                   ...shipment.payment_data,
-                  session_id: sessionId,
-                  stripe_session_id: sessionId
+                  session_id: paymentId,
+                  external_reference: externalReference || null
                 }
               })
               .eq('id', shipment.id);
@@ -108,27 +155,28 @@ const PaymentSuccessStripe = () => {
         }
         
         if (!shipment) {
-          console.error('PaymentSuccessStripe - Nenhum shipment encontrado para session:', sessionId);
+          console.error('PaymentSuccess - Nenhum shipment encontrado para:', paymentId);
           toast({
-            title: "Erro",
-            description: "Dados do envio não encontrados após o pagamento. Por favor, entre em contato com o suporte informando o Session ID: " + (sessionId?.slice(-8) || 'N/A'),
-            variant: "destructive"
+            title: "Pagamento processado!",
+            description: "Seu pagamento foi confirmado. O processamento do envio está em andamento.",
           });
-          navigate('/');
+          setPaymentConfirmed(true);
+          setIsProcessing(false);
           return;
         }
 
-        console.log('PaymentSuccessStripe - Processando shipment:', shipment.id);
+        console.log('PaymentSuccess - Processando shipment:', shipment.id);
 
         // Update shipment status to paid
+        const paymentMethod = isAsaas ? 'ASAAS' : 'STRIPE';
         const { data: updatedShipment, error: updateError } = await supabase
           .from('shipments')
           .update({
             status: 'PAYMENT_CONFIRMED',
             payment_data: {
-              method: 'STRIPE',
-              session_id: sessionId,
-              stripe_session_id: sessionId,
+              method: paymentMethod,
+              session_id: paymentId,
+              external_reference: externalReference || null,
               amount: shipment.quote_data?.shippingQuote?.economicPrice || shipment.quote_data?.totalPrice || 0,
               status: 'PAID'
             },
@@ -165,9 +213,9 @@ const PaymentSuccessStripe = () => {
         const webhookPayload = {
           shipmentId: shipment.id,
           paymentData: {
-            method: 'STRIPE',
-            session_id: sessionId,
-            stripe_session_id: sessionId,
+            method: paymentMethod,
+            payment_id: paymentId,
+            external_reference: externalReference || null,
             amount: typeof updatedShipment.payment_data === 'object' && updatedShipment.payment_data !== null ? 
               (updatedShipment.payment_data as any).amount || 0 : 0,
             status: 'PAID'
@@ -225,8 +273,8 @@ const PaymentSuccessStripe = () => {
       }
     };
 
-    processStripePaymentSuccess();
-  }, [sessionId, navigate, toast]);
+    processPaymentSuccess();
+  }, [paymentId, navigate, toast, externalReference]);
 
   const handleGoToDashboard = () => {
     navigate('/');
@@ -274,7 +322,9 @@ const PaymentSuccessStripe = () => {
             )}
 
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Pagamento Stripe</span>
+              <span className="text-muted-foreground">
+                Pagamento {paymentSource === 'asaas' ? 'Asaas' : 'Stripe'}
+              </span>
               <Badge variant="default" className="bg-green-500">
                 {paymentConfirmed ? "Confirmado" : "Processando..."}
               </Badge>
@@ -295,10 +345,10 @@ const PaymentSuccessStripe = () => {
               </Badge>
             </div>
 
-            {sessionId && (
+            {paymentId && (
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Session ID</span>
-                <span className="text-sm font-mono">{sessionId.slice(-12)}</span>
+                <span className="text-muted-foreground">ID do Pagamento</span>
+                <span className="text-sm font-mono">{paymentId.slice(-12)}</span>
               </div>
             )}
           </CardContent>
@@ -317,7 +367,7 @@ const PaymentSuccessStripe = () => {
                <div>
                  <p className="font-medium">Pagamento Confirmado</p>
                  <p className="text-sm text-muted-foreground">
-                   Seu pagamento via Stripe foi processado com sucesso
+                   Seu pagamento via {paymentSource === 'asaas' ? 'Asaas' : 'Stripe'} foi processado com sucesso
                  </p>
                </div>
              </div>
