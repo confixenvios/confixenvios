@@ -5,8 +5,6 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, CreditCard, Zap, Barcode, DollarSign, Loader2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import SavedCardsSelector from "@/components/SavedCardsSelector";
 import PixPaymentModal from "@/components/PixPaymentModal";
 import PaymentDataModal from "@/components/PaymentDataModal";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +17,6 @@ const Payment = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
-  const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [pixModalOpen, setPixModalOpen] = useState(false);
   const [paymentDataModalOpen, setPaymentDataModalOpen] = useState(false);
@@ -111,51 +108,7 @@ const Payment = () => {
         return;
       }
 
-      if (selectedMethod === 'saved_credit') {
-        if (!selectedCard) {
-          toast({
-            title: "Erro",
-            description: "Selecione um cartão salvo ou adicione um novo",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        // Process payment with saved card
-        const { data, error } = await supabase.functions.invoke('create-payment-with-saved-card', {
-          body: {
-            paymentMethodId: selectedCard,
-            amount: totalAmount,
-            shipmentData: {
-              ...shipmentData,
-              weight: shipmentData.weight || 1,
-              senderEmail: shipmentData.senderAddress?.email || user?.email || 'guest@example.com'
-            }
-          },
-          headers: sessionHeaders
-        });
-
-        if (error) {
-          console.error('Saved card payment error:', error);
-          toast({
-            title: "Erro no pagamento",
-            description: "Erro ao processar pagamento com cartão salvo. Tente novamente.",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        console.log('Saved card payment response:', data);
-        
-        if (data.success) {
-          window.location.href = data.redirectUrl;
-        } else if (data.requiresAction) {
-          window.location.href = data.redirectUrl;
-        }
-        return;
-      }
-      
-      // Handle credit card - open modal to collect user data
+      // Handle credit card - open modal to collect user data via Asaas hosted checkout
       if (selectedMethod === 'credit') {
         setPaymentDataBillingType('CREDIT_CARD');
         setPaymentDataModalOpen(true);
@@ -271,19 +224,10 @@ const Payment = () => {
             </CardContent>
           </Card>
 
-          {/* Show saved cards selector when credit card with saved cards is selected */}
-          {selectedMethod === 'saved_credit' && (
-            <SavedCardsSelector
-              onCardSelected={(cardId) => setSelectedCard(cardId)}
-              onNewCard={() => setSelectedMethod('credit')}
-              disabled={processing}
-            />
-          )}
-
           {/* Confirm Button */}
           <Button 
             onClick={handleConfirmPayment}
-            disabled={!selectedMethod || processing || (selectedMethod === 'saved_credit' && !selectedCard)}
+            disabled={!selectedMethod || processing}
             className="w-full h-12 text-base font-semibold"
           >
             {processing ? (
