@@ -166,8 +166,8 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
 
       console.log('📋 Payload PIX completo:', pixPayload);
 
-      const { data, error } = await supabase.functions.invoke('create-pix-payment', {
-        body: pixPayload
+      const { data, error } = await supabase.functions.invoke('create-asaas-payment', {
+        body: { ...pixPayload, billingType: 'PIX' }
       });
 
       console.log('🔍 Resposta create-pix-payment:', { data, error });
@@ -289,7 +289,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
       console.log(`🔍 Verificação automática ${attempts}/${maxAttempts} para PIX:`, pixData.paymentId);
       
       try {
-        const { data: response, error } = await supabase.functions.invoke('check-pix-status', {
+        const { data: response, error } = await supabase.functions.invoke('check-asaas-status', {
           body: { paymentId: pixData.paymentId }
         });
 
