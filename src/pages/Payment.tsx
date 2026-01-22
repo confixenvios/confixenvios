@@ -8,6 +8,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import SavedCardsSelector from "@/components/SavedCardsSelector";
 import PixPaymentModal from "@/components/PixPaymentModal";
+import PaymentDataModal from "@/components/PaymentDataModal";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { SessionManager } from "@/utils/sessionManager";
@@ -21,6 +22,8 @@ const Payment = () => {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [pixModalOpen, setPixModalOpen] = useState(false);
+  const [paymentDataModalOpen, setPaymentDataModalOpen] = useState(false);
+  const [paymentDataBillingType, setPaymentDataBillingType] = useState<'CREDIT_CARD' | 'BOLETO'>('CREDIT_CARD');
   
   // Get shipment data from location state or sessionStorage
   const shipmentData = location.state?.shipmentData || JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
@@ -152,89 +155,20 @@ const Payment = () => {
         return;
       }
       
-      // Handle credit card via Asaas
+      // Handle credit card - open modal to collect user data
       if (selectedMethod === 'credit') {
-        const { data, error } = await supabase.functions.invoke('create-asaas-payment', {
-          body: {
-            amount: totalAmount,
-            billingType: 'CREDIT_CARD',
-            shipmentData: {
-              ...shipmentData,
-              weight: shipmentData.weight || 1,
-              senderEmail: shipmentData.senderAddress?.email || user?.email || 'guest@example.com'
-            }
-          },
-          headers: sessionHeaders
-        });
-
-        if (error) {
-          console.error('Credit card payment error:', error);
-          toast({
-            title: "Erro no pagamento",
-            description: "Erro ao processar pagamento com cartão. Tente novamente.",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        console.log('Asaas credit card response:', data);
-        
-        // Asaas returns a checkout URL for credit card
-        if (data.invoiceUrl) {
-          window.location.href = data.invoiceUrl;
-        } else {
-          toast({
-            title: "Erro",
-            description: "URL de pagamento não encontrada",
-            variant: "destructive"
-          });
-        }
+        setPaymentDataBillingType('CREDIT_CARD');
+        setPaymentDataModalOpen(true);
+        setProcessing(false);
         return;
       }
       
-      // Handle boleto via Asaas
+      // Handle boleto - open modal to collect user data
       if (selectedMethod === 'boleto') {
-        const { data, error } = await supabase.functions.invoke('create-asaas-payment', {
-          body: {
-            amount: totalAmount,
-            billingType: 'BOLETO',
-            shipmentData: {
-              ...shipmentData,
-              weight: shipmentData.weight || 1,
-              senderEmail: shipmentData.senderAddress?.email || user?.email || 'guest@example.com'
-            }
-          },
-          headers: sessionHeaders
-        });
-
-        if (error) {
-          console.error('Boleto payment error:', error);
-          toast({
-            title: "Erro no pagamento",
-            description: "Erro ao gerar boleto. Tente novamente.",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        console.log('Asaas boleto response:', data);
-        
-        // Asaas returns a bankSlipUrl for boleto
-        if (data.bankSlipUrl) {
-          window.open(data.bankSlipUrl, '_blank');
-          toast({
-            title: "Boleto gerado!",
-            description: "O boleto foi aberto em uma nova aba. Vencimento em 3 dias úteis.",
-          });
-        } else if (data.invoiceUrl) {
-          window.location.href = data.invoiceUrl;
-        } else {
-          toast({
-            title: "Erro",
-            description: "URL do boleto não encontrada",
-            variant: "destructive"
-          });
-        }
+        setPaymentDataBillingType('BOLETO');
+        setPaymentDataModalOpen(true);
+        setProcessing(false);
+        return;
       }
       
     } catch (error) {
@@ -369,6 +303,14 @@ const Payment = () => {
         isOpen={pixModalOpen}
         onClose={() => setPixModalOpen(false)}
         amount={totalAmount}
+      />
+
+      {/* Credit Card / Boleto Payment Modal */}
+      <PaymentDataModal
+        isOpen={paymentDataModalOpen}
+        onClose={() => setPaymentDataModalOpen(false)}
+        amount={totalAmount}
+        billingType={paymentDataBillingType}
       />
     </div>
   );
