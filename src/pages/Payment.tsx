@@ -54,23 +54,7 @@ const Payment = () => {
     navigate('/documento');
   };
 
-  // Por enquanto, mostrar apenas PIX que está implementado e funcional
   const paymentMethods = [
-    // TODO: Reativar quando implementados
-    // {
-    //   id: 'saved_credit',
-    //   name: 'Cartão de Crédito Salvo',
-    //   icon: CreditCard,
-    //   description: 'Use um cartão salvo',
-    //   available: !!user
-    // },
-    // {
-    //   id: 'credit',
-    //   name: 'Novo Cartão de Crédito',
-    //   icon: CreditCard,
-    //   description: 'Pagamento à vista',
-    //   available: true
-    // },
     {
       id: 'pix',
       name: 'PIX',
@@ -78,13 +62,20 @@ const Payment = () => {
       description: 'Aprovação instantânea',
       available: true
     },
-    // {
-    //   id: 'boleto',
-    //   name: 'Boleto Bancário',
-    //   icon: Barcode,
-    //   description: 'Vencimento em 3 dias úteis',
-    //   available: true
-    // }
+    {
+      id: 'credit',
+      name: 'Cartão de Crédito',
+      icon: CreditCard,
+      description: 'Pagamento à vista',
+      available: true
+    },
+    {
+      id: 'boleto',
+      name: 'Boleto Bancário',
+      icon: Barcode,
+      description: 'Vencimento em 3 dias úteis',
+      available: true
+    }
   ].filter(method => method.available);
 
   const handlePaymentSelect = (methodId: string) => {
@@ -161,11 +152,12 @@ const Payment = () => {
         return;
       }
       
-      // Handle new credit card (existing Stripe flow)
+      // Handle credit card via Asaas
       if (selectedMethod === 'credit') {
-        const { data, error } = await supabase.functions.invoke('create-payment', {
+        const { data, error } = await supabase.functions.invoke('create-asaas-payment', {
           body: {
             amount: totalAmount,
+            billingType: 'CREDIT_CARD',
             shipmentData: {
               ...shipmentData,
               weight: shipmentData.weight || 1,
@@ -176,27 +168,72 @@ const Payment = () => {
         });
 
         if (error) {
-          console.error('Payment error:', error);
+          console.error('Credit card payment error:', error);
           toast({
             title: "Erro no pagamento",
-            description: "Erro ao processar pagamento. Tente novamente.",
+            description: "Erro ao processar pagamento com cartão. Tente novamente.",
             variant: "destructive"
           });
           return;
         }
 
-        console.log('Stripe session created:', data);
+        console.log('Asaas credit card response:', data);
         
-        // Save current shipment data with backup before redirecting to Stripe
-        if (shipmentData && shipmentData.id) {
-          localStorage.setItem('currentShipment_backup', JSON.stringify(shipmentData));
-          localStorage.setItem('shipmentData_stripe_session', data.sessionId);
-          console.log('Payment - Dados salvos no localStorage como backup antes do Stripe');
+        // Asaas returns a checkout URL for credit card
+        if (data.invoiceUrl) {
+          window.location.href = data.invoiceUrl;
+        } else {
+          toast({
+            title: "Erro",
+            description: "URL de pagamento não encontrada",
+            variant: "destructive"
+          });
         }
+        return;
+      }
+      
+      // Handle boleto via Asaas
+      if (selectedMethod === 'boleto') {
+        const { data, error } = await supabase.functions.invoke('create-asaas-payment', {
+          body: {
+            amount: totalAmount,
+            billingType: 'BOLETO',
+            shipmentData: {
+              ...shipmentData,
+              weight: shipmentData.weight || 1,
+              senderEmail: shipmentData.senderAddress?.email || user?.email || 'guest@example.com'
+            }
+          },
+          headers: sessionHeaders
+        });
+
+        if (error) {
+          console.error('Boleto payment error:', error);
+          toast({
+            title: "Erro no pagamento",
+            description: "Erro ao gerar boleto. Tente novamente.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        console.log('Asaas boleto response:', data);
         
-        // Redirect to Stripe checkout in same tab to preserve session
-        if (data.url) {
-          window.location.href = data.url;
+        // Asaas returns a bankSlipUrl for boleto
+        if (data.bankSlipUrl) {
+          window.open(data.bankSlipUrl, '_blank');
+          toast({
+            title: "Boleto gerado!",
+            description: "O boleto foi aberto em uma nova aba. Vencimento em 3 dias úteis.",
+          });
+        } else if (data.invoiceUrl) {
+          window.location.href = data.invoiceUrl;
+        } else {
+          toast({
+            title: "Erro",
+            description: "URL do boleto não encontrada",
+            variant: "destructive"
+          });
         }
       }
       
