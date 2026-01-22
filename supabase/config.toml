@@ -15,9 +15,6 @@ verify_jwt = false
 [functions.webhook-tms]  
 verify_jwt = false
 
-[functions.create-payment]
-verify_jwt = false
-
 [functions.create-asaas-payment]
 verify_jwt = false
 
@@ -29,18 +26,6 @@ verify_jwt = false
 
 [functions.send-custom-email]
 verify_jwt = false
-
-[functions.list-payment-methods]
-verify_jwt = true
-
-[functions.create-setup-intent]
-verify_jwt = true
-
-[functions.remove-payment-method]
-verify_jwt = true
-
-[functions.create-payment-with-saved-card]
-verify_jwt = true
 
 [functions.motorista-operations]
 verify_jwt = false
