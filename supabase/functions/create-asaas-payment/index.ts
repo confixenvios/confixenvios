@@ -99,7 +99,7 @@ const validatePaymentInput = (requestBody: any): { isValid: boolean; error?: str
   return { isValid: true };
 };
 
-// Get or create Asaas customer
+// Get or create Asaas customer - ALWAYS update with provided data
 async function getOrCreateCustomer(asaasApiKey: string, customerData: {
   name: string;
   email: string;
@@ -120,8 +120,31 @@ async function getOrCreateCustomer(asaasApiKey: string, customerData: {
   if (searchResponse.ok) {
     const searchData = await searchResponse.json();
     if (searchData.data && searchData.data.length > 0) {
-      console.log('✅ Cliente existente encontrado:', searchData.data[0].id);
-      return searchData.data[0].id;
+      const existingCustomer = searchData.data[0];
+      console.log('✅ Cliente existente encontrado:', existingCustomer.id);
+      
+      // ALWAYS update customer with the new data provided
+      console.log('📝 Atualizando dados do cliente no Asaas...');
+      const updateResponse = await fetch(`${asaasBaseUrl}/customers/${existingCustomer.id}`, {
+        method: 'PUT',
+        headers: {
+          'access_token': asaasApiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: customerData.name,
+          email: customerData.email,
+          phone: customerData.phone.replace(/\D/g, ''),
+        }),
+      });
+      
+      if (updateResponse.ok) {
+        console.log('✅ Cliente atualizado com novos dados:', customerData.name);
+      } else {
+        console.warn('⚠️ Não foi possível atualizar cliente, usando existente');
+      }
+      
+      return existingCustomer.id;
     }
   }
 
