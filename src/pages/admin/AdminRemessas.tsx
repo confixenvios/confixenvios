@@ -891,81 +891,100 @@ const AdminRemessas = () => {
     }
   };
 
-  // Função para enviar webhook Jadlog Inclusão (manual)
+  // Função para enviar webhook Jadlog Inclusão (manual) - mesmo payload do cte-webhook automático
   const handleSendJadlogInclusao = async (shipment: AdminShipment) => {
     setSendingJadlogInclusao(prev => ({ ...prev, [shipment.id]: true }));
     
     try {
       console.log('📤 [JADLOG INCLUSÃO] Enviando webhook para remessa:', shipment.tracking_code);
       
-      // Extrair dados de remetente e destinatário do quote_data
-      const addressData = (shipment.quote_data as any)?.addressData || {};
-      const senderData = addressData.sender || {};
-      const recipientData = addressData.recipient || {};
+      const quoteData = shipment.quote_data as any || {};
       
-      const webhookData = {
+      // Extrair dados de remetente e destinatário do quote_data.addressData
+      const addressData = quoteData.addressData || {};
+      const senderAddressData = addressData.sender || {};
+      const recipientAddressData = addressData.recipient || {};
+      
+      // Determinar a transportadora REAL baseado no quote_data
+      const selectedOption = shipment.selected_option || quoteData.deliveryDetails?.selectedOption || 'economic';
+      let actualCarrier = 'jadlog'; // default
+      
+      if (selectedOption === 'economic' || selectedOption === 'maisbarato') {
+        const maisBarato = quoteData.quoteData?.maisBarato || quoteData.quoteData?.shippingQuote?.maisbarato;
+        actualCarrier = (maisBarato?.transportadora || 'Jadlog').toLowerCase();
+      } else if (selectedOption === 'express' || selectedOption === 'maisrapido') {
+        const maisRapido = quoteData.quoteData?.maisRapido || quoteData.quoteData?.shippingQuote?.maisrapido;
+        actualCarrier = (maisRapido?.transportadora || 'Jadlog').toLowerCase();
+      }
+      
+      // Payload idêntico ao do cte-webhook automático
+      const webhookPayload = {
         shipment_id: shipment.id,
         tracking_code: shipment.tracking_code || '',
-        carrier_order_id: shipment.carrier_order_id || '',
+        status: shipment.status,
+        selected_carrier: actualCarrier,
+        
+        // CT-e dados
         cte_chave: shipment.cte_emission?.chave_cte || shipment.cte_key || '',
         cte_numero: shipment.cte_emission?.numero_cte || '',
         cte_serie: shipment.cte_emission?.serie || '',
         cte_uuid: shipment.cte_emission?.uuid_cte || '',
         
-        // Dados do remetente
-        sender_name: shipment.sender_address?.name || '',
-        sender_document: senderData.document || '',
-        sender_phone: senderData.phone || '',
-        sender_email: senderData.email || '',
-        sender_street: shipment.sender_address?.street || '',
-        sender_number: shipment.sender_address?.number || '',
-        sender_complement: shipment.sender_address?.complement || '',
-        sender_neighborhood: shipment.sender_address?.neighborhood || '',
-        sender_city: shipment.sender_address?.city || '',
-        sender_state: shipment.sender_address?.state || '',
-        sender_cep: shipment.sender_address?.cep || '',
+        // Dados do pacote
+        peso_total: shipment.weight || 1,
+        valor_mercadoria: quoteData.merchandiseDetails?.totalValue || 
+                         quoteData.quoteData?.merchandiseValue ||
+                         quoteData.originalFormData?.totalMerchandiseValue || 100,
+        valor_total: quoteData.deliveryDetails?.totalPrice || 
+                    quoteData.paymentAmount || 20,
+        content_description: quoteData.fiscalData?.contentDescription || 
+                            quoteData.merchandiseDescription || 
+                            quoteData.descricaoMercadoria || 'Mercadoria',
         
-        // Dados do destinatário
-        recipient_name: shipment.recipient_address?.name || '',
-        recipient_document: recipientData.document || '',
-        recipient_phone: recipientData.phone || '',
-        recipient_email: recipientData.email || '',
-        recipient_street: shipment.recipient_address?.street || '',
-        recipient_number: shipment.recipient_address?.number || '',
-        recipient_complement: shipment.recipient_address?.complement || '',
-        recipient_neighborhood: shipment.recipient_address?.neighborhood || '',
-        recipient_city: shipment.recipient_address?.city || '',
-        recipient_state: shipment.recipient_address?.state || '',
-        recipient_cep: shipment.recipient_address?.cep || '',
+        // Destinatário - pegar do addressData que tem os dados completos
+        recipient_name: recipientAddressData.name || shipment.recipient_address?.name || '',
+        recipient_document: recipientAddressData.document || '',
+        recipient_inscricao_estadual: recipientAddressData.inscricaoEstadual || '',
+        recipient_cep: recipientAddressData.cep || shipment.recipient_address?.cep || '',
+        recipient_street: recipientAddressData.street || shipment.recipient_address?.street || '',
+        recipient_number: recipientAddressData.number || shipment.recipient_address?.number || '',
+        recipient_complement: recipientAddressData.complement || shipment.recipient_address?.complement || '',
+        recipient_neighborhood: recipientAddressData.neighborhood || shipment.recipient_address?.neighborhood || '',
+        recipient_city: recipientAddressData.city || shipment.recipient_address?.city || '',
+        recipient_state: recipientAddressData.state || shipment.recipient_address?.state || '',
+        recipient_phone: recipientAddressData.phone || '',
+        recipient_email: recipientAddressData.email || '',
         
-        // Dados da remessa
-        weight: String(shipment.weight || 0),
-        length: String(shipment.length || 0),
-        width: String(shipment.width || 0),
-        height: String(shipment.height || 0),
+        // Remetente - pegar do addressData
+        sender_name: senderAddressData.name || shipment.sender_address?.name || '',
+        sender_document: senderAddressData.document || '',
+        sender_inscricao_estadual: senderAddressData.inscricaoEstadual || '',
+        sender_cep: senderAddressData.cep || shipment.sender_address?.cep || '',
+        sender_street: senderAddressData.street || shipment.sender_address?.street || '',
+        sender_number: senderAddressData.number || shipment.sender_address?.number || '',
+        sender_complement: senderAddressData.complement || shipment.sender_address?.complement || '',
+        sender_neighborhood: senderAddressData.neighborhood || shipment.sender_address?.neighborhood || '',
+        sender_city: senderAddressData.city || shipment.sender_address?.city || '',
+        sender_state: senderAddressData.state || shipment.sender_address?.state || '',
+        sender_phone: senderAddressData.phone || '',
+        sender_email: senderAddressData.email || '',
         
-        // Transportadora
-        selected_carrier: (() => {
-          const directCarrier = (shipment.quote_data as any)?.deliveryDetails?.selectedCarrier;
-          if (directCarrier && (directCarrier === 'jadlog' || directCarrier === 'magalog')) {
-            return directCarrier;
-          }
-          return 'jadlog';
-        })(),
-        
-        // Número único do documento
-        nrDoc: `DEC-${shipment.id.substring(0, 8).toUpperCase()}`,
+        // Quote data completo para volumes
+        quote_data: quoteData,
         
         webhook_type: 'inclusao',
         sent_at: new Date().toISOString()
       };
       
+      console.log('📤 [JADLOG INCLUSÃO] Payload:', JSON.stringify(webhookPayload, null, 2));
+      
+      // URL de teste para debug
       const response = await fetch('https://n8n.grupoconfix.com/webhook-test/f5d4f949-29fd-4200-b7a1-b9a140e8c16c', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(webhookData)
+        body: JSON.stringify(webhookPayload)
       });
 
       if (!response.ok) {
@@ -980,8 +999,9 @@ const AdminRemessas = () => {
         const { error: updateError } = await supabase
           .from('shipments')
           .update({
-            carrier_order_id: result.codigo,
-            tracking_code: result.codigo
+            carrier_order_id: String(result.codigo),
+            status: 'LABEL_AVAILABLE',
+            updated_at: new Date().toISOString()
           })
           .eq('id', shipment.id);
         
