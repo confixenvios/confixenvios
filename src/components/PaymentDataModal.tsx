@@ -126,7 +126,7 @@ const PaymentDataModal: React.FC<PaymentDataModalProps> = ({
 
       // Get current origin for callback URL (works in both preview and production)
       const currentOrigin = window.location.origin;
-      const callbackUrl = `${currentOrigin}/payment-success-stripe`;
+      const callbackUrl = `${currentOrigin}/pagamento-sucesso`;
 
       const paymentPayload = {
         amount: parseFloat(amount.toFixed(2)),
