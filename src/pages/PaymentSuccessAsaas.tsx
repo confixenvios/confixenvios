@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSavedSenders } from "@/hooks/useSavedSenders";
 
-const PaymentSuccessStripe = () => {
+const PaymentSuccessAsaas = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { saveApprovedSender } = useSavedSenders();
@@ -421,4 +421,4 @@ const PaymentSuccessStripe = () => {
   );
 };
 
-export default PaymentSuccessStripe;
+export default PaymentSuccessAsaas;
