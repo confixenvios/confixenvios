@@ -98,19 +98,40 @@ const PaymentSuccessAsaas = () => {
 
         setPaymentConfirmed(true);
 
-        // 3. Check if shipment already exists (to prevent duplicates)
-        if (tempQuote.status === 'processed') {
-          console.log('Shipment already created');
+        // 3. Check if shipment already exists by externalReference (primary duplicate check)
+        const { data: existingShipmentByRef } = await supabase
+          .from('shipments')
+          .select('*')
+          .contains('quote_data', { externalReference: externalReference })
+          .limit(1)
+          .maybeSingle();
+        
+        if (existingShipmentByRef) {
+          console.log('Shipment already exists for this payment:', existingShipmentByRef.tracking_code);
+          setTrackingCode(existingShipmentByRef.tracking_code || '');
+          setPaymentConfirmed(true);
+          setShipmentCreated(true);
+          setWebhookDispatched(true);
+          setIsProcessing(false);
+          return;
+        }
+
+        // 4. Also check temp_quote status
+        if (tempQuote.status === 'processed' || tempQuote.status === 'processing') {
+          console.log('Quote already processed or processing, checking for existing shipment...');
           
-          // Find the shipment
-          const { data: existingShipment } = await supabase
+          // Wait a bit and recheck for shipment (may be in progress)
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          const { data: shipmentCheck } = await supabase
             .from('shipments')
             .select('*')
             .contains('quote_data', { externalReference: externalReference })
-            .single();
+            .limit(1)
+            .maybeSingle();
           
-          if (existingShipment) {
-            setTrackingCode(existingShipment.tracking_code || '');
+          if (shipmentCheck) {
+            setTrackingCode(shipmentCheck.tracking_code || '');
             setShipmentCreated(true);
             setWebhookDispatched(true);
           }
@@ -119,16 +140,39 @@ const PaymentSuccessAsaas = () => {
           return;
         }
 
-        // 4. Lock the quote to prevent duplicate processing
-        const { error: lockError } = await supabase
+        // 5. Lock the quote BEFORE creating shipment (atomic operation)
+        const { data: lockResult, error: lockError } = await supabase
           .from('temp_quotes')
-          .update({ status: 'processing' })
+          .update({ status: 'processing', updated_at: new Date().toISOString() })
           .eq('id', tempQuote.id)
-          .eq('status', 'payment_confirmed');
+          .eq('status', 'payment_confirmed')
+          .select('id')
+          .maybeSingle();
 
-        if (lockError) {
-          console.log('Could not lock quote, may already be processing');
+        if (lockError || !lockResult) {
+          console.log('Could not acquire lock, another process is handling this');
+          // Wait and check if shipment was created by another process
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          const { data: shipmentByOther } = await supabase
+            .from('shipments')
+            .select('*')
+            .contains('quote_data', { externalReference: externalReference })
+            .limit(1)
+            .maybeSingle();
+          
+          if (shipmentByOther) {
+            setTrackingCode(shipmentByOther.tracking_code || '');
+            setPaymentConfirmed(true);
+            setShipmentCreated(true);
+            setWebhookDispatched(true);
+          }
+          
+          setIsProcessing(false);
+          return;
         }
+        
+        console.log('Lock acquired, proceeding to create shipment');
 
         // 5. Extract data from temp_quote
         const senderData = tempQuote.sender_data as any;
