@@ -303,61 +303,105 @@ const PaymentSuccessAsaas = () => {
           }
         }
 
-        // 13. Dispatch webhook to N8N for label generation
-        const webhookPayload = {
-          event: 'shipment.created',
-          shipmentId: newShipment.id,
-          trackingCode: newTrackingCode,
-          paymentData: {
-            method: 'asaas',
-            externalReference: externalReference,
-            amount: quoteOptions?.paymentAmount || quoteOptions?.totalPrice,
-            status: 'paid'
-          },
-          senderData: {
-            name: senderData.name,
-            document: senderData.document,
-            email: senderData.email,
-            phone: senderData.phone,
-            cep: senderData.cep,
-            street: senderData.street,
-            number: senderData.number,
-            complement: senderData.complement,
-            neighborhood: senderData.neighborhood,
-            city: senderData.city,
-            state: senderData.state
-          },
-          recipientData: {
-            name: recipientData.name,
-            document: recipientData.document,
-            email: recipientData.email,
-            phone: recipientData.phone,
-            cep: recipientData.cep,
-            street: recipientData.street,
-            number: recipientData.number,
-            complement: recipientData.complement,
-            neighborhood: recipientData.neighborhood,
-            city: recipientData.city,
-            state: recipientData.state
-          },
-          packageData: packageData,
-          quoteOptions: quoteOptions
-        };
-
+        // 13. Dispatch webhook for CT-e generation (POST to n8n/webhook.grupoconfix.com)
         try {
-          const { data: webhookResult, error: webhookError } = await supabase.functions
-            .invoke('webhook-dispatch', {
-              body: webhookPayload
-            });
-
-          if (webhookError) {
-            console.error('Webhook dispatch error:', webhookError);
-          } else {
-            console.log('Webhook dispatched successfully:', webhookResult);
+          console.log('🔔 Disparando webhook para geração de CT-e...');
+          
+          // Extrair volumes do packageData
+          const volumes = packageData?.volumes || [packageData];
+          
+          // Determinar tipo fiscal: 1 = NFe, 3 = Declaração de Conteúdo
+          const documentType = quoteOptions?.documentType || quoteOptions?.fiscalData?.type || 'declaracao_conteudo';
+          const fiscalTipo = (documentType === 'nfe' || documentType === 'nota_fiscal_eletronica') ? '1' : '3';
+          
+          // Construir payload no formato FLAT que o n8n espera
+          const flatPayload: Record<string, any> = {
+            // Identificação da remessa
+            shipmentId: newShipment.id,
+            trackingCode: newTrackingCode,
+            status: 'PAYMENT_CONFIRMED',
+            createdAt: new Date().toISOString(),
+            
+            // Tipo fiscal: 1 = NFe, 3 = Declaração de Conteúdo
+            tipo: fiscalTipo,
+            fiscal_tipo: fiscalTipo,
+            chaveNotaFiscal: quoteOptions?.nfeKey || quoteOptions?.fiscalData?.nfeAccessKey || null,
+            
+            // Valores principais
+            valorTotal: quoteOptions?.paymentAmount || quoteOptions?.totalPrice || 0,
+            mercadoria_valorDeclarado: quoteOptions?.totalMerchandiseValue || packageData?.totalMerchandiseValue || 0,
+            descricaoMercadoria: quoteOptions?.merchandiseDescription || quoteOptions?.fiscalData?.contentDescription || 'Mercadoria',
+            remessa_prazo: quoteOptions?.deliveryDays || quoteOptions?.shippingQuote?.deliveryDays || 5,
+            
+            // Dados do remetente (flat)
+            remetente_nome: senderData.name || '',
+            remetente_documento: senderData.document || '',
+            remetente_email: senderData.email || '',
+            remetente_telefone: senderData.phone || '',
+            remetente_inscricaoEstadual: senderData.inscricaoEstadual || null,
+            remetente_cep: senderData.cep || '',
+            remetente_endereco: senderData.street || '',
+            remetente_numero: senderData.number || '',
+            remetente_complemento: senderData.complement || '',
+            remetente_bairro: senderData.neighborhood || '',
+            remetente_cidade: senderData.city || '',
+            remetente_estado: senderData.state || '',
+            
+            // Dados do destinatário (flat)
+            destinatario_nome: recipientData.name || '',
+            destinatario_documento: recipientData.document || '',
+            destinatario_email: recipientData.email || '',
+            destinatario_telefone: recipientData.phone || '',
+            destinatario_inscricaoEstadual: recipientData.inscricaoEstadual || null,
+            destinatario_cep: recipientData.cep || '',
+            destinatario_endereco: recipientData.street || '',
+            destinatario_numero: recipientData.number || '',
+            destinatario_complemento: recipientData.complement || '',
+            destinatario_bairro: recipientData.neighborhood || '',
+            destinatario_cidade: recipientData.city || '',
+            destinatario_estado: recipientData.state || '',
+            
+            // Dados técnicos
+            formato: packageData?.format || 'pacote',
+            opcao_coleta: quoteOptions?.pickupOption || 'dropoff',
+            opcao_entrega: quoteOptions?.selectedOption || 'standard',
+            peso_total: volumes.reduce((sum: number, v: any) => sum + (Number(v.weight) || 0), 0) || packageData?.weight || 1
+          };
+          
+          // Adicionar volumes dinamicamente (flat)
+          volumes.forEach((vol: any, index: number) => {
+            const volNum = index + 1;
+            flatPayload[`volume${volNum}_peso`] = Number(vol.weight) || 0;
+            flatPayload[`volume${volNum}_comprimento`] = Number(vol.length) || 0;
+            flatPayload[`volume${volNum}_largura`] = Number(vol.width) || 0;
+            flatPayload[`volume${volNum}_altura`] = Number(vol.height) || 0;
+            // Calcular cubagem: (C x L x A) / 6000
+            const cubagem = ((Number(vol.length) || 0) * (Number(vol.width) || 0) * (Number(vol.height) || 0)) / 6000;
+            flatPayload[`volume${volNum}_cubagemVolume`] = cubagem;
+            flatPayload[`volume${volNum}_tipoMercadoria`] = vol.merchandiseType || 'normal';
+          });
+          
+          console.log('📋 Payload CT-e webhook (flat):', flatPayload);
+          
+          // Disparar webhook POST para CT-e
+          const cteResponse = await fetch('https://webhook.grupoconfix.com/webhook/cd6d1d7d-b6a0-483d-8314-662e54dda78b', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(flatPayload)
+          });
+          
+          if (cteResponse.ok) {
+            console.log('✅ Webhook CT-e disparado com sucesso, status:', cteResponse.status);
             setWebhookDispatched(true);
+          } else {
+            console.warn('⚠️ Webhook CT-e retornou status:', cteResponse.status);
           }
+          
         } catch (webhookErr) {
-          console.error('Error dispatching webhook:', webhookErr);
+          console.error('❌ Erro ao disparar webhook CT-e:', webhookErr);
+          // Não bloqueia o fluxo por erro no webhook
         }
 
         toast({

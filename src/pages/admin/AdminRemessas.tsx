@@ -130,6 +130,10 @@ const AdminRemessas = () => {
   const [selectedShipmentLabel, setSelectedShipmentLabel] = useState<AdminShipment | null>(null);
   const [labelPersonalData, setLabelPersonalData] = useState<{senderPhone?: string; senderDocument?: string; recipientPhone?: string; recipientDocument?: string}>({});
 
+  // Estados para webhooks Jadlog
+  const [sendingJadlogInclusao, setSendingJadlogInclusao] = useState<Record<string, boolean>>({});
+  const [sendingJadlogCancelamento, setSendingJadlogCancelamento] = useState<Record<string, boolean>>({});
+
   // Função para enviar dados B2B via WhatsApp webhook
   const handleSendB2BWhatsAppWebhook = async (shipment: AdminShipment) => {
     const trackingCode = shipment.tracking_code || '';
@@ -887,6 +891,160 @@ const AdminRemessas = () => {
     }
   };
 
+  // Função para enviar webhook Jadlog Inclusão
+  const handleSendJadlogInclusao = async (shipment: AdminShipment) => {
+    setSendingJadlogInclusao(prev => ({ ...prev, [shipment.id]: true }));
+    
+    try {
+      console.log('📤 [JADLOG INCLUSÃO] Enviando webhook para remessa:', shipment.tracking_code);
+      
+      // Preparar payload com dados da remessa
+      const webhookData = {
+        shipment_id: shipment.id,
+        tracking_code: shipment.tracking_code,
+        status: shipment.status,
+        cte_chave: shipment.cte_emission?.chave_cte || shipment.cte_key || '',
+        cte_numero: shipment.cte_emission?.numero_cte || '',
+        cte_serie: shipment.cte_emission?.serie || '',
+        cte_uuid: shipment.cte_emission?.uuid_cte || '',
+        
+        // Remetente
+        sender_name: shipment.sender_address?.name || '',
+        sender_cep: shipment.sender_address?.cep || '',
+        sender_street: shipment.sender_address?.street || '',
+        sender_number: shipment.sender_address?.number || '',
+        sender_neighborhood: shipment.sender_address?.neighborhood || '',
+        sender_city: shipment.sender_address?.city || '',
+        sender_state: shipment.sender_address?.state || '',
+        sender_phone: (shipment.quote_data as any)?.addressData?.sender?.phone || '',
+        sender_document: (shipment.quote_data as any)?.addressData?.sender?.document || '',
+        
+        // Destinatário fixo para Jadlog
+        recipient_name: 'CD Jadlog Goiânia',
+        recipient_cep: '74911-775',
+        recipient_street: 'Rua 42, Qd. 69 - Lt. 7',
+        recipient_neighborhood: 'Jardim Santo Antônio',
+        recipient_city: 'Aparecida de Goiânia',
+        recipient_state: 'GO',
+        
+        // Dados do pacote
+        weight: shipment.weight,
+        length: shipment.length,
+        width: shipment.width,
+        height: shipment.height,
+        format: shipment.format,
+        
+        // Valor
+        valor_total: (shipment.payment_data as any)?.amount || (shipment.quote_data as any)?.deliveryDetails?.totalPrice || 0,
+        
+        webhook_type: 'inclusao',
+        sent_at: new Date().toISOString()
+      };
+      
+      const response = await fetch('https://n8n.grupoconfix.com/webhook-test/f5d4f949-29fd-4200-b7a1-b9a140e8c16c', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(webhookData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Tentar pegar o código retornado
+      try {
+        const result = await response.json();
+        if (result?.codigo) {
+          // Atualizar o tracking_code com o código da transportadora
+          await supabase
+            .from('shipments')
+            .update({ 
+              carrier_order_id: result.codigo,
+              tracking_code: result.codigo,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', shipment.id);
+          
+          toast({
+            title: "Inclusão Jadlog Realizada",
+            description: `Código da transportadora: ${result.codigo}`,
+          });
+          
+          // Recarregar remessas
+          loadShipments();
+        } else {
+          toast({
+            title: "Inclusão Enviada",
+            description: `Webhook de inclusão enviado para ${shipment.tracking_code}`,
+          });
+        }
+      } catch {
+        toast({
+          title: "Inclusão Enviada",
+          description: `Webhook de inclusão enviado para ${shipment.tracking_code}`,
+        });
+      }
+
+    } catch (error: any) {
+      console.error('❌ [JADLOG INCLUSÃO] Erro:', error);
+      toast({
+        title: "Erro na Inclusão",
+        description: `Erro ao enviar webhook: ${error.message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setSendingJadlogInclusao(prev => ({ ...prev, [shipment.id]: false }));
+    }
+  };
+
+  // Função para enviar webhook Jadlog Cancelamento
+  const handleSendJadlogCancelamento = async (shipment: AdminShipment) => {
+    setSendingJadlogCancelamento(prev => ({ ...prev, [shipment.id]: true }));
+    
+    try {
+      console.log('📤 [JADLOG CANCELAMENTO] Enviando webhook para remessa:', shipment.tracking_code);
+      
+      const webhookData = {
+        shipment_id: shipment.id,
+        tracking_code: shipment.tracking_code,
+        carrier_order_id: shipment.carrier_order_id || '',
+        cte_chave: shipment.cte_emission?.chave_cte || shipment.cte_key || '',
+        cte_numero: shipment.cte_emission?.numero_cte || '',
+        webhook_type: 'cancelamento',
+        sent_at: new Date().toISOString()
+      };
+      
+      const response = await fetch('https://n8n.grupoconfix.com/webhook-test/12a51728-7ef5-405a-9bfb-f1e8d2b6bf36', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(webhookData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      toast({
+        title: "Cancelamento Enviado",
+        description: `Webhook de cancelamento enviado para ${shipment.tracking_code}`,
+      });
+
+    } catch (error: any) {
+      console.error('❌ [JADLOG CANCELAMENTO] Erro:', error);
+      toast({
+        title: "Erro no Cancelamento",
+        description: `Erro ao enviar webhook: ${error.message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setSendingJadlogCancelamento(prev => ({ ...prev, [shipment.id]: false }));
+    }
+  };
+
   // Função para obter badge do status do webhook
   const getWebhookStatusBadge = (shipment: AdminShipment) => {
     const status = webhookStatuses[shipment.id];
@@ -1379,8 +1537,12 @@ const AdminRemessas = () => {
                   onDownloadLabel={handleDownloadLabel}
                   onSendWebhook={handleSendWebhook}
                   onSendB2BWhatsApp={handleSendB2BWhatsAppWebhook}
+                  onSendJadlogInclusao={handleSendJadlogInclusao}
+                  onSendJadlogCancelamento={handleSendJadlogCancelamento}
                   sendingWebhook={sendingWebhook[shipment.id] || false}
                   sendingB2BWhatsapp={sendingB2BWhatsapp[shipment.id] || false}
+                  sendingJadlogInclusao={sendingJadlogInclusao[shipment.id] || false}
+                  sendingJadlogCancelamento={sendingJadlogCancelamento[shipment.id] || false}
                   webhookStatus={webhookStatuses[shipment.id]}
                   getStatusBadge={getStatusBadge}
                   getQuoteValue={getQuoteValue}

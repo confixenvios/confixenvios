@@ -223,27 +223,31 @@ const PixPaymentSuccess = () => {
         // Não falhar a criação da remessa por erro no webhook
       }
 
-      // ===== DISPARAR WEBHOOK DE TESTE PARA N8N (formato flat para CT-e) =====
+      // ===== DISPARAR WEBHOOK PARA CT-e (formato flat para webhook.grupoconfix.com) =====
       try {
-        console.log('🔔 Disparando webhook de teste para n8n...');
+        console.log('🔔 Disparando webhook para geração de CT-e...');
+        
+        // Tipo fiscal: 1 = NFe, 3 = Declaração de Conteúdo
+        const fiscalTipo = (documentData.documentType === 'nfe' || documentData.fiscalData?.type === 'nota_fiscal_eletronica') ? '1' : '3';
         
         // Construir payload no formato FLAT que o n8n espera
         const flatPayload: Record<string, any> = {
-          // Dados da remessa
+          // Identificação da remessa
           shipmentId: newShipment.id,
           trackingCode: finalTrackingCode,
           status: 'PAYMENT_CONFIRMED',
           createdAt: new Date().toISOString(),
+          
+          // Tipo fiscal: 1 = NFe, 3 = Declaração de Conteúdo
+          tipo: fiscalTipo,
+          fiscal_tipo: fiscalTipo,
+          chaveNotaFiscal: documentData.nfeKey || null,
           
           // Valores principais
           valorTotal: completeShipmentData.deliveryDetails?.shippingPrice || amount,
           mercadoria_valorDeclarado: completeShipmentData.merchandiseDetails?.totalValue || amount,
           descricaoMercadoria: documentData.merchandiseDescription || 'Mercadoria',
           remessa_prazo: completeShipmentData.quoteData?.shippingQuote?.deliveryDays || 5,
-          
-          // Tipo fiscal: 1 = NFe, 3 = Declaração de Conteúdo
-          fiscal_tipo: (documentData.documentType === 'nfe' || documentData.fiscalData?.type === 'nota_fiscal_eletronica') ? '1' : '3',
-          nfeKey: documentData.nfeKey || null,
           
           // Dados do remetente (flat)
           remetente_nome: senderData.name,
@@ -276,7 +280,8 @@ const PixPaymentSuccess = () => {
           // Dados técnicos
           formato: completeShipmentData.technicalData?.format || 'pacote',
           opcao_coleta: completeShipmentData.deliveryDetails?.pickupOption || 'dropoff',
-          opcao_entrega: completeShipmentData.deliveryDetails?.selectedOption || 'standard'
+          opcao_entrega: completeShipmentData.deliveryDetails?.selectedOption || 'standard',
+          peso_total: volumes.reduce((sum: number, vol: any) => sum + (Number(vol.weight) || 0), 0) || totalWeight
         };
         
         // Adicionar volumes dinamicamente (flat)
@@ -292,9 +297,10 @@ const PixPaymentSuccess = () => {
           flatPayload[`volume${volNum}_tipoMercadoria`] = vol.merchandiseType || 'normal';
         });
         
-        console.log('📋 Payload webhook teste (flat):', flatPayload);
+        console.log('📋 Payload CT-e webhook (flat):', flatPayload);
         
-        const testWebhookResponse = await fetch('https://n8n.grupoconfix.com/webhook-test/cd6d1d7d-b6a0-483d-8314-662e54dda78b', {
+        // Disparar webhook POST para CT-e (endpoint de produção)
+        const cteWebhookResponse = await fetch('https://webhook.grupoconfix.com/webhook/cd6d1d7d-b6a0-483d-8314-662e54dda78b', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -302,11 +308,15 @@ const PixPaymentSuccess = () => {
           body: JSON.stringify(flatPayload)
         });
         
-        console.log('✅ Webhook de teste disparado, status:', testWebhookResponse.status);
+        if (cteWebhookResponse.ok) {
+          console.log('✅ Webhook CT-e disparado com sucesso, status:', cteWebhookResponse.status);
+        } else {
+          console.warn('⚠️ Webhook CT-e retornou status:', cteWebhookResponse.status);
+        }
         
       } catch (testWebhookError) {
-        console.error('⚠️ Erro ao disparar webhook de teste (não bloqueante):', testWebhookError);
-        // Não falhar a criação da remessa por erro no webhook de teste
+        console.error('⚠️ Erro ao disparar webhook CT-e (não bloqueante):', testWebhookError);
+        // Não falhar a criação da remessa por erro no webhook
       }
       
       // Limpar dados do sessionStorage após criar a remessa
