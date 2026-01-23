@@ -130,8 +130,7 @@ const AdminRemessas = () => {
   const [selectedShipmentLabel, setSelectedShipmentLabel] = useState<AdminShipment | null>(null);
   const [labelPersonalData, setLabelPersonalData] = useState<{senderPhone?: string; senderDocument?: string; recipientPhone?: string; recipientDocument?: string}>({});
 
-  // Estados para webhooks Jadlog
-  const [sendingJadlogInclusao, setSendingJadlogInclusao] = useState<Record<string, boolean>>({});
+  // Estados para webhooks Jadlog (apenas cancelamento - inclusão é automática)
   const [sendingJadlogCancelamento, setSendingJadlogCancelamento] = useState<Record<string, boolean>>({});
 
   // Função para enviar dados B2B via WhatsApp webhook
@@ -891,144 +890,7 @@ const AdminRemessas = () => {
     }
   };
 
-  // Função para enviar webhook Jadlog Inclusão (manual) - mesmo payload do cte-webhook automático
-  const handleSendJadlogInclusao = async (shipment: AdminShipment) => {
-    setSendingJadlogInclusao(prev => ({ ...prev, [shipment.id]: true }));
-    
-    try {
-      console.log('📤 [JADLOG INCLUSÃO] Enviando webhook para remessa:', shipment.tracking_code);
-      
-      const quoteData = shipment.quote_data as any || {};
-      
-      // Extrair dados de remetente e destinatário do quote_data.addressData
-      const addressData = quoteData.addressData || {};
-      const senderAddressData = addressData.sender || {};
-      const recipientAddressData = addressData.recipient || {};
-      
-      // Determinar a transportadora REAL baseado no quote_data
-      const selectedOption = shipment.selected_option || quoteData.deliveryDetails?.selectedOption || 'economic';
-      let actualCarrier = 'jadlog'; // default
-      
-      if (selectedOption === 'economic' || selectedOption === 'maisbarato') {
-        const maisBarato = quoteData.quoteData?.maisBarato || quoteData.quoteData?.shippingQuote?.maisbarato;
-        actualCarrier = (maisBarato?.transportadora || 'Jadlog').toLowerCase();
-      } else if (selectedOption === 'express' || selectedOption === 'maisrapido') {
-        const maisRapido = quoteData.quoteData?.maisRapido || quoteData.quoteData?.shippingQuote?.maisrapido;
-        actualCarrier = (maisRapido?.transportadora || 'Jadlog').toLowerCase();
-      }
-      
-      // Payload idêntico ao do cte-webhook automático
-      const webhookPayload = {
-        shipment_id: shipment.id,
-        tracking_code: shipment.tracking_code || '',
-        status: shipment.status,
-        selected_carrier: actualCarrier,
-        
-        // CT-e dados
-        cte_chave: shipment.cte_emission?.chave_cte || shipment.cte_key || '',
-        cte_numero: shipment.cte_emission?.numero_cte || '',
-        cte_serie: shipment.cte_emission?.serie || '',
-        cte_uuid: shipment.cte_emission?.uuid_cte || '',
-        
-        // Dados do pacote
-        peso_total: shipment.weight || 1,
-        valor_mercadoria: quoteData.merchandiseDetails?.totalValue || 
-                         quoteData.quoteData?.merchandiseValue ||
-                         quoteData.originalFormData?.totalMerchandiseValue || 100,
-        valor_total: quoteData.deliveryDetails?.totalPrice || 
-                    quoteData.paymentAmount || 20,
-        content_description: quoteData.fiscalData?.contentDescription || 
-                            quoteData.merchandiseDescription || 
-                            quoteData.descricaoMercadoria || 'Mercadoria',
-        
-        // Destinatário - pegar do addressData que tem os dados completos
-        recipient_name: recipientAddressData.name || shipment.recipient_address?.name || '',
-        recipient_document: recipientAddressData.document || '',
-        recipient_inscricao_estadual: recipientAddressData.inscricaoEstadual || '',
-        recipient_cep: recipientAddressData.cep || shipment.recipient_address?.cep || '',
-        recipient_street: recipientAddressData.street || shipment.recipient_address?.street || '',
-        recipient_number: recipientAddressData.number || shipment.recipient_address?.number || '',
-        recipient_complement: recipientAddressData.complement || shipment.recipient_address?.complement || '',
-        recipient_neighborhood: recipientAddressData.neighborhood || shipment.recipient_address?.neighborhood || '',
-        recipient_city: recipientAddressData.city || shipment.recipient_address?.city || '',
-        recipient_state: recipientAddressData.state || shipment.recipient_address?.state || '',
-        recipient_phone: recipientAddressData.phone || '',
-        recipient_email: recipientAddressData.email || '',
-        
-        // Remetente - pegar do addressData
-        sender_name: senderAddressData.name || shipment.sender_address?.name || '',
-        sender_document: senderAddressData.document || '',
-        sender_inscricao_estadual: senderAddressData.inscricaoEstadual || '',
-        sender_cep: senderAddressData.cep || shipment.sender_address?.cep || '',
-        sender_street: senderAddressData.street || shipment.sender_address?.street || '',
-        sender_number: senderAddressData.number || shipment.sender_address?.number || '',
-        sender_complement: senderAddressData.complement || shipment.sender_address?.complement || '',
-        sender_neighborhood: senderAddressData.neighborhood || shipment.sender_address?.neighborhood || '',
-        sender_city: senderAddressData.city || shipment.sender_address?.city || '',
-        sender_state: senderAddressData.state || shipment.sender_address?.state || '',
-        sender_phone: senderAddressData.phone || '',
-        sender_email: senderAddressData.email || '',
-        
-        // Quote data completo para volumes
-        quote_data: quoteData,
-        
-        webhook_type: 'inclusao',
-        sent_at: new Date().toISOString()
-      };
-      
-      console.log('📤 [JADLOG INCLUSÃO] Payload:', JSON.stringify(webhookPayload, null, 2));
-      
-      // URL de teste para debug
-      const response = await fetch('https://n8n.grupoconfix.com/webhook-test/f5d4f949-29fd-4200-b7a1-b9a140e8c16c', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(webhookPayload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ [JADLOG INCLUSÃO] Resposta:', result);
-      
-      // Se retornou código da Jadlog, atualizar a remessa
-      if (result.codigo) {
-        const { error: updateError } = await supabase
-          .from('shipments')
-          .update({
-            carrier_order_id: String(result.codigo),
-            status: 'LABEL_AVAILABLE',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', shipment.id);
-        
-        if (updateError) {
-          console.error('Erro ao atualizar carrier_order_id:', updateError);
-        }
-      }
-
-      toast({
-        title: "Inclusão Enviada",
-        description: `Webhook de inclusão enviado para ${shipment.tracking_code}`,
-      });
-
-      // Recarregar remessas para atualizar o estado
-      loadShipments();
-
-    } catch (error: any) {
-      console.error('❌ [JADLOG INCLUSÃO] Erro:', error);
-      toast({
-        title: "Erro na Inclusão",
-        description: `Erro ao enviar webhook: ${error.message}`,
-        variant: "destructive"
-      });
-    } finally {
-      setSendingJadlogInclusao(prev => ({ ...prev, [shipment.id]: false }));
-    }
-  };
+  // Inclusão Jadlog removida - agora é automática via cte-webhook
 
   // Função para enviar webhook Jadlog Cancelamento
   const handleSendJadlogCancelamento = async (shipment: AdminShipment) => {
@@ -1568,11 +1430,9 @@ const AdminRemessas = () => {
                   onDownloadLabel={handleDownloadLabel}
                   onSendWebhook={handleSendWebhook}
                   onSendB2BWhatsApp={handleSendB2BWhatsAppWebhook}
-                  onSendJadlogInclusao={handleSendJadlogInclusao}
                   onSendJadlogCancelamento={handleSendJadlogCancelamento}
                   sendingWebhook={sendingWebhook[shipment.id] || false}
                   sendingB2BWhatsapp={sendingB2BWhatsapp[shipment.id] || false}
-                  sendingJadlogInclusao={sendingJadlogInclusao[shipment.id] || false}
                   sendingJadlogCancelamento={sendingJadlogCancelamento[shipment.id] || false}
                   webhookStatus={webhookStatuses[shipment.id]}
                   getStatusBadge={getStatusBadge}
