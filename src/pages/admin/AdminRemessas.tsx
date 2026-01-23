@@ -898,17 +898,23 @@ const AdminRemessas = () => {
     try {
       console.log('📤 [JADLOG INCLUSÃO] Enviando webhook para remessa:', shipment.tracking_code);
       
-      // Preparar payload com dados da remessa
+      // Preparar payload com dados da remessa - campos alinhados com n8n
+      const quoteData = shipment.quote_data as any;
+      const paymentData = shipment.payment_data as any;
+      const recipientAddress = shipment.recipient_address;
+      
       const webhookData = {
         shipment_id: shipment.id,
         tracking_code: shipment.tracking_code,
         status: shipment.status,
+        
+        // CT-e dados
         cte_chave: shipment.cte_emission?.chave_cte || shipment.cte_key || '',
         cte_numero: shipment.cte_emission?.numero_cte || '',
         cte_serie: shipment.cte_emission?.serie || '',
         cte_uuid: shipment.cte_emission?.uuid_cte || '',
         
-        // Remetente
+        // Remetente (dados fixos da Juri Express para Jadlog)
         sender_name: shipment.sender_address?.name || '',
         sender_cep: shipment.sender_address?.cep || '',
         sender_street: shipment.sender_address?.street || '',
@@ -916,26 +922,31 @@ const AdminRemessas = () => {
         sender_neighborhood: shipment.sender_address?.neighborhood || '',
         sender_city: shipment.sender_address?.city || '',
         sender_state: shipment.sender_address?.state || '',
-        sender_phone: (shipment.quote_data as any)?.addressData?.sender?.phone || '',
-        sender_document: (shipment.quote_data as any)?.addressData?.sender?.document || '',
+        sender_phone: quoteData?.addressData?.sender?.phone || '',
+        sender_document: quoteData?.addressData?.sender?.document || '',
         
-        // Destinatário fixo para Jadlog
-        recipient_name: 'CD Jadlog Goiânia',
-        recipient_cep: '74911-775',
-        recipient_street: 'Rua 42, Qd. 69 - Lt. 7',
+        // Destinatário fixo para CD Jadlog (campos com nomes que n8n espera)
+        recipient_name: 'CONFIX ENVIOS CD',
+        recipient_document: '54007348000130',
+        recipient_inscricao_estadual: '201227606',
+        recipient_cep: '74911775',
+        recipient_street: 'Rua 42',
+        recipient_number: 'Qd. 69 - Lt. 7',
+        recipient_complement: '',
         recipient_neighborhood: 'Jardim Santo Antônio',
         recipient_city: 'Aparecida de Goiânia',
         recipient_state: 'GO',
+        recipient_phone: '62999191438',
+        recipient_email: 'confixenvios@gmail.com',
         
-        // Dados do pacote
-        weight: shipment.weight,
-        length: shipment.length,
-        width: shipment.width,
-        height: shipment.height,
-        format: shipment.format,
+        // Dados do pacote - nomes esperados pelo n8n
+        peso_total: shipment.weight || 0,
+        valor_mercadoria: quoteData?.quoteFormData?.valorDeclarado || quoteData?.quoteData?.insuranceValue || 100,
+        valor_total: paymentData?.amount || quoteData?.deliveryDetails?.totalPrice || 0,
+        content_description: quoteData?.quoteFormData?.descricaoMercadoria || quoteData?.quoteData?.merchandiseDescription || 'Mercadoria',
         
-        // Valor
-        valor_total: (shipment.payment_data as any)?.amount || (shipment.quote_data as any)?.deliveryDetails?.totalPrice || 0,
+        // Quote data completo para volumes
+        quote_data: quoteData,
         
         webhook_type: 'inclusao',
         sent_at: new Date().toISOString()
