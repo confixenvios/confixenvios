@@ -553,55 +553,23 @@ const ClientRemessas = () => {
                         <History className="h-4 w-4 mr-1" />
                         Rastreio
                       </Button>
-                      {shipment.label_pdf_url && !isLabelLocked(shipment.status) && (
-                        (() => {
-                          // Check if it's a Jadlog/Nacional shipment - use same logic as admin
-                          const isNacionalLabel = shipment.pricing_table_name?.toLowerCase().includes('jadlog') ||
-                            shipment.pricing_table_name?.toLowerCase().includes('nacional') ||
-                            shipment.carrier_order_id ||
-                            shipment.carrier_barcode;
-                          
-                          if (isNacionalLabel) {
-                            return (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="default"
-                                    size="sm"
-                                    className="bg-primary hover:bg-primary/90"
-                                  >
-                                    <Tag className="h-4 w-4 mr-1" />
-                                    Etiqueta
-                                    <ChevronDown className="h-3 w-3 ml-1" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className="bg-white z-50">
-                                  <DropdownMenuItem 
-                                    onClick={() => {
-                                      setLabelShipment(shipment);
-                                      setLabelModalOpen(true);
-                                    }}
-                                    className="cursor-pointer"
-                                  >
-                                    <Printer className="h-4 w-4 mr-2" />
-                                    Imprimir Etiqueta
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onClick={() => {
-                                      setLabelShipment(shipment);
-                                      setLabelModalOpen(true);
-                                    }}
-                                    className="cursor-pointer"
-                                  >
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Baixar PDF
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            );
-                          }
-                          
-                          // For other labels, use the original behavior
+                      {/* Botão de etiqueta - aparece para nacionais com carrier_order_id OU para outros com label_pdf_url */}
+                      {!isLabelLocked(shipment.status) && (() => {
+                        // Check if it's a Jadlog/Nacional shipment - use same logic as admin
+                        const isNacionalLabel = shipment.pricing_table_name?.toLowerCase().includes('jadlog') ||
+                          shipment.pricing_table_name?.toLowerCase().includes('nacional') ||
+                          shipment.carrier_order_id ||
+                          shipment.carrier_barcode;
+                        
+                        // Para nacionais: mostra se tiver carrier_order_id ou carrier_barcode
+                        // Para outros: mostra se tiver label_pdf_url
+                        const canShowLabel = isNacionalLabel 
+                          ? (shipment.carrier_order_id || shipment.carrier_barcode)
+                          : shipment.label_pdf_url;
+                        
+                        if (!canShowLabel) return null;
+                        
+                        if (isNacionalLabel) {
                           return (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -617,14 +585,20 @@ const ClientRemessas = () => {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent className="bg-white z-50">
                                 <DropdownMenuItem 
-                                  onClick={() => window.print()}
+                                  onClick={() => {
+                                    setLabelShipment(shipment);
+                                    setLabelModalOpen(true);
+                                  }}
                                   className="cursor-pointer"
                                 >
                                   <Printer className="h-4 w-4 mr-2" />
                                   Imprimir Etiqueta
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
-                                  onClick={() => handleDownloadLabel(shipment)}
+                                  onClick={() => {
+                                    setLabelShipment(shipment);
+                                    setLabelModalOpen(true);
+                                  }}
                                   className="cursor-pointer"
                                 >
                                   <Download className="h-4 w-4 mr-2" />
@@ -633,8 +607,41 @@ const ClientRemessas = () => {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           );
-                        })()
-                      )}
+                        }
+                        
+                        // For other labels, use the original behavior
+                        return (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="bg-primary hover:bg-primary/90"
+                              >
+                                <Tag className="h-4 w-4 mr-1" />
+                                Etiqueta
+                                <ChevronDown className="h-3 w-3 ml-1" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="bg-white z-50">
+                              <DropdownMenuItem 
+                                onClick={() => window.print()}
+                                className="cursor-pointer"
+                              >
+                                <Printer className="h-4 w-4 mr-2" />
+                                Imprimir Etiqueta
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDownloadLabel(shipment)}
+                                className="cursor-pointer"
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Baixar PDF
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
