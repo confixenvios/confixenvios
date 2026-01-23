@@ -278,17 +278,28 @@ serve(async (req) => {
         );
       }
 
-      // Create sender address
+      // Create sender address - handle both flat and nested structures
+      const senderCep = senderData.cep || senderData.address?.cep;
+      const senderStreet = senderData.street || senderData.address?.street;
+      const senderNumber = senderData.number || senderData.address?.number;
+      const senderNeighborhood = senderData.neighborhood || senderData.address?.neighborhood;
+      const senderCity = senderData.city || senderData.address?.city;
+      const senderState = senderData.state || senderData.address?.state;
+      const senderComplement = senderData.complement || senderData.address?.complement || null;
+
+      console.log('📍 Dados do remetente:', { name: senderData.name, cep: senderCep, street: senderStreet });
+
       const { data: senderAddress, error: senderError } = await supabase
         .from('addresses')
         .insert([{
-          name: senderData.name,
-          street: senderData.address?.street,
-          number: senderData.address?.number,
-          neighborhood: senderData.address?.neighborhood,
-          city: senderData.address?.city,
-          state: senderData.address?.state,
-          cep: senderData.address?.cep,
+          name: senderData.name || 'Remetente',
+          street: senderStreet || '',
+          number: senderNumber || '',
+          neighborhood: senderNeighborhood || '',
+          city: senderCity || '',
+          state: senderState || '',
+          cep: senderCep || '',
+          complement: senderComplement,
           address_type: 'sender',
           user_id: userId
         }])
@@ -300,17 +311,28 @@ serve(async (req) => {
         throw senderError;
       }
 
-      // Create recipient address
+      // Create recipient address - handle both flat and nested structures
+      const recipientCep = recipientData.cep || recipientData.address?.cep;
+      const recipientStreet = recipientData.street || recipientData.address?.street;
+      const recipientNumber = recipientData.number || recipientData.address?.number;
+      const recipientNeighborhood = recipientData.neighborhood || recipientData.address?.neighborhood;
+      const recipientCity = recipientData.city || recipientData.address?.city;
+      const recipientState = recipientData.state || recipientData.address?.state;
+      const recipientComplement = recipientData.complement || recipientData.address?.complement || null;
+
+      console.log('📍 Dados do destinatário:', { name: recipientData.name, cep: recipientCep, street: recipientStreet });
+
       const { data: recipientAddress, error: recipientError } = await supabase
         .from('addresses')
         .insert([{
-          name: recipientData.name,
-          street: recipientData.address?.street,
-          number: recipientData.address?.number,
-          neighborhood: recipientData.address?.neighborhood,
-          city: recipientData.address?.city,
-          state: recipientData.address?.state,
-          cep: recipientData.address?.cep,
+          name: recipientData.name || 'Destinatário',
+          street: recipientStreet || '',
+          number: recipientNumber || '',
+          neighborhood: recipientNeighborhood || '',
+          city: recipientCity || '',
+          state: recipientState || '',
+          cep: recipientCep || '',
+          complement: recipientComplement,
           address_type: 'recipient',
           user_id: userId
         }])
