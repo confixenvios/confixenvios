@@ -338,11 +338,7 @@ const PaymentSuccessAsaas = () => {
   }, [externalReference, navigate, toast, saveApprovedSender]);
 
   const handleGoToDashboard = () => {
-    navigate('/');
-  };
-
-  const handleTrackShipment = () => {
-    navigate('/rastreamento');
+    navigate('/cliente/remessas');
   };
 
   if (error && !paymentConfirmed) {
@@ -486,17 +482,8 @@ const PaymentSuccessAsaas = () => {
             className="w-full h-12 text-base font-semibold"
             disabled={isProcessing}
           >
-            Voltar ao Início
+            Ver Minhas Remessas
             <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-          
-          <Button 
-            variant="outline"
-            onClick={handleTrackShipment}
-            className="w-full h-12 text-base"
-            disabled={isProcessing || !trackingCode}
-          >
-            Rastrear Envio
           </Button>
         </div>
       </div>
