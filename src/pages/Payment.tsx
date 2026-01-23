@@ -60,21 +60,24 @@ const Payment = () => {
       name: 'PIX',
       icon: Zap,
       description: 'Aprovação instantânea',
-      available: true
+      available: true,
+      disabled: false
     },
     {
       id: 'credit',
       name: 'Cartão de Crédito',
       icon: CreditCard,
       description: 'Pagamento à vista',
-      available: true
+      available: true,
+      disabled: false
     },
     {
       id: 'boleto',
       name: 'Boleto Bancário',
       icon: Barcode,
-      description: 'Vencimento em 3 dias úteis',
-      available: true
+      description: 'Temporariamente indisponível',
+      available: true,
+      disabled: true
     }
   ].filter(method => method.available);
 
@@ -194,27 +197,37 @@ const Payment = () => {
             <CardContent className="space-y-3">
               {paymentMethods.map((method) => {
                 const Icon = method.icon;
+                const isDisabled = method.disabled;
                 return (
                   <div
                     key={method.id}
-                    className={`p-4 border rounded-lg cursor-pointer transition-all hover:border-primary/50 ${
-                      selectedMethod === method.id 
-                        ? 'border-primary bg-primary/5' 
-                        : 'border-border'
+                    className={`p-4 border rounded-lg transition-all ${
+                      isDisabled 
+                        ? 'cursor-not-allowed opacity-50 border-border bg-muted/30' 
+                        : `cursor-pointer hover:border-primary/50 ${
+                            selectedMethod === method.id 
+                              ? 'border-primary bg-primary/5' 
+                              : 'border-border'
+                          }`
                     }`}
-                    onClick={() => handlePaymentSelect(method.id)}
+                    onClick={() => !isDisabled && handlePaymentSelect(method.id)}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className="h-5 w-5 text-primary" />
+                      <Icon className={`h-5 w-5 ${isDisabled ? 'text-muted-foreground' : 'text-primary'}`} />
                       <div className="flex-1">
-                        <div className="font-semibold">{method.name}</div>
+                        <div className={`font-semibold ${isDisabled ? 'text-muted-foreground' : ''}`}>{method.name}</div>
                         <div className="text-sm text-muted-foreground">
                           {method.description}
                         </div>
                       </div>
-                      {selectedMethod === method.id && (
+                      {selectedMethod === method.id && !isDisabled && (
                         <Badge variant="default" className="bg-primary">
                           Selecionado
+                        </Badge>
+                      )}
+                      {isDisabled && (
+                        <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                          Indisponível
                         </Badge>
                       )}
                     </div>
