@@ -103,7 +103,15 @@ serve(async (req) => {
     const shippingQuote = quoteData?.quoteData?.shippingQuote;
     const selectedQuote = shippingQuote?.[selectedCarrier] || shippingQuote?.jadlog;
     const totalPrice = quoteData?.deliveryDetails?.totalPrice || (shipment.payment_data as any)?.amount || 0;
-    const merchandiseValue = quoteData?.quoteData?.totalMerchandiseValue || quoteData?.fiscalData?.merchandise_value || 0;
+    
+    // Valor da mercadoria - buscar em múltiplos caminhos possíveis
+    const merchandiseValue = quoteData?.quoteData?.merchandiseValue || 
+                             quoteData?.merchandiseDetails?.totalValue ||
+                             quoteData?.originalFormData?.totalMerchandiseValue ||
+                             quoteData?.quoteData?.totalMerchandiseValue || 
+                             quoteData?.fiscalData?.merchandise_value || 0;
+    
+    console.log('💰 [AUTO-LABEL] Valor mercadoria encontrado:', merchandiseValue);
     const deliveryDays = quoteData?.deliveryDetails?.deliveryDays || selectedQuote?.prazo || 5;
     
     // Dados do documento
