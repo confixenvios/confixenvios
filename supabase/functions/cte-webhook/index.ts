@@ -409,12 +409,34 @@ serve(async (req) => {
           
           const quoteData = shipmentData.quote_data || {};
           
+          // Extrair dados do addressData para preencher campos corretamente
+          const addressData = quoteData.addressData || {};
+          const recipientAddressData = addressData.recipient || {};
+          const senderAddressData = addressData.sender || {};
+          
+          // Determinar a transportadora REAL baseado no quote_data
+          // selected_option pode ser "economic" ou "express", precisamos verificar qual transportadora
+          const selectedOption = shipmentData.selected_option || quoteData.deliveryDetails?.selectedOption || 'economic';
+          let actualCarrier = 'jadlog'; // default
+          
+          if (selectedOption === 'economic' || selectedOption === 'maisbarato') {
+            // Pegar do maisBarato
+            const maisBarato = quoteData.quoteData?.maisBarato || quoteData.quoteData?.shippingQuote?.maisbarato;
+            actualCarrier = (maisBarato?.transportadora || 'Jadlog').toLowerCase();
+          } else if (selectedOption === 'express' || selectedOption === 'maisrapido') {
+            // Pegar do maisRapido
+            const maisRapido = quoteData.quoteData?.maisRapido || quoteData.quoteData?.shippingQuote?.maisrapido;
+            actualCarrier = (maisRapido?.transportadora || 'Jadlog').toLowerCase();
+          }
+          
+          console.log('CTE Webhook - selected_option:', selectedOption, '-> actualCarrier:', actualCarrier);
+          
           // Preparar payload completo para n8n (n8n faz o filtro por selected_carrier)
           const webhookPayload = {
             shipment_id: shipmentId,
             tracking_code: trackingCode,
             status: shipmentData.status,
-            selected_carrier: shipmentData.selected_option || quoteData.selectedCarrier || 'jadlog',
+            selected_carrier: actualCarrier, // Agora envia "jadlog", "angil", etc
             
             // CT-e dados
             cte_chave: result.data.chave_cte,
@@ -424,41 +446,42 @@ serve(async (req) => {
             
             // Dados do pacote
             peso_total: shipmentData.weight || 1,
-            valor_mercadoria: quoteData.quoteFormData?.valorDeclarado || 
-                             quoteData.merchandiseDetails?.totalValue || 
-                             quoteData.quoteData?.insuranceValue || 100,
+            valor_mercadoria: quoteData.merchandiseDetails?.totalValue || 
+                             quoteData.quoteData?.merchandiseValue ||
+                             quoteData.originalFormData?.totalMerchandiseValue || 100,
             valor_total: quoteData.deliveryDetails?.totalPrice || 
                         quoteData.paymentAmount || 20,
-            content_description: quoteData.quoteFormData?.descricaoMercadoria || 
+            content_description: quoteData.fiscalData?.contentDescription || 
                                 quoteData.merchandiseDescription || 
                                 quoteData.descricaoMercadoria || 'Mercadoria',
             
-            // Destinatário real (n8n decide se manda pro CD ou pro destino final)
-            recipient_name: shipmentData.recipient?.name || '',
-            recipient_document: recipientPersonalData.document || '',
-            recipient_inscricao_estadual: '',
-            recipient_cep: shipmentData.recipient?.cep || '',
-            recipient_street: shipmentData.recipient?.street || '',
-            recipient_number: shipmentData.recipient?.number || '',
-            recipient_complement: shipmentData.recipient?.complement || '',
-            recipient_neighborhood: shipmentData.recipient?.neighborhood || '',
-            recipient_city: shipmentData.recipient?.city || '',
-            recipient_state: shipmentData.recipient?.state || '',
-            recipient_phone: recipientPersonalData.phone || '',
-            recipient_email: recipientPersonalData.email || '',
+            // Destinatário - pegar do addressData que tem os dados completos
+            recipient_name: recipientAddressData.name || shipmentData.recipient?.name || '',
+            recipient_document: recipientAddressData.document || recipientPersonalData.document || '',
+            recipient_inscricao_estadual: recipientAddressData.inscricaoEstadual || '',
+            recipient_cep: recipientAddressData.cep || shipmentData.recipient?.cep || '',
+            recipient_street: recipientAddressData.street || shipmentData.recipient?.street || '',
+            recipient_number: recipientAddressData.number || shipmentData.recipient?.number || '',
+            recipient_complement: recipientAddressData.complement || shipmentData.recipient?.complement || '',
+            recipient_neighborhood: recipientAddressData.neighborhood || shipmentData.recipient?.neighborhood || '',
+            recipient_city: recipientAddressData.city || shipmentData.recipient?.city || '',
+            recipient_state: recipientAddressData.state || shipmentData.recipient?.state || '',
+            recipient_phone: recipientAddressData.phone || recipientPersonalData.phone || '',
+            recipient_email: recipientAddressData.email || recipientPersonalData.email || '',
             
-            // Remetente
-            sender_name: shipmentData.sender?.name || '',
-            sender_cep: shipmentData.sender?.cep || '',
-            sender_street: shipmentData.sender?.street || '',
-            sender_number: shipmentData.sender?.number || '',
-            sender_complement: shipmentData.sender?.complement || '',
-            sender_neighborhood: shipmentData.sender?.neighborhood || '',
-            sender_city: shipmentData.sender?.city || '',
-            sender_state: shipmentData.sender?.state || '',
-            sender_phone: senderPersonalData.phone || '',
-            sender_document: senderPersonalData.document || '',
-            sender_email: senderPersonalData.email || '',
+            // Remetente - pegar do addressData
+            sender_name: senderAddressData.name || shipmentData.sender?.name || '',
+            sender_document: senderAddressData.document || senderPersonalData.document || '',
+            sender_inscricao_estadual: senderAddressData.inscricaoEstadual || '',
+            sender_cep: senderAddressData.cep || shipmentData.sender?.cep || '',
+            sender_street: senderAddressData.street || shipmentData.sender?.street || '',
+            sender_number: senderAddressData.number || shipmentData.sender?.number || '',
+            sender_complement: senderAddressData.complement || shipmentData.sender?.complement || '',
+            sender_neighborhood: senderAddressData.neighborhood || shipmentData.sender?.neighborhood || '',
+            sender_city: senderAddressData.city || shipmentData.sender?.city || '',
+            sender_state: senderAddressData.state || shipmentData.sender?.state || '',
+            sender_phone: senderAddressData.phone || senderPersonalData.phone || '',
+            sender_email: senderAddressData.email || senderPersonalData.email || '',
             
             // Quote data completo para volumes
             quote_data: quoteData,
