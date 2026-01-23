@@ -415,46 +415,59 @@ serve(async (req) => {
           if (integration && integration.webhook_url) {
             const quoteData = shipmentData.quote_data || {};
             
-            // Preparar payload para Jadlog
+            // Preparar payload para Jadlog com campos alinhados ao n8n
             const jadlogPayload = {
-              shipmentId: shipmentId,
+              shipment_id: shipmentId,
               tracking_code: trackingCode,
-              remetente: {
-                nome: shipmentData.sender?.name || '',
-                documento: senderPersonalData.document || '',
-                telefone: senderPersonalData.phone || '',
-                email: senderPersonalData.email || '',
-                endereco: shipmentData.sender?.street || '',
-                numero: shipmentData.sender?.number || '',
-                complemento: shipmentData.sender?.complement || '',
-                bairro: shipmentData.sender?.neighborhood || '',
-                cidade: shipmentData.sender?.city || '',
-                estado: shipmentData.sender?.state || '',
-                cep: shipmentData.sender?.cep || ''
-              },
-              destinatario: {
-                nome: shipmentData.recipient?.name || '',
-                documento: recipientPersonalData.document || '',
-                telefone: recipientPersonalData.phone || '',
-                email: recipientPersonalData.email || '',
-                endereco: shipmentData.recipient?.street || '',
-                numero: shipmentData.recipient?.number || '',
-                complemento: shipmentData.recipient?.complement || '',
-                bairro: shipmentData.recipient?.neighborhood || '',
-                cidade: shipmentData.recipient?.city || '',
-                estado: shipmentData.recipient?.state || '',
-                cep: shipmentData.recipient?.cep || ''
-              },
-              pacote: {
-                peso: shipmentData.weight || 1,
-                altura: shipmentData.height || 10,
-                largura: shipmentData.width || 10,
-                comprimento: shipmentData.length || 10,
-                formato: shipmentData.format || 'pacote'
-              },
-              valor_declarado: quoteData.declaredValue || quoteData.mercadoria_valorDeclarado || 100,
-              valor_frete: quoteData.price || quoteData.valorTotal || 20,
-              cte_chave: result.data.chave_cte
+              status: shipmentData.status,
+              
+              // CT-e dados
+              cte_chave: result.data.chave_cte,
+              cte_numero: result.data.numero_cte,
+              cte_serie: result.data.serie,
+              cte_uuid: result.data.uuid_cte,
+              
+              // Dados do pacote - nomes esperados pelo n8n
+              peso_total: shipmentData.weight || 1,
+              valor_mercadoria: quoteData.quoteFormData?.valorDeclarado || 
+                               quoteData.merchandiseDetails?.totalValue || 
+                               quoteData.quoteData?.insuranceValue || 100,
+              valor_total: quoteData.deliveryDetails?.totalPrice || 
+                          quoteData.paymentAmount || 20,
+              content_description: quoteData.quoteFormData?.descricaoMercadoria || 
+                                  quoteData.merchandiseDescription || 
+                                  quoteData.descricaoMercadoria || 'Mercadoria',
+              
+              // Destinatário fixo para CD (campos com nomes que n8n espera)
+              recipient_name: 'CONFIX ENVIOS CD',
+              recipient_document: '54007348000130',
+              recipient_inscricao_estadual: '201227606',
+              recipient_cep: '74911775',
+              recipient_street: 'Rua 42',
+              recipient_number: 'Qd. 69 - Lt. 7',
+              recipient_complement: '',
+              recipient_neighborhood: 'Jardim Santo Antônio',
+              recipient_city: 'Aparecida de Goiânia',
+              recipient_state: 'GO',
+              recipient_phone: '62999191438',
+              recipient_email: 'confixenvios@gmail.com',
+              
+              // Remetente
+              sender_name: shipmentData.sender?.name || '',
+              sender_cep: shipmentData.sender?.cep || '',
+              sender_street: shipmentData.sender?.street || '',
+              sender_number: shipmentData.sender?.number || '',
+              sender_neighborhood: shipmentData.sender?.neighborhood || '',
+              sender_city: shipmentData.sender?.city || '',
+              sender_state: shipmentData.sender?.state || '',
+              sender_phone: senderPersonalData.phone || '',
+              sender_document: senderPersonalData.document || '',
+              
+              // Quote data completo para volumes
+              quote_data: quoteData,
+              
+              webhook_type: 'inclusao',
+              sent_at: new Date().toISOString()
             };
 
             console.log('CTE Webhook - Enviando para Jadlog:', JSON.stringify(jadlogPayload, null, 2));
@@ -470,7 +483,37 @@ serve(async (req) => {
               success: jadlogResponse.ok
             };
 
-            console.log('CTE Webhook - Resposta Jadlog:', jadlogResult.status);
+            // Tentar pegar o código retornado e atualizar o shipment
+            if (jadlogResponse.ok) {
+              try {
+                const responseData = await jadlogResponse.json();
+                console.log('CTE Webhook - Resposta Jadlog:', JSON.stringify(responseData, null, 2));
+                
+                if (responseData?.codigo) {
+                  // Atualizar o tracking_code e carrier_order_id com o código da transportadora
+                  const { error: updateError } = await supabase
+                    .from('shipments')
+                    .update({ 
+                      carrier_order_id: responseData.codigo,
+                      tracking_code: responseData.codigo,
+                      status: 'LABEL_AVAILABLE',
+                      updated_at: new Date().toISOString()
+                    })
+                    .eq('id', shipmentId);
+                  
+                  if (updateError) {
+                    console.error('CTE Webhook - Erro ao atualizar carrier_order_id:', updateError);
+                  } else {
+                    console.log('CTE Webhook - carrier_order_id atualizado:', responseData.codigo);
+                    jadlogResult.codigo = responseData.codigo;
+                  }
+                }
+              } catch (parseError) {
+                console.log('CTE Webhook - Resposta não é JSON, status:', jadlogResponse.status);
+              }
+            }
+
+            console.log('CTE Webhook - Status Jadlog:', jadlogResult.status);
 
             // Log do webhook Jadlog
             await supabase.from('webhook_logs').insert({
@@ -478,7 +521,7 @@ serve(async (req) => {
               event_type: 'jadlog_auto_dispatch',
               payload: jadlogPayload,
               response_status: jadlogResponse.status,
-              response_body: { auto_triggered: true, from_cte_webhook: true }
+              response_body: { auto_triggered: true, from_cte_webhook: true, ...jadlogResult }
             });
           } else {
             console.log('CTE Webhook - Integração Jadlog não encontrada ou inativa');
