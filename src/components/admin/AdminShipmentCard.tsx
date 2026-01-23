@@ -24,11 +24,9 @@ interface AdminShipmentCardProps {
   onDownloadLabel: (url: string, trackingCode: string) => void;
   onSendWebhook: (shipment: AdminShipment) => void;
   onSendB2BWhatsApp: (shipment: AdminShipment) => void;
-  onSendJadlogInclusao?: (shipment: AdminShipment) => void;
   onSendJadlogCancelamento?: (shipment: AdminShipment) => void;
   sendingWebhook: boolean;
   sendingB2BWhatsapp: boolean;
-  sendingJadlogInclusao?: boolean;
   sendingJadlogCancelamento?: boolean;
   webhookStatus?: 'sent' | 'pending' | 'error';
   getStatusBadge: (status: string) => JSX.Element;
@@ -43,11 +41,9 @@ const AdminShipmentCard = ({
   onDownloadLabel,
   onSendWebhook,
   onSendB2BWhatsApp,
-  onSendJadlogInclusao,
   onSendJadlogCancelamento,
   sendingWebhook,
   sendingB2BWhatsapp,
-  sendingJadlogInclusao,
   sendingJadlogCancelamento,
   webhookStatus,
   getStatusBadge,
@@ -405,23 +401,7 @@ const AdminShipmentCard = ({
             </Button>
           )}
 
-          {/* Jadlog Inclusão - Only for Jadlog shipments with CTE approved */}
-          {!isB2BExpresso && isNacionalLabel && shipment.cte_emission?.status === 'aprovado' && onSendJadlogInclusao && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 border-emerald-300 text-emerald-600 hover:bg-emerald-50"
-              onClick={() => onSendJadlogInclusao(shipment)}
-              disabled={sendingJadlogInclusao}
-            >
-              {sendingJadlogInclusao ? (
-                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-              ) : (
-                <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
-              )}
-              Inclusão
-            </Button>
-          )}
+          {/* Jadlog Inclusão removido - agora é automático após CTe aprovado */}
 
           {/* Jadlog Cancelamento - Only for Jadlog shipments with CTE approved */}
           {!isB2BExpresso && isNacionalLabel && shipment.cte_emission?.status === 'aprovado' && onSendJadlogCancelamento && (
