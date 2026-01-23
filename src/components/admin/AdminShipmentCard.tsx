@@ -24,8 +24,12 @@ interface AdminShipmentCardProps {
   onDownloadLabel: (url: string, trackingCode: string) => void;
   onSendWebhook: (shipment: AdminShipment) => void;
   onSendB2BWhatsApp: (shipment: AdminShipment) => void;
+  onSendJadlogInclusao?: (shipment: AdminShipment) => void;
+  onSendJadlogCancelamento?: (shipment: AdminShipment) => void;
   sendingWebhook: boolean;
   sendingB2BWhatsapp: boolean;
+  sendingJadlogInclusao?: boolean;
+  sendingJadlogCancelamento?: boolean;
   webhookStatus?: 'sent' | 'pending' | 'error';
   getStatusBadge: (status: string) => JSX.Element;
   getQuoteValue: (shipment: AdminShipment) => number;
@@ -39,8 +43,12 @@ const AdminShipmentCard = ({
   onDownloadLabel,
   onSendWebhook,
   onSendB2BWhatsApp,
+  onSendJadlogInclusao,
+  onSendJadlogCancelamento,
   sendingWebhook,
   sendingB2BWhatsapp,
+  sendingJadlogInclusao,
+  sendingJadlogCancelamento,
   webhookStatus,
   getStatusBadge,
   getQuoteValue
@@ -397,6 +405,42 @@ const AdminShipmentCard = ({
             </Button>
           )}
 
+          {/* Jadlog Inclusão - Only for Jadlog shipments with CTE approved */}
+          {!isB2BExpresso && isNacionalLabel && shipment.cte_emission?.status === 'aprovado' && onSendJadlogInclusao && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 border-emerald-300 text-emerald-600 hover:bg-emerald-50"
+              onClick={() => onSendJadlogInclusao(shipment)}
+              disabled={sendingJadlogInclusao}
+            >
+              {sendingJadlogInclusao ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              Inclusão
+            </Button>
+          )}
+
+          {/* Jadlog Cancelamento - Only for Jadlog shipments with CTE approved */}
+          {!isB2BExpresso && isNacionalLabel && shipment.cte_emission?.status === 'aprovado' && onSendJadlogCancelamento && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 border-red-300 text-red-600 hover:bg-red-50"
+              onClick={() => onSendJadlogCancelamento(shipment)}
+              disabled={sendingJadlogCancelamento}
+            >
+              {sendingJadlogCancelamento ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              Cancelar
+            </Button>
+          )}
+
           {/* B2B WhatsApp */}
           {isB2BExpresso && (
             <Button
@@ -404,7 +448,7 @@ const AdminShipmentCard = ({
               size="sm"
               onClick={() => onSendB2BWhatsApp(shipment)}
               disabled={sendingB2BWhatsapp}
-              className="h-8 text-green-600 hover:bg-green-50"
+              className="h-8 text-emerald-600 hover:bg-emerald-50"
             >
               {sendingB2BWhatsapp ? (
                 <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />

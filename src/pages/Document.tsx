@@ -170,8 +170,9 @@ const Document = () => {
           remessa_prazo: deliveryDetails.deliveryDays || completeData.quoteData?.shippingQuote?.deliveryDays || 5,
           
           // Tipo fiscal: 1 = NFe, 3 = Declaração de Conteúdo
+          tipo: documentType === 'nfe' ? '1' : '3',
           fiscal_tipo: documentType === 'nfe' ? '1' : '3',
-          nfeKey: documentType === 'nfe' ? nfeKey : null,
+          chaveNotaFiscal: documentType === 'nfe' ? nfeKey : null,
           
           // Dados do remetente (flat)
           remetente_nome: senderData.name || '',
@@ -223,17 +224,17 @@ const Document = () => {
         
         console.log('📋 Payload webhook teste (flat):', flatPayload);
         
-        // Disparar webhook POST (não bloqueia o fluxo)
-        fetch('https://n8n.grupoconfix.com/webhook-test/cd6d1d7d-b6a0-483d-8314-662e54dda78b', {
+        // Disparar webhook POST para CT-e (endpoint de produção)
+        fetch('https://webhook.grupoconfix.com/webhook/cd6d1d7d-b6a0-483d-8314-662e54dda78b', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(flatPayload)
         }).then(response => {
-          console.log('✅ Webhook de teste disparado, status:', response.status);
+          console.log('✅ Webhook CT-e disparado, status:', response.status);
         }).catch(err => {
-          console.warn('⚠️ Erro ao disparar webhook de teste (não crítico):', err);
+          console.warn('⚠️ Erro ao disparar webhook CT-e (não crítico):', err);
         });
         
       } catch (testError) {
