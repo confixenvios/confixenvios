@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Package, ArrowRight, Clock } from "lucide-react";
+import { CheckCircle, Package, ArrowRight, Loader2 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,258 +14,319 @@ const PaymentSuccessAsaas = () => {
   const { saveApprovedSender } = useSavedSenders();
   const [searchParams] = useSearchParams();
   
-  // Support both Stripe (session_id) and Asaas (externalReference) callbacks
-  const sessionId = searchParams.get('session_id');
   const externalReference = searchParams.get('externalReference');
-  const paymentId = sessionId || externalReference;
   
   const [isProcessing, setIsProcessing] = useState(true);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [shipmentCreated, setShipmentCreated] = useState(false);
   const [webhookDispatched, setWebhookDispatched] = useState(false);
   const [trackingCode, setTrackingCode] = useState('');
-  const [paymentSource, setPaymentSource] = useState<'stripe' | 'asaas'>('stripe');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const processPaymentSuccess = async () => {
+    const processPaymentAndCreateShipment = async () => {
       try {
-        if (!paymentId) {
-          console.log('No payment ID provided');
-          navigate('/');
+        if (!externalReference) {
+          console.log('No externalReference provided');
+          setError('Referência de pagamento não encontrada');
+          setIsProcessing(false);
           return;
         }
 
-        // Detect payment source
-        const isAsaas = !!externalReference;
-        setPaymentSource(isAsaas ? 'asaas' : 'stripe');
-        console.log(`Processing ${isAsaas ? 'Asaas' : 'Stripe'} payment success for:`, paymentId);
+        console.log('Processing payment for externalReference:', externalReference);
 
-        // Get shipment data from session storage or backup in localStorage
-        let shipmentData = JSON.parse(sessionStorage.getItem('currentShipment') || '{}');
-        let documentData = JSON.parse(sessionStorage.getItem('documentData') || '{}');
-        
-        // If not found in sessionStorage, try localStorage backup
-        if (!shipmentData || !shipmentData.id) {
-          console.log('Shipment data not found in sessionStorage, trying localStorage backup');
-          const backupShipmentData = localStorage.getItem('currentShipment_backup');
-          if (backupShipmentData) {
-            shipmentData = JSON.parse(backupShipmentData);
-            console.log('Recovered shipment data from localStorage backup:', shipmentData);
-          }
+        // 1. Find the temp_quote with this externalReference
+        const { data: tempQuote, error: quoteError } = await supabase
+          .from('temp_quotes')
+          .select('*')
+          .eq('external_id', externalReference)
+          .single();
+
+        if (quoteError || !tempQuote) {
+          console.error('Temp quote not found:', quoteError);
+          setError('Cotação não encontrada');
+          setIsProcessing(false);
+          return;
         }
-        
-        // For Asaas payments, first try to find temp_quote using externalReference
-        let tempQuote = null;
-        if (isAsaas && externalReference) {
-          console.log('Looking for temp_quote with externalReference:', externalReference);
-          const { data: tempQuotes, error: tempQuoteError } = await supabase
+
+        console.log('Found temp_quote:', tempQuote.id, 'status:', tempQuote.status);
+
+        // 2. Check if payment is confirmed (by webhook or already processed)
+        if (!['payment_confirmed', 'processed', 'processing'].includes(tempQuote.status)) {
+          // Payment not yet confirmed by webhook, wait a bit and retry
+          console.log('Payment not yet confirmed, waiting...');
+          
+          // Poll for payment confirmation (max 30 seconds)
+          let attempts = 0;
+          const maxAttempts = 10;
+          
+          while (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            
+            const { data: updatedQuote } = await supabase
+              .from('temp_quotes')
+              .select('status')
+              .eq('external_id', externalReference)
+              .single();
+            
+            if (updatedQuote && ['payment_confirmed', 'processed', 'processing'].includes(updatedQuote.status)) {
+              console.log('Payment confirmed!');
+              break;
+            }
+            
+            attempts++;
+            console.log(`Waiting for payment confirmation... attempt ${attempts}/${maxAttempts}`);
+          }
+          
+          // Re-fetch the quote
+          const { data: refreshedQuote } = await supabase
             .from('temp_quotes')
             .select('*')
             .eq('external_id', externalReference)
             .single();
-
-          if (!tempQuoteError && tempQuotes) {
-            tempQuote = tempQuotes;
-            console.log('Found temp_quote:', tempQuote.id);
-            
-            // Update temp_quote status
-            await supabase
-              .from('temp_quotes')
-              .update({ status: 'payment_confirmed' })
-              .eq('id', tempQuote.id);
+          
+          if (!refreshedQuote || !['payment_confirmed', 'processed', 'processing'].includes(refreshedQuote.status)) {
+            console.log('Payment still not confirmed after waiting');
+            setError('Aguardando confirmação do pagamento. Atualize a página em alguns segundos.');
+            setIsProcessing(false);
+            return;
           }
-        }
-        
-        // Try to find shipment in database
-        let shipment = null;
-        const { data: shipments, error: searchError } = await supabase
-          .from('shipments')
-          .select('*')
-          .or(`payment_data->>session_id.eq.${paymentId},payment_data->>stripe_session_id.eq.${paymentId},payment_data->>external_reference.eq.${paymentId}`)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (searchError) {
-          console.error('PaymentSuccess - Erro ao buscar shipment:', searchError);
+          
+          // Use refreshed quote
+          Object.assign(tempQuote, refreshedQuote);
         }
 
-        if (shipments && shipments.length > 0) {
-          shipment = shipments[0];
-          console.log('PaymentSuccess - Shipment encontrado no banco:', shipment.id);
-        } else if (shipmentData && shipmentData.id) {
-          // Try to find by storage ID
-          const { data: foundShipment } = await supabase
+        setPaymentConfirmed(true);
+
+        // 3. Check if shipment already exists (to prevent duplicates)
+        if (tempQuote.status === 'processed') {
+          console.log('Shipment already created');
+          
+          // Find the shipment
+          const { data: existingShipment } = await supabase
             .from('shipments')
             .select('*')
-            .eq('id', shipmentData.id)
+            .contains('quote_data', { externalReference: externalReference })
             .single();
-
-          if (foundShipment) {
-            shipment = foundShipment;
-            console.log('PaymentSuccess - Shipment encontrado por ID do storage:', shipment.id);
-          }
-        }
-        
-        // If no shipment found but we have temp_quote (Asaas flow), show success anyway
-        // The webhook will create the shipment
-        if (!shipment && tempQuote) {
-          console.log('No shipment yet, but temp_quote found - Asaas webhook will create shipment');
-          setPaymentConfirmed(true);
-          setTrackingCode('');
-          toast({
-            title: "Pagamento confirmado!",
-            description: "Seu envio está sendo processado. Em breve você receberá a confirmação.",
-          });
-          setWebhookDispatched(true);
           
-          // Clean up storage
-          sessionStorage.removeItem('currentShipment');
-          sessionStorage.removeItem('documentData');
-          localStorage.removeItem('currentShipment_backup');
+          if (existingShipment) {
+            setTrackingCode(existingShipment.tracking_code || '');
+            setShipmentCreated(true);
+            setWebhookDispatched(true);
+          }
           
           setIsProcessing(false);
           return;
         }
-        
-        // Fallback search for pending shipments
-        if (!shipment) {
-          console.log('PaymentSuccess - Tentando busca alternativa...');
-          const { data: fallbackShipments } = await supabase
-            .from('shipments')
-            .select('*')
-            .in('status', ['PENDING_PAYMENT', 'PENDING_DOCUMENT'])
-            .order('created_at', { ascending: false })
-            .limit(3);
 
-          if (fallbackShipments && fallbackShipments.length > 0) {
-            shipment = fallbackShipments[0];
-            console.log('PaymentSuccess - Usando shipment alternativo:', shipment.id);
-            
-            // Update with correct payment ID
-            await supabase
-              .from('shipments')
-              .update({
-                payment_data: {
-                  ...shipment.payment_data,
-                  session_id: paymentId,
-                  external_reference: externalReference || null
-                }
-              })
-              .eq('id', shipment.id);
-          }
-        }
-        
-        if (!shipment) {
-          console.error('PaymentSuccess - Nenhum shipment encontrado para:', paymentId);
-          toast({
-            title: "Pagamento processado!",
-            description: "Seu pagamento foi confirmado. O processamento do envio está em andamento.",
-          });
-          setPaymentConfirmed(true);
-          setIsProcessing(false);
-          return;
+        // 4. Lock the quote to prevent duplicate processing
+        const { error: lockError } = await supabase
+          .from('temp_quotes')
+          .update({ status: 'processing' })
+          .eq('id', tempQuote.id)
+          .eq('status', 'payment_confirmed');
+
+        if (lockError) {
+          console.log('Could not lock quote, may already be processing');
         }
 
-        console.log('PaymentSuccess - Processando shipment:', shipment.id);
+        // 5. Extract data from temp_quote
+        const senderData = tempQuote.sender_data as any;
+        const recipientData = tempQuote.recipient_data as any;
+        const packageData = tempQuote.package_data as any;
+        const quoteOptions = tempQuote.quote_options as any;
+        const userId = tempQuote.user_id;
 
-        // Update shipment status to paid
-        const paymentMethod = isAsaas ? 'ASAAS' : 'STRIPE';
-        const { data: updatedShipment, error: updateError } = await supabase
-          .from('shipments')
-          .update({
-            status: 'PAYMENT_CONFIRMED',
-            payment_data: {
-              method: paymentMethod,
-              session_id: paymentId,
-              external_reference: externalReference || null,
-              amount: shipment.quote_data?.shippingQuote?.economicPrice || shipment.quote_data?.totalPrice || 0,
-              status: 'PAID'
-            },
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', shipment.id)
+        console.log('Creating shipment with data:', { senderData, recipientData, packageData });
+
+        // 6. Create sender address
+        const { data: senderAddress, error: senderError } = await supabase
+          .from('addresses')
+          .insert([{
+            name: senderData.name || 'Remetente',
+            street: senderData.street || '',
+            number: senderData.number || '',
+            complement: senderData.complement || null,
+            neighborhood: senderData.neighborhood || '',
+            city: senderData.city || '',
+            state: senderData.state || '',
+            cep: senderData.cep || '',
+            address_type: 'sender',
+            user_id: userId
+          }])
           .select()
           .single();
 
-        if (updateError) {
-          throw updateError;
+        if (senderError) {
+          console.error('Error creating sender address:', senderError);
+          throw new Error('Erro ao criar endereço do remetente');
         }
 
-        setTrackingCode(updatedShipment?.tracking_code || '');
-        setPaymentConfirmed(true);
+        // 7. Create recipient address
+        const { data: recipientAddress, error: recipientError } = await supabase
+          .from('addresses')
+          .insert([{
+            name: recipientData.name || 'Destinatário',
+            street: recipientData.street || '',
+            number: recipientData.number || '',
+            complement: recipientData.complement || null,
+            neighborhood: recipientData.neighborhood || '',
+            city: recipientData.city || '',
+            state: recipientData.state || '',
+            cep: recipientData.cep || '',
+            address_type: 'recipient',
+            user_id: userId
+          }])
+          .select()
+          .single();
 
-        // Salvar remetente automaticamente após pagamento aprovado se houver dados
-        const storedShipmentData = JSON.parse(sessionStorage.getItem('currentShipment') || localStorage.getItem('currentShipment_backup') || '{}');
-        if (storedShipmentData.senderData) {
-          try {
-            console.log('Salvando remetente aprovado:', storedShipmentData.senderData);
-            const senderSaved = await saveApprovedSender(storedShipmentData.senderData, true);
-            if (senderSaved) {
-              console.log('Remetente salvo com sucesso como padrão');
-            }
-          } catch (error) {
-            console.error('Erro ao salvar remetente aprovado:', error);
-            // Não bloquear o fluxo por erro no salvamento do remetente
-          }
+        if (recipientError) {
+          console.error('Error creating recipient address:', recipientError);
+          throw new Error('Erro ao criar endereço do destinatário');
         }
 
-        // Dispatch webhook to N8n with consolidated data
-        const storedDocumentData = JSON.parse(sessionStorage.getItem('documentData') || '{}');
-        const webhookPayload = {
-          shipmentId: shipment.id,
-          paymentData: {
-            method: paymentMethod,
-            payment_id: paymentId,
-            external_reference: externalReference || null,
-            amount: typeof updatedShipment.payment_data === 'object' && updatedShipment.payment_data !== null ? 
-              (updatedShipment.payment_data as any).amount || 0 : 0,
-            status: 'PAID'
+        // 8. Generate tracking code
+        const newTrackingCode = `CFX${new Date().getFullYear()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+        // 9. Create shipment
+        const shipmentData = {
+          user_id: userId,
+          tracking_code: newTrackingCode,
+          sender_address_id: senderAddress.id,
+          recipient_address_id: recipientAddress.id,
+          quote_data: {
+            ...quoteOptions,
+            externalReference: externalReference,
+            paymentConfirmed: true,
+            paymentProvider: 'asaas'
           },
-          documentData: storedDocumentData,
-          selectedQuote: updatedShipment.quote_data || {},
-          shipmentData: {
-            id: shipment.id,
-            quoteData: updatedShipment.quote_data,
-            weight: shipment.weight,
-            totalPrice: typeof updatedShipment.payment_data === 'object' && updatedShipment.payment_data !== null ? 
-              (updatedShipment.payment_data as any).amount || 0 : 0,
-            ...storedShipmentData
+          selected_option: quoteOptions?.selectedOption || 'standard',
+          pickup_option: quoteOptions?.pickupOption || 'dropoff',
+          weight: packageData?.weight || 1,
+          length: packageData?.length || 20,
+          width: packageData?.width || 20,
+          height: packageData?.height || 20,
+          format: packageData?.format || 'caixa',
+          status: 'PAID',
+          payment_data: {
+            method: quoteOptions?.paymentMethod || 'asaas',
+            status: 'paid',
+            paymentId: quoteOptions?.paymentId,
+            externalReference: externalReference,
+            amount: quoteOptions?.paymentAmount || quoteOptions?.totalPrice,
+            paidAt: quoteOptions?.paymentConfirmedAt || new Date().toISOString(),
+            provider: 'asaas'
           }
         };
 
-        console.log('Dispatching webhook with payload:', webhookPayload);
+        const { data: newShipment, error: shipmentError } = await supabase
+          .from('shipments')
+          .insert([shipmentData])
+          .select()
+          .single();
 
-        const { data: webhookResult, error: webhookError } = await supabase.functions
-          .invoke('webhook-dispatch', {
-            body: webhookPayload
-          });
-
-        if (webhookError) {
-          console.error('Webhook dispatch error:', webhookError);
-          toast({
-            title: "Atenção",
-            description: "Pagamento confirmado, mas houve problema na comunicação com o sistema N8n.",
-            variant: "destructive"
-          });
-        } else {
-          console.log('Webhook dispatched successfully to N8n:', webhookResult);
-          setWebhookDispatched(true);
-          toast({
-            title: "Sucesso",
-            description: "Pagamento confirmado e dados enviados para o N8n!",
-          });
+        if (shipmentError) {
+          console.error('Error creating shipment:', shipmentError);
+          throw new Error('Erro ao criar remessa');
         }
 
-        // Clean up session storage and localStorage backup
-        sessionStorage.removeItem('currentShipment');
-        sessionStorage.removeItem('documentData');
-        localStorage.removeItem('currentShipment_backup');
-        localStorage.removeItem('shipmentData_stripe_session');
+        console.log('Shipment created:', newShipment.id);
+        setTrackingCode(newTrackingCode);
+        setShipmentCreated(true);
 
-      } catch (error) {
-        console.error('Error processing Stripe payment success:', error);
+        // 10. Update temp_quote to processed
+        await supabase
+          .from('temp_quotes')
+          .update({ status: 'processed', updated_at: new Date().toISOString() })
+          .eq('id', tempQuote.id);
+
+        // 11. Create status history
+        await supabase
+          .from('shipment_status_history')
+          .insert([{
+            shipment_id: newShipment.id,
+            status: 'PAID',
+            observacoes: 'Pagamento confirmado via Asaas. Remessa criada com sucesso.'
+          }]);
+
+        // 12. Save sender if applicable
+        if (senderData) {
+          try {
+            await saveApprovedSender(senderData, true);
+            console.log('Sender saved successfully');
+          } catch (e) {
+            console.error('Error saving sender:', e);
+          }
+        }
+
+        // 13. Dispatch webhook to N8N for label generation
+        const webhookPayload = {
+          event: 'shipment.created',
+          shipmentId: newShipment.id,
+          trackingCode: newTrackingCode,
+          paymentData: {
+            method: 'asaas',
+            externalReference: externalReference,
+            amount: quoteOptions?.paymentAmount || quoteOptions?.totalPrice,
+            status: 'paid'
+          },
+          senderData: {
+            name: senderData.name,
+            document: senderData.document,
+            email: senderData.email,
+            phone: senderData.phone,
+            cep: senderData.cep,
+            street: senderData.street,
+            number: senderData.number,
+            complement: senderData.complement,
+            neighborhood: senderData.neighborhood,
+            city: senderData.city,
+            state: senderData.state
+          },
+          recipientData: {
+            name: recipientData.name,
+            document: recipientData.document,
+            email: recipientData.email,
+            phone: recipientData.phone,
+            cep: recipientData.cep,
+            street: recipientData.street,
+            number: recipientData.number,
+            complement: recipientData.complement,
+            neighborhood: recipientData.neighborhood,
+            city: recipientData.city,
+            state: recipientData.state
+          },
+          packageData: packageData,
+          quoteOptions: quoteOptions
+        };
+
+        try {
+          const { data: webhookResult, error: webhookError } = await supabase.functions
+            .invoke('webhook-dispatch', {
+              body: webhookPayload
+            });
+
+          if (webhookError) {
+            console.error('Webhook dispatch error:', webhookError);
+          } else {
+            console.log('Webhook dispatched successfully:', webhookResult);
+            setWebhookDispatched(true);
+          }
+        } catch (webhookErr) {
+          console.error('Error dispatching webhook:', webhookErr);
+        }
+
+        toast({
+          title: "Sucesso!",
+          description: "Sua remessa foi criada com sucesso!",
+        });
+
+      } catch (err: any) {
+        console.error('Error processing payment:', err);
+        setError(err.message || 'Erro ao processar pagamento');
         toast({
           title: "Erro",
-          description: "Houve um problema ao processar seu pagamento. Entre em contato conosco.",
+          description: err.message || "Houve um problema ao processar seu pagamento.",
           variant: "destructive"
         });
       } finally {
@@ -273,8 +334,8 @@ const PaymentSuccessAsaas = () => {
       }
     };
 
-    processPaymentSuccess();
-  }, [paymentId, navigate, toast, externalReference]);
+    processPaymentAndCreateShipment();
+  }, [externalReference, navigate, toast, saveApprovedSender]);
 
   const handleGoToDashboard = () => {
     navigate('/');
@@ -284,21 +345,42 @@ const PaymentSuccessAsaas = () => {
     navigate('/rastreamento');
   };
 
+  if (error && !paymentConfirmed) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-background/80 p-4 flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardContent className="pt-6 text-center">
+            <p className="text-destructive mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>
+              Tentar Novamente
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-background/80 p-4">
       <div className="max-w-2xl mx-auto">
         {/* Success Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="p-4 bg-green-500/10 rounded-full">
-              <CheckCircle className="h-12 w-12 text-green-500" />
-            </div>
+            {isProcessing ? (
+              <div className="p-4 bg-primary/10 rounded-full">
+                <Loader2 className="h-12 w-12 text-primary animate-spin" />
+              </div>
+            ) : (
+              <div className="p-4 bg-green-500/10 rounded-full">
+                <CheckCircle className="h-12 w-12 text-green-500" />
+              </div>
+            )}
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Pagamento Realizado com Sucesso!
+            {isProcessing ? "Processando Pagamento..." : "Pagamento Realizado com Sucesso!"}
           </h1>
           <p className="text-muted-foreground">
-            Seus dados foram enviados para o N8n para processamento
+            {isProcessing ? "Aguarde enquanto criamos sua remessa" : "Sua remessa foi criada e está pronta"}
           </p>
         </div>
 
@@ -322,33 +404,32 @@ const PaymentSuccessAsaas = () => {
             )}
 
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">
-                Pagamento {paymentSource === 'asaas' ? 'Asaas' : 'Stripe'}
-              </span>
-              <Badge variant="default" className="bg-green-500">
-                {paymentConfirmed ? "Confirmado" : "Processando..."}
+              <span className="text-muted-foreground">Pagamento Asaas</span>
+              <Badge variant="default" className={paymentConfirmed ? "bg-green-500" : ""}>
+                {paymentConfirmed ? "Confirmado" : "Verificando..."}
               </Badge>
             </div>
             
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Webhook N8n</span>
-              <Badge variant={webhookDispatched ? "default" : "secondary"} 
-                     className={webhookDispatched ? "bg-green-500" : ""}>
-                {isProcessing ? "Enviando..." : webhookDispatched ? "Enviado" : "Aguardando"}
+              <span className="text-muted-foreground">Remessa</span>
+              <Badge variant={shipmentCreated ? "default" : "secondary"} 
+                     className={shipmentCreated ? "bg-green-500" : ""}>
+                {isProcessing ? "Criando..." : shipmentCreated ? "Criada" : "Aguardando"}
               </Badge>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Status da Remessa</span>
-              <Badge variant="secondary">
-                {isProcessing ? "Processando..." : "Pago - Aguardando Etiqueta"}
+              <span className="text-muted-foreground">Webhook N8n</span>
+              <Badge variant={webhookDispatched ? "default" : "secondary"} 
+                     className={webhookDispatched ? "bg-green-500" : ""}>
+                {webhookDispatched ? "Enviado" : "Pendente"}
               </Badge>
             </div>
 
-            {paymentId && (
+            {externalReference && (
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">ID do Pagamento</span>
-                <span className="text-sm font-mono">{paymentId.slice(-12)}</span>
+                <span className="text-muted-foreground">Referência</span>
+                <span className="text-sm font-mono">{externalReference.slice(-12)}</span>
               </div>
             )}
           </CardContent>
@@ -361,37 +442,37 @@ const PaymentSuccessAsaas = () => {
           </CardHeader>
           <CardContent className="space-y-3">
              <div className="flex items-start gap-3">
-               <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                 <span className="text-xs font-semibold text-primary">1</span>
+               <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${paymentConfirmed ? 'bg-green-500' : 'bg-primary/10'}`}>
+                 <span className={`text-xs font-semibold ${paymentConfirmed ? 'text-white' : 'text-primary'}`}>1</span>
                </div>
                <div>
                  <p className="font-medium">Pagamento Confirmado</p>
                  <p className="text-sm text-muted-foreground">
-                   Seu pagamento via {paymentSource === 'asaas' ? 'Asaas' : 'Stripe'} foi processado com sucesso
+                   Seu pagamento via Asaas foi processado com sucesso
                  </p>
                </div>
              </div>
              
              <div className="flex items-start gap-3">
-               <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                 <span className="text-xs font-semibold text-primary">2</span>
+               <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${shipmentCreated ? 'bg-green-500' : 'bg-primary/10'}`}>
+                 <span className={`text-xs font-semibold ${shipmentCreated ? 'text-white' : 'text-primary'}`}>2</span>
                </div>
                <div>
-                 <p className="font-medium">Dados Enviados para N8n</p>
+                 <p className="font-medium">Remessa Criada</p>
                  <p className="text-sm text-muted-foreground">
-                   {webhookDispatched ? "Dados enviados com sucesso para processamento" : "Enviando dados consolidados..."}
+                   {shipmentCreated ? "Sua remessa foi registrada no sistema" : "Criando sua remessa..."}
                  </p>
                </div>
              </div>
              
              <div className="flex items-start gap-3">
-               <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                 <span className="text-xs font-semibold text-primary">3</span>
+               <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${webhookDispatched ? 'bg-green-500' : 'bg-primary/10'}`}>
+                 <span className={`text-xs font-semibold ${webhookDispatched ? 'text-white' : 'text-primary'}`}>3</span>
                </div>
                <div>
                  <p className="font-medium">Geração da Etiqueta</p>
                  <p className="text-sm text-muted-foreground">
-                   O sistema externo processará seus dados e gerará a etiqueta de envio
+                   {webhookDispatched ? "Dados enviados para geração da etiqueta" : "Aguardando envio para o sistema externo"}
                  </p>
                </div>
              </div>
@@ -403,6 +484,7 @@ const PaymentSuccessAsaas = () => {
           <Button 
             onClick={handleGoToDashboard}
             className="w-full h-12 text-base font-semibold"
+            disabled={isProcessing}
           >
             Voltar ao Início
             <ArrowRight className="h-4 w-4 ml-2" />
@@ -412,6 +494,7 @@ const PaymentSuccessAsaas = () => {
             variant="outline"
             onClick={handleTrackShipment}
             className="w-full h-12 text-base"
+            disabled={isProcessing || !trackingCode}
           >
             Rastrear Envio
           </Button>
