@@ -130,7 +130,8 @@ const AdminRemessas = () => {
   const [selectedShipmentLabel, setSelectedShipmentLabel] = useState<AdminShipment | null>(null);
   const [labelPersonalData, setLabelPersonalData] = useState<{senderPhone?: string; senderDocument?: string; recipientPhone?: string; recipientDocument?: string}>({});
 
-  // Estados para webhooks Jadlog (apenas cancelamento - inclusão é automática)
+  // Estados para webhooks Jadlog
+  const [sendingJadlogInclusao, setSendingJadlogInclusao] = useState<Record<string, boolean>>({});
   const [sendingJadlogCancelamento, setSendingJadlogCancelamento] = useState<Record<string, boolean>>({});
 
   // Função para enviar dados B2B via WhatsApp webhook
@@ -890,7 +891,124 @@ const AdminRemessas = () => {
     }
   };
 
-  // Inclusão Jadlog removida - agora é automática via cte-webhook
+  // Função para enviar webhook Jadlog Inclusão (manual)
+  const handleSendJadlogInclusao = async (shipment: AdminShipment) => {
+    setSendingJadlogInclusao(prev => ({ ...prev, [shipment.id]: true }));
+    
+    try {
+      console.log('📤 [JADLOG INCLUSÃO] Enviando webhook para remessa:', shipment.tracking_code);
+      
+      // Extrair dados de remetente e destinatário do quote_data
+      const addressData = (shipment.quote_data as any)?.addressData || {};
+      const senderData = addressData.sender || {};
+      const recipientData = addressData.recipient || {};
+      
+      const webhookData = {
+        shipment_id: shipment.id,
+        tracking_code: shipment.tracking_code || '',
+        carrier_order_id: shipment.carrier_order_id || '',
+        cte_chave: shipment.cte_emission?.chave_cte || shipment.cte_key || '',
+        cte_numero: shipment.cte_emission?.numero_cte || '',
+        cte_serie: shipment.cte_emission?.serie || '',
+        cte_uuid: shipment.cte_emission?.uuid_cte || '',
+        
+        // Dados do remetente
+        sender_name: shipment.sender_address?.name || '',
+        sender_document: senderData.document || '',
+        sender_phone: senderData.phone || '',
+        sender_email: senderData.email || '',
+        sender_street: shipment.sender_address?.street || '',
+        sender_number: shipment.sender_address?.number || '',
+        sender_complement: shipment.sender_address?.complement || '',
+        sender_neighborhood: shipment.sender_address?.neighborhood || '',
+        sender_city: shipment.sender_address?.city || '',
+        sender_state: shipment.sender_address?.state || '',
+        sender_cep: shipment.sender_address?.cep || '',
+        
+        // Dados do destinatário
+        recipient_name: shipment.recipient_address?.name || '',
+        recipient_document: recipientData.document || '',
+        recipient_phone: recipientData.phone || '',
+        recipient_email: recipientData.email || '',
+        recipient_street: shipment.recipient_address?.street || '',
+        recipient_number: shipment.recipient_address?.number || '',
+        recipient_complement: shipment.recipient_address?.complement || '',
+        recipient_neighborhood: shipment.recipient_address?.neighborhood || '',
+        recipient_city: shipment.recipient_address?.city || '',
+        recipient_state: shipment.recipient_address?.state || '',
+        recipient_cep: shipment.recipient_address?.cep || '',
+        
+        // Dados da remessa
+        weight: String(shipment.weight || 0),
+        length: String(shipment.length || 0),
+        width: String(shipment.width || 0),
+        height: String(shipment.height || 0),
+        
+        // Transportadora
+        selected_carrier: (() => {
+          const directCarrier = (shipment.quote_data as any)?.deliveryDetails?.selectedCarrier;
+          if (directCarrier && (directCarrier === 'jadlog' || directCarrier === 'magalog')) {
+            return directCarrier;
+          }
+          return 'jadlog';
+        })(),
+        
+        // Número único do documento
+        nrDoc: `DEC-${shipment.id.substring(0, 8).toUpperCase()}`,
+        
+        webhook_type: 'inclusao',
+        sent_at: new Date().toISOString()
+      };
+      
+      const response = await fetch('https://n8n.grupoconfix.com/webhook-test/f5d4f949-29fd-4200-b7a1-b9a140e8c16c', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(webhookData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ [JADLOG INCLUSÃO] Resposta:', result);
+      
+      // Se retornou código da Jadlog, atualizar a remessa
+      if (result.codigo) {
+        const { error: updateError } = await supabase
+          .from('shipments')
+          .update({
+            carrier_order_id: result.codigo,
+            tracking_code: result.codigo
+          })
+          .eq('id', shipment.id);
+        
+        if (updateError) {
+          console.error('Erro ao atualizar carrier_order_id:', updateError);
+        }
+      }
+
+      toast({
+        title: "Inclusão Enviada",
+        description: `Webhook de inclusão enviado para ${shipment.tracking_code}`,
+      });
+
+      // Recarregar remessas para atualizar o estado
+      loadShipments();
+
+    } catch (error: any) {
+      console.error('❌ [JADLOG INCLUSÃO] Erro:', error);
+      toast({
+        title: "Erro na Inclusão",
+        description: `Erro ao enviar webhook: ${error.message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setSendingJadlogInclusao(prev => ({ ...prev, [shipment.id]: false }));
+    }
+  };
 
   // Função para enviar webhook Jadlog Cancelamento
   const handleSendJadlogCancelamento = async (shipment: AdminShipment) => {
@@ -1430,9 +1548,11 @@ const AdminRemessas = () => {
                   onDownloadLabel={handleDownloadLabel}
                   onSendWebhook={handleSendWebhook}
                   onSendB2BWhatsApp={handleSendB2BWhatsAppWebhook}
+                  onSendJadlogInclusao={handleSendJadlogInclusao}
                   onSendJadlogCancelamento={handleSendJadlogCancelamento}
                   sendingWebhook={sendingWebhook[shipment.id] || false}
                   sendingB2BWhatsapp={sendingB2BWhatsapp[shipment.id] || false}
+                  sendingJadlogInclusao={sendingJadlogInclusao[shipment.id] || false}
                   sendingJadlogCancelamento={sendingJadlogCancelamento[shipment.id] || false}
                   webhookStatus={webhookStatuses[shipment.id]}
                   getStatusBadge={getStatusBadge}
