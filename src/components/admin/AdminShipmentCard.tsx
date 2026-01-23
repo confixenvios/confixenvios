@@ -24,9 +24,11 @@ interface AdminShipmentCardProps {
   onDownloadLabel: (url: string, trackingCode: string) => void;
   onSendWebhook: (shipment: AdminShipment) => void;
   onSendB2BWhatsApp: (shipment: AdminShipment) => void;
+  onSendJadlogInclusao?: (shipment: AdminShipment) => void;
   onSendJadlogCancelamento?: (shipment: AdminShipment) => void;
   sendingWebhook: boolean;
   sendingB2BWhatsapp: boolean;
+  sendingJadlogInclusao?: boolean;
   sendingJadlogCancelamento?: boolean;
   webhookStatus?: 'sent' | 'pending' | 'error';
   getStatusBadge: (status: string) => JSX.Element;
@@ -41,9 +43,11 @@ const AdminShipmentCard = ({
   onDownloadLabel,
   onSendWebhook,
   onSendB2BWhatsApp,
+  onSendJadlogInclusao,
   onSendJadlogCancelamento,
   sendingWebhook,
   sendingB2BWhatsapp,
+  sendingJadlogInclusao,
   sendingJadlogCancelamento,
   webhookStatus,
   getStatusBadge,
@@ -401,7 +405,23 @@ const AdminShipmentCard = ({
             </Button>
           )}
 
-          {/* Jadlog Inclusão removido - agora é automático após CTe aprovado */}
+          {/* Jadlog Inclusão - para remessas nacionais com CTE aprovado */}
+          {!isB2BExpresso && isNacionalLabel && shipment.cte_emission?.status === 'aprovado' && onSendJadlogInclusao && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 border-blue-300 text-blue-600 hover:bg-blue-50"
+              onClick={() => onSendJadlogInclusao(shipment)}
+              disabled={sendingJadlogInclusao}
+            >
+              {sendingJadlogInclusao ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <Truck className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              Inclusão
+            </Button>
+          )}
 
           {/* Jadlog Cancelamento - Only for Jadlog shipments with CTE approved */}
           {!isB2BExpresso && isNacionalLabel && shipment.cte_emission?.status === 'aprovado' && onSendJadlogCancelamento && (
