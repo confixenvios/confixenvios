@@ -273,7 +273,7 @@ const Header = () => {
                 <button
                   key={link.href}
                   onClick={() => handleNavClick(link.href, link.isRoute)}
-                  className="relative px-4 py-2 text-[15px] font-medium text-foreground/80 hover:text-primary transition-colors duration-200 rounded-lg hover:bg-primary/5 group"
+                  className="relative px-4 py-2 text-[15px] font-medium text-foreground hover:text-primary transition-colors duration-200 rounded-lg hover:bg-primary/5 group"
                 >
                   {link.label}
                   <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-1/2 rounded-full" />
