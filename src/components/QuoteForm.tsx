@@ -2115,18 +2115,26 @@ const QuoteForm = () => {
                   </div>
 
                   <div
-                    className={`p-4 border rounded-lg transition-all duration-200 opacity-50 cursor-not-allowed ${
-                      "border-border"
+                    className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 hover-scale ${
+                      pickupOption === "pickup"
+                        ? "border-primary bg-accent/20 ring-2 ring-primary"
+                        : "border-border hover:border-primary/50"
                     }`}
+                    onClick={() => setPickupOption("pickup")}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <div className="h-4 w-4 rounded-full border-2 border-muted-foreground flex items-center justify-center">
+                        <div className={`w-5 h-5 min-w-5 min-h-5 rounded-full border-2 flex items-center justify-center ${
+                          pickupOption === "pickup" ? "border-primary" : "border-muted-foreground"
+                        }`}>
+                          {pickupOption === "pickup" && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                          )}
                         </div>
                         <div>
-                          <h4 className="font-medium text-muted-foreground">Coletar no meu local</h4>
+                          <h4 className="font-medium">Coletar no meu local</h4>
                           <p className="text-sm text-muted-foreground">
-                            Buscamos em seu endereço (Região Metropolitana de Goiânia e Anápolis) - Em breve
+                            Buscamos em seu endereço (Região Metropolitana de Goiânia e Anápolis)
                           </p>
                         </div>
                       </div>
