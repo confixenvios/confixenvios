@@ -1,0 +1,172 @@
+Table users {
+  id uuid [pk]
+  email varchar [unique]
+  password_hash varchar
+  first_name varchar
+  last_name varchar
+  phone varchar
+  document varchar
+  inscricao_estadual varchar
+  status varchar [default: 'active']
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table user_roles {
+  id uuid [pk]
+  user_id uuid [ref: > users.id]
+  role varchar
+  created_at timestamp [default: `now()`]
+}
+
+Table saved_contacts {
+  id uuid [pk]
+  user_id uuid [ref: > users.id]
+  contact_type varchar // 'sender', 'recipient', 'pickup'
+  name varchar
+  document varchar
+  phone varchar
+  email varchar
+  inscricao_estadual varchar
+  cep varchar
+  street varchar
+  number varchar
+  complement varchar
+  neighborhood varchar
+  city varchar
+  state varchar
+  reference varchar
+  is_default boolean [default: false]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table orders {
+  id uuid [pk]
+  user_id uuid [ref: > users.id]
+  pickup_driver_id uuid [ref: > users.id]
+  pickup_address_id uuid [ref: > saved_contacts.id] // null se digitado avulso
+  tracking_code varchar [unique]
+  status varchar [default: 'PENDING']
+  origin varchar
+  document_type varchar
+  selected_option varchar
+  pickup_option varchar
+  format varchar
+  pricing_table_name varchar
+  quote_data jsonb
+  payment_data jsonb
+  label_pdf_url varchar
+  carrier_barcode varchar
+  carrier_order_id varchar
+
+  // Snapshot do remetente (dados fiscais)
+  sender_name varchar
+  sender_document varchar
+  sender_phone varchar
+  sender_email varchar
+  sender_inscricao_estadual varchar
+  sender_cep varchar
+  sender_street varchar
+  sender_number varchar
+  sender_complement varchar
+  sender_neighborhood varchar
+  sender_city varchar
+  sender_state varchar
+
+  // Snapshot do local de coleta (onde motorista busca)
+  pickup_name varchar
+  pickup_contact_name varchar
+  pickup_contact_phone varchar
+  pickup_cep varchar
+  pickup_street varchar
+  pickup_number varchar
+  pickup_complement varchar
+  pickup_neighborhood varchar
+  pickup_city varchar
+  pickup_state varchar
+  pickup_reference varchar
+
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table packages {
+  id uuid [pk]
+  order_id uuid [ref: > orders.id]
+  delivery_driver_id uuid [ref: > users.id]
+  delivery_address_id uuid [ref: > saved_contacts.id] // null se digitado avulso
+  package_number integer
+  eti_code varchar [unique]
+  status varchar [default: 'PENDING']
+  weight decimal
+  length decimal
+  width decimal
+  height decimal
+
+  // Snapshot do destinatário (cada volume pode ter destino diferente)
+  recipient_name varchar
+  recipient_document varchar
+  recipient_phone varchar
+  recipient_email varchar
+  recipient_inscricao_estadual varchar
+  recipient_cep varchar
+  recipient_street varchar
+  recipient_number varchar
+  recipient_complement varchar
+  recipient_neighborhood varchar
+  recipient_city varchar
+  recipient_state varchar
+
+  delivery_photo_url varchar
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table package_events {
+  id uuid [pk]
+  package_id uuid [ref: > packages.id]
+  created_by uuid [ref: > users.id]
+  event_type varchar
+  status varchar
+  description varchar
+  notes varchar
+  metadata jsonb
+  is_alert boolean [default: false]
+  created_at timestamp [default: `now()`]
+}
+
+Table fiscal_documents {
+  id uuid [pk]
+  order_id uuid [ref: > orders.id]
+  document_type varchar
+  document_key varchar [unique]
+  document_number varchar
+  series varchar
+  status varchar
+  reason varchar
+  xml_url varchar
+  pdf_url varchar
+  raw_payload jsonb
+  is_contingency boolean [default: false]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table quote_logs {
+  id uuid [pk]
+  user_id uuid [ref: > users.id]
+  origin_cep varchar
+  destination_cep varchar
+  total_weight decimal
+  total_cubic_volume decimal
+  packages_data jsonb
+  priority_used varchar
+  selected_table_name varchar
+  base_price decimal
+  final_price decimal
+  delivery_days integer
+  additionals_applied jsonb
+  all_options_analyzed jsonb
+  created_at timestamp [default: `now()`]
+}
