@@ -45,7 +45,7 @@ Table orders {
   id uuid [pk]
   user_id uuid [ref: > users.id]
   pickup_driver_id uuid [ref: > users.id]
-  pickup_address_id uuid [ref: > saved_contacts.id] // null se digitado avulso
+  pickup_address_id uuid [ref: > saved_contacts.id]
   tracking_code varchar [unique]
   status varchar [default: 'PENDING']
   origin varchar
@@ -60,7 +60,7 @@ Table orders {
   carrier_barcode varchar
   carrier_order_id varchar
 
-  // Snapshot do remetente (dados fiscais)
+  // Snapshot do remetente
   sender_name varchar
   sender_document varchar
   sender_phone varchar
@@ -74,7 +74,21 @@ Table orders {
   sender_city varchar
   sender_state varchar
 
-  // Snapshot do local de coleta (onde motorista busca)
+  // Snapshot do destinatário
+  recipient_name varchar
+  recipient_document varchar
+  recipient_phone varchar
+  recipient_email varchar
+  recipient_inscricao_estadual varchar
+  recipient_cep varchar
+  recipient_street varchar
+  recipient_number varchar
+  recipient_complement varchar
+  recipient_neighborhood varchar
+  recipient_city varchar
+  recipient_state varchar
+
+  // Snapshot do local de coleta
   pickup_name varchar
   pickup_contact_name varchar
   pickup_contact_phone varchar
@@ -95,7 +109,6 @@ Table packages {
   id uuid [pk]
   order_id uuid [ref: > orders.id]
   delivery_driver_id uuid [ref: > users.id]
-  delivery_address_id uuid [ref: > saved_contacts.id] // null se digitado avulso
   package_number integer
   eti_code varchar [unique]
   status varchar [default: 'PENDING']
@@ -103,21 +116,6 @@ Table packages {
   length decimal
   width decimal
   height decimal
-
-  // Snapshot do destinatário (cada volume pode ter destino diferente)
-  recipient_name varchar
-  recipient_document varchar
-  recipient_phone varchar
-  recipient_email varchar
-  recipient_inscricao_estadual varchar
-  recipient_cep varchar
-  recipient_street varchar
-  recipient_number varchar
-  recipient_complement varchar
-  recipient_neighborhood varchar
-  recipient_city varchar
-  recipient_state varchar
-
   delivery_photo_url varchar
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
