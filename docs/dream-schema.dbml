@@ -65,6 +65,7 @@ Table addresses {
   city varchar
   state varchar
   reference varchar
+  is_active boolean [default: true]
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
 }
@@ -77,6 +78,7 @@ Table saved_contacts {
   name varchar
   document varchar
   document_type varchar
+  state_registration_number varchar
   phone varchar
   email varchar
   is_default boolean [default: false]
@@ -164,6 +166,8 @@ Table temp_quote {
   session_id varchar
   origin_cep varchar
   destination_cep varchar
+  carrier_id uuid [ref: > carriers.id]
+  external_id uuid
   total_weight decimal
   total_volume decimal
   packages_data jsonb
