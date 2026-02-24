@@ -1,13 +1,30 @@
 Table users {
   id uuid [pk]
+  username varchar
   email varchar [unique]
   password_hash varchar
   first_name varchar
   last_name varchar
   phone varchar
-  document varchar
-  inscricao_estadual varchar
+  document varchar [not null]
+  state_registration_number varchar
   status varchar [default: 'active']
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table roles {
+  id uuid [pk]
+  name varchar [unique, not null]
+  description varchar
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table permissions {
+  id uuid [pk]
+  name varchar [unique, not null]
+  description varchar
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
 }
@@ -15,27 +32,53 @@ Table users {
 Table user_roles {
   id uuid [pk]
   user_id uuid [ref: > users.id]
-  role varchar
+  role_id uuid [ref: > roles.id]
   created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table role_permissions {
+  id uuid [pk]
+  role_id uuid [ref: > roles.id]
+  permission_id uuid [ref: > permissions.id]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table carriers {
+  id uuid [pk]
+  name varchar [unique, not null]
+  code varchar [unique, not null]
+  cnpj varchar
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table addresses {
+  id uuid [pk]
+  cep varchar
+  street varchar
+  number varchar
+  complement varchar
+  district varchar
+  city varchar
+  state varchar
+  reference varchar
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
 }
 
 Table saved_contacts {
   id uuid [pk]
   user_id uuid [ref: > users.id]
-  contact_type varchar // 'sender', 'recipient', 'pickup'
+  address_id uuid [ref: > addresses.id]
+  contact_type varchar
   name varchar
   document varchar
+  document_type varchar
   phone varchar
   email varchar
-  inscricao_estadual varchar
-  cep varchar
-  street varchar
-  number varchar
-  complement varchar
-  neighborhood varchar
-  city varchar
-  state varchar
-  reference varchar
   is_default boolean [default: false]
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
@@ -44,8 +87,9 @@ Table saved_contacts {
 Table orders {
   id uuid [pk]
   user_id uuid [ref: > users.id]
-  pickup_driver_id uuid [ref: > users.id]
-  pickup_address_id uuid [ref: > saved_contacts.id]
+  carrier_id uuid [ref: > carriers.id]
+  is_sender_address boolean [not null]
+  pickup_driver_id uuid [ref: > users.id, null]
   tracking_code varchar [unique]
   status varchar [default: 'PENDING']
   origin varchar
@@ -59,48 +103,9 @@ Table orders {
   label_pdf_url varchar
   carrier_barcode varchar
   carrier_order_id varchar
-
-  // Snapshot do remetente
-  sender_name varchar
-  sender_document varchar
-  sender_phone varchar
-  sender_email varchar
-  sender_inscricao_estadual varchar
-  sender_cep varchar
-  sender_street varchar
-  sender_number varchar
-  sender_complement varchar
-  sender_neighborhood varchar
-  sender_city varchar
-  sender_state varchar
-
-  // Snapshot do destinatário
-  recipient_name varchar
-  recipient_document varchar
-  recipient_phone varchar
-  recipient_email varchar
-  recipient_inscricao_estadual varchar
-  recipient_cep varchar
-  recipient_street varchar
-  recipient_number varchar
-  recipient_complement varchar
-  recipient_neighborhood varchar
-  recipient_city varchar
-  recipient_state varchar
-
-  // Snapshot do local de coleta
-  pickup_name varchar
-  pickup_contact_name varchar
-  pickup_contact_phone varchar
-  pickup_cep varchar
-  pickup_street varchar
-  pickup_number varchar
-  pickup_complement varchar
-  pickup_neighborhood varchar
-  pickup_city varchar
-  pickup_state varchar
-  pickup_reference varchar
-
+  address_sender_id uuid [ref: > addresses.id]
+  address_recipient_id uuid [ref: > addresses.id]
+  address_pickup_id uuid [ref: > addresses.id, null]
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
 }
@@ -108,9 +113,9 @@ Table orders {
 Table packages {
   id uuid [pk]
   order_id uuid [ref: > orders.id]
-  delivery_driver_id uuid [ref: > users.id]
-  package_number integer
-  eti_code varchar [unique]
+  delivery_driver_id uuid [ref: > users.id, null]
+  package_number integer [unique]
+  external_label_code varchar [unique]
   status varchar [default: 'PENDING']
   weight decimal
   length decimal
@@ -125,6 +130,8 @@ Table package_events {
   id uuid [pk]
   package_id uuid [ref: > packages.id]
   created_by uuid [ref: > users.id]
+  pickup_driver_id uuid [ref: > users.id, null]
+  delivery_driver_id uuid [ref: > users.id, null]
   event_type varchar
   status varchar
   description varchar
@@ -151,20 +158,18 @@ Table fiscal_documents {
   updated_at timestamp [default: `now()`]
 }
 
-Table quote_logs {
+Table temp_quote {
   id uuid [pk]
-  user_id uuid [ref: > users.id]
+  user_id uuid [ref: > users.id, null]
+  session_id varchar
   origin_cep varchar
   destination_cep varchar
   total_weight decimal
-  total_cubic_volume decimal
+  total_volume decimal
   packages_data jsonb
-  priority_used varchar
-  selected_table_name varchar
-  base_price decimal
-  final_price decimal
-  delivery_days integer
-  additionals_applied jsonb
-  all_options_analyzed jsonb
+  quote_options jsonb
+  status varchar [default: 'active']
+  expires_at timestamp
   created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
 }
