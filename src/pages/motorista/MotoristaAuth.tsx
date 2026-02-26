@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Truck, User, Lock, ArrowLeft, MapPin, Package } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient, ApiError, LoginResponse } from '@/services/apiClient';
 import { toast } from 'sonner';
 import confixLogo from '@/assets/confix-logo-black.png';
 
@@ -30,38 +30,41 @@ const MotoristaAuth = () => {
     setLoading(true);
 
     try {
-      // Login via função de autenticação do banco
-      const { data, error } = await supabase.rpc('authenticate_motorista_username', {
-        p_username: formData.username.toLowerCase().trim(),
-        p_password: formData.senha
-      });
+      const data = await apiClient.post<LoginResponse>(
+        '/auth/login',
+        {
+          email: formData.username.toLowerCase().trim(),
+          password: formData.senha,
+        },
+        { skipAuth: true },
+      );
 
-      if (error) {
-        console.error('Erro na autenticação:', error);
-        throw new Error('Usuário ou senha incorretos');
+      apiClient.setToken(data.access_token);
+      const payload = apiClient.decodeToken();
+
+      if (!payload) {
+        throw new Error('Erro ao processar autenticação');
       }
 
-      if (!data || data.length === 0) {
-        throw new Error('Usuário ou senha incorretos');
-      }
-
-      const motorista = data[0];
-
-      if (motorista.status !== 'ativo') {
+      if (payload.status !== 'active' && payload.status !== 'ativo') {
+        apiClient.clearToken();
         throw new Error('Sua conta ainda não foi ativada. Aguarde aprovação do administrador.');
       }
 
       // Salvar dados do motorista no localStorage
-      localStorage.setItem('motorista_id', motorista.id);
-      localStorage.setItem('motorista_nome', motorista.nome);
-      localStorage.setItem('motorista_username', motorista.username);
+      localStorage.setItem('motorista_id', payload.sub);
+      localStorage.setItem('motorista_nome', payload.first_name);
+      localStorage.setItem('motorista_username', formData.username.toLowerCase().trim());
 
-      toast.success(`Bem-vindo, ${motorista.nome}!`);
+      toast.success(`Bem-vindo, ${payload.first_name}!`);
       navigate('/motorista/dashboard');
 
     } catch (error: any) {
       console.error('Erro no login:', error);
-      toast.error(error.message || 'Erro ao fazer login');
+      const message = error instanceof ApiError
+        ? error.message
+        : error.message || 'Erro ao fazer login';
+      toast.error(message);
     } finally {
       setLoading(false);
     }

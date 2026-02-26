@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Truck, Lock, User, Phone, FileText, AtSign } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient, ApiError, RegisterResponse } from '@/services/apiClient';
 import { toast } from 'sonner';
 
 const MotoristaRegistro = () => {
@@ -39,7 +39,6 @@ const MotoristaRegistro = () => {
   };
 
   const formatUsername = (value: string) => {
-    // Apenas letras minúsculas, números, pontos e underscores
     return value.toLowerCase().replace(/[^a-z0-9._]/g, '');
   };
 
@@ -78,48 +77,22 @@ const MotoristaRegistro = () => {
     try {
       console.log('🔄 Iniciando cadastro de motorista...');
 
-      // Verificar se username já existe
-      const { data: existingUser } = await supabase
-        .from('motoristas')
-        .select('id')
-        .eq('username', formData.username.toLowerCase())
-        .maybeSingle();
-
-      if (existingUser) {
-        throw new Error('Este nome de usuário já está em uso. Escolha outro.');
-      }
-
-      // Verificar se CPF já existe
-      const { data: existingCPF } = await supabase
-        .from('motoristas')
-        .select('id')
-        .eq('cpf', formData.cpf)
-        .maybeSingle();
-
-      if (existingCPF) {
-        throw new Error('Este CPF já está cadastrado.');
-      }
-
-      // Inserir motorista na tabela (senha será hasheada pelo trigger)
-      const { data, error } = await supabase
-        .from('motoristas')
-        .insert({
+      await apiClient.post<RegisterResponse>(
+        '/users',
+        {
+          role: 'driver',
+          email: formData.username.toLowerCase(), // username como identificador
+          password: formData.senha,
+          first_name: formData.nome,
+          phone: formData.telefone.replace(/\D/g, ''),
+          document: formData.cpf.replace(/\D/g, ''),
+          document_type: 'pf',
           username: formData.username.toLowerCase(),
-          nome: formData.nome,
-          cpf: formData.cpf,
-          telefone: formData.telefone,
-          senha: formData.senha,
-          status: 'pendente'
-        })
-        .select()
-        .single();
+        },
+        { skipAuth: true },
+      );
 
-      if (error) {
-        console.error('❌ Erro ao cadastrar:', error);
-        throw new Error('Erro ao realizar cadastro. Tente novamente.');
-      }
-
-      console.log('✅ Motorista cadastrado:', data.id);
+      console.log('✅ Motorista cadastrado com sucesso');
       
       toast.success('Cadastro realizado com sucesso!');
       toast.info('Aguarde a aprovação do administrador para acessar o sistema.');
@@ -127,7 +100,10 @@ const MotoristaRegistro = () => {
 
     } catch (error: any) {
       console.error('❌ Erro ao cadastrar motorista:', error);
-      toast.error(error.message || 'Erro ao realizar cadastro');
+      const message = error instanceof ApiError
+        ? error.message
+        : error.message || 'Erro ao realizar cadastro';
+      toast.error(message);
     } finally {
       setLoading(false);
     }

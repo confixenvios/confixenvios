@@ -136,7 +136,7 @@ export interface LoginResponse {
 }
 
 export interface RegisterRequest {
-  role: 'customer';
+  role: 'customer' | 'driver';
   email: string;
   password: string;
   first_name: string;
