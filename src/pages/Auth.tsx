@@ -132,7 +132,7 @@ const Auth = () => {
         signupData.lastName,
         signupData.phone,
         signupData.document,
-        signupData.inscricaoEstadual || 'ISENTO',
+        signupData.isIsento ? '' : signupData.inscricaoEstadual,
         docType,
       );
       
