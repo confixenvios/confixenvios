@@ -172,7 +172,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           phone: phone || undefined,
           document,
           document_type: documentType,
-          state_registration_number: (inscricaoEstadual && inscricaoEstadual !== 'ISENTO') ? inscricaoEstadual : undefined,
+          state_registration_number: (inscricaoEstadual && inscricaoEstadual !== 'ISENTO') ? inscricaoEstadual : null,
         };
 
         await apiClient.post<RegisterResponse>('/users', body, { skipAuth: true });
