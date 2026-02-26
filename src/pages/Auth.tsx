@@ -26,7 +26,7 @@ const Auth = () => {
   
   // Login form
   const [loginData, setLoginData] = useState({
-    email: '',
+    login: '',
     password: ''
   });
   
@@ -56,14 +56,14 @@ const Auth = () => {
     setIsLoading(true);
     setError('');
 
-    if (!loginData.email || !loginData.password) {
+    if (!loginData.login || !loginData.password) {
       setError('Preencha todos os campos');
       setIsLoading(false);
       return;
     }
 
     try {
-      const { error } = await signIn(loginData.email, loginData.password);
+      const { error } = await signIn(loginData.login, loginData.password);
       
       if (error) {
         if (error.message.includes('Invalid credentials')) {
@@ -255,15 +255,15 @@ const Auth = () => {
                 <TabsContent value="login" className="space-y-4">
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="login-email">Email</Label>
+                      <Label htmlFor="login-email">Email ou Usuário</Label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="login-email"
-                          type="email"
-                          placeholder="seu@email.com"
-                          value={loginData.email}
-                          onChange={(e) => setLoginData(prev => ({ ...prev, email: e.target.value }))}
+                          type="text"
+                          placeholder="seu@email.com ou nome_de_usuario"
+                          value={loginData.login}
+                          onChange={(e) => setLoginData(prev => ({ ...prev, login: e.target.value }))}
                           disabled={isLoading}
                           className="pl-10"
                         />
