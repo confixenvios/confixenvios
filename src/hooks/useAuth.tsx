@@ -14,8 +14,10 @@ import {
 
 export interface AuthUser {
   id: string;
-  email: string;
-  first_name: string;
+  email: string | null;
+  username: string | null;
+  first_name: string | null;
+  last_name: string | null;
   role: string;
   status: string;
   created_at?: string;
@@ -75,7 +77,9 @@ function buildUserFromToken(payload: JwtPayload): AuthUser {
   return {
     id: payload.sub,
     email: payload.email,
+    username: payload.username,
     first_name: payload.first_name,
+    last_name: payload.last_name,
     role: payload.role,
     status: payload.status,
   };
@@ -85,7 +89,7 @@ function buildProfileFromToken(payload: JwtPayload): Profile {
   return {
     id: payload.sub,
     first_name: payload.first_name || null,
-    last_name: null,
+    last_name: payload.last_name || null,
     email: payload.email || null,
     phone: null,
     document: null,
@@ -123,11 +127,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // ─── Sign In ──────────────────────────────────────────────────────────────
 
-  const signIn = useCallback(async (email: string, password: string) => {
+  const signIn = useCallback(async (login: string, password: string) => {
     try {
       const data = await apiClient.post<LoginResponse>(
         '/auth/login',
-        { email, password },
+        { login, password },
         { skipAuth: true },
       );
 

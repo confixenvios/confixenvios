@@ -93,6 +93,8 @@ import B2BRastreamento from "./pages/b2b/B2BRastreamento";
 import PainelEnderecos from "./pages/painel/PainelEnderecos";
 import PainelCadastros from "./pages/painel/PainelCadastros";
 import PainelRelatorios from "./pages/painel/PainelRelatorios";
+import PainelContatos from "./pages/painel/PainelContatos";
+import PainelPedidos from "./pages/painel/PainelPedidos";
 
 // Parceiros (Carrier Partners) pages
 import ParceirosAuth from "./pages/parceiros/ParceirosAuth";
@@ -170,6 +172,9 @@ const App = () => (
                       <Route path="convencional/rastreamento" element={<ClientRastreio />} />
                       {/* Relatórios unificado */}
                       <Route path="relatorios" element={<PainelRelatorios />} />
+                      {/* Contacts & Orders (NestJS API) */}
+                      <Route path="contatos" element={<PainelContatos />} />
+                      <Route path="pedidos" element={<PainelPedidos />} />
                       {/* Shared */}
                       <Route path="minha-conta" element={<ClientConta />} />
                       {/* Suporte */}

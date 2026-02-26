@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { supabase } from '@/integrations/supabase/client';
 import confixLogo from '@/assets/confix-logo-black.png';
 
 import PanelSwitcher from '@/components/PanelSwitcher';
@@ -26,54 +25,21 @@ interface ClientLayoutProps {
 }
 
 const ClientLayout = ({ children }: ClientLayoutProps) => {
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [checkingAdmin, setCheckingAdmin] = useState(true);
-  
 
-  // Check if user is admin and redirect, also check approval status
   useEffect(() => {
-    const checkUserStatus = async () => {
-      if (!user) {
-        setCheckingAdmin(false);
-        return;
-      }
+    if (!user) return;
+    if (isAdmin) {
+      navigate('/admin', { replace: true });
+    }
+  }, [user, isAdmin, navigate]);
 
-      // Check if user is admin
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-
-      if (roleData) {
-        // User is admin, redirect to admin panel
-        navigate('/admin', { replace: true });
-        return;
-      }
-
-      setCheckingAdmin(false);
-    };
-
-    checkUserStatus();
-  }, [user, navigate]);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/auth');
+  const handleLogout = () => {
+    signOut('/auth');
   };
-
-  // Show loading while checking admin status
-  if (checkingAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   const getDisplayName = () => {
     if (profile?.first_name && profile?.last_name) {

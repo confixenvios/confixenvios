@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { 
   Plus, BarChart3, LogOut, MapPin, Truck, Menu, Car, 
   Search, User, LayoutDashboard,
-  ChevronDown, Headphones, List
+  ChevronDown, Headphones, List, ContactIcon, ShoppingCart
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -185,6 +185,30 @@ const PainelLayout = () => {
         >
           <BarChart3 className="h-4 w-4" />
           <span className="text-sm font-medium">Relatórios</span>
+        </NavLink>
+
+        <NavLink
+          to="/painel/contatos"
+          onClick={() => setMenuOpen(false)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all mt-2",
+            isActive('/painel/contatos') ? 'bg-primary text-white shadow-md' : 'text-foreground hover:bg-slate-100'
+          )}
+        >
+          <ContactIcon className="h-4 w-4" />
+          <span className="text-sm font-medium">Contatos</span>
+        </NavLink>
+
+        <NavLink
+          to="/painel/pedidos"
+          onClick={() => setMenuOpen(false)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all mt-2",
+            isActive('/painel/pedidos') ? 'bg-primary text-white shadow-md' : 'text-foreground hover:bg-slate-100'
+          )}
+        >
+          <ShoppingCart className="h-4 w-4" />
+          <span className="text-sm font-medium">Pedidos</span>
         </NavLink>
 
         <NavLink

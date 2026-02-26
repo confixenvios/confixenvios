@@ -123,8 +123,10 @@ export class ApiError extends Error {
 
 export interface JwtPayload {
   sub: string;
-  email: string;
-  first_name: string;
+  email: string | null;
+  username: string | null;
+  first_name: string | null;
+  last_name: string | null;
   status: string;
   role: string;
   iat?: number;
