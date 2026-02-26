@@ -169,7 +169,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           password,
           first_name: firstName,
           last_name: lastName || undefined,
-          phone: phone || undefined,
+          phone: phone ? phone.replace(/\D/g, '') : undefined,
           document,
           document_type: documentType,
           state_registration_number: (inscricaoEstadual && inscricaoEstadual !== 'ISENTO') ? inscricaoEstadual : null,
