@@ -17,7 +17,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
 
 // Funções de sanitização
 const sanitizeName = (value: string): string => {
@@ -53,7 +52,7 @@ const sanitizeInscricaoEstadual = (value: string): string => {
 };
 
 const ClientConta = () => {
-  const { user, profile, userRole, updatePassword, refreshUserData } = useAuth();
+  const { user, profile, userRole, updatePassword, updateProfile, refreshUserData } = useAuth();
   const { toast } = useToast();
   
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -106,13 +105,7 @@ const ClientConta = () => {
           title: "Senha alterada com sucesso!",
           description: "Sua senha foi atualizada.",
         });
-        
-        // Clear form
-        setPasswordData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
-        });
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       }
     } catch (error) {
       setPasswordError('Erro inesperado ao alterar senha');
@@ -133,16 +126,13 @@ const ClientConta = () => {
     setIsUpdatingProfile(true);
     
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          first_name: profileData.first_name,
-          last_name: profileData.last_name,
-          phone: profileData.phone,
-          document: profileData.document,
-          inscricao_estadual: profileData.inscricao_estadual,
-        })
-        .eq('id', user?.id);
+      const { error } = await updateProfile({
+        first_name: profileData.first_name,
+        last_name: profileData.last_name,
+        phone: profileData.phone,
+        document: profileData.document,
+        inscricao_estadual: profileData.inscricao_estadual,
+      });
       
       if (error) {
         setProfileError('Erro ao atualizar perfil: ' + error.message);
@@ -151,9 +141,6 @@ const ClientConta = () => {
           title: "Perfil atualizado!",
           description: "Suas informações foram atualizadas com sucesso.",
         });
-        
-        // Refresh user data
-        await refreshUserData();
         setIsEditDialogOpen(false);
       }
     } catch (error) {
@@ -173,6 +160,16 @@ const ClientConta = () => {
     });
     setProfileError('');
     setIsEditDialogOpen(true);
+  };
+
+  const getRoleLabel = (role?: string) => {
+    switch (role) {
+      case 'admin': return 'Administrador';
+      case 'customer': return 'Cliente';
+      case 'driver': return 'Motorista';
+      case 'moderator': return 'Moderador';
+      default: return 'Cliente';
+    }
   };
 
   return (
@@ -220,10 +217,7 @@ const ClientConta = () => {
                           id="edit-first-name"
                           placeholder="Digite seu nome"
                           value={profileData.first_name}
-                          onChange={(e) => setProfileData(prev => ({
-                            ...prev,
-                            first_name: sanitizeName(e.target.value)
-                          }))}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, first_name: sanitizeName(e.target.value) }))}
                           maxLength={40}
                           disabled={isUpdatingProfile}
                         />
@@ -234,10 +228,7 @@ const ClientConta = () => {
                           id="edit-last-name"
                           placeholder="Digite seu sobrenome"
                           value={profileData.last_name}
-                          onChange={(e) => setProfileData(prev => ({
-                            ...prev,
-                            last_name: sanitizeName(e.target.value)
-                          }))}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, last_name: sanitizeName(e.target.value) }))}
                           maxLength={40}
                           disabled={isUpdatingProfile}
                         />
@@ -250,10 +241,7 @@ const ClientConta = () => {
                         id="edit-phone"
                         placeholder="(00) 00000-0000"
                         value={profileData.phone}
-                        onChange={(e) => setProfileData(prev => ({
-                          ...prev,
-                          phone: formatPhone(e.target.value)
-                        }))}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
                         maxLength={15}
                         disabled={isUpdatingProfile}
                       />
@@ -265,10 +253,7 @@ const ClientConta = () => {
                         id="edit-document"
                         placeholder="000.000.000-00"
                         value={profileData.document}
-                        onChange={(e) => setProfileData(prev => ({
-                          ...prev,
-                          document: formatDocument(e.target.value)
-                        }))}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, document: formatDocument(e.target.value) }))}
                         maxLength={18}
                         disabled={isUpdatingProfile}
                       />
@@ -280,10 +265,7 @@ const ClientConta = () => {
                         id="edit-inscricao"
                         placeholder="Digite a inscrição estadual"
                         value={profileData.inscricao_estadual}
-                        onChange={(e) => setProfileData(prev => ({
-                          ...prev,
-                          inscricao_estadual: sanitizeInscricaoEstadual(e.target.value)
-                        }))}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, inscricao_estadual: sanitizeInscricaoEstadual(e.target.value) }))}
                         maxLength={15}
                         disabled={isUpdatingProfile}
                       />
@@ -296,18 +278,10 @@ const ClientConta = () => {
                     )}
 
                     <div className="flex gap-2 justify-end">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => setIsEditDialogOpen(false)}
-                        disabled={isUpdatingProfile}
-                      >
+                      <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isUpdatingProfile}>
                         Cancelar
                       </Button>
-                      <Button 
-                        type="submit" 
-                        disabled={isUpdatingProfile}
-                      >
+                      <Button type="submit" disabled={isUpdatingProfile}>
                         {isUpdatingProfile ? (
                           <>
                             <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
@@ -368,19 +342,6 @@ const ClientConta = () => {
             </div>
 
             <div className="flex items-center space-x-3">
-              <Calendar className="w-4 h-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Membro desde</p>
-                <p className="text-sm text-muted-foreground">
-                  {user?.created_at 
-                    ? new Date(user.created_at).toLocaleDateString('pt-BR')
-                    : 'Não informado'
-                  }
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3">
               <FileText className="w-4 h-4 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium">Inscrição Estadual</p>
@@ -392,7 +353,7 @@ const ClientConta = () => {
 
             <div className="flex items-center space-x-3">
               <Badge variant="secondary" className="mt-2">
-                {userRole?.role === 'admin' ? 'Administrador' : 'Cliente'}
+                {getRoleLabel(userRole?.role)}
               </Badge>
             </div>
           </CardContent>
@@ -423,10 +384,7 @@ const ClientConta = () => {
                     type="password"
                     placeholder="Digite sua nova senha"
                     value={passwordData.newPassword}
-                    onChange={(e) => setPasswordData(prev => ({
-                      ...prev,
-                      newPassword: e.target.value
-                    }))}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
                     disabled={isChangingPassword}
                   />
                 </div>
@@ -438,10 +396,7 @@ const ClientConta = () => {
                     type="password"
                     placeholder="Confirme sua nova senha"
                     value={passwordData.confirmPassword}
-                    onChange={(e) => setPasswordData(prev => ({
-                      ...prev,
-                      confirmPassword: e.target.value
-                    }))}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
                     disabled={isChangingPassword}
                   />
                 </div>
@@ -452,29 +407,14 @@ const ClientConta = () => {
                   </Alert>
                 )}
 
-                <Button 
-                  type="submit" 
-                  disabled={isChangingPassword}
-                  className="w-full"
-                >
-                  {isChangingPassword ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
-                      Alterando...
-                    </>
-                  ) : (
-                    <>
-                      <Key className="w-4 h-4 mr-2" />
-                      Alterar Senha
-                    </>
-                  )}
+                <Button type="submit" disabled={isChangingPassword} className="w-full">
+                  {isChangingPassword ? 'Alterando...' : 'Alterar Senha'}
                 </Button>
               </form>
             </div>
           </CardContent>
         </Card>
       </div>
-
     </div>
   );
 };
